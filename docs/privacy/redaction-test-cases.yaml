@@ -1,0 +1,1443 @@
+schema_version: 1
+model_revision: TL-0005 draft 1
+fixture_type: synthetic privacy redaction cases
+privacy_owner_approval: Pending
+
+expectation_output_contract:
+  ordinary_log: exact registered safe-field fragment before required closed-envelope assembly
+  support_export: exact allowlisted normalized projection fragment before bundle-manifest assembly
+  all_other_sinks: exact post-classification sink decision output
+
+synthetic_value_policy:
+  reserved_markers:
+    - SYNTHETIC_
+    - example.invalid
+  documentation_network_ranges:
+    - 192.0.2.0/24
+    - 2001:db8::/32
+  requirements:
+    - Inputs are invented test values and never copied from a person, device, account, or local machine.
+    - Secret-like inputs use conspicuous DO_NOT_USE markers rather than real credential formats.
+    - External-product cases are generic and contain no sibling product identifier or behavior.
+
+decision_vocabulary:
+  - allow
+  - replace
+  - drop
+  - reject
+
+sink_vocabulary:
+  - workshop_record
+  - ordinary_log
+  - support_export
+  - recipient_guide
+  - local_crash
+  - ui_error
+  - task_evidence
+  - telemetry
+
+category_vocabulary:
+  - recipient_identity_absent
+  - full_serial
+  - recipient_identity
+  - email_address
+  - username
+  - security_identifier
+  - operator_identity
+  - wifi_identifier
+  - wifi_secret
+  - ip_address
+  - mac_address
+  - host_identity
+  - personal_path
+  - network_path
+  - file_uri
+  - environment_path
+  - package_download_url
+  - url_credential
+  - url_token
+  - password
+  - product_key
+  - authentication_token
+  - recovery_key
+  - encryption_key
+  - clipboard_secret
+  - raw_output
+  - raw_provider_report
+  - encoded_blob
+  - exception_text
+  - stack_trace
+  - nested_sensitive_value
+  - duplicate_key
+  - unicode_normalization
+  - zero_width_character
+  - homoglyph
+  - bidi_control
+  - control_character
+  - log_injection
+  - markup_injection
+  - formula_injection
+  - oversized_input
+  - oversized_collection
+  - excessive_depth
+  - external_private_database
+  - external_private_content
+  - external_recovery_credential
+  - telemetry
+  - device_identifier
+  - public_package_metadata
+  - os_version
+  - native_error_code
+  - generic_hardware
+  - public_update_identity
+  - logical_manifest_name
+  - correlation_id
+  - support_id
+  - recipient_choice_status
+  - unknown_classification
+  - hashed_identifier
+  - export_destination
+  - destination_category
+  - stable_result_code
+
+cases:
+  - id: PRV-001
+    categories: [recipient_identity_absent]
+    sink: workshop_record
+    input:
+      kind: structured_record
+      value:
+        job_id: SYNTHETIC_JOB_0001
+        device_state: ready_for_assessment
+    expectation:
+      decision: allow
+      output:
+        job_id: SYNTHETIC_JOB_0001
+        device_state: ready_for_assessment
+      stable_code: PRV_ALLOWED_RECIPIENTLESS_JOB
+      prohibited_literals_absent: []
+      required_literals_present: [SYNTHETIC_JOB_0001, ready_for_assessment]
+    rationale: A normal workshop job succeeds without a recipient name or contact field.
+    decision_refs: [D-014]
+    tags: [positive, recipientless, workshop]
+
+  - id: PRV-002
+    categories: [full_serial]
+    sink: workshop_record
+    input:
+      kind: structured_field
+      value:
+        field: device_serial
+        value: SYNTHETIC-SERIAL-TEST-0001
+    expectation:
+      decision: allow
+      output:
+        field: device_serial
+        value: SYNTHETIC-SERIAL-TEST-0001
+      stable_code: PRV_ALLOWED_WORKSHOP_SERIAL
+      prohibited_literals_absent: []
+      required_literals_present: [SYNTHETIC-SERIAL-TEST-0001]
+    rationale: A full serial is permitted only in the workshop privacy class.
+    decision_refs: [D-014, D-036]
+    tags: [positive, serial, workshop_only]
+
+  - id: PRV-003
+    categories: [full_serial]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: device_serial
+        value: SYNTHETIC-SERIAL-TEST-0001
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_SERIAL_FROM_LOG
+      prohibited_literals_absent: [SYNTHETIC-SERIAL-TEST-0001]
+      required_literals_present: []
+    rationale: Ordinary diagnostics never persist a full serial.
+    decision_refs: [D-014, D-037]
+    tags: [negative, serial, log]
+
+  - id: PRV-004
+    categories: [full_serial]
+    sink: support_export
+    input:
+      kind: structured_field
+      value:
+        field: device_serial
+        value: SYNTHETIC-SERIAL-TEST-0001
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_SERIAL_FROM_SUPPORT
+      prohibited_literals_absent: [SYNTHETIC-SERIAL-TEST-0001]
+      required_literals_present: []
+    rationale: The initial support allowlist omits full serials rather than hashing them.
+    decision_refs: [D-014, D-036, D-037]
+    tags: [negative, serial, support]
+
+  - id: PRV-005
+    categories: [full_serial]
+    sink: recipient_guide
+    input:
+      kind: structured_field
+      value:
+        field: device_serial
+        value: SYNTHETIC-SERIAL-TEST-0001
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_SERIAL_FROM_GUIDE
+      prohibited_literals_absent: [SYNTHETIC-SERIAL-TEST-0001]
+      required_literals_present: []
+    rationale: A recipient guide does not need a full device identifier.
+    decision_refs: [D-014, D-036]
+    tags: [negative, serial, recipient]
+
+  - id: PRV-006
+    categories: [recipient_identity]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: recipient_name
+        value: SYNTHETIC_RECIPIENT_NAME_DO_NOT_USE
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_RECIPIENT_IDENTITY
+      prohibited_literals_absent: [SYNTHETIC_RECIPIENT_NAME_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Recipient identity is unnecessary for ordinary job logging.
+    decision_refs: [D-014, D-037]
+    tags: [negative, identity, log]
+
+  - id: PRV-007
+    categories: [email_address, recipient_identity]
+    sink: support_export
+    input:
+      kind: structured_field
+      value:
+        field: recipient_email
+        value: synthetic-recipient@example.invalid
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_EMAIL_FROM_SUPPORT
+      prohibited_literals_absent: [synthetic-recipient@example.invalid]
+      required_literals_present: []
+    rationale: Support data contains no recipient contact details.
+    decision_refs: [D-014, D-037]
+    tags: [negative, identity, email, support]
+
+  - id: PRV-008
+    categories: [username]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: local_username
+        value: SYNTHETIC_LOCAL_USERNAME_DO_NOT_USE
+    expectation:
+      decision: replace
+      output:
+        event_code: ACCOUNT_PRESENCE_OBSERVED
+        outcome: Completed
+        result_code: PRESENT
+        redaction_flags: [ValueDropped]
+      stable_code: PRV_REPLACED_USERNAME_WITH_PRESENCE
+      prohibited_literals_absent: [SYNTHETIC_LOCAL_USERNAME_DO_NOT_USE]
+      required_literals_present: [ACCOUNT_PRESENCE_OBSERVED, Completed, PRESENT, ValueDropped]
+    rationale: Logs may record a bounded finding state but not the account name.
+    decision_refs: [D-014, D-037]
+    tags: [negative, username, structured_replacement]
+
+  - id: PRV-009
+    categories: [security_identifier, username]
+    sink: support_export
+    input:
+      kind: structured_field
+      value:
+        field: account_sid
+        value: SYNTHETIC_SID_DO_NOT_USE
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_ACCOUNT_IDENTIFIER
+      prohibited_literals_absent: [SYNTHETIC_SID_DO_NOT_USE]
+      required_literals_present: []
+    rationale: An operating-system account identifier is linkable and not support-allowlisted.
+    decision_refs: [D-014, D-037]
+    tags: [negative, account, support]
+
+  - id: PRV-010
+    categories: [operator_identity]
+    sink: recipient_guide
+    input:
+      kind: structured_field
+      value:
+        field: operator_account
+        value: SYNTHETIC_OPERATOR_ACCOUNT_DO_NOT_USE
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_OPERATOR_ACCOUNT_FROM_GUIDE
+      prohibited_literals_absent: [SYNTHETIC_OPERATOR_ACCOUNT_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Recipient output does not disclose a workshop operator account.
+    decision_refs: [D-014, D-036]
+    tags: [negative, operator, recipient]
+
+  - id: PRV-011
+    categories: [wifi_identifier]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: wifi_ssid
+        value: SYNTHETIC_SSID_DO_NOT_USE
+    expectation:
+      decision: replace
+      output:
+        event_code: WIFI_PROFILE_PRESENCE_OBSERVED
+        outcome: Completed
+        result_code: PRESENT
+        redaction_flags: [ValueDropped]
+      stable_code: PRV_REPLACED_SSID_WITH_PRESENCE
+      prohibited_literals_absent: [SYNTHETIC_SSID_DO_NOT_USE]
+      required_literals_present: [WIFI_PROFILE_PRESENCE_OBSERVED, Completed, PRESENT, ValueDropped]
+    rationale: The existence of workshop residue may be recorded without the network name.
+    decision_refs: [D-037]
+    tags: [negative, network, ssid]
+
+  - id: PRV-012
+    categories: [wifi_secret, password]
+    sink: task_evidence
+    input:
+      kind: structured_field
+      value:
+        field: wifi_key
+        value: SYNTHETIC_WIFI_PASSWORD_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_WIFI_SECRET
+      prohibited_literals_absent: [SYNTHETIC_WIFI_PASSWORD_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Wi-Fi credentials are never ThirdLife evidence.
+    decision_refs: [D-037, D-053]
+    tags: [negative, network, secret, evidence]
+
+  - id: PRV-013
+    categories: [ip_address]
+    sink: support_export
+    input:
+      kind: structured_field
+      value:
+        field: ipv4_address
+        value: 192.0.2.44
+    expectation:
+      decision: replace
+      output:
+        check_id: network_connectivity
+        availability: available
+      stable_code: PRV_REPLACED_IPV4_WITH_CONNECTIVITY
+      prohibited_literals_absent: [192.0.2.44]
+      required_literals_present: [network_connectivity, available]
+    rationale: Even a reserved test address exercises removal of concrete IP addresses.
+    decision_refs: [D-037]
+    tags: [negative, network, ipv4, support]
+
+  - id: PRV-014
+    categories: [ip_address]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: ipv6_address
+        value: 2001:db8::44%SYNTHETIC_ZONE
+    expectation:
+      decision: replace
+      output:
+        event_code: IP_FAMILY_OBSERVED
+        outcome: Completed
+        result_code: IPV6
+        redaction_flags: [ValueDropped]
+      stable_code: PRV_REPLACED_IPV6_WITH_FAMILY
+      prohibited_literals_absent: [2001:db8::44%SYNTHETIC_ZONE, SYNTHETIC_ZONE]
+      required_literals_present: [IP_FAMILY_OBSERVED, Completed, IPV6, ValueDropped]
+    rationale: Address and interface-zone details are removed while a safe protocol family remains.
+    decision_refs: [D-037]
+    tags: [negative, network, ipv6, zone]
+
+  - id: PRV-015
+    categories: [mac_address, device_identifier]
+    sink: support_export
+    input:
+      kind: structured_field
+      value:
+        field: mac_address
+        value: 02-00-00-00-00-01
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_MAC_ADDRESS
+      prohibited_literals_absent: [02-00-00-00-00-01]
+      required_literals_present: []
+    rationale: A locally administered synthetic MAC still represents a persistent device identifier.
+    decision_refs: [D-014, D-037]
+    tags: [negative, network, mac, support]
+
+  - id: PRV-016
+    categories: [host_identity]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: hostname
+        value: SYNTHETIC-HOSTNAME-DO-NOT-USE
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_HOST_IDENTITY
+      prohibited_literals_absent: [SYNTHETIC-HOSTNAME-DO-NOT-USE]
+      required_literals_present: []
+    rationale: Host and domain names are unnecessary in ordinary diagnostics.
+    decision_refs: [D-014, D-037]
+    tags: [negative, network, host]
+
+  - id: PRV-017
+    categories: [personal_path]
+    sink: ordinary_log
+    input:
+      kind: path
+      value: C:\Users\SYNTHETIC_RECIPIENT\Documents\SYNTHETIC_FILE.txt
+    expectation:
+      decision: replace
+      output:
+        event_code: PERSONAL_PATH_REJECTED
+        outcome: RequiresReview
+        result_code: PROHIBITED_FIELD_DROPPED
+        redaction_flags: [ValueDropped]
+      stable_code: PRV_REDACTED_DRIVE_PATH
+      prohibited_literals_absent: [SYNTHETIC_RECIPIENT, SYNTHETIC_FILE.txt]
+      required_literals_present: [PERSONAL_PATH_REJECTED, PROHIBITED_FIELD_DROPPED, ValueDropped]
+    rationale: Drive paths produce only a closed diagnostic event and stable result code.
+    decision_refs: [D-014, D-037]
+    tags: [negative, path, windows]
+
+  - id: PRV-018
+    categories: [network_path, personal_path]
+    sink: support_export
+    input:
+      kind: path
+      value: \\SYNTHETIC-SERVER.invalid\SYNTHETIC-SHARE\SYNTHETIC_FILE.txt
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_REDACTED_UNC_PATH
+      prohibited_literals_absent: [SYNTHETIC-SERVER.invalid, SYNTHETIC-SHARE, SYNTHETIC_FILE.txt]
+      required_literals_present: []
+    rationale: A UNC path can disclose server, share and filename information and has no support field.
+    decision_refs: [D-014, D-037]
+    tags: [negative, path, unc, support]
+
+  - id: PRV-019
+    categories: [file_uri, personal_path]
+    sink: local_crash
+    input:
+      kind: url
+      value: file:///C:/Users/SYNTHETIC_RECIPIENT/SYNTHETIC_CRASH.txt
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_FILE_URI_CRASH_SINK
+      prohibited_literals_absent: [SYNTHETIC_RECIPIENT, SYNTHETIC_CRASH.txt]
+      required_literals_present: []
+    rationale: File URIs are rejected and no production crash sink accepts an event.
+    decision_refs: [D-014, D-037]
+    tags: [negative, path, file_uri, crash]
+
+  - id: PRV-020
+    categories: [environment_path, personal_path]
+    sink: ordinary_log
+    input:
+      kind: text
+      value: "%USERPROFILE%\\SYNTHETIC_PRIVATE_FILE.txt"
+    expectation:
+      decision: replace
+      output:
+        event_code: ENVIRONMENT_PATH_REJECTED
+        outcome: RequiresReview
+        result_code: PROHIBITED_FIELD_DROPPED
+        redaction_flags: [ValueDropped]
+      stable_code: PRV_REDACTED_ENVIRONMENT_PATH
+      prohibited_literals_absent: [USERPROFILE, SYNTHETIC_PRIVATE_FILE.txt]
+      required_literals_present: [ENVIRONMENT_PATH_REJECTED, PROHIBITED_FIELD_DROPPED, ValueDropped]
+    rationale: Environment-based paths produce only a closed diagnostic event and stable result code.
+    decision_refs: [D-014, D-037]
+    tags: [negative, path, environment]
+
+  - id: PRV-021
+    categories: [package_download_url, url_token]
+    sink: support_export
+    input:
+      kind: url
+      value: https://packages.example.invalid/SYNTHETIC_PACKAGE.exe?token=SYNTHETIC_TOKEN_DO_NOT_USE#SYNTHETIC_FRAGMENT
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_TOKENIZED_PACKAGE_URL
+      prohibited_literals_absent: [packages.example.invalid, SYNTHETIC_TOKEN_DO_NOT_USE, SYNTHETIC_FRAGMENT]
+      required_literals_present: []
+    rationale: Support uses an approved source alias and package ID, never a tokenized download URL.
+    decision_refs: [D-037]
+    tags: [negative, url, token, package, support]
+
+  - id: PRV-022
+    categories: [url_credential, password]
+    sink: ordinary_log
+    input:
+      kind: url
+      value: https://SYNTHETIC_USER:SYNTHETIC_PASSWORD_DO_NOT_USE@example.invalid/SYNTHETIC_RESOURCE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_URL_CREDENTIAL
+      prohibited_literals_absent: [SYNTHETIC_USER, SYNTHETIC_PASSWORD_DO_NOT_USE, SYNTHETIC_RESOURCE]
+      required_literals_present: []
+    rationale: A URL containing user information is rejected rather than partially logged.
+    decision_refs: [D-037]
+    tags: [negative, url, credential, log]
+
+  - id: PRV-023
+    categories: [package_download_url]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: package_download_url
+        value: https://packages.example.invalid/SYNTHETIC_PUBLIC_PACKAGE.exe
+    expectation:
+      decision: replace
+      output:
+        event_code: PACKAGE_SOURCE_RESOLVED
+        outcome: Completed
+        result_code: SOURCE_ALIAS_RECORDED
+        redaction_flags: [ValueDropped]
+      stable_code: PRV_REPLACED_PACKAGE_URL_WITH_ALIAS
+      prohibited_literals_absent: [packages.example.invalid, SYNTHETIC_PUBLIC_PACKAGE.exe]
+      required_literals_present: [PACKAGE_SOURCE_RESOLVED, Completed, SOURCE_ALIAS_RECORDED, ValueDropped]
+    rationale: Structured public identity replaces a raw package URL.
+    decision_refs: [D-037]
+    tags: [negative, url, package, structured_replacement]
+
+  - id: PRV-024
+    categories: [password]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: password
+        value: SYNTHETIC_PASSWORD_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_PASSWORD
+      prohibited_literals_absent: [SYNTHETIC_PASSWORD_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Password values are never accepted by a logging sink.
+    decision_refs: [D-037, D-053]
+    tags: [negative, secret, password]
+
+  - id: PRV-025
+    categories: [authentication_token]
+    sink: support_export
+    input:
+      kind: structured_field
+      value:
+        field: api_token
+        value: SYNTHETIC_API_TOKEN_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_AUTHENTICATION_TOKEN
+      prohibited_literals_absent: [SYNTHETIC_API_TOKEN_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Authentication material is absolutely prohibited from support artifacts.
+    decision_refs: [D-037, D-053]
+    tags: [negative, secret, token, support]
+
+  - id: PRV-026
+    categories: [recovery_key]
+    sink: workshop_record
+    input:
+      kind: structured_field
+      value:
+        field: recovery_key
+        value: SYNTHETIC_RECOVERY_KEY_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_RECOVERY_KEY
+      prohibited_literals_absent: [SYNTHETIC_RECOVERY_KEY_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Even the workshop privacy class cannot retain recovery material.
+    decision_refs: [D-053]
+    tags: [negative, secret, recovery, workshop]
+
+  - id: PRV-027
+    categories: [encryption_key]
+    sink: local_crash
+    input:
+      kind: structured_field
+      value:
+        field: encryption_key
+        value: SYNTHETIC_ENCRYPTION_KEY_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_ENCRYPTION_KEY
+      prohibited_literals_absent: [SYNTHETIC_ENCRYPTION_KEY_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Crash handling cannot serialize encryption material.
+    decision_refs: [D-037, D-053]
+    tags: [negative, secret, encryption, crash]
+
+  - id: PRV-028
+    categories: [clipboard_secret]
+    sink: task_evidence
+    input:
+      kind: structured_field
+      value:
+        field: clipboard_text
+        value: SYNTHETIC_CLIPBOARD_SECRET_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_CLIPBOARD_SECRET
+      prohibited_literals_absent: [SYNTHETIC_CLIPBOARD_SECRET_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Clipboard content is not task evidence or ThirdLife-owned data.
+    decision_refs: [D-037, D-053]
+    tags: [negative, secret, clipboard, evidence]
+
+  - id: PRV-029
+    categories: [raw_output, username, personal_path]
+    sink: ordinary_log
+    input:
+      kind: raw_stdout
+      value: "SYNTHETIC_TOOL: user=SYNTHETIC_USERNAME path=C:\\Users\\SYNTHETIC_USERNAME\\SYNTHETIC_FILE.txt"
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_RAW_STDOUT
+      prohibited_literals_absent: [SYNTHETIC_USERNAME, SYNTHETIC_FILE.txt]
+      required_literals_present: []
+    bounds:
+      max_input_utf8_bytes: 4096
+    rationale: Raw stdout is never made log-safe by a best-effort substitution pass.
+    decision_refs: [D-037]
+    tags: [negative, raw_output, stdout, log]
+
+  - id: PRV-030
+    categories: [raw_output, package_download_url, url_token]
+    sink: support_export
+    input:
+      kind: raw_stderr
+      value: "SYNTHETIC_INSTALLER_ERROR url=https://packages.example.invalid/file?token=SYNTHETIC_TOKEN_DO_NOT_USE"
+    expectation:
+      decision: replace
+      output:
+        error_code: PACKAGE_BACKEND_FAILED
+        error_category: backend
+        recovery_code: RETRY_OR_REVIEW
+      stable_code: PRV_REPLACED_RAW_STDERR_WITH_CODE
+      prohibited_literals_absent: [packages.example.invalid, SYNTHETIC_TOKEN_DO_NOT_USE, SYNTHETIC_INSTALLER_ERROR]
+      required_literals_present: [PACKAGE_BACKEND_FAILED, backend, RETRY_OR_REVIEW]
+    bounds:
+      max_input_utf8_bytes: 4096
+    rationale: A typed stable result replaces untrusted installer stderr.
+    decision_refs: [D-037]
+    tags: [negative, raw_output, stderr, support, structured_replacement]
+
+  - id: PRV-031
+    categories: [raw_provider_report, full_serial, host_identity]
+    sink: workshop_record
+    input:
+      kind: raw_xml
+      value: "<syntheticReport host=\"SYNTHETIC-HOSTNAME-DO-NOT-USE\" serial=\"SYNTHETIC-SERIAL-TEST-0001\"/>"
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_UNREVIEWED_RAW_REPORT
+      prohibited_literals_absent: [SYNTHETIC-HOSTNAME-DO-NOT-USE, SYNTHETIC-SERIAL-TEST-0001]
+      required_literals_present: []
+    bounds:
+      max_input_utf8_bytes: 4096
+      max_nesting_depth: 8
+    rationale: Raw reports require a provider-specific attachment contract; the general workshop serializer cannot accept them.
+    decision_refs: [D-014, D-037]
+    tags: [negative, raw_output, xml, workshop]
+
+  - id: PRV-032
+    categories: [encoded_blob, raw_output]
+    sink: support_export
+    input:
+      kind: encoded_blob
+      value: SYNTHETIC_BASE64_LIKE_BLOB_DO_NOT_DECODE_OR_EXPORT
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_ENCODED_BLOB
+      prohibited_literals_absent: [SYNTHETIC_BASE64_LIKE_BLOB_DO_NOT_DECODE_OR_EXPORT]
+      required_literals_present: []
+    bounds:
+      max_input_utf8_bytes: 4096
+    rationale: Opaque encoding is not a reviewed support field and is not decoded heuristically.
+    decision_refs: [D-037]
+    tags: [negative, raw_output, encoded, support]
+
+  - id: PRV-033
+    categories: [exception_text, username, personal_path, ip_address]
+    sink: ui_error
+    input:
+      kind: exception
+      value:
+        type: SyntheticIOException
+        message: "SYNTHETIC_USERNAME failed at C:\\Users\\SYNTHETIC_USERNAME\\SYNTHETIC_FILE.txt from 192.0.2.44"
+    expectation:
+      decision: replace
+      output:
+        message: The operation failed. Review the stable error code and retry safely.
+        error_code: IO_OPERATION_FAILED
+      stable_code: PRV_REPLACED_EXCEPTION_WITH_SAFE_UI_ERROR
+      prohibited_literals_absent: [SYNTHETIC_USERNAME, SYNTHETIC_FILE.txt, 192.0.2.44]
+      required_literals_present: [operation failed, IO_OPERATION_FAILED]
+    bounds:
+      max_output_utf8_bytes: 512
+    rationale: UI errors are plain-language structured messages, not exception echoes.
+    decision_refs: [D-037]
+    tags: [negative, exception, ui, structured_replacement]
+
+  - id: PRV-034
+    categories: [stack_trace, personal_path]
+    sink: local_crash
+    input:
+      kind: stack_trace
+      value: "SyntheticIOException at C:\\Users\\SYNTHETIC_DEVELOPER\\source\\SYNTHETIC_FILE.cs:line 44"
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_STACK_CRASH_SINK
+      prohibited_literals_absent: [SYNTHETIC_DEVELOPER, SYNTHETIC_FILE.cs, "line 44"]
+      required_literals_present: []
+    bounds:
+      max_stack_frames: 32
+      max_output_utf8_bytes: 512
+    rationale: Stack traces are rejected and no production crash sink accepts an event.
+    decision_refs: [D-037]
+    tags: [negative, exception, stack, crash]
+
+  - id: PRV-035
+    categories: [nested_sensitive_value, authentication_token, exception_text]
+    sink: ordinary_log
+    input:
+      kind: nested_record
+      value:
+        exception:
+          type: SyntheticBackendException
+          data:
+            retry_token: SYNTHETIC_RETRY_TOKEN_DO_NOT_USE
+            safe_result_code: BACKEND_UNAVAILABLE
+    expectation:
+      decision: replace
+      output:
+        event_code: BACKEND_OPERATION_FAILED
+        component: Packages
+        phase: Prepare
+        outcome: Failed
+        result_code: BACKEND_UNAVAILABLE
+        redaction_flags: [InputRejected]
+      stable_code: PRV_REMOVED_NESTED_EXCEPTION_DATA
+      prohibited_literals_absent: [SYNTHETIC_RETRY_TOKEN_DO_NOT_USE, retry_token]
+      required_literals_present: [BACKEND_OPERATION_FAILED, Packages, Prepare, Failed, BACKEND_UNAVAILABLE, InputRejected]
+    bounds:
+      max_nesting_depth: 8
+    rationale: Exception data bags are not serialized; explicitly mapped safe fields survive.
+    decision_refs: [D-037]
+    tags: [negative, nested, exception, token]
+
+  - id: PRV-036
+    categories: [nested_sensitive_value, username, ip_address]
+    sink: support_export
+    input:
+      kind: nested_record
+      value:
+        provider:
+          id: synthetic_battery_provider
+          result:
+            code: ACCESS_DENIED
+            raw_context:
+              username: SYNTHETIC_USERNAME_DO_NOT_USE
+              address: 192.0.2.55
+    expectation:
+      decision: replace
+      output:
+        check_id: synthetic_battery_provider
+        availability: unavailable
+        outcome_code: ACCESS_DENIED
+      stable_code: PRV_REMOVED_NESTED_RAW_CONTEXT
+      prohibited_literals_absent: [SYNTHETIC_USERNAME_DO_NOT_USE, 192.0.2.55, raw_context]
+      required_literals_present: [synthetic_battery_provider, unavailable, ACCESS_DENIED]
+    bounds:
+      max_nesting_depth: 8
+      max_collection_items: 32
+    rationale: A safe structured provider result survives while the nested raw context is removed.
+    decision_refs: [D-037]
+    tags: [negative, nested, support, structured_replacement]
+
+  - id: PRV-037
+    categories: [duplicate_key, username]
+    sink: ordinary_log
+    input:
+      kind: json_text
+      value: "{\"event_id\":\"SYNTHETIC_EVENT\",\"username\":\"SYNTHETIC_A\",\"username\":\"SYNTHETIC_B\"}"
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_DUPLICATE_KEY
+      prohibited_literals_absent: [SYNTHETIC_A, SYNTHETIC_B]
+      required_literals_present: []
+    bounds:
+      max_input_utf8_bytes: 4096
+    rationale: Duplicate keys cannot select a different value across validators and serializers.
+    decision_refs: [D-037]
+    tags: [negative, parser, duplicate_key, json]
+
+  - id: PRV-038
+    categories: [unicode_normalization, username]
+    sink: ordinary_log
+    input:
+      kind: text
+      value: "user=SYNTHETIC_U\u0308SERNAME_DO_NOT_USE"
+    expectation:
+      decision: replace
+      output:
+        event_code: USERNAME_REJECTED
+        outcome: RequiresReview
+        result_code: PROHIBITED_FIELD_DROPPED
+        redaction_flags: [ValueDropped]
+      stable_code: PRV_REDACTED_DECOMPOSED_UNICODE_USERNAME
+      prohibited_literals_absent: ["SYNTHETIC_U\u0308SERNAME_DO_NOT_USE"]
+      required_literals_present: [USERNAME_REJECTED, PROHIBITED_FIELD_DROPPED, ValueDropped]
+    bounds:
+      max_input_utf8_bytes: 512
+    rationale: Canonically equivalent text is normalized before category handling.
+    decision_refs: [D-037]
+    tags: [negative, unicode, normalization, username]
+
+  - id: PRV-039
+    categories: [zero_width_character, username]
+    sink: support_export
+    input:
+      kind: text
+      value: "SYNTHETIC_USER\u200bNAME_DO_NOT_USE"
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_REDACTED_ZERO_WIDTH_USERNAME
+      prohibited_literals_absent: ["SYNTHETIC_USER\u200bNAME_DO_NOT_USE"]
+      required_literals_present: []
+    bounds:
+      max_input_utf8_bytes: 512
+    rationale: A zero-width character cannot hide an identifier from redaction.
+    decision_refs: [D-037]
+    tags: [negative, unicode, zero_width, support]
+
+  - id: PRV-040
+    categories: [homoglyph, username]
+    sink: ordinary_log
+    input:
+      kind: text
+      value: "SYNTHETIC_US\u0415RNAME_DO_NOT_USE"
+    expectation:
+      decision: replace
+      output:
+        event_code: USERNAME_REJECTED
+        outcome: RequiresReview
+        result_code: PROHIBITED_FIELD_DROPPED
+        redaction_flags: [ValueDropped]
+      stable_code: PRV_REDACTED_HOMOGLYPH_USERNAME
+      prohibited_literals_absent: ["SYNTHETIC_US\u0415RNAME_DO_NOT_USE"]
+      required_literals_present: [USERNAME_REJECTED, PROHIBITED_FIELD_DROPPED, ValueDropped]
+    bounds:
+      max_input_utf8_bytes: 512
+    rationale: Confusable script characters do not turn an identifier into safe log text.
+    decision_refs: [D-037]
+    tags: [negative, unicode, homoglyph, log]
+
+  - id: PRV-041
+    categories: [bidi_control, personal_path]
+    sink: ui_error
+    input:
+      kind: text
+      value: "path=C:\\SYNTHETIC_SAFE\\\u202eSYNTHETIC_PRIVATE.txt"
+    expectation:
+      decision: replace
+      output: "path=[REDACTED_PERSONAL_PATH]"
+      stable_code: PRV_REDACTED_BIDI_PATH
+      prohibited_literals_absent: ["\u202e", SYNTHETIC_PRIVATE.txt]
+      required_literals_present: ["[REDACTED_PERSONAL_PATH]"]
+    bounds:
+      max_input_utf8_bytes: 512
+    rationale: Bidirectional controls cannot visually disguise a private path.
+    decision_refs: [D-037]
+    tags: [negative, unicode, bidi, path]
+
+  - id: PRV-042
+    categories: [control_character, log_injection, username]
+    sink: ordinary_log
+    input:
+      kind: text
+      value: "SYNTHETIC_SAFE\r\nforged_event username=SYNTHETIC_USERNAME_DO_NOT_USE"
+    expectation:
+      decision: replace
+      output:
+        event_code: UNTRUSTED_TEXT_REJECTED
+        outcome: RequiresReview
+        result_code: INPUT_REJECTED
+        redaction_flags: [InputRejected]
+      stable_code: PRV_REDACTED_CRLF_INJECTION
+      prohibited_literals_absent: [forged_event, SYNTHETIC_USERNAME_DO_NOT_USE]
+      required_literals_present: [UNTRUSTED_TEXT_REJECTED, INPUT_REJECTED, InputRejected]
+    bounds:
+      max_input_utf8_bytes: 512
+    rationale: CRLF cannot create a forged structured event.
+    decision_refs: [D-037]
+    tags: [negative, control, crlf, injection]
+
+  - id: PRV-043
+    categories: [control_character, log_injection]
+    sink: local_crash
+    input:
+      kind: text
+      value: "\u001b[31mSYNTHETIC_ANSI_CONTROL_DO_NOT_USE\u001b[0m"
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_ANSI_CRASH_SINK
+      prohibited_literals_absent: [SYNTHETIC_ANSI_CONTROL_DO_NOT_USE, "\u001b"]
+      required_literals_present: []
+    bounds:
+      max_input_utf8_bytes: 512
+    rationale: Terminal control sequences are rejected and no production crash sink accepts an event.
+    decision_refs: [D-037]
+    tags: [negative, control, ansi, crash]
+
+  - id: PRV-044
+    categories: [markup_injection, package_download_url]
+    sink: recipient_guide
+    input:
+      kind: text
+      value: "<img src=\"https://example.invalid/SYNTHETIC_TRACKER\" alt=\"SYNTHETIC_PRIVATE\">"
+    expectation:
+      decision: replace
+      output: "&lt;unsupported content removed&gt;"
+      stable_code: PRV_ESCAPED_OR_REMOVED_MARKUP
+      prohibited_literals_absent: ["<img", example.invalid, SYNTHETIC_TRACKER, SYNTHETIC_PRIVATE]
+      required_literals_present: ["&lt;unsupported content removed&gt;"]
+    bounds:
+      max_input_utf8_bytes: 512
+    rationale: Hostile markup and embedded URLs are not rendered into recipient output.
+    decision_refs: [D-036, D-037]
+    tags: [negative, markup, injection, recipient]
+
+  - id: PRV-045
+    categories: [formula_injection, package_download_url]
+    sink: support_export
+    input:
+      kind: text
+      value: "=HYPERLINK(\"https://example.invalid/SYNTHETIC_PRIVATE\",\"SYNTHETIC_LABEL\")"
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_FORMULA_TEXT
+      prohibited_literals_absent: [HYPERLINK, example.invalid, SYNTHETIC_PRIVATE, SYNTHETIC_LABEL]
+      required_literals_present: []
+    bounds:
+      max_input_utf8_bytes: 512
+    rationale: Formula-bearing free text is not a support allowlist field.
+    decision_refs: [D-036, D-037]
+    tags: [negative, formula, injection, support]
+
+  - id: PRV-046
+    categories: [oversized_input, raw_output]
+    sink: ordinary_log
+    input:
+      kind: synthetic_repeat
+      value:
+        unit: SYNTHETIC_A
+        repeat: 47
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_OVERSIZED_SCALAR
+      prohibited_literals_absent: [SYNTHETIC_A]
+      required_literals_present: []
+    bounds:
+      max_scalar_utf8_bytes: 512
+      actual_scalar_utf8_bytes: 517
+    rationale: Oversized source text is rejected before formatting or persistence.
+    decision_refs: [D-037]
+    tags: [negative, bounds, scalar, resource]
+
+  - id: PRV-047
+    categories: [oversized_collection, raw_output]
+    sink: support_export
+    input:
+      kind: synthetic_collection
+      value:
+        item_template: SYNTHETIC_ITEM_{index}
+        item_count: 33
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_OVERSIZED_COLLECTION
+      prohibited_literals_absent: [SYNTHETIC_ITEM_]
+      required_literals_present: []
+    bounds:
+      max_collection_items: 32
+      actual_collection_items: 33
+    rationale: Collection bounds are checked before archive or preview construction.
+    decision_refs: [D-037]
+    tags: [negative, bounds, collection, resource]
+
+  - id: PRV-048
+    categories: [excessive_depth, nested_sensitive_value]
+    sink: ordinary_log
+    input:
+      kind: synthetic_nesting
+      value:
+        level_key_template: synthetic_level_{index}
+        nesting_depth: 9
+        leaf: SYNTHETIC_PRIVATE_LEAF_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_EXCESSIVE_DEPTH
+      prohibited_literals_absent: [SYNTHETIC_PRIVATE_LEAF_DO_NOT_USE]
+      required_literals_present: []
+    bounds:
+      max_nesting_depth: 8
+      actual_nesting_depth: 9
+    rationale: Excessive nesting is rejected without walking or serializing the private leaf.
+    decision_refs: [D-037]
+    tags: [negative, bounds, depth, resource]
+
+  - id: PRV-049
+    categories: [external_private_database, external_private_content]
+    sink: support_export
+    input:
+      kind: structured_field
+      value:
+        field: external_product_private_database
+        value: SYNTHETIC_EXTERNAL_PRODUCT_PRIVATE_DATABASE_CONTENT_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_EXTERNAL_PRIVATE_DATABASE
+      prohibited_literals_absent: [SYNTHETIC_EXTERNAL_PRODUCT_PRIVATE_DATABASE_CONTENT_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Another product's private database and content are outside ThirdLife ownership.
+    decision_refs: [D-053]
+    tags: [negative, project_vacuum, external_private_data, support]
+
+  - id: PRV-050
+    categories: [external_private_content]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: external_product_workspace_content
+        value: SYNTHETIC_EXTERNAL_WORKSPACE_CONTENT_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_EXTERNAL_WORKSPACE_CONTENT
+      prohibited_literals_absent: [SYNTHETIC_EXTERNAL_WORKSPACE_CONTENT_DO_NOT_USE]
+      required_literals_present: []
+    rationale: ThirdLife does not inspect or log another product's workspace content.
+    decision_refs: [D-053]
+    tags: [negative, project_vacuum, external_private_data, log]
+
+  - id: PRV-051
+    categories: [external_recovery_credential, recovery_key]
+    sink: task_evidence
+    input:
+      kind: structured_field
+      value:
+        field: external_product_recovery_credential
+        value: SYNTHETIC_EXTERNAL_RECOVERY_CREDENTIAL_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_EXTERNAL_RECOVERY_CREDENTIAL
+      prohibited_literals_absent: [SYNTHETIC_EXTERNAL_RECOVERY_CREDENTIAL_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Recovery credentials from any other product are neither ThirdLife data nor evidence.
+    decision_refs: [D-053]
+    tags: [negative, project_vacuum, secret, evidence]
+
+  - id: PRV-052
+    categories: [telemetry]
+    sink: telemetry
+    input:
+      kind: structured_record
+      value:
+        metric: synthetic_job_completed
+        count: 1
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_TELEMETRY_SINK_DISABLED
+      prohibited_literals_absent: [synthetic_job_completed]
+      required_literals_present: []
+    rationale: Even apparently aggregate metrics cannot enter a disabled telemetry sink.
+    decision_refs: [D-013]
+    tags: [negative, telemetry, default_off]
+
+  - id: PRV-053
+    categories: [telemetry, device_identifier]
+    sink: telemetry
+    input:
+      kind: structured_record
+      value:
+        metric: synthetic_startup
+        device_id: SYNTHETIC_DEVICE_IDENTIFIER_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_TELEMETRY_DEVICE_IDENTIFIER
+      prohibited_literals_absent: [synthetic_startup, SYNTHETIC_DEVICE_IDENTIFIER_DO_NOT_USE]
+      required_literals_present: []
+    rationale: There is no analytics identifier, uploader, or telemetry queue.
+    decision_refs: [D-013, D-014]
+    tags: [negative, telemetry, device_identifier, default_off]
+
+  - id: PRV-054
+    categories: [public_package_metadata]
+    sink: support_export
+    input:
+      kind: structured_record
+      value:
+        source_id: synthetic-reviewed-source
+        package_id: Synthetic.TextEditor
+        publisher: Synthetic Public Publisher
+        resolved_version: 1.2.3
+        architecture: x64
+        scope: machine
+    expectation:
+      decision: allow
+      output:
+        source_id: synthetic-reviewed-source
+        package_id: Synthetic.TextEditor
+        publisher: Synthetic Public Publisher
+        resolved_version: 1.2.3
+        architecture: x64
+        scope: machine
+      stable_code: PRV_ALLOWED_PUBLIC_PACKAGE_METADATA
+      prohibited_literals_absent: []
+      required_literals_present: [synthetic-reviewed-source, Synthetic.TextEditor, Synthetic Public Publisher, 1.2.3, x64, machine]
+    rationale: Reviewed public package identity is a positive control and must not be over-redacted.
+    decision_refs: [D-036, D-037]
+    tags: [positive, false_positive_control, package, support]
+
+  - id: PRV-055
+    categories: [os_version]
+    sink: support_export
+    input:
+      kind: structured_record
+      value:
+        os_edition: Windows 11
+        os_build: "26100"
+        os_architecture: x64
+        os_support_state: supported
+    expectation:
+      decision: allow
+      output:
+        os_edition: Windows 11
+        os_build: "26100"
+        os_architecture: x64
+        os_support_state: supported
+      stable_code: PRV_ALLOWED_OS_VERSION
+      prohibited_literals_absent: []
+      required_literals_present: [Windows 11, "26100", x64, supported]
+    rationale: Product, build and architecture are support-allowlisted non-identity facts.
+    decision_refs: [D-036, D-037]
+    tags: [positive, false_positive_control, os, support]
+
+  - id: PRV-056
+    categories: [native_error_code, stable_result_code]
+    sink: ordinary_log
+    input:
+      kind: structured_record
+      value:
+        result_code: ACCESS_DENIED
+        native_error_code: 5
+    expectation:
+      decision: allow
+      output:
+        result_code: ACCESS_DENIED
+        native_error_code: 5
+      stable_code: PRV_ALLOWED_ERROR_CODES
+      prohibited_literals_absent: []
+      required_literals_present: [ACCESS_DENIED, "5"]
+    rationale: Stable and bounded numeric error codes are safe diagnostic controls.
+    decision_refs: [D-037]
+    tags: [positive, false_positive_control, error_code, log]
+
+  - id: PRV-057
+    categories: [generic_hardware]
+    sink: support_export
+    input:
+      kind: structured_record
+      value:
+        device_form_factor: laptop
+        installed_memory_bucket: 8_to_15
+        storage_capacity_bucket: 128_to_255
+    expectation:
+      decision: allow
+      output:
+        device_form_factor: laptop
+        installed_memory_bucket: 8_to_15
+        storage_capacity_bucket: 128_to_255
+      stable_code: PRV_ALLOWED_GENERIC_HARDWARE
+      prohibited_literals_absent: []
+      required_literals_present: [laptop, 8_to_15, 128_to_255]
+    rationale: Coarse generic hardware fields are useful without emitting a device identifier.
+    decision_refs: [D-014, D-036, D-037]
+    tags: [positive, false_positive_control, hardware, support]
+
+  - id: PRV-058
+    categories: [public_update_identity]
+    sink: support_export
+    input:
+      kind: structured_record
+      value:
+        check_id: SYNTHETIC-KB-000001
+        availability: available
+        outcome_code: installed_and_verified
+    expectation:
+      decision: allow
+      output:
+        check_id: SYNTHETIC-KB-000001
+        availability: available
+        outcome_code: installed_and_verified
+      stable_code: PRV_ALLOWED_PUBLIC_UPDATE_IDENTITY
+      prohibited_literals_absent: []
+      required_literals_present: [SYNTHETIC-KB-000001, available, installed_and_verified]
+    rationale: A synthetic public update identity and stable outcome are not personal data.
+    decision_refs: [D-036, D-037]
+    tags: [positive, false_positive_control, update, support]
+
+  - id: PRV-059
+    categories: [logical_manifest_name]
+    sink: support_export
+    input:
+      kind: structured_record
+      value:
+        relative_name: events.jsonl
+        content_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        byte_count: 128
+        generated_at_utc: "2026-01-01T00:00:00Z"
+    expectation:
+      decision: allow
+      output:
+        relative_name: events.jsonl
+        content_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        byte_count: 128
+        generated_at_utc: "2026-01-01T00:00:00Z"
+      stable_code: PRV_ALLOWED_LOGICAL_MANIFEST_ENTRY
+      prohibited_literals_absent: []
+      required_literals_present: [events.jsonl, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, "128", "2026-01-01T00:00:00Z"]
+    rationale: A fixed logical manifest entry is safe and does not expose the source filesystem path.
+    decision_refs: [D-036, D-037]
+    tags: [positive, false_positive_control, manifest, support]
+
+  - id: PRV-060
+    categories: [correlation_id]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: correlation_id
+        value: SYNTHETIC_CORRELATION_0001
+    expectation:
+      decision: replace
+      output:
+        correlation_ref: SYNTHETIC_CORRELATION_0001
+      stable_code: PRV_REPLACED_SCOPED_CORRELATION_ID
+      prohibited_literals_absent: []
+      required_literals_present: [correlation_ref, SYNTHETIC_CORRELATION_0001]
+    rationale: A random scoped correlation identifier is allowed when it is not derived from personal data.
+    decision_refs: [D-014, D-037]
+    tags: [positive, false_positive_control, correlation, log]
+
+  - id: PRV-061
+    categories: [support_id]
+    sink: support_export
+    input:
+      kind: structured_field
+      value:
+        support_id: SYNTHETIC_SUPPORT_BUNDLE_0001
+    expectation:
+      decision: allow
+      output:
+        support_id: SYNTHETIC_SUPPORT_BUNDLE_0001
+      stable_code: PRV_ALLOWED_EXPORT_SCOPED_SUPPORT_ID
+      prohibited_literals_absent: []
+      required_literals_present: [support_id, SYNTHETIC_SUPPORT_BUNDLE_0001]
+    rationale: An export-scoped random support identifier permits correlation without serial or recipient identity.
+    decision_refs: [D-014, D-036, D-037]
+    tags: [positive, false_positive_control, support_id]
+
+  - id: PRV-062
+    categories: [recipient_choice_status]
+    sink: recipient_guide
+    input:
+      kind: structured_record
+      value:
+        capability: accessibility_setup
+        status: pending_for_recipient
+        secret_value: null
+    expectation:
+      decision: replace
+      output:
+        capability: accessibility_setup
+        status: pending_for_recipient
+      stable_code: PRV_PROJECTED_RECIPIENT_CHOICE_STATUS
+      prohibited_literals_absent: [secret_value]
+      required_literals_present: [accessibility_setup, pending_for_recipient]
+    rationale: A recipient-controlled status can be explained without storing a preference or secret.
+    decision_refs: [D-011, D-014, D-036]
+    tags: [positive, false_positive_control, recipient_choice, guide]
+
+  - id: PRV-063
+    categories: [unknown_classification]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: synthetic_unregistered_dynamic_field
+        value: SYNTHETIC_UNKNOWN_VALUE_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_UNKNOWN_FIELD_CLASSIFICATION
+      prohibited_literals_absent: [SYNTHETIC_UNKNOWN_VALUE_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Unknown fields fail closed and cannot become free-form diagnostic properties.
+    decision_refs: [D-037]
+    tags: [negative, unknown_field, fail_closed, log]
+
+  - id: PRV-064
+    categories: [hashed_identifier, full_serial]
+    sink: support_export
+    input:
+      kind: structured_field
+      value:
+        field: hashed_device_serial
+        value: SYNTHETIC_HASH_OF_SERIAL_DO_NOT_USE
+    expectation:
+      decision: drop
+      output: null
+      stable_code: PRV_DROPPED_HASHED_SERIAL
+      prohibited_literals_absent: [SYNTHETIC_HASH_OF_SERIAL_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Hashing a stable low-entropy identifier does not make it anonymous or support-allowlisted.
+    decision_refs: [D-014, D-037]
+    tags: [negative, pseudonymization, serial, support]
+
+  - id: PRV-065
+    categories: [export_destination, personal_path]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: export_destination
+        value: D:\SYNTHETIC_RECIPIENT_EXPORT\SYNTHETIC_SUPPORT.zip
+    expectation:
+      decision: replace
+      output:
+        event_code: EXPORT_DESTINATION_CLASSIFIED
+        outcome: Completed
+        result_code: REMOVABLE_STORAGE
+        redaction_flags: [ValueDropped]
+      stable_code: PRV_REPLACED_EXPORT_PATH_WITH_CATEGORY
+      prohibited_literals_absent: [SYNTHETIC_RECIPIENT_EXPORT, SYNTHETIC_SUPPORT.zip]
+      required_literals_present: [EXPORT_DESTINATION_CLASSIFIED, Completed, REMOVABLE_STORAGE, ValueDropped]
+    rationale: General diagnostics retain only a reviewed destination category, not its personal path.
+    decision_refs: [D-014, D-036, D-037]
+    tags: [negative, export, path, structured_replacement]
+
+  - id: PRV-066
+    categories: [destination_category]
+    sink: ordinary_log
+    input:
+      kind: structured_field
+      value:
+        field: destination_category
+        value: removable_storage
+    expectation:
+      decision: replace
+      output:
+        event_code: EXPORT_DESTINATION_CLASSIFIED
+        outcome: Completed
+        result_code: REMOVABLE_STORAGE
+      stable_code: PRV_PROJECTED_DESTINATION_CATEGORY
+      prohibited_literals_absent: []
+      required_literals_present: [EXPORT_DESTINATION_CLASSIFIED, Completed, REMOVABLE_STORAGE]
+    rationale: A bounded destination category is a positive control and contains no location identifier.
+    decision_refs: [D-036, D-037]
+    tags: [positive, false_positive_control, export, log]
+
+  - id: PRV-067
+    categories: [oversized_input, raw_output]
+    sink: ordinary_log
+    input:
+      kind: synthetic_raw_stdout_repeat
+      value:
+        unit: SYNTHETIC_RAW_
+        repeat: 293
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_RAW_INPUT_WINDOW_EXCEEDED
+      prohibited_literals_absent: [SYNTHETIC_RAW_]
+      required_literals_present: []
+    bounds:
+      max_input_utf8_bytes: 4096
+      actual_input_utf8_bytes: 4102
+    rationale: Raw provider output beyond the bounded in-memory read window is rejected without echo or persistence.
+    decision_refs: [D-037]
+    tags: [negative, bounds, raw_output, resource]
+
+  - id: PRV-068
+    categories: [product_key]
+    sink: task_evidence
+    input:
+      kind: structured_field
+      value:
+        field: product_key
+        value: SYNTHETIC_PRODUCT_KEY_DO_NOT_USE
+    expectation:
+      decision: reject
+      output: null
+      stable_code: PRV_REJECTED_PRODUCT_KEY
+      prohibited_literals_absent: [SYNTHETIC_PRODUCT_KEY_DO_NOT_USE]
+      required_literals_present: []
+    rationale: Product keys are secret material and never enter logs, exports, or task evidence.
+    decision_refs: [D-037, D-053]
+    tags: [negative, secret, product_key, evidence]
