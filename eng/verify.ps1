@@ -32,6 +32,8 @@ $solutionPath = Join-Path $repositoryRoot "ThirdLife.sln"
 $nugetConfigPath = Join-Path $repositoryRoot "NuGet.Config"
 $globalJsonPath = Join-Path $repositoryRoot "global.json"
 $venvPythonPath = Join-Path $repositoryRoot ".venv\Scripts\python.exe"
+$sbomScriptPath = Join-Path $repositoryRoot "eng\generate-sbom.ps1"
+$sbomTemporaryDirectory = $null
 
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = "1"
 $env:DOTNET_NOLOGO = "1"
@@ -90,6 +92,39 @@ try {
         -Command $pythonCommand `
         -CommandArguments @("tools/validate_repository.py")
 
+    $sbomTemporaryDirectory = Join-Path `
+        ([System.IO.Path]::GetTempPath()) `
+        ("ThirdLife-SBOM-" + [System.Guid]::NewGuid().ToString("N"))
+    $null = New-Item -ItemType Directory -Path $sbomTemporaryDirectory
+    $firstSbomPath = Join-Path $sbomTemporaryDirectory "first.cdx.json"
+    $secondSbomPath = Join-Path $sbomTemporaryDirectory "second.cdx.json"
+
+    Write-Host "==> Generate and compare deterministic development SBOMs"
+    & $sbomScriptPath -OutputPath $firstSbomPath
+    & $sbomScriptPath -OutputPath $secondSbomPath
+
+    $firstSbomBytes = [System.IO.File]::ReadAllBytes($firstSbomPath)
+    $secondSbomBytes = [System.IO.File]::ReadAllBytes($secondSbomPath)
+    if ($firstSbomBytes.Length -ne $secondSbomBytes.Length) {
+        throw "Repeated SBOM generation produced different byte lengths."
+    }
+    for ($index = 0; $index -lt $firstSbomBytes.Length; $index++) {
+        if ($firstSbomBytes[$index] -ne $secondSbomBytes[$index]) {
+            throw "Repeated SBOM generation differed at byte offset $index."
+        }
+    }
+
+    $sbomDocument = Get-Content -Raw -LiteralPath $firstSbomPath | ConvertFrom-Json
+    if (
+        $sbomDocument.bomFormat -ne "CycloneDX" -or
+        $sbomDocument.specVersion -ne "1.7" -or
+        $sbomDocument.components.Count -lt 1
+    ) {
+        throw "Generated SBOM is not a populated CycloneDX 1.7 document."
+    }
+    $sbomDigest = (Get-FileHash -Algorithm SHA256 -LiteralPath $firstSbomPath).Hash.ToLowerInvariant()
+    Write-Host "OK: deterministic development SBOM sha256:$sbomDigest"
+
     Invoke-CheckedCommand `
         -Label "Restore the locked dependency graph" `
         -Command $dotnetCommand.Source `
@@ -138,5 +173,14 @@ try {
     Write-Host "OK: ThirdLife verification passed."
 }
 finally {
+    if ($null -ne $sbomTemporaryDirectory -and (Test-Path -LiteralPath $sbomTemporaryDirectory)) {
+        foreach ($temporaryName in @("first.cdx.json", "second.cdx.json")) {
+            $temporaryPath = Join-Path $sbomTemporaryDirectory $temporaryName
+            if (Test-Path -LiteralPath $temporaryPath) {
+                Remove-Item -Force -LiteralPath $temporaryPath
+            }
+        }
+        Remove-Item -Force -LiteralPath $sbomTemporaryDirectory
+    }
     Pop-Location
 }

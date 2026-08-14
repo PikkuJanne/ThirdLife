@@ -42,6 +42,10 @@ REQUIRED_FILES = (
     "docs/security/abuse-cases.md",
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
+    "docs/supply-chain/dependencies.md",
+    "docs/supply-chain/license-matrix.csv",
+    "eng/generate-sbom.ps1",
+    "tools/generate_sbom.py",
     "tools/requirements.txt",
     "tools/tests/test_validate_bundle.py",
 )

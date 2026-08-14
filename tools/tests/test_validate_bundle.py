@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import csv
+import hashlib
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,6 +20,7 @@ REPOSITORY_ROOT = TOOLS_ROOT.parent
 sys.path.insert(0, str(TOOLS_ROOT))
 
 import validate_bundle  # noqa: E402
+import validate_repository  # noqa: E402
 
 
 GOVERNANCE_DOCUMENTS = (
@@ -29,6 +33,10 @@ SECURITY_DOCUMENTS = (
     "docs/security/abuse-cases.md",
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
+)
+SUPPLY_CHAIN_DOCUMENTS = (
+    "docs/supply-chain/dependencies.md",
+    "docs/supply-chain/license-matrix.csv",
 )
 TASK_DOCUMENT = validate_bundle.yaml.safe_load(
     (REPOSITORY_ROOT / "TASKS.yaml").read_text(encoding="utf-8")
@@ -822,6 +830,671 @@ class GovernanceDocumentContractTests(unittest.TestCase):
             validation = self.validate_documents(root)
             self.assertTrue(
                 any("M0 through M6" in error for error in validation.errors)
+            )
+
+
+class SupplyChainRepositoryContractTests(unittest.TestCase):
+    def copy_file(self, root: Path, relative: str) -> Path:
+        source = REPOSITORY_ROOT / relative
+        destination = root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+        return destination
+
+    def current_inventory(self) -> dict[str, dict[str, str]]:
+        validation = validate_repository.Validation()
+        inventory = validate_repository.expected_supply_chain_inventory(validation)
+        self.assertEqual(validation.errors, [])
+        self.assertEqual(
+            len(inventory), validate_repository.EXPECTED_MATRIX_COMPONENT_COUNT
+        )
+        return inventory
+
+    def read_current_matrix(self) -> list[dict[str, str]]:
+        validation = validate_repository.Validation()
+        rows = validate_repository._read_license_matrix(validation)
+        self.assertEqual(validation.errors, [])
+        return rows
+
+    def write_matrix(self, path: Path, rows: list[dict[str, str]]) -> None:
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=validate_repository.LICENSE_MATRIX_HEADER,
+                lineterminator="\n",
+            )
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def release_ready_rows(self) -> list[dict[str, str]]:
+        rows = [dict(row) for row in self.read_current_matrix()]
+        for row in rows:
+            row["review_status"] = "approved"
+            row["installation_rights"] = "permitted"
+            row["redistribution_rights"] = "not_applicable"
+            row["bundled_in_release"] = "no"
+            row["notice_requirements"] = "not_applicable"
+            if row["license_expression"] == "NOASSERTION":
+                row["license_expression"] = "MIT"
+        return rows
+
+    def validate_approved_review(
+        self,
+        root: Path,
+        rows: list[dict[str, str]],
+        *,
+        generated_sbom_digest: str = "b" * 64,
+        current_sbom_digest: str | None = None,
+        approval_reference: str = (
+            "PikkuJanne approved TL-0006 dependency rights"
+        ),
+        retained_current_state: str = "",
+        task_status: str | None = None,
+        task_evidence: list[dict[str, str]] | None = None,
+    ) -> validate_repository.Validation:
+        for relative in (*SUPPLY_CHAIN_DOCUMENTS, "TASKS.yaml"):
+            self.copy_file(root, relative)
+        matrix_path = root / "docs/supply-chain/license-matrix.csv"
+        self.write_matrix(matrix_path, rows)
+        matrix_digest = hashlib.sha256(matrix_path.read_bytes()).hexdigest()
+
+        document_path = root / "docs/supply-chain/dependencies.md"
+        document = document_path.read_text(encoding="utf-8")
+        replacements = (
+            (
+                "**Status:** Draft for licence-owner review",
+                "**Status:** Approved",
+            ),
+            (
+                "**Control revision:** TL-0006 draft 1",
+                "**Control revision:** TL-0006 approved test fixture 1",
+            ),
+            ("**Review result:** Pending", "**Review result:** Approved"),
+            (
+                "**Reviewing owner and role:** Pending",
+                "**Reviewing owner and role:** PikkuJanne — Licence owner",
+            ),
+            (
+                "**Review date:** Pending",
+                f"**Review date:** {validate_repository.date.today().isoformat()}",
+            ),
+            (
+                "**Reviewed source commit:** Pending",
+                "**Reviewed source commit:** " + "a" * 40,
+            ),
+            (
+                "**Reviewed matrix SHA-256:** Pending",
+                f"**Reviewed matrix SHA-256:** {matrix_digest}",
+            ),
+            (
+                "**Generated SBOM SHA-256:** Pending",
+                f"**Generated SBOM SHA-256:** {generated_sbom_digest}",
+            ),
+            (
+                "**Approval reference:** Pending",
+                f"**Approval reference:** {approval_reference}",
+            ),
+            (
+                "**Review state:** **Pending — no approval has been recorded.**",
+                "**Review state:** **Approved.**",
+            ),
+            (
+                "Every current rights field is `pending_human_review`, every current "
+                "review status is `pending`, and every current component is "
+                "`bundled_in_release=no`.",
+                "Every current rights field and review status has an explicit reviewed "
+                "value in this synthetic approved fixture; every current component is "
+                "`bundled_in_release=no`.",
+            ),
+            (
+                "Its expression remains `NOASSERTION` until an immutable licence source "
+                "for the exact package is reviewed.",
+                "Its expression and immutable licence evidence are resolved in this "
+                "synthetic approved fixture.",
+            ),
+            (
+                "the .NET SDK row remains `NOASSERTION` because source-code licensing "
+                "and Microsoft binary-distribution terms must not be collapsed into one "
+                "unreviewed expression.",
+                "the .NET SDK row uses the exact expression and separate binary terms "
+                "reviewed for this synthetic approved fixture.",
+            ),
+            (
+                "At this draft revision those conditions are intentionally unsatisfied.",
+                "In this synthetic approved fixture those conditions are satisfied.",
+            ),
+            (
+                "Human licence and separate-rights review is pending, so release-mode "
+                "generation and task completion remain gated.",
+                "Named human licence and separate-rights review is recorded for this "
+                "synthetic approved fixture.",
+            ),
+            (
+                "`xunit.abstractions` and the .NET SDK have `NOASSERTION` licence "
+                "expressions pending exact review.",
+                "The synthetic approved matrix resolves the formerly unasserted licence "
+                "expressions.",
+            ),
+        )
+        for old, new in replacements:
+            self.assertIn(old, document)
+            document = document.replace(old, new, 1)
+        document, substitution_count = re.subn(
+            r"No licence or redistribution approval is recorded\..*?"
+            r"release mode remains unavailable until then\.",
+            "A named licence owner approved this synthetic review fixture.",
+            document,
+            count=1,
+            flags=re.DOTALL,
+        )
+        self.assertEqual(substitution_count, 1)
+        if retained_current_state:
+            document += f"\n{retained_current_state}\n"
+        document_path.write_text(document, encoding="utf-8")
+
+        if task_status is not None or task_evidence is not None:
+            task_path = root / "TASKS.yaml"
+            task_document = validate_bundle.yaml.safe_load(
+                task_path.read_text(encoding="utf-8")
+            )
+            task = next(
+                task for task in task_document["tasks"] if task["id"] == "TL-0006"
+            )
+            if task_status is not None:
+                task["status"] = task_status
+            if task_evidence is not None:
+                task["evidence"] = task_evidence
+            task_path.write_text(
+                validate_bundle.yaml.safe_dump(task_document, sort_keys=False),
+                encoding="utf-8",
+            )
+
+        validation = validate_repository.Validation()
+        with (
+            patch.object(validate_repository, "ROOT", root),
+            patch.object(
+                validate_repository, "_git_commit_is_reachable", return_value=True
+            ),
+            patch.object(
+                validate_repository,
+                "_current_development_sbom_digest",
+                return_value=current_sbom_digest or generated_sbom_digest,
+            ),
+        ):
+            validate_repository.validate_supply_chain_approval(rows, validation)
+        return validation
+
+    def test_current_supply_chain_controls_satisfy_contract(self) -> None:
+        validation = validate_repository.Validation()
+        validate_repository.validate_supply_chain_controls(validation)
+        self.assertEqual(validation.errors, [])
+
+    def test_unhashed_python_requirement_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            requirements = root / "tools/requirements.txt"
+            requirements.parent.mkdir(parents=True)
+            requirements.write_text("PyYAML==6.0.3\n", encoding="utf-8")
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository._load_python_requirements(validation)
+            self.assertTrue(
+                any("carry one lowercase SHA-256 hash" in error for error in validation.errors)
+            )
+
+    def test_python_requirement_cannot_select_an_alternate_index(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            requirements = root / "tools/requirements.txt"
+            requirements.parent.mkdir(parents=True)
+            requirements.write_text(
+                "--extra-index-url https://example.invalid/simple\n"
+                "PyYAML==6.0.3 --hash=sha256:"
+                "4a2e8cebe2ff6ab7d1050ecd59c25d4c8bd7e6f400f5f82b96557ac0abafd0ac\n",
+                encoding="utf-8",
+            )
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository._load_python_requirements(validation)
+            self.assertTrue(
+                any("requirement must be exact" in error for error in validation.errors)
+            )
+
+    def test_matrix_version_drift_is_rejected(self) -> None:
+        expected = self.current_inventory()
+        rows = self.read_current_matrix()
+        rows[0] = dict(rows[0])
+        rows[0]["version"] = "999.0.0"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            matrix_path = root / "docs/supply-chain/license-matrix.csv"
+            matrix_path.parent.mkdir(parents=True)
+            self.write_matrix(matrix_path, rows)
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_license_matrix(expected, validation)
+            self.assertTrue(
+                any("version must equal" in error for error in validation.errors)
+            )
+
+    def test_matrix_hash_drift_is_rejected(self) -> None:
+        expected = self.current_inventory()
+        rows = self.read_current_matrix()
+        hashed_index = next(
+            index
+            for index, row in enumerate(rows)
+            if row["content_hash_algorithm"] == "SHA-512"
+        )
+        rows[hashed_index] = dict(rows[hashed_index])
+        rows[hashed_index]["content_hash"] = "0" * 128
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            matrix_path = root / "docs/supply-chain/license-matrix.csv"
+            matrix_path.parent.mkdir(parents=True)
+            self.write_matrix(matrix_path, rows)
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_license_matrix(expected, validation)
+            self.assertTrue(
+                any("content_hash must equal" in error for error in validation.errors)
+            )
+
+    def test_matrix_rows_must_be_component_sorted(self) -> None:
+        expected = self.current_inventory()
+        rows = self.read_current_matrix()
+        rows[0], rows[1] = rows[1], rows[0]
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            matrix_path = root / "docs/supply-chain/license-matrix.csv"
+            matrix_path.parent.mkdir(parents=True)
+            self.write_matrix(matrix_path, rows)
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_license_matrix(expected, validation)
+            self.assertIn(
+                "docs/supply-chain/license-matrix.csv: rows must be sorted by governed ecosystem order and component_id",
+                validation.errors,
+            )
+
+    def test_bundled_component_needs_approved_redistribution_rights(self) -> None:
+        expected = self.current_inventory()
+        rows = self.read_current_matrix()
+        rows[0] = dict(rows[0])
+        rows[0]["bundled_in_release"] = "yes"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            matrix_path = root / "docs/supply-chain/license-matrix.csv"
+            matrix_path.parent.mkdir(parents=True)
+            self.write_matrix(matrix_path, rows)
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_license_matrix(expected, validation)
+            self.assertTrue(
+                any("cannot be bundled" in error for error in validation.errors)
+            )
+
+    def copy_audit_files(self, root: Path) -> None:
+        for relative in (
+            "Directory.Build.props",
+            "Directory.Packages.props",
+            ".github/workflows/verify.yml",
+            "eng/verify.ps1",
+            "eng/verify.sh",
+        ):
+            self.copy_file(root, relative)
+
+    def test_nuget_audit_suppression_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_audit_files(root)
+            build_props = root / "Directory.Build.props"
+            build_props.write_text(
+                build_props.read_text(encoding="utf-8").replace(
+                    "</Project>",
+                    "  <ItemGroup><NuGetAuditSuppress Include=\"https://example.invalid/advisory\" /></ItemGroup>\n</Project>",
+                ),
+                encoding="utf-8",
+            )
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_nuget_audit_policy([], validation)
+            self.assertTrue(
+                any("NuGetAuditSuppress entries are prohibited" in error for error in validation.errors)
+            )
+
+    def test_nuget_warning_suppression_is_rejected(self) -> None:
+        for suppressed_code in ("NU1903", "NU19*", "NU1*", "NU*"):
+            with self.subTest(suppressed_code=suppressed_code), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_audit_files(root)
+                build_props = root / "Directory.Build.props"
+                build_props.write_text(
+                    build_props.read_text(encoding="utf-8").replace(
+                        "</PropertyGroup>",
+                        f"  <NoWarn>{suppressed_code}</NoWarn>\n  </PropertyGroup>",
+                        1,
+                    ),
+                    encoding="utf-8",
+                )
+                validation = validate_repository.Validation()
+                with patch.object(validate_repository, "ROOT", root):
+                    validate_repository.validate_nuget_audit_policy([], validation)
+                self.assertTrue(
+                    any("must not suppress NuGet audit warnings" in error for error in validation.errors)
+                )
+
+    def test_nuget_audit_policy_cannot_be_conditioned_by_ancestor(self) -> None:
+        mutations = (
+            (
+                "<PropertyGroup>",
+                "<PropertyGroup Condition=\"'$(Configuration)' == 'Release'\">",
+            ),
+            (
+                "<Project>",
+                "<Project><Choose><When Condition=\"'$(Configuration)' == 'Release'\">",
+            ),
+        )
+        for old, new in mutations:
+            with self.subTest(new=new), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_audit_files(root)
+                build_props = root / "Directory.Build.props"
+                document = build_props.read_text(encoding="utf-8").replace(old, new, 1)
+                if old == "<Project>":
+                    document = document.replace(
+                        "</PropertyGroup>",
+                        "</PropertyGroup></When></Choose>",
+                        1,
+                    )
+                build_props.write_text(document, encoding="utf-8")
+                validation = validate_repository.Validation()
+                with patch.object(validate_repository, "ROOT", root):
+                    validate_repository.validate_nuget_audit_policy([], validation)
+                self.assertTrue(
+                    any("conditional XML context" in error for error in validation.errors)
+                )
+
+    def test_nuget_audit_override_in_additional_targets_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_audit_files(root)
+            targets = root / "eng/override.targets"
+            targets.parent.mkdir(parents=True, exist_ok=True)
+            targets.write_text(
+                "<Project><PropertyGroup><NuGetAudit>false</NuGetAudit>"
+                "</PropertyGroup></Project>\n",
+                encoding="utf-8",
+            )
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_nuget_audit_policy([], validation)
+            self.assertTrue(
+                any("project-local NuGetAudit overrides" in error for error in validation.errors)
+            )
+
+    def test_explicit_msbuild_import_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_audit_files(root)
+            packages_props = root / "Directory.Packages.props"
+            packages_props.write_text(
+                packages_props.read_text(encoding="utf-8").replace(
+                    "</Project>",
+                    '  <Import Project="eng\\override.targets" />\n</Project>',
+                ),
+                encoding="utf-8",
+            )
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_nuget_audit_policy([], validation)
+            self.assertTrue(
+                any(
+                    "explicit MSBuild Import elements are prohibited" in error
+                    for error in validation.errors
+                ),
+                validation.errors,
+            )
+
+    def test_verify_surface_rejects_indirect_nuget_audit_override_token(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_audit_files(root)
+            verify_script = root / "eng/verify.ps1"
+            verify_script.write_text(
+                verify_script.read_text(encoding="utf-8")
+                + '\n$auditPropertyName = "NuGetAuditMode"\n',
+                encoding="utf-8",
+            )
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_nuget_audit_policy([], validation)
+            self.assertTrue(
+                any(
+                    "NuGetAudit override tokens are prohibited" in error
+                    for error in validation.errors
+                ),
+                validation.errors,
+            )
+
+    def test_workflow_requires_hash_binary_index_and_full_history_controls(self) -> None:
+        mutations = (
+            (" --require-hashes", ""),
+            (" --only-binary=:all:", ""),
+            ("          fetch-depth: 0\n", ""),
+        )
+        for old, new in mutations:
+            with self.subTest(old=old), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                workflow = self.copy_file(root, ".github/workflows/verify.yml")
+                text = workflow.read_text(encoding="utf-8")
+                self.assertIn(old, text)
+                workflow.write_text(text.replace(old, new, 1), encoding="utf-8")
+                validation = validate_repository.Validation()
+                with patch.object(validate_repository, "ROOT", root):
+                    validate_repository.validate_workflow(validation)
+                self.assertTrue(validation.errors)
+
+    def test_readme_install_examples_cannot_drift_from_ci(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            readme = self.copy_file(root, "README.md")
+            text = readme.read_text(encoding="utf-8")
+            self.assertIn("--only-binary=:all:", text)
+            readme.write_text(
+                text.replace(" --only-binary=:all:", "", 1), encoding="utf-8"
+            )
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_readme_tool_install(validation)
+            self.assertTrue(
+                any("both Python setup examples" in error for error in validation.errors)
+            )
+
+    def test_pending_licence_review_cannot_be_marked_done(self) -> None:
+        rows = self.read_current_matrix()
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            for relative in (*SUPPLY_CHAIN_DOCUMENTS, "TASKS.yaml"):
+                self.copy_file(root, relative)
+            task_path = root / "TASKS.yaml"
+            task_document = validate_bundle.yaml.safe_load(
+                task_path.read_text(encoding="utf-8")
+            )
+            task = next(task for task in task_document["tasks"] if task["id"] == "TL-0006")
+            task["status"] = "done"
+            task_path.write_text(
+                validate_bundle.yaml.safe_dump(task_document, sort_keys=False),
+                encoding="utf-8",
+            )
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_supply_chain_approval(rows, validation)
+            self.assertIn(
+                "TL-0006 cannot be done while licence-owner review is Pending",
+                validation.errors,
+            )
+
+    def test_approved_review_rejects_release_gate_row_gaps(self) -> None:
+        mutations = (
+            (
+                "license_expression",
+                "NOASSERTION",
+                "license_expression cannot be NOASSERTION",
+            ),
+            (
+                "notice_requirements",
+                "pending_human_review",
+                "notice_requirements cannot be pending_human_review",
+            ),
+            (
+                "bundled_in_release",
+                "pending",
+                "bundled_in_release cannot be pending",
+            ),
+            (
+                "installation_rights",
+                "prohibited",
+                "installation_rights cannot be prohibited",
+            ),
+        )
+        for field, value, expected_error in mutations:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temporary_directory:
+                rows = self.release_ready_rows()
+                rows[0][field] = value
+                validation = self.validate_approved_review(
+                    Path(temporary_directory), rows
+                )
+                self.assertTrue(
+                    any(expected_error in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_approved_review_allows_prohibited_redistribution_when_not_bundled(
+        self,
+    ) -> None:
+        rows = self.release_ready_rows()
+        rows[0]["redistribution_rights"] = "prohibited"
+        rows[0]["bundled_in_release"] = "no"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            validation = self.validate_approved_review(Path(temporary_directory), rows)
+        self.assertEqual(validation.errors, [])
+
+    def test_approved_review_rejects_bundling_with_prohibited_redistribution(
+        self,
+    ) -> None:
+        rows = self.release_ready_rows()
+        rows[0]["redistribution_rights"] = "prohibited"
+        rows[0]["bundled_in_release"] = "yes"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            validation = self.validate_approved_review(Path(temporary_directory), rows)
+        self.assertTrue(
+            any(
+                "only when bundled_in_release=no" in error
+                for error in validation.errors
+            ),
+            validation.errors,
+        )
+
+    def test_approved_review_requires_current_development_sbom_digest(self) -> None:
+        rows = self.release_ready_rows()
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            validation = self.validate_approved_review(
+                Path(temporary_directory),
+                rows,
+                generated_sbom_digest="b" * 64,
+                current_sbom_digest="c" * 64,
+            )
+        self.assertTrue(
+            any(
+                "does not match the current deterministic development SBOM" in error
+                for error in validation.errors
+            ),
+            validation.errors,
+        )
+
+    def test_approved_review_rejects_negated_approval_reference(self) -> None:
+        rows = self.release_ready_rows()
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            validation = self.validate_approved_review(
+                Path(temporary_directory),
+                rows,
+                approval_reference=(
+                    "PikkuJanne did not approve TL-0006 dependency rights"
+                ),
+            )
+        self.assertTrue(
+            any(
+                "approval reference must affirm the named owner's approval" in error
+                for error in validation.errors
+            ),
+            validation.errors,
+        )
+
+    def test_done_evidence_rejects_negated_or_declined_approval(self) -> None:
+        metadata = {
+            "Reviewing owner and role": "PikkuJanne — Licence owner",
+            "Review date": "2026-08-14",
+            "Reviewed source commit": "a" * 40,
+            "Reviewed matrix SHA-256": "b" * 64,
+            "Generated SBOM SHA-256": "c" * 64,
+        }
+        required_values = " ".join(
+            (
+                "PikkuJanne",
+                metadata["Reviewed source commit"],
+                metadata["Reviewed matrix SHA-256"],
+                metadata["Generated SBOM SHA-256"],
+            )
+        )
+        for summary in (
+            "PikkuJanne did not approve TL-0006",
+            "PikkuJanne declined approval for TL-0006",
+        ):
+            with self.subTest(summary=summary):
+                task = {
+                    "evidence": [
+                        {
+                            "result": "passed",
+                            "date": metadata["Review date"],
+                            "environment": "Windows 11 repository review",
+                            "summary": summary,
+                            "reference": required_values,
+                        }
+                    ]
+                }
+                self.assertFalse(
+                    validate_repository._approval_evidence_matches(task, metadata)
+                )
+
+    def test_approved_review_rejects_retained_pending_current_state(self) -> None:
+        rows = self.release_ready_rows()
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            validation = self.validate_approved_review(
+                Path(temporary_directory),
+                rows,
+                retained_current_state="Human licence review remains pending.",
+            )
+        self.assertTrue(
+            any(
+                "must remove draft/Pending/no-approval current-state wording" in error
+                for error in validation.errors
+            ),
+            validation.errors,
+        )
+
+    def test_approved_done_state_needs_digest_bound_passed_evidence(self) -> None:
+        rows = self.release_ready_rows()
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            validation = self.validate_approved_review(
+                Path(temporary_directory),
+                rows,
+                task_status="done",
+                task_evidence=[],
+            )
+            self.assertTrue(
+                any("done evidence must bind" in error for error in validation.errors)
             )
 
 
