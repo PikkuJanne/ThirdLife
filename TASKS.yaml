@@ -291,7 +291,7 @@ tasks:
   workstream: product
   kind: docs
   priority: P0
-  status: backlog
+  status: done
   size: S
   executor: codex
   environment: any
@@ -339,7 +339,22 @@ tasks:
   verification:
   - Run the bundle validator.
   - Search tracked text for prohibited legacy naming and optimizer positioning.
-  evidence: []
+  evidence:
+  - summary: All ten governance deliverables were present and semantically reviewed against the cited frozen decisions.
+    result: passed
+    environment: Windows 11 x64; documentation and boundary review
+    date: '2026-08-14'
+    reference: docs/product-contract.md; docs/non-goals.md; docs/glossary.md; docs/change-control.md; six root baseline/boundary deliverables
+  - summary: Governance semantics and rejection behavior passed the committed regression suite and reversible negative probes.
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; PyYAML 6.0.3
+    date: '2026-08-14'
+    reference: tools/tests/test_validate_bundle.py (16 passed); tools/validate_bundle.py; missing glossary term, reordered authority, affirmative optimizer, and legacy-alias probes each failed as required
+  - summary: Staged tracked-text scope review and the complete deterministic repository gate passed.
+    result: passed
+    environment: Windows 11 x64; .NET SDK 10.0.400; Python 3.14.7
+    date: '2026-08-14'
+    reference: legacy-name git grep returned zero; optimizer-family hits were exclusion, validator, or negative-test contexts only; eng/verify.ps1 passed 16 governance tests, locked restore, formatting, Release build, and 14 .NET tests
 - id: TL-0004
   title: Write the v0.1 threat model
   milestone: M0

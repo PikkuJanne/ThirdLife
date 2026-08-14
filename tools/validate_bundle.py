@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from collections import defaultdict, deque
 from pathlib import Path
@@ -33,13 +34,89 @@ REQUIRED_FILES = (
     "RELEASE_INTERFACE.md",
     "FUTURE_ASSEMBLY_NOTES.md",
     "CHANGELOG.md",
+    "docs/change-control.md",
+    "docs/glossary.md",
+    "docs/non-goals.md",
+    "docs/product-contract.md",
     "tools/requirements.txt",
+    "tools/tests/test_validate_bundle.py",
 )
 TASK_ID_RE = re.compile(r"^TL-\d{4}$")
 DECISION_ID_RE = re.compile(r"^D-\d{3}$")
 MILESTONE_ID_RE = re.compile(r"^M\d+$")
 DECISION_HEADING_RE = re.compile(r"^### (D-\d{3})\s+—\s+.+$", re.MULTILINE)
-FORBIDDEN_BRAND_RE = re.compile("second" + r"\s*" + "life", re.IGNORECASE)
+FORBIDDEN_BRAND_RE = re.compile(
+    "second"
+    + "life"
+    + r"|\b"
+    + "second"
+    + r"(?:[\s_-]+|\*{1,3}|`{1,3}|[./\\])"
+    + "life"
+    + r"(?![a-z0-9_-])",
+    re.IGNORECASE,
+)
+OPTIMIZER_FAMILY_RE = re.compile(
+    r"\b(?:cleaner|optim(?:izer|iser|ization|isation)|"
+    r"debloat(?:er|ing|ed)?|registry\s+(?:clean(?:er|ing|up)|optim(?:ization|isation))|"
+    r"tune[\s-]*up(?:\s+utility)?|general\s+it\s+toolbox|"
+    r"speed\s+up(?:\s+any)?\s+pc|boost\s+(?:your\s+|pc\s+)?performance)\b",
+    re.IGNORECASE,
+)
+EXPLICIT_OPTIMIZER_MARKETING_RE = re.compile(
+    r"\b(?:pc\s+(?:cleaner|optim(?:izer|iser|ization|isation))|"
+    r"debloat(?:er|ing|ed)?|registry\s+(?:clean(?:er|ing|up)|optim(?:ization|isation))|"
+    r"tune[\s-]*up(?:\s+utility)?|general\s+it\s+toolbox|"
+    r"speed\s+up(?:\s+any)?\s+pc|boost\s+(?:your\s+|pc\s+)?performance)\b",
+    re.IGNORECASE,
+)
+DENIAL_CONTEXT_RE = re.compile(
+    r"\b(?:not|never|no|without|cannot|exclude(?:d|s|ing)?|"
+    r"prohibit(?:ed|s|ion|ions)?|reject(?:ed|s)?|avoid(?:ed|s)?)\b|"
+    r"\b(?:does|do|must)\s+not\b|\bout\s+of\s+scope\b|"
+    r"\bnon[\s-]*goals?\b|\bdoes\s+not\s+own\b",
+    re.IGNORECASE,
+)
+PRODUCT_IDENTITY_RE = re.compile(r"\bthirdlife(?:\s+setup\s+core)?\b", re.IGNORECASE)
+NEGATION_START_RE = re.compile(
+    r"\b(?:anything\s+but|not|never|no|cannot|without|"
+    r"exclude(?:d|s|ing)?|prohibit(?:ed|s|ing)?|reject(?:ed|s|ing)?|"
+    r"avoid(?:ed|s|ing)?)\b",
+    re.IGNORECASE,
+)
+DENIAL_PREDICATE_RE = re.compile(
+    r"\b(?:is|are|remain(?:s)?|must\s+be)\s+"
+    r"(?:strictly\s+)?(?:prohibited|excluded|rejected|avoided|"
+    r"out\s+of\s+scope|not\s+(?:allowed|supported))\b",
+    re.IGNORECASE,
+)
+OPTIMIZER_LIST_FILLER_RE = re.compile(
+    r"\bdriver[\s-]+download\s+utility\b|"
+    r"\b(?:a|an|the|any|our|your|pc|generic|general|aggressive|strictly|"
+    r"to|be|being|as|act|serve|function|operate|offer|provide|market|"
+    r"position|describe|consider|regard|classify|characterize|treat|use|call|see|"
+    r"designed|intended|marketed|positioned|described|considered|regarded|"
+    r"classified|characterized|treated|used|called|seen|"
+    r"and|or|nor|product|positioning|behaviou?r)\b|[\s,()/&]+",
+    re.IGNORECASE,
+)
+NEGATIVE_SCOPE_HEADING_RE = re.compile(
+    r"\b(?:does\s+not\s+own|out\s+of\s+scope|non[\s-]*goals?|"
+    r"security\s+and\s+safety\s+prohibitions?)\b",
+    re.IGNORECASE,
+)
+
+AUTHORITY_ORDER = (
+    "DECISIONS.md",
+    "ROADMAP.md",
+    "PROJECT_BOUNDARY.md",
+    "SECURITY.md",
+    "ACCESSIBILITY.md",
+    "LOW_SPEC.md",
+    "AGENTS.md",
+    "TASKS.yaml",
+    "CODEX_START_PROMPT.md",
+    "README.md",
+)
 
 ALLOWED_STATUS = {"backlog", "ready", "in_progress", "blocked", "review", "done", "cancelled"}
 ALLOWED_EXECUTOR = {"codex", "hybrid", "human"}
@@ -99,6 +176,328 @@ def require_nonempty_string_list(
     for index, item in enumerate(value):
         if not isinstance(item, str) or not item.strip():
             validation.error(f"{owner}: {field}[{index}] must be a non-empty string")
+
+
+def require_phrases(
+    relative: str,
+    phrases: tuple[str, ...],
+    validation: Validation,
+) -> str:
+    path = ROOT / relative
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        validation.error(f"{relative}: cannot read: {exc}")
+        return ""
+
+    folded = text.casefold()
+    for phrase in phrases:
+        if phrase.casefold() not in folded:
+            validation.error(f"{relative}: missing required contract phrase {phrase!r}")
+    return text
+
+
+def markdown_level_two_sections(text: str) -> dict[str, str]:
+    headings = list(re.finditer(r"^##\s+([^#\r\n].*?)\s*$", text, re.MULTILINE))
+    sections: dict[str, str] = {}
+    for index, heading in enumerate(headings):
+        start = heading.end()
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(text)
+        sections[heading.group(1).strip().casefold()] = text[start:end].strip()
+    return sections
+
+
+def contains_forbidden_legacy_name(text: str) -> bool:
+    return FORBIDDEN_BRAND_RE.search(text) is not None
+
+
+def is_optimizer_list_fragment(fragment: str) -> bool:
+    without_terms = OPTIMIZER_FAMILY_RE.sub(" ", fragment)
+    without_fillers = OPTIMIZER_LIST_FILLER_RE.sub(" ", without_terms)
+    return without_fillers.strip() == ""
+
+
+def optimizer_term_is_denied(clause: str, match: re.Match[str]) -> bool:
+    prefix = clause[: match.start()]
+    suffix = clause[match.end() :]
+    for negation in reversed(list(NEGATION_START_RE.finditer(prefix))):
+        if is_optimizer_list_fragment(prefix[negation.end() :]):
+            return True
+    for predicate in DENIAL_PREDICATE_RE.finditer(suffix):
+        if is_optimizer_list_fragment(suffix[: predicate.start()]):
+            return True
+    return False
+
+
+def has_prohibited_optimizer_positioning(line: str, heading: str = "") -> bool:
+    plain_line = re.sub(r"[*_`~]", "", line)
+    plain_heading = re.sub(r"[*_`~]", "", heading)
+    matches = list(OPTIMIZER_FAMILY_RE.finditer(plain_line))
+    if not matches:
+        return False
+
+    negative_heading = (
+        NEGATIVE_SCOPE_HEADING_RE.search(plain_heading) is not None
+        or (
+            DENIAL_CONTEXT_RE.search(plain_heading) is not None
+            and OPTIMIZER_FAMILY_RE.search(plain_heading) is not None
+        )
+    )
+    if negative_heading and PRODUCT_IDENTITY_RE.search(plain_line) is None:
+        return False
+
+    product_context = (
+        PRODUCT_IDENTITY_RE.search(plain_line) is not None
+        or PRODUCT_IDENTITY_RE.search(plain_heading) is not None
+    )
+    for match in matches:
+        is_positioning_claim = (
+            product_context
+            or EXPLICIT_OPTIMIZER_MARKETING_RE.search(plain_line) is not None
+        )
+        if is_positioning_claim and not optimizer_term_is_denied(plain_line, match):
+            return True
+    return False
+
+
+def is_probably_binary(data: bytes) -> bool:
+    if not data:
+        return False
+    sample = data[:8192]
+    if sample.startswith((b"\xff\xfe", b"\xfe\xff", b"\xff\xfe\0\0", b"\0\0\xfe\xff")):
+        return False
+    if b"\0" in sample:
+        return True
+    disallowed_controls = sum(
+        byte < 32 and byte not in {8, 9, 10, 12, 13}
+        for byte in sample
+    )
+    return disallowed_controls / len(sample) > 0.05
+
+
+def repository_text_paths() -> list[Path]:
+    candidates: set[Path] = {
+        ROOT / relative for relative in REQUIRED_FILES
+    } | {ROOT / "tools/validate_bundle.py"}
+
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files", "-z"],
+            check=False,
+            capture_output=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        result = None
+
+    if result is not None and result.returncode == 0:
+        for raw_path in result.stdout.split(b"\0"):
+            if raw_path:
+                candidates.add(ROOT / raw_path.decode("utf-8"))
+    else:
+        ignored_parts = {
+            ".git",
+            ".idea",
+            ".venv",
+            ".vs",
+            ".vscode",
+            "__pycache__",
+            "bin",
+            "coverage",
+            "obj",
+            "testresults",
+        }
+        candidates.update(
+            path
+            for path in ROOT.rglob("*")
+            if path.is_file()
+            and not any(
+                part.casefold() in ignored_parts
+                for part in path.relative_to(ROOT).parts
+            )
+        )
+
+    return sorted(path for path in candidates if path.is_file())
+
+
+def validate_tracked_text_positioning(validation: Validation) -> None:
+    for path in repository_text_paths():
+        try:
+            data = path.read_bytes()
+        except OSError as exc:
+            validation.error(
+                f"{path.relative_to(ROOT).as_posix()}: cannot scan tracked file: {exc}"
+            )
+            continue
+        if is_probably_binary(data):
+            continue
+        try:
+            text = data.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            validation.error(
+                f"{path.relative_to(ROOT).as_posix()}: tracked text is not UTF-8: {exc}"
+            )
+            continue
+
+        relative = path.relative_to(ROOT).as_posix()
+        current_heading = ""
+        skip_optimizer_policy_source = relative in {
+            "tools/validate_bundle.py",
+            "tools/tests/test_validate_bundle.py",
+        }
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            if re.match(r"^#{1,6}\s+", line):
+                current_heading = line
+            if contains_forbidden_legacy_name(line):
+                validation.error(
+                    f"{relative}:{line_number}: contains a forbidden legacy product name"
+                )
+            if (
+                not skip_optimizer_policy_source
+                and has_prohibited_optimizer_positioning(line, current_heading)
+            ):
+                validation.error(
+                    f"{relative}:{line_number}: contains prohibited optimizer positioning"
+                )
+
+
+def validate_governance_documents(validation: Validation) -> None:
+    require_phrases(
+        "docs/product-contract.md",
+        (
+            "ThirdLife** is the product family",
+            "ThirdLife Setup Core** is the active standalone project",
+            "Team B / B1",
+            "A present recipient participates only in explicitly recipient-controlled setup",
+            "M0 through M6",
+            "TL-0611",
+            "M7 / `TL-0710`",
+            "Scam Explainer",
+            "Team B / B4",
+            "project vacuum",
+            "recipient-controlled accessibility setup",
+            "basic operating-system backup onboarding",
+            "SECURITY.md",
+            "ACCESSIBILITY.md",
+            "LOW_SPEC.md",
+            "RELEASE_INTERFACE.md",
+            "does not amend or outrank",
+        ),
+        validation,
+    )
+
+    require_phrases(
+        "docs/non-goals.md",
+        (
+            "existing personal-PC repair",
+            "donor-media erasure",
+            "unsupported Windows",
+            "activation",
+            "ownership controls",
+            "PC cleaner, optimizer, debloater, registry cleaner",
+            "sibling-domain ownership",
+            "shared SDK",
+            "plugin framework",
+            "No B4 work during B1",
+            "FUTURE_ASSEMBLY_NOTES.md",
+            "manual fallback",
+            "ordinary implementation task cannot turn one into scope",
+            "already inside the selected task's contract",
+            "without silently expanding the task or editing the task graph",
+        ),
+        validation,
+    )
+
+    change_control_text = require_phrases(
+        "docs/change-control.md",
+        (
+            "derived from D-045",
+            "status",
+            "evidence",
+            "blocked_reason",
+            "Explicit human approval",
+            "approving owner",
+            "approval date",
+            "bundle version",
+            "stop before the conflicting implementation",
+            "FUTURE_ASSEMBLY_NOTES.md",
+            "creates no B1 requirement",
+            "BUNDLE_MANIFEST.sha256",
+            "eng/verify.ps1",
+        ),
+        validation,
+    )
+    authority_block = "\n".join(
+        f"{index}. `{relative}`"
+        for index, relative in enumerate(AUTHORITY_ORDER, start=1)
+    )
+    if authority_block not in change_control_text:
+        validation.error(
+            "docs/change-control.md: authority order must exactly match D-045"
+        )
+
+    glossary_text = require_phrases(
+        "docs/glossary.md",
+        ("Exact frozen decisions", "prevail over this summary"),
+        validation,
+    )
+    glossary_sections = markdown_level_two_sections(glossary_text)
+    glossary_contract: dict[str, tuple[str, ...]] = {
+        "Evidence": (
+            "observed",
+            "inferred",
+            "not available",
+            "human confirmed",
+            "collection time",
+            "provenance",
+        ),
+        "Requirement": ("versioned policy or profile", "not itself an observation"),
+        "Blocker": ("prevents a defined transition", "remains visible", "cannot be overridden"),
+        "Disposition": (
+            "Ready to prepare",
+            "Repair and retest",
+            "Human review required",
+            "Alternative operating system candidate",
+            "Do not deploy",
+        ),
+        "Applied": ("not complete", "verified"),
+        "Verified": (
+            "separate, bounded verification step",
+            "independently observed",
+            "Backend or installer success",
+        ),
+        "Frozen release": (
+            "exact, immutable",
+            "source revision",
+            "dependency lock",
+            "cryptographic hashes",
+        ),
+        "Compatibility cut": (
+            "future B4-owned",
+            "exact frozen product releases",
+            "manual fallback",
+            "newer release",
+        ),
+        "Adapter": (
+            "project-local provider",
+            "sibling adapter",
+            "future Team B / B4",
+            "version-bounded",
+            "manual fallback",
+            "private database access",
+        ),
+    }
+    for term, fragments in glossary_contract.items():
+        body = glossary_sections.get(term.casefold())
+        if body is None:
+            validation.error(f"docs/glossary.md: missing required term heading {term!r}")
+            continue
+        folded = body.casefold()
+        for fragment in fragments:
+            if fragment.casefold() not in folded:
+                validation.error(
+                    f"docs/glossary.md: {term!r} definition is missing {fragment!r}"
+                )
 
 
 def topological_order(
@@ -210,18 +609,7 @@ def validate() -> int:
             f"TASKS.yaml: workflow.mutable_task_fields must equal {MUTABLE_FIELDS!r}"
         )
 
-    expected_authority = [
-        "DECISIONS.md",
-        "ROADMAP.md",
-        "PROJECT_BOUNDARY.md",
-        "SECURITY.md",
-        "ACCESSIBILITY.md",
-        "LOW_SPEC.md",
-        "AGENTS.md",
-        "TASKS.yaml",
-        "CODEX_START_PROMPT.md",
-        "README.md",
-    ]
+    expected_authority = list(AUTHORITY_ORDER)
     if task_doc.get("authority", {}).get("precedence") != expected_authority:
         validation.error(
             f"TASKS.yaml: authority.precedence must equal {expected_authority!r}"
@@ -453,26 +841,8 @@ def validate() -> int:
                         f"{task_id}: does not depend transitively on prior gate {previous_gate}"
                     )
 
-    # Keep active bundle content on the approved name.
-    for relative in (
-        "ROADMAP.md",
-        "DECISIONS.md",
-        "TASKS.yaml",
-        "AGENTS.md",
-        "CODEX_START_PROMPT.md",
-        "README.md",
-        "TASKS.schema.json",
-        "PROJECT_BOUNDARY.md",
-        "SECURITY.md",
-        "ACCESSIBILITY.md",
-        "LOW_SPEC.md",
-        "RELEASE_INTERFACE.md",
-        "FUTURE_ASSEMBLY_NOTES.md",
-        "CHANGELOG.md",
-    ):
-        text = (ROOT / relative).read_text(encoding="utf-8")
-        if FORBIDDEN_BRAND_RE.search(text):
-            validation.error(f"{relative}: contains a forbidden legacy product name")
+    validate_governance_documents(validation)
+    validate_tracked_text_positioning(validation)
 
     boundary_text = (ROOT / "PROJECT_BOUNDARY.md").read_text(encoding="utf-8")
     for required_phrase in (
