@@ -1,6 +1,6 @@
-# ThirdLife Setup Core — Codex Roadmap Bundle
+# ThirdLife Setup Core
 
-This bundle turns the ThirdLife Setup Core concept and the portfolio’s two-team boundary architecture into a governed, dependency-ordered implementation plan for Codex and human reviewers.
+This repository develops ThirdLife Setup Core: a local-first, auditable Windows refurbishment workflow for volunteer and staff refurbishers. Development follows the frozen decisions, standalone Team B/B1 boundary, and dependency-ordered task graph checked into this repository.
 
 **Current project:** Team B / B1 — ThirdLife Setup Core  
 **Pilot gate:** `TL-0611` — controlled v0.1 partner pilot  
@@ -8,7 +8,7 @@ This bundle turns the ThirdLife Setup Core concept and the portfolio’s two-tea
 **Next Team B project after stable:** Scam Explainer  
 **Future integration project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
 
-The bundle contains **91 tasks**, **8 milestone gates**, and **57 frozen decisions**. Only `TL-0001` is initially dependency-ready.
+The governed roadmap contains **91 tasks**, **8 milestone gates**, and **57 frozen decisions**. Current implementation progress and the next dependency-ready work are recorded in `TASKS.yaml`; do not infer them from this README.
 
 ## What changed in portfolio-aligned bundle 0.2.0
 
@@ -24,7 +24,7 @@ The bundle contains **91 tasks**, **8 milestone gates**, and **57 frozen decisio
 
 See `CHANGELOG.md` for the file-level change record.
 
-## Bundle contents
+## Governance and repository contents
 
 | File | Role |
 |---|---|
@@ -36,6 +36,10 @@ See `CHANGELOG.md` for the file-level change record.
 | `LOW_SPEC.md` | Resource budgets, constrained-test method, benchmark evidence, and graceful-degradation rules. |
 | `TASKS.yaml` | Machine-readable DAG with 91 tasks, dependencies, deliverables, acceptance, verification, executor, environment, and evidence. |
 | `AGENTS.md` | Codex operating contract: read order, task selection, allowed edits, project-vacuum rules, architecture, testing, and reporting. |
+| [`docs/product-contract.md`](docs/product-contract.md) | Concise product identity, outcome, delivery cuts, Team B queue, standalone rules, and quality-baseline map. |
+| [`docs/non-goals.md`](docs/non-goals.md) | Explicit existing-PC, bypass, optimizer, sibling-domain, shared-infrastructure, and early-B4 exclusions. |
+| [`docs/glossary.md`](docs/glossary.md) | Governed meanings for evidence, requirements, blockers, dispositions, action state, and frozen-release integration terms. |
+| [`docs/change-control.md`](docs/change-control.md) | Exact authority order, task-state limits, governed-amendment process, contradiction stop rule, and review checklist. |
 | `CODEX_START_PROMPT.md` | First-session prompt and reusable execution, review, gate, security, accessibility, recovery, deferral, release-interface, and handoff prompts. |
 | `RELEASE_INTERFACE.md` | Human-readable black-box release sheet, populated as a preview draft at `TL-0610`, completed at `TL-0706`, and frozen before `TL-0710`; not a shared API. |
 | `FUTURE_ASSEMBLY_NOTES.md` | Non-binding B4 backlog for cross-project ideas; nothing here can block or expand B1. |
@@ -74,30 +78,27 @@ Apply files in this order:
 
 ## Quick start
 
-Copy the bundle contents into the root of a new ThirdLife repository before application development begins. Keep all root governance files together.
-
-On Windows PowerShell:
+Clone the repository on Windows and enter its root:
 
 ```powershell
-py -m venv .venv
-.venv\Scripts\python -m pip install --requirement tools\requirements.txt
-.venv\Scripts\python tools\validate_bundle.py
+git clone git@github.com:PikkuJanne/ThirdLife.git
+Set-Location ThirdLife
 ```
 
-Expected initial result:
+Install the exact .NET SDK and Python versions named under **Repository verification** below. Create the ignored Python environment once and install the pinned validator dependency:
 
-```text
-OK: 91 tasks, 8 milestones, 57 frozen decisions; DAG valid
-Codex-ready tasks: TL-0001
+```powershell
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --no-deps --requirement tools\requirements.txt
 ```
 
-Then paste the **First session** prompt from `CODEX_START_PROMPT.md` into Codex. Codex must work only on:
+Run the complete clean-checkout gate:
 
-```text
-TL-0001 — Create the solution and repository scaffold
+```powershell
+.\eng\verify.ps1
 ```
 
-It should stop after that task and report the next dependency-ready task.
+For development, read the authority files in the required authority order and use the default selection rule in `AGENTS.md`. The validator prints the currently Codex-ready task IDs from live `TASKS.yaml` state. Work on exactly one selected task and publish its verified result before choosing another.
 
 ## Milestone chain
 
@@ -206,7 +207,7 @@ Then run the complete repository gate from the repository root:
 
 The scripts resolve repository paths relative to themselves, so an absolute script path also works from another directory. Git Bash on Windows may run `./eng/verify.sh`. Non-Windows hosts fail clearly because the authoritative solution includes WPF and Windows-targeted projects.
 
-The verifier checks the governed bundle and machine-readable portfolio metadata, the bundle hash manifest, solution and WPF boundaries, exact SDK and central package policy, project-local NuGet lock files, the hardened Windows workflow, formatting, the Release build with warnings as errors, and all Release tests. Restore uses only `NuGet.Config` and `--locked-mode`; it does not rewrite the dependency graph.
+The verifier runs governance-validator regression probes, then checks the governed bundle and machine-readable portfolio metadata, the bundle hash manifest, solution and WPF boundaries, exact SDK and central package policy, project-local NuGet lock files, the hardened Windows workflow, formatting, the Release build with warnings as errors, and all Release tests. Restore uses only `NuGet.Config` and `--locked-mode`; it does not rewrite the dependency graph.
 
 When an intentional package-version change is approved, update `Directory.Packages.props`, run `dotnet restore ThirdLife.sln --configfile NuGet.Config --force-evaluate`, inspect every lock-file change, and rerun the full verifier. Environment-specific checks must be reported truthfully. Do not disable security, accessibility, low-spec, provenance, analyzer, or failing-test gates.
 

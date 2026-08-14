@@ -76,6 +76,11 @@ try {
         )
 
     Invoke-CheckedCommand `
+        -Label "Run governance validator regression tests" `
+        -Command $pythonCommand `
+        -CommandArguments @("tools/tests/test_validate_bundle.py")
+
+    Invoke-CheckedCommand `
         -Label "Validate the governed roadmap bundle and portfolio metadata" `
         -Command $pythonCommand `
         -CommandArguments @("tools/validate_bundle.py")
