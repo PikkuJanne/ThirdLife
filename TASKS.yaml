@@ -361,7 +361,7 @@ tasks:
   workstream: security
   kind: security
   priority: P0
-  status: backlog
+  status: review
   size: M
   executor: hybrid
   environment: any
@@ -400,7 +400,32 @@ tasks:
   verification:
   - Perform a structured threat review.
   - Map each broker/package threat to at least one task.
-  evidence: []
+  evidence:
+  - summary: Structured threat review covered assets, actors, ten distinct trust boundaries, inventory/catalog/package/broker/journal/report/update/release-supply flows, fourteen threats, nineteen abuse cases, and eight proposed residual risks; high-risk and broker/package/release entries map to binding decisions and real tasks.
+    result: passed; technical draft complete and owner approval pending
+    environment: Repository semantic review on Windows 11 x64
+    date: '2026-08-14'
+    reference: docs/security/threat-model.md THR-001..THR-014 and RR-001..RR-008; docs/security/data-flow.md F-01..F-19; docs/security/abuse-cases.md AC-001..AC-019
+  - summary: Security governance regression tests and bundle semantic validation passed, including collapsed-boundary, orphan-link, risk-floor, approval-state, task-status, broker/package mapping, machine-path, and sanitization/B4 negative probes.
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; PyYAML 6.0.3
+    date: '2026-08-14'
+    reference: tools/tests/test_validate_bundle.py (32 passed); tools/validate_bundle.py reported 91 tasks, 8 milestones, 57 decisions, DAG valid
+  - summary: Scoped hygiene and boundary review found no secret, credential, personal identifier, machine-specific path, direct sibling dependency, runtime sanitization/ownership bypass, firmware-flashing path, or B1 adapter design.
+    result: passed
+    environment: Windows 11 x64; tracked/untracked text review
+    date: '2026-08-14'
+    reference: docs/security/*.md; git diff --check; security-document machine-path regression
+  - summary: The deterministic repository gate passed in TL-0004 review state with the synchronized bundle manifest.
+    result: passed
+    environment: Windows 11 x64; .NET SDK 10.0.400; Python 3.14.7; PyYAML 6.0.3
+    date: '2026-08-14'
+    reference: eng/verify.ps1 passed 32 governance tests, bundle/repository validators, locked restore, formatting, Release build with 0 warnings/errors, and 14 .NET tests
+  - summary: Named security-owner approval of the exact model revision and every residual-risk treatment remains required; no residual risk or release is approved by this draft.
+    result: pending
+    environment: Human security-owner review
+    date: '2026-08-14'
+    reference: docs/security/threat-model.md approval metadata and RR-001..RR-008 owner-decision cells remain Pending
   human_evidence_required:
   - A named security owner approves the initial threat model and residual-risk list.
 - id: TL-0005
