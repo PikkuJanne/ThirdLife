@@ -43,6 +43,9 @@ See `CHANGELOG.md` for the file-level change record.
 | [`docs/security/threat-model.md`](docs/security/threat-model.md) | Assets, actors, threats, control/task mappings, residual-risk decisions, and named-owner approval state tracked by `TL-0004`. |
 | [`docs/security/data-flow.md`](docs/security/data-flow.md) | Accessible diagram and textual inventory of processes, stores, flows, validation, recovery, and distinct trust boundaries. |
 | [`docs/security/abuse-cases.md`](docs/security/abuse-cases.md) | Stable adversarial scenarios with detection, fail-closed behavior, recovery, task traceability, and residual risks. |
+| [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md) | Data classifications, owned/excluded data map, sink-specific allowlists, retention/deletion guidance, residual limitations, and privacy-owner approval state. |
+| [`docs/privacy/logging-standard.md`](docs/privacy/logging-standard.md) | Structured logging, classify-and-redact-before-persistence, raw-output handling, bounded local retention, support projection, and telemetry-off rules. |
+| [`docs/privacy/redaction-test-cases.yaml`](docs/privacy/redaction-test-cases.yaml) | Versioned synthetic cases with deterministic allow, replace, drop, and reject expectations across privacy channels, including explicit pre-envelope and projection stages. |
 | `CODEX_START_PROMPT.md` | First-session prompt and reusable execution, review, gate, security, accessibility, recovery, deferral, release-interface, and handoff prompts. |
 | `RELEASE_INTERFACE.md` | Human-readable black-box release sheet, populated as a preview draft at `TL-0610`, completed at `TL-0706`, and frozen before `TL-0710`; not a shared API. |
 | `FUTURE_ASSEMBLY_NOTES.md` | Non-binding B4 backlog for cross-project ideas; nothing here can block or expand B1. |
