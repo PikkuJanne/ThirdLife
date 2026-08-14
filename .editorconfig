@@ -6,11 +6,11 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{cs,csproj,props,targets,xaml,json,yaml,yml}]
+[*.{cs,csproj,props,targets,xaml,config,json,yaml,yml}]
 indent_style = space
 indent_size = 2
 
-[*.{cs,csproj,props,targets,xaml,sln,ps1,cmd,bat}]
+[*.{cs,csproj,props,targets,xaml,config,sln,ps1,cmd,bat}]
 end_of_line = crlf
 
 [*.cs]
