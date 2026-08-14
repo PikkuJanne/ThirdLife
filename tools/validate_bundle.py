@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 from collections import defaultdict, deque
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,9 @@ REQUIRED_FILES = (
     "docs/glossary.md",
     "docs/non-goals.md",
     "docs/product-contract.md",
+    "docs/security/abuse-cases.md",
+    "docs/security/data-flow.md",
+    "docs/security/threat-model.md",
     "tools/requirements.txt",
     "tools/tests/test_validate_bundle.py",
 )
@@ -117,6 +121,64 @@ AUTHORITY_ORDER = (
     "CODEX_START_PROMPT.md",
     "README.md",
 )
+
+ASSET_IDS = tuple(f"AST-{index:02d}" for index in range(1, 13))
+ACTOR_IDS = tuple(f"ACT-{index:02d}" for index in range(1, 11))
+THREAT_IDS = tuple(f"THR-{index:03d}" for index in range(1, 15))
+ABUSE_CASE_IDS = tuple(f"AC-{index:03d}" for index in range(1, 20))
+RESIDUAL_RISK_IDS = tuple(f"RR-{index:03d}" for index in range(1, 9))
+ENTITY_IDS = tuple(f"E-{index:02d}" for index in range(1, 9))
+PROCESS_IDS = tuple(f"P-{index:02d}" for index in range(1, 10))
+STORE_IDS = tuple(f"DS-{index:02d}" for index in range(1, 8))
+FLOW_IDS = tuple(f"F-{index:02d}" for index in range(1, 20))
+FLOW_REFERENCE_IDS = (*FLOW_IDS, "F-08a", "F-08b")
+SECURITY_BOUNDARY_IDS = (
+    "TB-UI",
+    "TB-PROVIDER",
+    "TB-BROKER",
+    "TB-SYSTEM",
+    "TB-PACKAGE-SOURCE",
+    "TB-JOB-STORE",
+    "TB-EXPORT",
+    "TB-RECIPIENT",
+    "TB-RELEASE-SUPPLY",
+    "TB-FUTURE-B4",
+)
+SECURITY_MACHINE_PATH_RE = re.compile(
+    r"(?i)(?:\b[a-z]:[\\/]|\\\\[^\\/\s]+[\\/][^\\/\s]+|"
+    r"file:/+(?:[a-z]:|/)|/(?:home|users)/[^/\s]+/)"
+)
+BROKER_TASK_IDS = {
+    "TL-0303",
+    "TL-0307",
+    "TL-0309",
+    "TL-0310",
+    "TL-0311",
+    "TL-0312",
+    "TL-0313",
+}
+PACKAGE_TASK_IDS = {
+    "TL-0006",
+    "TL-0301",
+    "TL-0307",
+    "TL-0401",
+    "TL-0402",
+    "TL-0403",
+    "TL-0404",
+    "TL-0405",
+    "TL-0406",
+    "TL-0407",
+    "TL-0408",
+    "TL-0409",
+    "TL-0503",
+    "TL-0504",
+    "TL-0505",
+    "TL-0507",
+    "TL-0508",
+    "TL-0509",
+    "TL-0510",
+    "TL-0609",
+}
 
 ALLOWED_STATUS = {"backlog", "ready", "in_progress", "blocked", "review", "done", "cancelled"}
 ALLOWED_EXECUTOR = {"codex", "hybrid", "human"}
@@ -205,6 +267,32 @@ def markdown_level_two_sections(text: str) -> dict[str, str]:
         end = headings[index + 1].start() if index + 1 < len(headings) else len(text)
         sections[heading.group(1).strip().casefold()] = text[start:end].strip()
     return sections
+
+
+def markdown_security_entries(
+    text: str,
+    prefix: str,
+    validation: Validation,
+    relative: str,
+) -> dict[str, str]:
+    heading_re = re.compile(
+        rf"^###\s+({re.escape(prefix)}-\d{{3}})\s+—\s+.+$",
+        re.MULTILINE,
+    )
+    headings = list(heading_re.finditer(text))
+    entries: dict[str, str] = {}
+    for heading in headings:
+        entry_id = heading.group(1)
+        next_heading = re.search(r"^#{1,3}\s+", text[heading.end() :], re.MULTILINE)
+        end = (
+            heading.end() + next_heading.start()
+            if next_heading is not None
+            else len(text)
+        )
+        if entry_id in entries:
+            validation.error(f"{relative}: duplicate entry {entry_id}")
+        entries[entry_id] = text[heading.end() : end].strip()
+    return entries
 
 
 def contains_forbidden_legacy_name(text: str) -> bool:
@@ -498,6 +586,580 @@ def validate_governance_documents(validation: Validation) -> None:
                 validation.error(
                     f"docs/glossary.md: {term!r} definition is missing {fragment!r}"
                 )
+
+
+def security_field(body: str, field: str) -> str:
+    match = re.search(
+        rf"^\*\*{re.escape(field)}:\*\*\s*(.+?)\s*$",
+        body,
+        re.MULTILINE,
+    )
+    return match.group(1).strip() if match is not None else ""
+
+
+def validate_security_documents(
+    validation: Validation,
+    task_by_id: dict[str, dict[str, Any]],
+    decision_ids: set[str],
+) -> None:
+    task_ids = set(task_by_id)
+    threat_relative = "docs/security/threat-model.md"
+    flow_relative = "docs/security/data-flow.md"
+    abuse_relative = "docs/security/abuse-cases.md"
+
+    threat_text = require_phrases(
+        threat_relative,
+        (
+            "Security-owner approval:**",
+            "Approving owner and role:",
+            "Approval date:",
+            "Approval reference:",
+            "A task reference is a traceability link, not proof that the mitigation works",
+            "Sanitization is an external prerequisite",
+            "ownership controls are never bypassed",
+            "B1 runs in a project vacuum",
+            "does not design an adapter",
+            "## Protected assets",
+            "## Actors and capabilities",
+            "## Trust boundaries",
+            "## Threat register",
+            "## Control-to-roadmap summary",
+            "## Residual-risk register",
+            "## Security-owner review and approval",
+            "Dependency, build, or release provenance is incomplete or substituted",
+            "dependency, build, package/release metadata and artifact provenance",
+            "`Accept`, `Mitigate`, `Avoid`, `Transfer`, or `Block`",
+        ),
+        validation,
+    )
+    flow_text = require_phrases(
+        flow_relative,
+        (
+            "Sanitization remains an external prerequisite",
+            "there is no erase, wipe, imaging, activation, unlock, MDM removal, or ownership-bypass flow",
+            "there is no B4 actor in the runtime diagram",
+            "not an adapter specification",
+            "Inventory provider collection",
+            "Policy/profile/catalogue import",
+            "Package metadata resolution and execution-time artifact comparison",
+            "Broker handshake and request",
+            "durably commits a correlated started/dispatch-intent checkpoint before emitting",
+            "Action journal and checkpoint",
+            "Report/finalization projection",
+            "Structured Windows Update lifecycle",
+            "Dependency, build, and release metadata/artifact verification",
+            "## Interruption and split-state rules",
+        ),
+        validation,
+    )
+    abuse_text = require_phrases(
+        abuse_relative,
+        (
+            "Catalogue or profile data injects executable behavior",
+            "Package source, publisher, version, architecture, or catalogue changes after approval",
+            "Replayed, stale, tampered, or cross-job approval",
+            "Another local user connects to or pre-creates the broker pipe",
+            "Traversal, junction, symlink, reparse point, or unsafe temporary path",
+            "Sensitive or hostile text leaks through logs",
+            "UAC decline, network/power loss, reboot, full disk, or process death",
+            "B1 accidentally gains a sibling dependency",
+            "Future B4 adapter misuses private state",
+            "Dependency, build input, or release artifact is substituted or lacks provenance",
+            "flows `F-01` through `F-19`",
+            "not an adapter design or B1 implementation",
+            "## Structured review checklist",
+            "Review result:**",
+        ),
+        validation,
+    )
+
+    threat_entries = markdown_security_entries(
+        threat_text,
+        "THR",
+        validation,
+        threat_relative,
+    )
+    if tuple(threat_entries) != THREAT_IDS:
+        validation.error(
+            f"{threat_relative}: threat IDs must exactly equal {list(THREAT_IDS)!r}"
+        )
+
+    asset_rows = tuple(
+        re.findall(r"^\|\s*`?(AST-\d{2})`?\s*\|", threat_text, re.MULTILINE)
+    )
+    if asset_rows != ASSET_IDS:
+        validation.error(
+            f"{threat_relative}: asset rows must exactly equal {list(ASSET_IDS)!r}"
+        )
+    actor_rows = tuple(
+        re.findall(r"^\|\s*`?(ACT-\d{2})`?\s*\|", threat_text, re.MULTILINE)
+    )
+    if actor_rows != ACTOR_IDS:
+        validation.error(
+            f"{threat_relative}: actor rows must exactly equal {list(ACTOR_IDS)!r}"
+        )
+
+    threat_fields = (
+        "Initial risk",
+        "Likelihood",
+        "Impact",
+        "Boundaries/flows",
+        "Abuse cases",
+        "Decisions",
+        "Planned controls/tasks",
+        "Control status",
+        "Target residual risk",
+        "Review trigger",
+    )
+    threat_abuse_links: dict[str, set[str]] = {}
+    for threat_id, body in threat_entries.items():
+        for field in threat_fields:
+            if not security_field(body, field):
+                validation.error(
+                    f"{threat_relative}: {threat_id} is missing field {field!r}"
+                )
+        risk = security_field(body, "Initial risk").casefold()
+        likelihood = security_field(body, "Likelihood").casefold()
+        impact = security_field(body, "Impact").casefold()
+        for field, rating in (("Initial risk", risk), ("Likelihood", likelihood), ("Impact", impact)):
+            if rating not in {"low", "medium", "high"}:
+                validation.error(
+                    f"{threat_relative}: {threat_id} {field} must be Low, Medium, or High"
+                )
+        rating_rank = {"low": 0, "medium": 1, "high": 2}
+        if (
+            risk in rating_rank
+            and likelihood in rating_rank
+            and impact in rating_rank
+            and rating_rank[risk] < max(rating_rank[likelihood], rating_rank[impact])
+        ):
+            validation.error(
+                f"{threat_relative}: {threat_id} Initial risk cannot be below Likelihood or Impact"
+            )
+        task_mapping = set(
+            re.findall(r"\bTL-\d{4}\b", security_field(body, "Planned controls/tasks"))
+        )
+        if risk.startswith("high") and not task_mapping:
+            validation.error(
+                f"{threat_relative}: high-risk {threat_id} has no roadmap task mapping"
+            )
+
+        boundary_ids = set(
+            re.findall(r"\bTB-[A-Z0-9-]+\b", security_field(body, "Boundaries/flows"))
+        )
+        if not boundary_ids:
+            validation.error(
+                f"{threat_relative}: {threat_id} needs at least one typed trust-boundary reference"
+            )
+        if "TB-BROKER" in boundary_ids and not task_mapping & BROKER_TASK_IDS:
+            validation.error(
+                f"{threat_relative}: broker threat {threat_id} lacks a relevant broker task mapping"
+            )
+        if "TB-PACKAGE-SOURCE" in boundary_ids and not task_mapping & PACKAGE_TASK_IDS:
+            validation.error(
+                f"{threat_relative}: package-source threat {threat_id} lacks a relevant package task mapping"
+            )
+        threat_abuse_links[threat_id] = set(
+            re.findall(r"\bAC-\d{3}\b", security_field(body, "Abuse cases"))
+        )
+        if not threat_abuse_links[threat_id]:
+            validation.error(
+                f"{threat_relative}: {threat_id} needs at least one typed abuse-case reference"
+            )
+        decision_references = set(
+            re.findall(r"\bD-\d{3}\b", security_field(body, "Decisions"))
+        )
+        if not decision_references:
+            validation.error(
+                f"{threat_relative}: {threat_id} needs at least one typed decision reference"
+            )
+        control_status = security_field(body, "Control status")
+        if "verified" in control_status.casefold():
+            status_task_ids = set(re.findall(r"\bTL-\d{4}\b", control_status))
+            if not status_task_ids or any(
+                task_id not in task_mapping
+                or task_by_id.get(task_id, {}).get("status") != "done"
+                for task_id in status_task_ids
+            ):
+                validation.error(
+                    f"{threat_relative}: {threat_id} verified control status must cite only mapped done tasks"
+                )
+
+    residual_row_lines = re.findall(
+        r"^\|\s*`RR-\d{3}`\s*\|.*$",
+        threat_text,
+        re.MULTILINE,
+    )
+    residual_rows: list[tuple[str, str]] = []
+    residual_threat_links: dict[str, set[str]] = {}
+    for line in residual_row_lines:
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        residual_id = cells[0].strip("`") if cells else ""
+        if len(cells) != 6:
+            validation.error(
+                f"{threat_relative}: {residual_id or 'residual row'} must have six table cells"
+            )
+            continue
+        residual_rows.append((residual_id, cells[-1]))
+        residual_threat_links[residual_id] = set(
+            re.findall(r"\bTHR-\d{3}\b", cells[1])
+        )
+    residual_ids = tuple(residual_id for residual_id, _ in residual_rows)
+    if residual_ids != RESIDUAL_RISK_IDS:
+        validation.error(
+            f"{threat_relative}: residual rows must exactly equal {list(RESIDUAL_RISK_IDS)!r}"
+        )
+
+    approval_match = re.search(
+        r"^\*\*Security-owner approval:\*\*\s*\*\*(Pending|Approved)\*\*\s*$",
+        threat_text,
+        re.MULTILINE,
+    )
+    approval_state = approval_match.group(1) if approval_match is not None else ""
+    if not approval_state:
+        validation.error(
+            f"{threat_relative}: security-owner approval must be Pending or Approved"
+        )
+    approval_metadata: dict[str, str] = {}
+    for field in ("Approving owner and role", "Approval date", "Approval reference"):
+        match = re.search(
+            rf"^\*\*{re.escape(field)}:\*\*\s*(.+?)\s*$",
+            threat_text,
+            re.MULTILINE,
+        )
+        approval_metadata[field] = match.group(1).strip() if match is not None else ""
+        if not approval_metadata[field]:
+            validation.error(f"{threat_relative}: missing approval metadata {field!r}")
+
+    abuse_review_match = re.search(
+        r"^\*\*Review result:\*\*\s*(Pending|Approved)\b",
+        abuse_text,
+        re.MULTILINE,
+    )
+    abuse_review_state = abuse_review_match.group(1) if abuse_review_match is not None else ""
+    threat_review_match = re.search(
+        r"^\*\*Current review result:\*\*\s*(Pending|Approved)\b",
+        threat_text,
+        re.MULTILINE,
+    )
+    threat_review_state = threat_review_match.group(1) if threat_review_match is not None else ""
+    document_statuses = tuple(
+        security_field(text, "Status")
+        for text in (threat_text, flow_text, abuse_text)
+    )
+    model_revisions = tuple(
+        security_field(text, "Model revision")
+        for text in (threat_text, flow_text, abuse_text)
+    )
+    if len(set(model_revisions)) != 1:
+        validation.error(
+            "Security documents must share one exact model revision"
+        )
+    pending_review_disclaimers = (
+        "This draft does not satisfy the human evidence required by `TL-0004`",
+        "Human acceptance of residual risks remains pending.",
+        "No security-owner approval or residual-risk acceptance is recorded in this draft.",
+    )
+    if approval_state == "Pending":
+        if any(value.casefold() != "pending" for value in approval_metadata.values()):
+            validation.error(
+                f"{threat_relative}: pending approval metadata must remain Pending"
+            )
+        if any(state.casefold() != "pending" for _, state in residual_rows):
+            validation.error(
+                f"{threat_relative}: unapproved residual-risk decisions must remain Pending"
+            )
+        if "No residual risk is accepted by this draft" not in threat_text:
+            validation.error(
+                f"{threat_relative}: pending draft must state that no residual risk is accepted"
+            )
+        if abuse_review_state != "Pending" or threat_review_state != "Pending":
+            validation.error(
+                "Security-document review results must be Pending while owner approval is pending"
+            )
+        if any(status != "Draft for security-owner review" for status in document_statuses):
+            validation.error(
+                "Pending security documents must have status 'Draft for security-owner review'"
+            )
+        if any("draft" not in revision.casefold() for revision in model_revisions):
+            validation.error(
+                "Pending security-document model revisions must identify a draft"
+            )
+        if any(
+            disclaimer not in "\n".join((threat_text, abuse_text))
+            for disclaimer in pending_review_disclaimers
+        ):
+            validation.error(
+                "Pending security documents must retain the no-approval disclaimers"
+            )
+    elif approval_state == "Approved":
+        if any(value.casefold() == "pending" for value in approval_metadata.values()):
+            validation.error(
+                f"{threat_relative}: approved model needs named owner/role, date, and exact reference"
+            )
+        owner_and_role = approval_metadata["Approving owner and role"]
+        owner_parts = re.split(r"\s+—\s+", owner_and_role, maxsplit=1)
+        placeholder_names = {
+            "example reviewer",
+            "pending",
+            "security owner",
+            "tbd",
+            "unknown",
+        }
+        if (
+            len(owner_parts) != 2
+            or len(owner_parts[0].strip()) < 3
+            or owner_parts[0].strip().casefold() in placeholder_names
+            or "security owner" not in owner_parts[1].casefold()
+        ):
+            validation.error(
+                f"{threat_relative}: approved model needs a non-placeholder named security owner and role"
+            )
+        try:
+            date.fromisoformat(approval_metadata["Approval date"])
+        except ValueError:
+            validation.error(
+                f"{threat_relative}: approved model needs a real ISO approval date"
+            )
+        if not re.search(r"\b[0-9a-fA-F]{40}\b", approval_metadata["Approval reference"]):
+            validation.error(
+                f"{threat_relative}: approved model needs an immutable 40-character Git commit"
+            )
+        residual_decision_re = re.compile(
+            r"(?:Accept|Mitigate|Avoid|Transfer|Block)\s+—\s+\S.+",
+            re.IGNORECASE,
+        )
+        if any(
+            residual_decision_re.fullmatch(state) is None
+            for _, state in residual_rows
+        ):
+            validation.error(
+                f"{threat_relative}: approved model needs an explicit treatment decision for every residual risk"
+            )
+        if "No residual risk is accepted by this draft" in threat_text:
+            validation.error(
+                f"{threat_relative}: approved model cannot retain the pending no-acceptance statement"
+            )
+        if abuse_review_state != "Approved" or threat_review_state != "Approved":
+            validation.error(
+                "Security-document review results must be Approved with owner approval"
+            )
+        if any(status != "Approved initial model" for status in document_statuses):
+            validation.error(
+                "Approved security documents must have status 'Approved initial model'"
+            )
+        if any("draft" in revision.casefold() or not revision for revision in model_revisions):
+            validation.error(
+                "Approved security-document model revisions must be non-draft"
+            )
+        if any(
+            disclaimer in "\n".join((threat_text, abuse_text))
+            for disclaimer in pending_review_disclaimers
+        ):
+            validation.error(
+                "Approved security documents cannot retain pending/no-approval disclaimers"
+            )
+
+    threat_model_task = task_by_id.get("TL-0004", {})
+    if threat_model_task.get("status") == "done":
+        if approval_state != "Approved":
+            validation.error(
+                "TL-0004 cannot be done while security-owner approval is Pending"
+            )
+        approval_commit = re.search(
+            r"\b[0-9a-fA-F]{40}\b",
+            approval_metadata.get("Approval reference", ""),
+        )
+        evidence = threat_model_task.get("evidence", [])
+        approval_evidence = False
+        if approval_commit is not None and isinstance(evidence, list):
+            reviewed_commit = approval_commit.group(0).casefold()
+            approval_evidence = any(
+                isinstance(entry, dict)
+                and re.search(
+                    r"\bsecurity owner approved\b",
+                    str(entry.get("summary", "")),
+                    re.IGNORECASE,
+                )
+                is not None
+                and str(entry.get("result", "")).casefold() == "passed"
+                and reviewed_commit in str(entry.get("reference", "")).casefold()
+                for entry in evidence
+            )
+        if not approval_evidence:
+            validation.error(
+                "TL-0004 done evidence must record named security-owner approval for the reviewed commit"
+            )
+
+    boundary_rows = re.findall(
+        r"^\|\s*`(TB-[A-Z0-9-]+)`\s*\|",
+        flow_text,
+        re.MULTILINE,
+    )
+    if tuple(boundary_rows) != SECURITY_BOUNDARY_IDS:
+        validation.error(
+            f"{flow_relative}: trust-boundary table must keep distinct rows {list(SECURITY_BOUNDARY_IDS)!r}"
+        )
+    flow_table_contract = (
+        (r"^\|\s*`?(E-\d{2})`?\s*\|", ENTITY_IDS, "entity"),
+        (r"^\|\s*`?(P-\d{2})`?\s*\|", PROCESS_IDS, "process"),
+        (r"^\|\s*`?(DS-\d{2})`?\s*\|", STORE_IDS, "store"),
+        (r"^\|\s*`?(F-\d{2})`?\s*\|", FLOW_IDS, "flow"),
+    )
+    for pattern, expected_ids, kind in flow_table_contract:
+        actual_ids = tuple(re.findall(pattern, flow_text, re.MULTILINE))
+        if actual_ids != expected_ids:
+            validation.error(
+                f"{flow_relative}: {kind} rows must exactly equal {list(expected_ids)!r}"
+            )
+
+    abuse_entries = markdown_security_entries(
+        abuse_text,
+        "AC",
+        validation,
+        abuse_relative,
+    )
+    if tuple(abuse_entries) != ABUSE_CASE_IDS:
+        validation.error(
+            f"{abuse_relative}: abuse-case IDs must exactly equal {list(ABUSE_CASE_IDS)!r}"
+        )
+
+    abuse_fields = (
+        "Threats",
+        "Actor",
+        "Preconditions",
+        "Attack path",
+        "Assets/impact",
+        "Detection",
+        "Fail-closed response",
+        "Planned controls/tasks",
+        "Control status",
+        "Recovery/manual path",
+        "Residual risk",
+    )
+    abuse_task_mappings: dict[str, set[str]] = {}
+    abuse_threat_links: dict[str, set[str]] = {}
+    abuse_residual_links: dict[str, set[str]] = {}
+    for abuse_id, body in abuse_entries.items():
+        for field in abuse_fields:
+            if not security_field(body, field):
+                validation.error(
+                    f"{abuse_relative}: {abuse_id} is missing field {field!r}"
+                )
+        task_mapping = set(
+            re.findall(r"\bTL-\d{4}\b", security_field(body, "Planned controls/tasks"))
+        )
+        abuse_task_mappings[abuse_id] = task_mapping
+        abuse_threat_links[abuse_id] = set(
+            re.findall(r"\bTHR-\d{3}\b", security_field(body, "Threats"))
+        )
+        abuse_residual_links[abuse_id] = set(
+            re.findall(r"\bRR-\d{3}\b", security_field(body, "Residual risk"))
+        )
+        if not task_mapping:
+            validation.error(
+                f"{abuse_relative}: {abuse_id} has no roadmap task mapping"
+            )
+        if not abuse_threat_links[abuse_id]:
+            validation.error(
+                f"{abuse_relative}: {abuse_id} needs at least one typed threat reference"
+            )
+        if not re.findall(r"\bACT-\d{2}\b", security_field(body, "Actor")):
+            validation.error(
+                f"{abuse_relative}: {abuse_id} needs at least one typed actor reference"
+            )
+        if not re.findall(r"\bAST-\d{2}\b", security_field(body, "Assets/impact")):
+            validation.error(
+                f"{abuse_relative}: {abuse_id} needs at least one typed asset reference"
+            )
+        if not abuse_residual_links[abuse_id]:
+            validation.error(
+                f"{abuse_relative}: {abuse_id} needs at least one typed residual-risk reference"
+            )
+        control_status = security_field(body, "Control status")
+        if "verified" in control_status.casefold():
+            status_task_ids = set(re.findall(r"\bTL-\d{4}\b", control_status))
+            if not status_task_ids or any(
+                task_id not in task_mapping
+                or task_by_id.get(task_id, {}).get("status") != "done"
+                for task_id in status_task_ids
+            ):
+                validation.error(
+                    f"{abuse_relative}: {abuse_id} verified control status must cite only mapped done tasks"
+                )
+
+    for abuse_id in ("AC-002", "AC-003", "AC-004"):
+        if not abuse_task_mappings.get(abuse_id, set()) & BROKER_TASK_IDS:
+            validation.error(
+                f"{abuse_relative}: broker abuse case {abuse_id} lacks a relevant broker task mapping"
+            )
+    for abuse_id in ("AC-005", "AC-006", "AC-012"):
+        if not abuse_task_mappings.get(abuse_id, set()) & PACKAGE_TASK_IDS:
+            validation.error(
+                f"{abuse_relative}: package/update abuse case {abuse_id} lacks a relevant package task mapping"
+            )
+
+    for threat_id, abuse_ids in threat_abuse_links.items():
+        for abuse_id in abuse_ids:
+            if threat_id not in abuse_threat_links.get(abuse_id, set()):
+                validation.error(
+                    f"Security documents: {threat_id} links {abuse_id}, but the abuse case does not link back"
+                )
+    for abuse_id, threat_ids in abuse_threat_links.items():
+        for threat_id in threat_ids:
+            if abuse_id not in threat_abuse_links.get(threat_id, set()):
+                validation.error(
+                    f"Security documents: {abuse_id} links {threat_id}, but the threat does not link back"
+                )
+    for abuse_id, residual_ids in abuse_residual_links.items():
+        linked_threats = abuse_threat_links.get(abuse_id, set())
+        for residual_id in residual_ids:
+            if not linked_threats & residual_threat_links.get(residual_id, set()):
+                validation.error(
+                    f"Security documents: {abuse_id} cites {residual_id}, but they share no linked threat"
+                )
+
+    referenced_task_ids = set(
+        re.findall(
+            r"\bTL-\d{4}\b",
+            "\n".join((threat_text, flow_text, abuse_text)),
+        )
+    )
+    unknown_task_ids = sorted(referenced_task_ids - task_ids)
+    if unknown_task_ids:
+        validation.error(
+            f"Security documents reference unknown roadmap tasks {unknown_task_ids!r}"
+        )
+
+    combined_security_text = "\n".join((threat_text, flow_text, abuse_text))
+    cross_reference_contract = (
+        (r"\bD-\d{3}\b", decision_ids, "decision"),
+        (r"\bAST-\d{2}\b", set(ASSET_IDS), "asset"),
+        (r"\bACT-\d{2}\b", set(ACTOR_IDS), "actor"),
+        (r"\bTHR-\d{3}\b", set(THREAT_IDS), "threat"),
+        (r"\bAC-\d{3}\b", set(ABUSE_CASE_IDS), "abuse-case"),
+        (r"\bRR-\d{3}\b", set(RESIDUAL_RISK_IDS), "residual-risk"),
+        (r"\bE-\d{2}\b", set(ENTITY_IDS), "external-entity"),
+        (r"\bP-\d{2}\b", set(PROCESS_IDS), "process"),
+        (r"\bDS-\d{2}\b", set(STORE_IDS), "store"),
+        (r"\bF-\d{2}[a-z]?\b", set(FLOW_REFERENCE_IDS), "flow"),
+        (r"\bTB-[A-Z0-9-]+\b", set(SECURITY_BOUNDARY_IDS), "trust-boundary"),
+    )
+    for pattern, known_ids, kind in cross_reference_contract:
+        references = set(re.findall(pattern, combined_security_text))
+        unknown_ids = sorted(references - known_ids)
+        if unknown_ids:
+            validation.error(
+                f"Security documents contain unknown {kind} references {unknown_ids!r}"
+            )
+
+    for relative, text in (
+        (threat_relative, threat_text),
+        (flow_relative, flow_text),
+        (abuse_relative, abuse_text),
+    ):
+        if SECURITY_MACHINE_PATH_RE.search(text):
+            validation.error(f"{relative}: contains a machine-specific path")
 
 
 def topological_order(
@@ -842,6 +1504,7 @@ def validate() -> int:
                     )
 
     validate_governance_documents(validation)
+    validate_security_documents(validation, task_by_id, decision_set)
     validate_tracked_text_positioning(validation)
 
     boundary_text = (ROOT / "PROJECT_BOUNDARY.md").read_text(encoding="utf-8")
