@@ -18,6 +18,7 @@
 *.props text eol=crlf
 *.targets text eol=crlf
 *.xaml text eol=crlf
+*.config text eol=crlf
 *.sln text eol=crlf
 *.ps1 text eol=crlf
 *.cmd text eol=crlf

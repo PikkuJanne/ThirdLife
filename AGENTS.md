@@ -131,14 +131,13 @@ Never claim a test passed when it was not run. State exactly why a Windows, priv
 
 ## 7. Repository verification
 
-`TL-0002` establishes the final clean-checkout verification command. The intended high-level baseline is:
+`TL-0002` establishes the final clean-checkout verification command. On Windows, after installing the exact SDK and Python tooling documented in `README.md`, run:
 
 ```powershell
-python tools/validate_bundle.py
-dotnet restore ThirdLife.sln --locked-mode
-dotnet build ThirdLife.sln -c Release --no-restore
-dotnet test ThirdLife.sln -c Release --no-build
+.\eng\verify.ps1
 ```
+
+Git Bash on Windows may use `./eng/verify.sh`. Both entry points run the governed bundle and repository validators, locked restore, formatting verification, Release build with warnings as errors, and Release tests. The authoritative CI environment is Windows; an unsupported host must fail clearly rather than skip Windows projects.
 
 Use the checked-in SDK/tool manifest and locked dependencies once created. Run focused tests during implementation and the documented full suite before a gate/release.
 

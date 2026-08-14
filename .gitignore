@@ -1,5 +1,7 @@
 # Local tools and IDE state
 .venv/
+__pycache__/
+*.py[cod]
 .vs/
 .idea/
 .vscode/

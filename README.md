@@ -191,16 +191,24 @@ For `hybrid` tasks, Codex completes the automatable portion and leaves `review` 
 
 ## Repository verification
 
-`TL-0002` establishes the final checked-in clean-checkout command. The intended baseline is:
+The verification toolchain is pinned to .NET SDK `10.0.400` by `global.json`, Python `3.14.7`, and the exact Python dependency in `tools/requirements.txt`. On a clean Windows checkout, create the ignored local environment once:
 
 ```powershell
-python tools/validate_bundle.py
-dotnet restore ThirdLife.sln --locked-mode
-dotnet build ThirdLife.sln -c Release --no-restore
-dotnet test ThirdLife.sln -c Release --no-build
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --no-deps --requirement tools\requirements.txt
 ```
 
-Environment-specific checks must be reported truthfully. Do not disable security, accessibility, low-spec, provenance, analyzer, or failing-test gates.
+Then run the complete repository gate from the repository root:
+
+```powershell
+.\eng\verify.ps1
+```
+
+The scripts resolve repository paths relative to themselves, so an absolute script path also works from another directory. Git Bash on Windows may run `./eng/verify.sh`. Non-Windows hosts fail clearly because the authoritative solution includes WPF and Windows-targeted projects.
+
+The verifier checks the governed bundle and machine-readable portfolio metadata, the bundle hash manifest, solution and WPF boundaries, exact SDK and central package policy, project-local NuGet lock files, the hardened Windows workflow, formatting, the Release build with warnings as errors, and all Release tests. Restore uses only `NuGet.Config` and `--locked-mode`; it does not rewrite the dependency graph.
+
+When an intentional package-version change is approved, update `Directory.Packages.props`, run `dotnet restore ThirdLife.sln --configfile NuGet.Config --force-evaluate`, inspect every lock-file change, and rerun the full verifier. Environment-specific checks must be reported truthfully. Do not disable security, accessibility, low-spec, provenance, analyzer, or failing-test gates.
 
 ## Stable Core 1.0 handoff
 
