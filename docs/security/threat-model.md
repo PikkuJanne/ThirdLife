@@ -1,12 +1,12 @@
 # ThirdLife Setup Core — v0.1 Threat Model
 
-**Status:** Draft for security-owner review  
-**Model revision:** TL-0004 draft 1  
+**Status:** Approved initial model  
+**Model revision:** TL-0004 approved 1  
 **Draft date:** 2026-08-14  
-**Security-owner approval:** **Pending**  
-**Approving owner and role:** Pending  
-**Approval date:** Pending  
-**Approval reference:** Pending  
+**Security-owner approval:** **Approved**  
+**Approving owner and role:** PikkuJanne — Security owner  
+**Approval date:** 2026-08-14  
+**Approval reference:** reviewed commit 917b5ebd5f5e4cf273a087a05dd381da54324235  
 **Authority:** Derived analysis under `DECISIONS.md`, `ROADMAP.md`, `PROJECT_BOUNDARY.md`, and `SECURITY.md`
 
 This document identifies security risks in the planned ThirdLife Setup Core architecture. It is not a new authority tier, a certification, or evidence that a planned control has been implemented. Frozen decisions and the canonical **Owns / Does not own** boundary prevail.
@@ -21,7 +21,7 @@ Control status has three meanings:
 - **Implemented:** code or documentation exists, but the required verification evidence is incomplete.
 - **Verified:** the owning task's required automated, Windows, adversarial, and human evidence exists.
 
-At this revision, every product control in the threat register is **planned** unless a completed task is explicitly named. A task reference is a traceability link, not proof that the mitigation works. No residual risk is accepted by this draft. A named security owner must approve this exact revision and the residual-risk list before `TL-0004` can be done.
+At this revision, every product control in the threat register is **planned** unless a completed task is explicitly named. A task reference is a traceability link, not proof that the mitigation works. The named security owner approved this initial model and selected a mitigation treatment for each residual risk; this does not approve an implemented control or authorize a release.
 
 ## Scope
 
@@ -311,18 +311,18 @@ The boundaries are intentionally separate; “local machine” is not a single t
 
 ## Residual-risk register
 
-These are proposed residuals for owner review. **Pending** means neither approval nor release authorization. On approval, each owner-decision cell must use `Accept`, `Mitigate`, `Avoid`, `Transfer`, or `Block`, followed by an em dash and a concrete rationale, condition, owner, or gate. Approval of this model is not release authorization.
+These residuals were reviewed with the initial model. Each owner-decision cell uses `Accept`, `Mitigate`, `Avoid`, `Transfer`, or `Block`, followed by an em dash and a concrete rationale, condition, owner, or gate. Approval of this model is not release authorization.
 
 | Residual ID | Linked threats | Proposed residual and affected asset | Detection, recovery, or manual fallback | Review trigger / blocking gate | Owner treatment/decision |
 |---|---|---|---|---|---|
-| `RR-001` | `THR-002`, `THR-004`, `THR-005`, `THR-006` | A compromised OS or local administrator can subvert local IPC/filesystem checks, falsify provider output, or tamper with local records; the audit is not tamper-proof. | Caller/session controls, final-object checks, cross-source evidence, provenance, fresh re-observation, physical/human tests, and visible uncertainty; stop/use external investigation when compromise is suspected. | IPC/path/provider/trust change; blocks `TL-0609` and `TL-0710` if unowned. | Pending |
-| `RR-002` | `THR-001`, `THR-003`, `THR-014` | A curated catalogue, signed publisher, package/dependency/build source, action, or update service can itself be compromised; a schema/reviewer can miss dangerous declarative meaning; and some backends may not expose strong artifact hashes. | Strict non-executable schema/action registry, adversarial/reviewer checks, exact metadata/provenance/locks, signature/hash where available, catalogue/release freeze, reapproval, SBOM/licence/vulnerability review, independent verification, and emergency stop. | Catalogue/schema/action/source/publisher/dependency/build/release trust change or active incident; blocks applicable package/release gates. | Pending |
-| `RR-003` | `THR-003`, `THR-008`, `THR-009` | Installers and Windows Update can make non-transactional machine changes; power loss may leave ambiguous state without safe rollback. | Journal attempted/applied state, actual-state reconciliation, requires-review outcome, documented non-rollback/recovery, cold boot and re-verification. | New mutation or rollback assumption; blocks applicable write/release gate. | Pending |
-| `RR-004` | `THR-013` | An authorized operator can approve a harmful but plausibly presented action or UAC prompt. | Complete accessible preview, exact source/impact/privilege display, material-change reapproval, operator training, and stop path. | Approval UX or action scope change; blocks `TL-0314`/release if high-severity ambiguity remains. | Pending |
-| `RR-005` | `THR-010` | External sanitization or ownership evidence can be false even when recorded correctly. | Attributable confirmation, policy blocker for unknown/conflict, human review, no erase/unlock/bypass capability, and truthful limitation in reports. | Evidence-source change or ownership conflict; blocks handover and release. | Pending |
-| `RR-006` | `THR-007` | After an operator exports an approved report/bundle, ThirdLife cannot control later copying, storage, or disclosure. | Minimize and preview content, bind preview digest to export, warn about destination, allow secure manual transfer, and record only sanitized export metadata. | Export schema/destination change; blocks `TL-0609` if minimization is inadequate. | Pending |
-| `RR-007` | `THR-011` | A future integrator may ignore the frozen-release/manual-fallback boundary outside this repository. | Public boundary documentation, exact release hashes/interface, no private runtime interface, optionality, independent disablement, and future portfolio-owner review. | B4 starts or a compatibility claim is proposed; blocks `TL-0709`/`TL-0710` if boundary is violated. | Pending |
-| `RR-008` | `THR-012` | Inputs or workloads beyond measured and published byte/count/depth/time/disk/concurrency limits may still exhaust a supported device or leave recoverable partial state. | Conservative hard limits, preflight/headroom, streaming, cancellation, bounded cleanup, representative low-spec/adversarial measurements, and documented manual recovery. | New parser/renderer/archive/workload class or limit change; blocks `TL-0707`/release if unbounded or unmeasured. | Pending |
+| `RR-001` | `THR-002`, `THR-004`, `THR-005`, `THR-006` | A compromised OS or local administrator can subvert local IPC/filesystem checks, falsify provider output, or tamper with local records; the audit is not tamper-proof. | Caller/session controls, final-object checks, cross-source evidence, provenance, fresh re-observation, physical/human tests, and visible uncertainty; stop/use external investigation when compromise is suspected. | IPC/path/provider/trust change; blocks `TL-0609` and `TL-0710` if unowned. | Mitigate — retain the planned caller, path, provenance, re-observation, and human checks; re-review at the listed trigger and block `TL-0609` or `TL-0710` while unowned. |
+| `RR-002` | `THR-001`, `THR-003`, `THR-014` | A curated catalogue, signed publisher, package/dependency/build source, action, or update service can itself be compromised; a schema/reviewer can miss dangerous declarative meaning; and some backends may not expose strong artifact hashes. | Strict non-executable schema/action registry, adversarial/reviewer checks, exact metadata/provenance/locks, signature/hash where available, catalogue/release freeze, reapproval, SBOM/licence/vulnerability review, independent verification, and emergency stop. | Catalogue/schema/action/source/publisher/dependency/build/release trust change or active incident; blocks applicable package/release gates. | Mitigate — require the planned schema, provenance, lock, reapproval, SBOM, licence, vulnerability, freeze, and independent-verification controls before each applicable gate. |
+| `RR-003` | `THR-003`, `THR-008`, `THR-009` | Installers and Windows Update can make non-transactional machine changes; power loss may leave ambiguous state without safe rollback. | Journal attempted/applied state, actual-state reconciliation, requires-review outcome, documented non-rollback/recovery, cold boot and re-verification. | New mutation or rollback assumption; blocks applicable write/release gate. | Mitigate — require durable journaling, actual-state reconciliation, truthful requires-review outcomes, documented recovery, and cold-boot re-verification before write and release gates. |
+| `RR-004` | `THR-013` | An authorized operator can approve a harmful but plausibly presented action or UAC prompt. | Complete accessible preview, exact source/impact/privilege display, material-change reapproval, operator training, and stop path. | Approval UX or action scope change; blocks `TL-0314`/release if high-severity ambiguity remains. | Mitigate — require complete accessible preview, exact impact and privilege disclosure, reapproval, training, and a stop path; block `TL-0314` or release on high-severity ambiguity. |
+| `RR-005` | `THR-010` | External sanitization or ownership evidence can be false even when recorded correctly. | Attributable confirmation, policy blocker for unknown/conflict, human review, no erase/unlock/bypass capability, and truthful limitation in reports. | Evidence-source change or ownership conflict; blocks handover and release. | Mitigate — keep sanitization and ownership external, attributable, conflict-blocking, and human-reviewed with no erase, unlock, or bypass capability; unresolved conflict blocks handover and release. |
+| `RR-006` | `THR-007` | After an operator exports an approved report/bundle, ThirdLife cannot control later copying, storage, or disclosure. | Minimize and preview content, bind preview digest to export, warn about destination, allow secure manual transfer, and record only sanitized export metadata. | Export schema/destination change; blocks `TL-0609` if minimization is inadequate. | Mitigate — minimize and preview export content, bind preview to export, warn about destination handling, and block `TL-0609` if the reviewed privacy controls are inadequate. |
+| `RR-007` | `THR-011` | A future integrator may ignore the frozen-release/manual-fallback boundary outside this repository. | Public boundary documentation, exact release hashes/interface, no private runtime interface, optionality, independent disablement, and future portfolio-owner review. | B4 starts or a compatibility claim is proposed; blocks `TL-0709`/`TL-0710` if boundary is violated. | Mitigate — preserve the frozen-release, public-interface, optionality, disablement, and manual-fallback boundary; re-review in B4 and block `TL-0709` or `TL-0710` on violation. |
+| `RR-008` | `THR-012` | Inputs or workloads beyond measured and published byte/count/depth/time/disk/concurrency limits may still exhaust a supported device or leave recoverable partial state. | Conservative hard limits, preflight/headroom, streaming, cancellation, bounded cleanup, representative low-spec/adversarial measurements, and documented manual recovery. | New parser/renderer/archive/workload class or limit change; blocks `TL-0707`/release if unbounded or unmeasured. | Mitigate — require conservative limits, preflight headroom, streaming, cancellation, bounded cleanup, measurements, and manual recovery; unbounded or unmeasured release workloads block `TL-0707`. |
 
 ## Security-owner review and approval
 
@@ -336,7 +336,7 @@ The reviewer must examine the exact Git revision and record:
 - any new threat, owner, blocking task, test, or release-gate condition; and
 - explicit result: approved, approved with recorded conditions, or changes required.
 
-**Current review result:** Pending. This draft does not satisfy the human evidence required by `TL-0004`, does not approve any implemented control, and does not replace later broker, package, privacy, pilot, or Core 1.0 security reviews.
+**Current review result:** Approved. The named security owner approved this initial model and recorded a treatment for every residual risk; this is not release authorization and does not replace later security reviews.
 
 ## Maintenance triggers
 

@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Security Data Flow
 
-**Status:** Draft for security-owner review  
-**Model revision:** TL-0004 draft 1  
+**Status:** Approved initial model  
+**Model revision:** TL-0004 approved 1  
 **Draft date:** 2026-08-14  
 **Authority:** Supporting analysis for [`threat-model.md`](threat-model.md); binding boundaries remain in the root authority files
 

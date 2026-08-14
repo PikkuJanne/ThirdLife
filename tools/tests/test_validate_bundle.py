@@ -290,6 +290,71 @@ class SecurityDocumentContractTests(unittest.TestCase):
         self.assertIn(old, text)
         path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
+    def make_pending_security_review(self, root: Path) -> None:
+        threat_path = root / "docs/security/threat-model.md"
+        threat_replacements = (
+            ("**Status:** Approved initial model", "**Status:** Draft for security-owner review"),
+            ("**Model revision:** TL-0004 approved 1", "**Model revision:** TL-0004 draft 1"),
+            ("**Security-owner approval:** **Approved**", "**Security-owner approval:** **Pending**"),
+            ("**Approving owner and role:** PikkuJanne — Security owner", "**Approving owner and role:** Pending"),
+            ("**Approval date:** 2026-08-14", "**Approval date:** Pending"),
+            (
+                "**Approval reference:** reviewed commit 917b5ebd5f5e4cf273a087a05dd381da54324235",
+                "**Approval reference:** Pending",
+            ),
+            (
+                "The named security owner approved this initial model and selected a mitigation treatment for each residual risk; this does not approve an implemented control or authorize a release.",
+                "No residual risk is accepted by this draft. A named security owner must approve this exact revision and the residual-risk list before `TL-0004` can be done.",
+            ),
+            (
+                "These residuals were reviewed with the initial model. Each owner-decision cell uses `Accept`, `Mitigate`, `Avoid`, `Transfer`, or `Block`, followed by an em dash and a concrete rationale, condition, owner, or gate. Approval of this model is not release authorization.",
+                "These are proposed residuals for owner review. **Pending** means neither approval nor release authorization. On approval, each owner-decision cell must use `Accept`, `Mitigate`, `Avoid`, `Transfer`, or `Block`, followed by an em dash and a concrete rationale, condition, owner, or gate. Approval of this model is not release authorization.",
+            ),
+            (
+                "**Current review result:** Approved. The named security owner approved this initial model and recorded a treatment for every residual risk; this is not release authorization and does not replace later security reviews.",
+                "**Current review result:** Pending. This draft does not satisfy the human evidence required by `TL-0004`, does not approve any implemented control, and does not replace later broker, package, privacy, pilot, or Core 1.0 security reviews.",
+            ),
+        )
+        for old, new in threat_replacements:
+            self.replace_once(threat_path, old, new)
+        threat_text = threat_path.read_text(encoding="utf-8")
+        threat_text, replacement_count = re.subn(
+            r"(^\|\s*`RR-\d{3}`\s*\|.*\|)\s*(?:Accept|Mitigate|Avoid|Transfer|Block)\s+—\s+.*?\s*(\|\s*$)",
+            r"\1 Pending \2",
+            threat_text,
+            flags=re.MULTILINE,
+        )
+        self.assertEqual(replacement_count, 8)
+        threat_path.write_text(threat_text, encoding="utf-8")
+
+        flow_path = root / "docs/security/data-flow.md"
+        self.replace_once(
+            flow_path,
+            "**Status:** Approved initial model",
+            "**Status:** Draft for security-owner review",
+        )
+        self.replace_once(
+            flow_path,
+            "**Model revision:** TL-0004 approved 1",
+            "**Model revision:** TL-0004 draft 1",
+        )
+
+        abuse_path = root / "docs/security/abuse-cases.md"
+        abuse_replacements = (
+            ("**Status:** Approved initial model", "**Status:** Draft for security-owner review"),
+            ("**Model revision:** TL-0004 approved 1", "**Model revision:** TL-0004 draft 1"),
+            (
+                "The named security owner recorded a treatment for every residual risk; this is not release authorization.",
+                "Human acceptance of residual risks remains pending.",
+            ),
+            (
+                "**Review result:** Approved. Named security-owner approval is recorded for the exact model revision.",
+                "**Review result:** Pending. No security-owner approval or residual-risk acceptance is recorded in this draft.",
+            ),
+        )
+        for old, new in abuse_replacements:
+            self.replace_once(abuse_path, old, new)
+
     def test_current_security_documents_satisfy_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -500,8 +565,8 @@ class SecurityDocumentContractTests(unittest.TestCase):
         mutations = (
             (
                 "docs/security/data-flow.md",
-                "**Model revision:** TL-0004 draft 1",
-                "**Model revision:** TL-0004 draft 2",
+                "**Model revision:** TL-0004 approved 1",
+                "**Model revision:** TL-0004 approved 2",
                 "must share one exact model revision",
             ),
             (
@@ -608,6 +673,7 @@ class SecurityDocumentContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_security_documents(root)
+            self.make_pending_security_review(root)
             threat_path = root / "docs/security/threat-model.md"
             self.replace_once(
                 threat_path,
@@ -635,6 +701,7 @@ class SecurityDocumentContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_security_documents(root)
+            self.make_pending_security_review(root)
             task_by_id = dict(TASK_BY_ID)
             threat_model_task = dict(task_by_id["TL-0004"])
             threat_model_task["status"] = "done"
@@ -655,67 +722,8 @@ class SecurityDocumentContractTests(unittest.TestCase):
             self.copy_security_documents(root)
             threat_path = root / "docs/security/threat-model.md"
             threat_text = threat_path.read_text(encoding="utf-8")
-            replacements = (
-                ("**Status:** Draft for security-owner review", "**Status:** Approved initial model"),
-                ("**Model revision:** TL-0004 draft 1", "**Model revision:** TL-0004 approved 1"),
-                ("**Security-owner approval:** **Pending**", "**Security-owner approval:** **Approved**"),
-                ("**Approving owner and role:** Pending", "**Approving owner and role:** Alex Reviewer — Security owner"),
-                ("**Approval date:** Pending", "**Approval date:** 2026-08-14"),
-                ("**Approval reference:** Pending", "**Approval reference:** commit 0123456789abcdef0123456789abcdef01234567"),
-                (
-                    "No residual risk is accepted by this draft.",
-                    "The named security owner accepted the recorded residual-risk decisions.",
-                ),
-                (
-                    "**Current review result:** Pending. This draft does not satisfy the human evidence required by `TL-0004`, does not approve any implemented control, and does not replace later broker, package, privacy, pilot, or Core 1.0 security reviews.",
-                    "**Current review result:** Approved. The named security owner approved this initial model and recorded a treatment for every residual risk; this is not release authorization and does not replace later security reviews.",
-                ),
-            )
-            for old, new in replacements:
-                self.assertIn(old, threat_text)
-                threat_text = threat_text.replace(old, new, 1)
-            threat_text = re.sub(
-                r"(^\|\s*`RR-\d{3}`\s*\|.*\|)\s*Pending\s*(\|\s*$)",
-                r"\1 Mitigate — owner and blocking gate recorded \2",
-                threat_text,
-                flags=re.MULTILINE,
-            )
-            threat_path.write_text(threat_text, encoding="utf-8")
-
-            flow_path = root / "docs/security/data-flow.md"
-            flow_text = flow_path.read_text(encoding="utf-8")
-            flow_text = flow_text.replace(
-                "**Status:** Draft for security-owner review",
-                "**Status:** Approved initial model",
-                1,
-            ).replace(
-                "**Model revision:** TL-0004 draft 1",
-                "**Model revision:** TL-0004 approved 1",
-                1,
-            )
-            flow_path.write_text(flow_text, encoding="utf-8")
-
-            abuse_path = root / "docs/security/abuse-cases.md"
-            abuse_text = abuse_path.read_text(encoding="utf-8")
-            self.assertIn("**Review result:** Pending.", abuse_text)
-            abuse_text = abuse_text.replace(
-                "**Status:** Draft for security-owner review",
-                "**Status:** Approved initial model",
-                1,
-            ).replace(
-                "**Model revision:** TL-0004 draft 1",
-                "**Model revision:** TL-0004 approved 1",
-                1,
-            ).replace(
-                "Human acceptance of residual risks remains pending.",
-                "The named security owner recorded a treatment for every residual risk; this is not release authorization.",
-                1,
-            ).replace(
-                "**Review result:** Pending. No security-owner approval or residual-risk acceptance is recorded in this draft.",
-                "**Review result:** Approved. Named security-owner approval is recorded for the exact model revision.",
-                1,
-            )
-            abuse_path.write_text(abuse_text, encoding="utf-8")
+            approval_commit = re.search(r"\b[0-9a-fA-F]{40}\b", threat_text)
+            self.assertIsNotNone(approval_commit)
 
             task_by_id = dict(TASK_BY_ID)
             threat_model_task = dict(task_by_id["TL-0004"])
@@ -724,7 +732,7 @@ class SecurityDocumentContractTests(unittest.TestCase):
                 {
                     "summary": "Named security owner approved the initial model and residual-risk decisions.",
                     "result": "failed",
-                    "reference": "reviewed commit 0123456789abcdef0123456789abcdef01234567",
+                    "reference": f"reviewed commit {approval_commit.group(0)}",
                 }
             ]
             task_by_id["TL-0004"] = threat_model_task

@@ -1,13 +1,13 @@
 # ThirdLife Setup Core — v0.1 Abuse Cases
 
-**Status:** Draft for security-owner review  
-**Model revision:** TL-0004 draft 1  
+**Status:** Approved initial model  
+**Model revision:** TL-0004 approved 1  
 **Draft date:** 2026-08-14  
 **Authority:** Supporting analysis for [`threat-model.md`](threat-model.md) and [`data-flow.md`](data-flow.md)
 
 These cases turn the threat register into reviewable misuse and failure stories. Attack paths are intentionally abstract: the repository does not need executable payloads, real secrets, private paths, or exploit scripts to test rejection and recovery semantics.
 
-All mapped product controls are **planned** unless their owning task has separately reached done with the required evidence. A roadmap reference does not claim implementation. Human acceptance of residual risks remains pending.
+All mapped product controls are **planned** unless their owning task has separately reached done with the required evidence. A roadmap reference does not claim implementation. The named security owner recorded a treatment for every residual risk; this is not release authorization.
 
 ## Coverage index
 
@@ -311,4 +311,4 @@ The security owner should review the exact commit and confirm:
 - proposed residuals `RR-001` through `RR-008` have an owner decision, conditions, review trigger, and blocking gate; and
 - approval records name, role, date, result, exact commit/reference, and residual decisions.
 
-**Review result:** Pending. No security-owner approval or residual-risk acceptance is recorded in this draft.
+**Review result:** Approved. Named security-owner approval is recorded for the exact model revision.
