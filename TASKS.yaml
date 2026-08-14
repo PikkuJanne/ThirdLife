@@ -239,7 +239,7 @@ tasks:
   workstream: foundation
   kind: build
   priority: P0
-  status: in_progress
+  status: done
   size: M
   executor: codex
   environment: any
@@ -269,7 +269,22 @@ tasks:
   - Run the local verification scripts where supported.
   - Validate the CI definition.
   - Confirm a deliberate warning fails verification.
-  evidence: []
+  evidence:
+  - summary: PowerShell and Git Bash entry points completed the full deterministic repository gate.
+    result: passed
+    environment: Windows 11 x64; .NET SDK 10.0.400; Python 3.14.7; PyYAML 6.0.3
+    date: '2026-08-14'
+    reference: eng/verify.ps1; eng/verify.sh; locked restore, formatting, Release build, and 14 tests passed
+  - summary: Formatting and compiler-warning failure gates were proven with reversible probes.
+    result: passed
+    environment: Windows 11 x64; .NET SDK 10.0.400
+    date: '2026-08-14'
+    reference: Temporary EOL defect produced ENDOFLINE and exit 2; temporary #warning produced CS1030 and exit 1; probes removed; final verification passed
+  - summary: Authoritative Windows clean-checkout CI passed without publishing artifacts.
+    result: passed
+    environment: GitHub Actions windows-2025; commit 9ac9e9ed4b9b4b01828644199311aa1ae4054172
+    date: '2026-08-14'
+    reference: https://github.com/PikkuJanne/ThirdLife/actions/runs/31805725622; job 94784055142; artifact count 0
 - id: TL-0003
   title: Establish product, portfolio-boundary, and documentation governance
   milestone: M0
