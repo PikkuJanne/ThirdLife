@@ -1,0 +1,501 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thirdlife.local/schemas/tasks.schema.json",
+  "title": "ThirdLife Setup Core roadmap task graph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "bundle_version",
+    "generated_on",
+    "project",
+    "portfolio",
+    "authority",
+    "workflow",
+    "definition_of_ready",
+    "definition_of_done",
+    "milestones",
+    "tasks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "bundle_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "generated_on": {
+      "type": "string",
+      "format": "date"
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "component",
+        "owner_team",
+        "queue_position",
+        "release_target",
+        "pilot_gate",
+        "standalone_release_gate",
+        "future_assembly_project",
+        "future_assembly_queue_position",
+        "platform",
+        "stack",
+        "repository_root"
+      ],
+      "properties": {
+        "name": {
+          "const": "ThirdLife"
+        },
+        "component": {
+          "const": "ThirdLife Setup Core"
+        },
+        "owner_team": {
+          "const": "Team B"
+        },
+        "queue_position": {
+          "const": "B1"
+        },
+        "release_target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pilot_gate": {
+          "const": "TL-0611"
+        },
+        "standalone_release_gate": {
+          "const": "TL-0710"
+        },
+        "future_assembly_project": {
+          "const": "ThirdLife Deployment and Suite Assembly"
+        },
+        "future_assembly_queue_position": {
+          "const": "B4"
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stack": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "repository_root": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "portfolio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roadmap_version",
+        "development_posture",
+        "integration_posture",
+        "active_cross_project_dependencies_allowed",
+        "sibling_specific_work_authorized",
+        "next_team_project_after_stable"
+      ],
+      "properties": {
+        "roadmap_version": {
+          "const": "2.0"
+        },
+        "development_posture": {
+          "const": "standalone project vacuum"
+        },
+        "integration_posture": {
+          "const": "late binding against frozen stable releases"
+        },
+        "active_cross_project_dependencies_allowed": {
+          "const": false
+        },
+        "sibling_specific_work_authorized": {
+          "const": false
+        },
+        "next_team_project_after_stable": {
+          "const": "Scam Explainer"
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "precedence",
+        "change_rule"
+      ],
+      "properties": {
+        "precedence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "change_rule": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "states",
+        "allowed_transitions",
+        "mutable_task_fields",
+        "ready_rule",
+        "selection_rule",
+        "single_task_default",
+        "human_completion_rule"
+      ],
+      "properties": {
+        "states": {
+          "type": "array",
+          "const": [
+            "backlog",
+            "ready",
+            "in_progress",
+            "blocked",
+            "review",
+            "done",
+            "cancelled"
+          ]
+        },
+        "allowed_transitions": {
+          "type": "object"
+        },
+        "mutable_task_fields": {
+          "type": "array",
+          "const": [
+            "status",
+            "evidence",
+            "blocked_reason"
+          ]
+        },
+        "ready_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "selection_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "single_task_default": {
+          "const": true
+        },
+        "human_completion_rule": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "definition_of_ready": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "definition_of_done": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "milestones": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/milestone"
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/task"
+      }
+    }
+  },
+  "$defs": {
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "objective",
+        "gate_task",
+        "exit_criteria"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^M\\d+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gate_task": {
+          "type": "string",
+          "pattern": "^TL-\\d{4}$"
+        },
+        "exit_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "milestone",
+        "workstream",
+        "kind",
+        "priority",
+        "status",
+        "size",
+        "executor",
+        "environment",
+        "depends_on",
+        "decision_refs",
+        "objective",
+        "deliverables",
+        "acceptance_criteria",
+        "verification",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^TL-\\d{4}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "milestone": {
+          "type": "string",
+          "pattern": "^M\\d+$"
+        },
+        "workstream": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "build",
+            "code",
+            "data",
+            "docs",
+            "gate",
+            "release",
+            "security",
+            "spike",
+            "test"
+          ]
+        },
+        "priority": {
+          "enum": [
+            "P0",
+            "P1",
+            "P2",
+            "P3"
+          ]
+        },
+        "status": {
+          "enum": [
+            "backlog",
+            "ready",
+            "in_progress",
+            "blocked",
+            "review",
+            "done",
+            "cancelled"
+          ]
+        },
+        "size": {
+          "enum": [
+            "S",
+            "M",
+            "L",
+            "XL"
+          ]
+        },
+        "executor": {
+          "enum": [
+            "codex",
+            "hybrid",
+            "human"
+          ]
+        },
+        "environment": {
+          "enum": [
+            "any",
+            "windows"
+          ]
+        },
+        "depends_on": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^TL-\\d{4}$"
+          }
+        },
+        "decision_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^D-\\d{3}$"
+          }
+        },
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deliverables": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "verification": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "additionalProperties": true,
+                "required": [
+                  "summary"
+                ],
+                "properties": {
+                  "summary": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "result": {
+                    "type": "string"
+                  },
+                  "environment": {
+                    "type": "string"
+                  },
+                  "date": {
+                    "type": "string"
+                  },
+                  "reference": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "human_evidence_required": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "blocked_reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "executor": {
+                "enum": [
+                  "hybrid",
+                  "human"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "human_evidence_required"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "blocked"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "blocked_reason"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

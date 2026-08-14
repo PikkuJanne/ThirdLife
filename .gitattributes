@@ -1,0 +1,25 @@
+* text=auto
+.gitattributes text eol=lf
+.editorconfig text eol=lf
+.gitignore text eol=lf
+
+# Keep the governed bundle byte-stable across developer machines.
+*.md text eol=lf whitespace=-blank-at-eol
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.py text eol=lf
+*.txt text eol=lf
+*.sha256 text eol=lf
+
+# The application targets Windows; keep its native project formats consistent.
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.props text eol=crlf
+*.targets text eol=crlf
+*.xaml text eol=crlf
+*.sln text eol=crlf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.sh text eol=lf

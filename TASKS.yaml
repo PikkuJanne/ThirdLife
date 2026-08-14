@@ -1,0 +1,3699 @@
+schema_version: 1
+bundle_version: 0.2.0
+generated_on: '2026-08-14'
+project:
+  name: ThirdLife
+  component: ThirdLife Setup Core
+  owner_team: Team B
+  queue_position: B1
+  release_target: ThirdLife Setup Core 1.0 standalone stable release
+  pilot_gate: TL-0611
+  standalone_release_gate: TL-0710
+  future_assembly_project: ThirdLife Deployment and Suite Assembly
+  future_assembly_queue_position: B4
+  platform: Windows 11 x64
+  stack:
+  - .NET 10
+  - C#
+  - WPF
+  - SQLite
+  repository_root: .
+authority:
+  precedence:
+  - DECISIONS.md
+  - ROADMAP.md
+  - PROJECT_BOUNDARY.md
+  - SECURITY.md
+  - ACCESSIBILITY.md
+  - LOW_SPEC.md
+  - AGENTS.md
+  - TASKS.yaml
+  - CODEX_START_PROMPT.md
+  - README.md
+  change_rule: Frozen decisions, project boundaries, portfolio posture, and milestone scope require explicit human approval.
+    Codex may update only task execution fields unless the selected task explicitly authorizes a synchronized bundle change.
+workflow:
+  states:
+  - backlog
+  - ready
+  - in_progress
+  - blocked
+  - review
+  - done
+  - cancelled
+  allowed_transitions:
+    backlog:
+    - ready
+    - cancelled
+    ready:
+    - in_progress
+    - blocked
+    - cancelled
+    in_progress:
+    - blocked
+    - review
+    - ready
+    blocked:
+    - ready
+    - cancelled
+    review:
+    - in_progress
+    - done
+    - blocked
+    done: []
+    cancelled: []
+  mutable_task_fields:
+  - status
+  - evidence
+  - blocked_reason
+  ready_rule: A task is dependency-ready when every depends_on task is done. It is Codex-ready when dependency-ready, status
+    is ready or backlog, executor is codex or hybrid, and any required human input is already available.
+  selection_rule: Select the lowest milestone, then lowest numeric task ID, among Codex-ready P0 tasks unless the user names
+    a task.
+  single_task_default: true
+  human_completion_rule: 'Codex must not mark executor: human tasks done. For executor: hybrid tasks, Codex may complete implementation
+    but must leave status at review or blocked until every human_evidence_required item is attached.'
+definition_of_ready:
+- All dependencies are done.
+- Relevant frozen decisions and project-boundary rules have been read.
+- Deliverables and acceptance criteria are testable.
+- Required Windows, hardware, package, policy, or human inputs are available, or the task is explicitly limited to a portable
+  portion.
+- No unresolved blocker or contradictory authority exists.
+- The task has no live dependency on a sibling repository, database, service, branch, build, or unfinished feature.
+definition_of_done:
+- Every listed deliverable is present or the task record explains an approved replacement.
+- Every acceptance criterion is satisfied by linked evidence.
+- Automated verification passes at the required scope.
+- Required Windows/manual/human evidence is attached.
+- Security, privacy, accessibility, low-spec, migration, release-interface, and documentation impacts are addressed where
+  applicable.
+- The implementation remains independently useful without sibling applications and does not introduce a cross-project dependency.
+- TASKS.yaml status/evidence is updated without rewriting frozen history.
+milestones:
+- id: M0
+  name: Foundation and product contract
+  objective: Create the governed repository, frozen standalone and portfolio boundaries, security/privacy/accessibility/low-spec
+    baselines, pilot inputs, and verification infrastructure required before feature code expands.
+  gate_task: TL-0010
+  exit_criteria:
+  - The repository builds from a clean checkout on the supported Windows environment.
+  - Product, non-goals, threat, privacy, accessibility, low-spec, dependency/license, test-device, and ADR inputs have named
+    owners.
+  - The Team B/B1 project-vacuum boundary and future B4 late-binding posture are explicit and validated.
+  - The roadmap bundle and repository rules are internally consistent and validated.
+- id: M1
+  name: Audit-only vertical slice
+  objective: Create a durable local job, enforce sanitization evidence, run a read-only assessment, collect human tests, and
+    produce a privacy-safe workshop report.
+  gate_task: TL-0116
+  exit_criteria:
+  - The normal flow makes no system changes and runs unelevated.
+  - Missing evidence remains unknown and normalized observations are deterministic.
+  - A representative volunteer completes the flow with accessible UI and privacy-safe persistence/logging.
+- id: M2
+  name: Explainable disposition engine
+  objective: Evaluate versioned organization policy against immutable evidence and produce explainable dispositions, confirmations,
+    repairs, and governed exceptions.
+  gate_task: TL-0208
+  exit_criteria:
+  - Every disposition cites evidence and policy.
+  - Blocking failures cannot silently pass; exceptions remain attributable and visible.
+  - Historical jobs preserve the policy/result originally used.
+- id: M3
+  name: Safe planning and privilege boundary
+  objective: Resolve declarative profiles into a complete approved plan and prove that a narrow ephemeral broker independently
+    rejects anything outside compiled actions.
+  gate_task: TL-0314
+  exit_criteria:
+  - Profiles/catalog entries cannot execute arbitrary commands.
+  - Approval binds resolved content and material changes require reapproval.
+  - The broker protocol, IPC, journal, and reboot checkpoints fail closed under adversarial tests.
+- id: M4
+  name: One package installation vertical slice
+  objective: Install and independently verify one approved machine-wide package through the structured backend, broker, journal,
+    recovery, and reporting path.
+  gate_task: TL-0411
+  exit_criteria:
+  - Exact package identity/source/trust data is enforced without localized table parsing or hash bypass.
+  - Installer success is not accepted until independent verification passes.
+  - UAC decline, network loss, process termination, reboot, and retry are recoverable and idempotent.
+- id: M5
+  name: Full machine profile
+  objective: Apply the reviewed pilot profile across Windows Update, multiple packages, security checks, restart phases, cold-boot
+    verification, and the supported test matrix.
+  gate_task: TL-0511
+  exit_criteria:
+  - The job-seeker machine profile converges on the approved Windows/device matrix.
+  - Essential failures and resource or ownership blockers prevent ready status.
+  - Final cold-boot verification records exact versions and unresolved limitations.
+- id: M6
+  name: Handover and controlled pilot
+  objective: Block handover until finalization, reports, diagnostic privacy, accessibility, security/privacy review, packaging,
+    and human go/no-go approvals support a controlled v0.1 pilot; this is not the standalone stable-release or Team B exit
+    gate.
+  gate_task: TL-0611
+  exit_criteria:
+  - Workshop, recipient, and diagnostic outputs respect their distinct data boundaries.
+  - Finalization and sign-off cannot be bypassed while blockers remain.
+  - The reproducible pilot package, runbook, audits, and named human approvals support a controlled partner pilot.
+  - The gate record states that Core 1.0 completion and portfolio handoff remain in M7.
+- id: M7
+  name: Core 1.0 standalone release and portfolio handoff
+  objective: Complete recipient-controlled accessibility and basic operating-system backup onboarding, harden the standalone
+    product lifecycle, publish the minimal release interface, freeze exact release artifacts, and prove ThirdLife Setup Core
+    1.0 is independently releasable.
+  gate_task: TL-0710
+  exit_criteria:
+  - ThirdLife Setup Core is useful, installable, updateable, repairable, removable, and recoverable without sibling applications,
+    a ThirdLife account, or a permanent privileged service.
+  - Recipient accessibility and basic operating-system backup choices remain recipient-controlled, reversible where applicable,
+    and do not leak recovery material.
+  - Offline core behavior, low-spec evidence, security/privacy, accessibility, update, repair, uninstall, migration, and data-preservation
+    evidence pass the stable-release matrix.
+  - Exact artifacts, hashes, source revision, SBOM, licence evidence, known limitations, sanitized samples, and RELEASE_INTERFACE.md
+    are frozen.
+  - Team B/B1 is complete and the next project is Scam Explainer; no B4 sibling adapter work is authorized by this gate.
+tasks:
+- id: TL-0001
+  title: Create the solution and repository scaffold
+  milestone: M0
+  workstream: foundation
+  kind: code
+  priority: P0
+  status: done
+  size: M
+  executor: codex
+  environment: any
+  depends_on: []
+  decision_refs:
+  - D-001
+  - D-027
+  - D-045
+  - D-046
+  - D-048
+  - D-050
+  objective: Create a clean .NET 10 solution for the ThirdLife Setup Core B1 project whose production namespaces remain ThirdLife.*,
+    whose project boundaries match the frozen architecture, and which contains no speculative suite/adapter project.
+  deliverables:
+  - ThirdLife.sln
+  - src/ThirdLife.* production projects
+  - tests/ThirdLife.*.Tests projects
+  - Directory.Build.props
+  - .editorconfig
+  - .gitignore
+  acceptance_criteria:
+  - All production and test projects are listed in ThirdLife.sln.
+  - Only ThirdLife.UI uses the WPF SDK.
+  - Nullable reference types and warnings-as-errors are enabled centrally.
+  - Production namespaces use ThirdLife.* while user-facing project documentation identifies ThirdLife Setup Core.
+  - No ThirdLife.Integration, shared SDK, plugin framework, sibling adapter, or portfolio service is scaffolded.
+  - Project references have no cycle.
+  verification:
+  - Run dotnet sln ThirdLife.sln list.
+  - Build the solution on Windows, or record the unavailable Windows verification honestly.
+  evidence:
+  - summary: Roadmap bundle and complete solution membership validated.
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; PyYAML 6.0.3; .NET SDK 10.0.400
+    date: '2026-08-14'
+    reference: tools/validate_bundle.py; dotnet sln ThirdLife.sln list; 26 solution projects matched 26 project files
+  - summary: Central compiler policy and exclusive WPF boundary validated.
+    result: passed
+    environment: Windows 11 x64; .NET SDK 10.0.400
+    date: '2026-08-14'
+    reference: Directory.Build.props evaluated Nullable=enable and TreatWarningsAsErrors=true; WPF scan found ThirdLife.UI only
+  - summary: Release restore and build completed without warnings or errors.
+    result: passed
+    environment: Windows 11 x64; .NET SDK 10.0.400
+    date: '2026-08-14'
+    reference: dotnet restore ThirdLife.sln; dotnet build ThirdLife.sln -c Release --no-restore
+  - summary: Assembly-boundary tests and explicit project-graph audit passed.
+    result: passed
+    environment: Windows 11 x64; .NET SDK 10.0.400
+    date: '2026-08-14'
+    reference: dotnet test ThirdLife.sln -c Release --no-build --no-restore (14 passed); graph audit (15 edges, 0 cycles)
+- id: TL-0002
+  title: Add deterministic verification and Windows CI
+  milestone: M0
+  workstream: foundation
+  kind: build
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0001
+  decision_refs:
+  - D-027
+  - D-039
+  - D-043
+  - D-045
+  - D-046
+  - D-048
+  objective: Provide one repeatable command for restore, formatting, build, tests, dependency checks, and an authoritative
+    Windows CI job.
+  deliverables:
+  - eng/verify.ps1
+  - eng/verify.sh
+  - .github/workflows/verify.yml or equivalent CI
+  - central package/lock configuration
+  acceptance_criteria:
+  - A clean checkout can run the documented verification command.
+  - The authoritative build-and-test job runs on Windows.
+  - Formatting and compiler warnings fail verification.
+  - CI artifacts contain no secrets or machine-specific paths.
+  - The verification command validates the required portfolio-boundary documents and machine-readable portfolio metadata.
+  verification:
+  - Run the local verification scripts where supported.
+  - Validate the CI definition.
+  - Confirm a deliberate warning fails verification.
+  evidence: []
+- id: TL-0003
+  title: Establish product, portfolio-boundary, and documentation governance
+  milestone: M0
+  workstream: product
+  kind: docs
+  priority: P0
+  status: backlog
+  size: S
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0001
+  decision_refs:
+  - D-001
+  - D-002
+  - D-003
+  - D-004
+  - D-005
+  - D-006
+  - D-010
+  - D-045
+  - D-046
+  - D-047
+  - D-048
+  - D-049
+  - D-050
+  - D-054
+  - D-056
+  - D-057
+  objective: Make the ThirdLife Setup Core purpose, Team B/B1 boundary, project-vacuum rule, future B4 role, vocabulary, non-goals,
+    specialized quality baselines, release-interface obligation, and change process visible inside the repository.
+  deliverables:
+  - docs/product-contract.md
+  - docs/non-goals.md
+  - docs/glossary.md
+  - docs/change-control.md
+  - PROJECT_BOUNDARY.md
+  - SECURITY.md
+  - ACCESSIBILITY.md
+  - LOW_SPEC.md
+  - RELEASE_INTERFACE.md
+  - FUTURE_ASSEMBLY_NOTES.md
+  acceptance_criteria:
+  - The documents distinguish the ThirdLife product family from the active ThirdLife Setup Core project.
+  - The controlled v0.1 pilot is M0 through M6; the independently releasable Core 1.0 and Team B exit gate are M7/TL-0710.
+  - Team B/B1, standalone-first development, and the next Team B project are explicit.
+  - Existing-PC work, unsupported Windows bypasses, sibling domains, shared integration infrastructure, and B4 adapter work
+    are excluded.
+  - Cross-project ideas are recorded only in FUTURE_ASSEMBLY_NOTES.md and create no active dependency.
+  - The authority order matches D-045.
+  - Evidence, requirement, blocker, disposition, applied, verified, frozen release, compatibility cut, and adapter are defined.
+  verification:
+  - Run the bundle validator.
+  - Search tracked text for prohibited legacy naming and optimizer positioning.
+  evidence: []
+- id: TL-0004
+  title: Write the v0.1 threat model
+  milestone: M0
+  workstream: security
+  kind: security
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: any
+  depends_on:
+  - TL-0003
+  decision_refs:
+  - D-007
+  - D-009
+  - D-022
+  - D-023
+  - D-025
+  - D-029
+  - D-030
+  - D-031
+  - D-035
+  - D-043
+  - D-048
+  - D-049
+  - D-050
+  - D-051
+  - D-053
+  - D-055
+  objective: Define assets, actors, trust boundaries, abuse cases, mitigations, and residual risks for inventory, catalog,
+    package, broker, journal, report, and update flows.
+  deliverables:
+  - docs/security/threat-model.md
+  - docs/security/data-flow.md
+  - docs/security/abuse-cases.md
+  acceptance_criteria:
+  - The UI, broker, package source, local job store, and export destination are distinct trust boundaries.
+  - Command injection, package substitution, replay, cross-user IPC, path attacks, log leakage, stale catalog, and interruption
+    are covered.
+  - Each high-risk threat maps to a roadmap control or accepted residual risk.
+  - Sanitization and ownership bypass remain outside the runtime boundary.
+  - The threat model covers accidental early cross-project coupling and future B4 adapter misuse without designing an adapter.
+  verification:
+  - Perform a structured threat review.
+  - Map each broker/package threat to at least one task.
+  evidence: []
+  human_evidence_required:
+  - A named security owner approves the initial threat model and residual-risk list.
+- id: TL-0005
+  title: Define the privacy and logging model
+  milestone: M0
+  workstream: privacy
+  kind: security
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: any
+  depends_on:
+  - TL-0003
+  - TL-0004
+  decision_refs:
+  - D-011
+  - D-013
+  - D-014
+  - D-036
+  - D-037
+  - D-053
+  objective: Specify data classification, retention, redaction, support-export review, and prohibited fields before logging
+    code is built.
+  deliverables:
+  - docs/privacy/privacy-model.md
+  - docs/privacy/logging-standard.md
+  - docs/privacy/redaction-test-cases.yaml
+  acceptance_criteria:
+  - Recipient identity is unnecessary for normal workshop jobs.
+  - Full serial numbers are restricted to the workshop record.
+  - Prohibited diagnostic fields and allowed support fields are enumerated.
+  - Raw command output is treated as untrusted sensitive input.
+  - Telemetry remains off by default.
+  - The data map explicitly excludes sibling workspaces, private databases, content, assessment evidence, and backup keys
+    from ThirdLife-owned data.
+  verification:
+  - Review synthetic sensitive-data examples.
+  - Confirm each example has an expected redacted form.
+  evidence: []
+  human_evidence_required:
+  - A named privacy owner approves classifications and default retention guidance.
+- id: TL-0006
+  title: Create dependency, license, and SBOM controls
+  milestone: M0
+  workstream: supply-chain
+  kind: build
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: any
+  depends_on:
+  - TL-0002
+  - TL-0004
+  decision_refs:
+  - D-024
+  - D-025
+  - D-026
+  - D-043
+  - D-052
+  - D-055
+  - D-056
+  objective: Establish central dependency pinning, license recording, vulnerability review, and release SBOM generation.
+  deliverables:
+  - Directory.Packages.props or equivalent
+  - docs/supply-chain/dependencies.md
+  - docs/supply-chain/license-matrix.csv
+  - eng/generate-sbom.ps1
+  acceptance_criteria:
+  - Every introduced package has owner, version, source, purpose, and license.
+  - Runtime, build-only, test-only, and catalog application dependencies are distinguished.
+  - Installation and redistribution rights are separate fields.
+  - An SBOM can be generated from a clean checkout.
+  - Release evidence can populate the dependency, licence, provenance, hash, and SBOM fields required by RELEASE_INTERFACE.md.
+  verification:
+  - Restore with locked versions.
+  - Generate and inspect an SBOM.
+  - Run the chosen vulnerability audit and record limitations.
+  evidence: []
+  human_evidence_required:
+  - A human reviews licenses and redistribution claims before a release gate.
+- id: TL-0007
+  title: Create synthetic pilot fixtures and reference inputs
+  milestone: M0
+  workstream: test-data
+  kind: test
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: any
+  depends_on:
+  - TL-0003
+  - TL-0005
+  decision_refs:
+  - D-005
+  - D-007
+  - D-014
+  - D-017
+  - D-020
+  - D-022
+  - D-048
+  - D-055
+  objective: Provide non-personal fixtures for jobs, sanitization evidence, observations, a candidate laptop policy, generic
+    Basic and Job Seeker profiles, and synthetic or public generic package entries without any sibling-product dependency.
+  deliverables:
+  - fixtures/jobs/*.yaml
+  - fixtures/policies/community-laptop-policy.yaml
+  - fixtures/profiles/basic.yaml
+  - fixtures/profiles/job-seeker.yaml
+  - fixtures/catalog/catalog.yaml
+  acceptance_criteria:
+  - Fixtures contain no real person, serial, SSID, key, email, or organization secret.
+  - The candidate policy targets supported Windows 11 x64 and explicit hardware/function requirements.
+  - Profiles separate workshop capabilities from recipient choices.
+  - Catalog entries stay minimal and placeholders are clearly marked until package review.
+  - Fixtures use generic capabilities and synthetic/public free essentials; they contain no sibling application identifier
+    or development artifact.
+  verification:
+  - Run secret/prohibited-pattern scans.
+  - Ensure later schema tasks can consume the fixtures without hand edits.
+  evidence: []
+  human_evidence_required:
+  - A pilot owner approves candidate policy values and the initial capability set.
+- id: TL-0008
+  title: Define the physical-device matrix and workshop test procedure
+  milestone: M0
+  workstream: quality
+  kind: docs
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0003
+  - TL-0004
+  decision_refs:
+  - D-003
+  - D-005
+  - D-015
+  - D-033
+  - D-039
+  - D-047
+  - D-057
+  objective: Turn the hardware matrix and human-assisted checks into a repeatable lab and operator procedure.
+  deliverables:
+  - docs/testing/device-matrix.md
+  - docs/testing/manual-hardware-tests.md
+  - docs/testing/failure-injection.md
+  - docs/testing/accessibility-matrix.md
+  - LOW_SPEC.md benchmark procedure and provisional resource-record template
+  acceptance_criteria:
+  - The matrix covers form factors, HDD/SATA SSD/NVMe, battery states, TPM/Secure Boot states, unsupported CPU, 4/8 GB RAM,
+    networks, and partial failures.
+  - Manual tests define pass, fail, not available, and human-confirmed evidence.
+  - Cold boot and interrupted-workflow scenarios are included.
+  - The procedure states that automation cannot prove long-term reliability.
+  - 4 GB/8 GB and constrained-environment runs are treated as test classes, not unsupported minimum-spec claims without evidence.
+  verification:
+  - Walk through the procedure on a representative device.
+  - Record missing equipment as an explicit pilot blocker.
+  evidence: []
+  human_evidence_required:
+  - A human records the actual device pool and confirms at least one reference device is available.
+- id: TL-0009
+  title: Record initial architecture decisions and project boundaries
+  milestone: M0
+  workstream: architecture
+  kind: docs
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0001
+  - TL-0003
+  - TL-0004
+  - TL-0005
+  decision_refs:
+  - D-018
+  - D-023
+  - D-027
+  - D-028
+  - D-029
+  - D-030
+  - D-031
+  - D-032
+  - D-046
+  - D-047
+  - D-048
+  - D-049
+  - D-050
+  - D-052
+  - D-053
+  - D-055
+  objective: Create ADRs for the stack, persistence, evidence/policy separation, package adapter seam, privilege boundary,
+    report privacy classes, standalone/late-binding boundary, and minimal release-interface envelope.
+  deliverables:
+  - docs/adr/0001-windows-wpf-stack.md
+  - docs/adr/0002-evidence-policy-separation.md
+  - docs/adr/0003-sqlite-job-store.md
+  - docs/adr/0004-ephemeral-broker.md
+  - docs/adr/0005-package-adapter.md
+  - docs/adr/0006-report-privacy-classes.md
+  - docs/adr/0007-standalone-late-binding-boundary.md
+  - docs/adr/0008-minimal-release-interface-envelope.md
+  acceptance_criteria:
+  - Each ADR states context, decision, alternatives, consequences, and decision IDs.
+  - Internal assembly dependency directions are documented without introducing a portfolio integration layer.
+  - The package backend remains replaceable pending TL-0401.
+  - The B1 project has no sibling source/runtime/data dependency and no speculative shared SDK/schema/plugin framework.
+  - Integration readiness is limited to ordinary install/remove, documented data, inputs/outputs, launch, support, samples,
+    and known limitations.
+  - No ADR contradicts DECISIONS.md or PROJECT_BOUNDARY.md.
+  verification:
+  - Run link/reference checks.
+  - Review project references against the documented direction.
+  evidence: []
+- id: TL-0010
+  title: Validate the M0 foundation gate
+  milestone: M0
+  workstream: release
+  kind: gate
+  priority: P0
+  status: backlog
+  size: S
+  executor: hybrid
+  environment: any
+  depends_on:
+  - TL-0002
+  - TL-0003
+  - TL-0004
+  - TL-0005
+  - TL-0006
+  - TL-0007
+  - TL-0008
+  - TL-0009
+  decision_refs:
+  - D-006
+  - D-043
+  - D-045
+  - D-046
+  - D-047
+  - D-048
+  - D-049
+  - D-050
+  - D-052
+  - D-054
+  - D-056
+  - D-057
+  objective: Demonstrate that the repository, standalone product contract, portfolio boundary, security/privacy/accessibility/low-spec
+    models, fixtures, lab plan, release-interface draft, and governance are ready for implementation.
+  deliverables:
+  - artifacts/gates/M0-foundation.md
+  acceptance_criteria:
+  - All predecessor tasks are done with evidence.
+  - The clean-checkout verification command is documented and passes on Windows.
+  - Threat, privacy, accessibility, low-spec, dependency, and licence reviews have named owners.
+  - The pilot policy/profile inputs and physical test plan are approved.
+  - PROJECT_BOUNDARY.md states Team B/B1 and prohibits live sibling dependencies and B4 work.
+  - RELEASE_INTERFACE.md remains an honest draft rather than a speculative API.
+  - No unresolved contradiction exists among binding bundle files.
+  verification:
+  - Run tools/validate_bundle.py.
+  - Run repository verification.
+  - Review the M0 checklist with the project owner.
+  evidence: []
+  human_evidence_required:
+  - Project owner signs the M0 gate record.
+  - Security, privacy, and license owners acknowledge their M0 artifacts.
+- id: TL-0101
+  title: Implement core job and evidence domain models
+  milestone: M1
+  workstream: core
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0010
+  decision_refs:
+  - D-007
+  - D-014
+  - D-015
+  - D-017
+  - D-018
+  - D-032
+  objective: Implement immutable identifiers and domain types for jobs, devices, sanitization evidence, observations, provenance,
+    human tests, requirements, and action-state vocabulary.
+  deliverables:
+  - src/ThirdLife.Core/Jobs
+  - src/ThirdLife.Core/Evidence
+  - src/ThirdLife.Core/Sanitization
+  - tests/ThirdLife.Core.Tests
+  acceptance_criteria:
+  - Evidence requires classification, provider, collected-at time, provenance, and value availability.
+  - Unknown and not-applicable states are distinct.
+  - Sanitization states model verified, replacement storage, no donor storage, unknown, and failed.
+  - Domain types contain no WPF, SQLite, shell, WinGet, or Windows API references.
+  - Serialization has stable explicit names.
+  verification:
+  - Unit-test invariants and serialization round trips.
+  - Property-test invalid state combinations where practical.
+  evidence: []
+- id: TL-0102
+  title: Implement the SQLite job store and migrations
+  milestone: M1
+  workstream: persistence
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0101
+  decision_refs:
+  - D-011
+  - D-014
+  - D-028
+  - D-032
+  objective: Persist jobs, observations, sanitization evidence, tests, and checkpoints in a versioned SQLite schema with a
+    restrictive per-job directory.
+  deliverables:
+  - src/ThirdLife.Persistence
+  - database migration files
+  - tests/ThirdLife.Persistence.Tests
+  acceptance_criteria:
+  - Creating, closing, and reopening a job preserves all committed state.
+  - Migrations are transactional and versioned.
+  - Interrupted writes do not leave a partially accepted record.
+  - Job paths derive from internal IDs, not recipient names.
+  - Database corruption is detected and reported without silent data loss.
+  verification:
+  - Integration-test create/reopen/archive and migrations.
+  - Kill around transaction boundaries.
+  - Test path traversal and junction defenses.
+  evidence: []
+- id: TL-0103
+  title: Implement job lifecycle and sanitization gate services
+  milestone: M1
+  workstream: workflow
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0102
+  decision_refs:
+  - D-003
+  - D-004
+  - D-007
+  - D-014
+  objective: Support create, reopen, archive, and complete operations while blocking progression when sanitization evidence
+    is unknown or failed.
+  deliverables:
+  - src/ThirdLife.Core/Jobs/JobService.cs
+  - src/ThirdLife.Core/Sanitization/SanitizationGate.cs
+  - tests/ThirdLife.Core.Tests/JobLifecycleTests.cs
+  acceptance_criteria:
+  - A random internal job ID is available without recipient information.
+  - Unknown and failed sanitization prevent preparation.
+  - Verified, replacement, and no-donor-storage states permit assessment.
+  - Gate decisions persist with policy version and evidence reference.
+  - Archive is reversible and does not delete evidence.
+  verification:
+  - Unit-test all sanitization state transitions.
+  - Integration-test restart during job creation and gate recording.
+  evidence: []
+- id: TL-0104
+  title: Implement structured logging and redaction
+  milestone: M1
+  workstream: privacy
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0101
+  - TL-0005
+  decision_refs:
+  - D-013
+  - D-014
+  - D-037
+  objective: Create structured privacy-safe logging with field allowlists, sensitive-value wrappers, export redaction, and
+    adversarial tests.
+  deliverables:
+  - src/ThirdLife.Diagnostics/Logging
+  - src/ThirdLife.Diagnostics/Redaction
+  - tests/ThirdLife.Diagnostics.Tests
+  acceptance_criteria:
+  - Sensitive domain values require an explicit safe representation before logging.
+  - Default logs omit usernames, SSIDs, serials, IPs, URLs, and personal paths.
+  - Unhandled exceptions are sanitized before persistence or display.
+  - Raw command output is never copied wholesale into the database.
+  - Telemetry remains absent.
+  verification:
+  - Run every redaction fixture.
+  - Fuzz mixed separators, casing, Unicode, and nested structures.
+  - Inspect a representative log bundle.
+  evidence: []
+- id: TL-0105
+  title: Define inventory provider contracts and evidence normalization
+  milestone: M1
+  workstream: inventory
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0101
+  decision_refs:
+  - D-015
+  - D-018
+  - D-042
+  objective: Create cancellable read-only provider interfaces that normalize observations without hiding source-specific uncertainty.
+  deliverables:
+  - src/ThirdLife.Inventory/Providers
+  - src/ThirdLife.Inventory/Normalization
+  - tests/ThirdLife.Inventory.Tests/ProviderContractTests.cs
+  acceptance_criteria:
+  - Every provider declares privilege, duration, network use, and supported OS.
+  - Provider failure yields not-available evidence plus a sanitized error, never pass.
+  - Cancellation and timeout are first-class outcomes.
+  - Provider contracts can be faked without Windows APIs.
+  - Inventory contracts cannot mutate settings.
+  verification:
+  - Run provider contract tests.
+  - Static-review providers for write APIs or generic shell strings.
+  evidence: []
+- id: TL-0106
+  title: Implement device identity, CPU, memory, and architecture inventory
+  milestone: M1
+  workstream: inventory
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0105
+  decision_refs:
+  - D-005
+  - D-014
+  - D-015
+  objective: Collect manufacturer, model, serial handling, device type, processor, architecture, and installed memory as read-only
+    evidence.
+  deliverables:
+  - src/ThirdLife.Inventory/Windows/SystemInventoryProvider.cs
+  - tests/ThirdLife.Inventory.Tests/SystemInventoryProviderTests.cs
+  acceptance_criteria:
+  - Workshop records may retain full serial while ordinary logs expose only an approved suffix or no serial.
+  - CPU, architecture, and memory include provider and timestamp.
+  - Missing fields remain not available.
+  - The provider runs without elevation on representative Windows 11 devices.
+  - Values use invariant units and serialization.
+  verification:
+  - Test captured synthetic provider data.
+  - Run on at least two physical manufacturers or record the coverage gap.
+  evidence: []
+  human_evidence_required:
+  - Physical-device runs for at least two representative systems are attached before the M1 gate.
+- id: TL-0107
+  title: Implement OS lifecycle and activation inventory
+  milestone: M1
+  workstream: inventory
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0105
+  decision_refs:
+  - D-005
+  - D-008
+  - D-009
+  - D-015
+  objective: Collect Windows edition, build, architecture, support-target evidence, activation state, and pending-reboot indicators
+    without changing licensing.
+  deliverables:
+  - src/ThirdLife.Inventory/Windows/OperatingSystemProvider.cs
+  - src/ThirdLife.Inventory/Windows/ActivationProvider.cs
+  - tests/ThirdLife.Inventory.Tests/OperatingSystemProviderTests.cs
+  acceptance_criteria:
+  - Supported Windows 11 x64 and Windows 10 audit-only states are distinct.
+  - Activation is read-only and never attempts key installation or bypass.
+  - Unsupported or unknown lifecycle data cannot pass.
+  - Pending-reboot evidence has an explicit source and confidence.
+  - Tests cover activated, unactivated, unsupported, and provider-failure states.
+  verification:
+  - Run captured-data tests.
+  - Run on supported Windows 11 and Windows 10 or a synthetic equivalent.
+  - Verify no write/activation APIs are invoked.
+  evidence: []
+- id: TL-0108
+  title: Implement storage inventory and reliability evidence
+  milestone: M1
+  workstream: inventory
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0105
+  decision_refs:
+  - D-015
+  - D-016
+  - D-018
+  objective: Collect capacity, free space, media type, health, wear, temperature, errors, and operating-time evidence when
+    providers expose it.
+  deliverables:
+  - src/ThirdLife.Inventory/Windows/StorageProvider.cs
+  - tests/ThirdLife.Inventory.Tests/StorageProviderTests.cs
+  acceptance_criteria:
+  - Capacity and free space use explicit units.
+  - Unavailable health or wear data remains not available.
+  - Critical provider errors are preserved without inventing a diagnosis.
+  - Multiple disks and the system volume are modeled separately.
+  - The provider performs no repair, optimization, SMART reset, or write test.
+  verification:
+  - Test HDD, SATA SSD, NVMe, missing counters, and provider errors.
+  - Run on physical media types or record coverage gaps.
+  evidence: []
+  human_evidence_required:
+  - Physical storage-provider results are reviewed before the M1 gate.
+- id: TL-0109
+  title: Implement battery report generation and parsing
+  milestone: M1
+  workstream: inventory
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0105
+  - TL-0104
+  decision_refs:
+  - D-015
+  - D-016
+  - D-037
+  objective: Generate a temporary structured battery report where supported, parse design/full-charge capacity and cycles,
+    and remove known temporary artifacts.
+  deliverables:
+  - src/ThirdLife.Inventory/Windows/BatteryReportProvider.cs
+  - src/ThirdLife.Inventory/Windows/BatteryReportParser.cs
+  - tests/ThirdLife.Inventory.Tests/BatteryReportParserTests.cs
+  acceptance_criteria:
+  - XML parsing is culture-invariant and handles missing fields.
+  - Capacity percentage is absent when inputs are unavailable or invalid.
+  - No battery is distinct from provider failure.
+  - Temporary report filenames use internal IDs and are cleaned up.
+  - The UI states that swelling requires human inspection.
+  verification:
+  - Test representative and malformed XML.
+  - Run on battery/no-battery systems.
+  - Verify cleanup after success, failure, and cancellation.
+  evidence: []
+  human_evidence_required:
+  - A human confirms physical swelling is represented only by the manual test.
+- id: TL-0110
+  title: Implement UEFI, Secure Boot, and TPM inventory
+  milestone: M1
+  workstream: inventory
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0105
+  decision_refs:
+  - D-005
+  - D-009
+  - D-015
+  objective: Collect firmware mode, Secure Boot capability/state, TPM presence/version/readiness, and ownership-lock indicators
+    where observable.
+  deliverables:
+  - src/ThirdLife.Inventory/Windows/FirmwareSecurityProvider.cs
+  - tests/ThirdLife.Inventory.Tests/FirmwareSecurityProviderTests.cs
+  acceptance_criteria:
+  - Capability and enabled state are separate.
+  - Access-denied and unsupported APIs yield not available, not pass.
+  - The provider does not modify firmware, initialize/clear TPM, or bypass passwords.
+  - TPM details retain raw provider values in expert evidence.
+  - Tests cover enabled, disabled, unavailable, and synthetic locked states.
+  verification:
+  - Run captured-data tests.
+  - Run on enabled and misconfigured-capable devices or record the gap.
+  evidence: []
+  human_evidence_required:
+  - Physical evidence covers at least one enabled and one disabled/misconfigured case before the pilot.
+- id: TL-0111
+  title: Implement network and key-device enumeration
+  milestone: M1
+  workstream: inventory
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0105
+  - TL-0104
+  decision_refs:
+  - D-014
+  - D-015
+  - D-037
+  objective: Enumerate network adapters and key device classes needed for human-assisted tests without logging network identities.
+  deliverables:
+  - src/ThirdLife.Inventory/Windows/DeviceEnumerationProvider.cs
+  - tests/ThirdLife.Inventory.Tests/DeviceEnumerationProviderTests.cs
+  acceptance_criteria:
+  - Wi-Fi, Ethernet, Bluetooth, audio, camera, microphone, display, keyboard, pointing, touch, and USB controller presence
+    can be represented.
+  - SSID, IP, MAC, and personal device names are absent from default logs and support evidence.
+  - Enumeration errors attach to the relevant class.
+  - Presence never substitutes for a functional test.
+  - The provider remains read-only.
+  verification:
+  - Test synthetic device trees with missing/error devices.
+  - Run on representative webcam/touch variants.
+  evidence: []
+- id: TL-0112
+  title: Implement the read-only assessment orchestrator
+  milestone: M1
+  workstream: inventory
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0103
+  - TL-0104
+  - TL-0106
+  - TL-0107
+  - TL-0108
+  - TL-0109
+  - TL-0110
+  - TL-0111
+  decision_refs:
+  - D-007
+  - D-015
+  - D-018
+  - D-042
+  objective: Run providers with bounded concurrency, cancellation, durable observation commits, and clear partial-failure
+    semantics.
+  deliverables:
+  - src/ThirdLife.Inventory/AssessmentOrchestrator.cs
+  - tests/ThirdLife.Inventory.Tests/AssessmentOrchestratorTests.cs
+  acceptance_criteria:
+  - The orchestrator refuses to start when sanitization blocks the job.
+  - Each provider result commits independently and can be rerun.
+  - Cancellation leaves a consistent partial assessment.
+  - Offline assessment makes no unapproved network request.
+  - A provider crash cannot mark unrelated requirements passed.
+  verification:
+  - Test cancellation, timeout, provider exception, process interruption, and rerun.
+  - Verify deterministic normalization for identical fixtures.
+  evidence: []
+- id: TL-0113
+  title: Build the accessible six-stage WPF shell
+  milestone: M1
+  workstream: ui
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0002
+  - TL-0103
+  - TL-0105
+  decision_refs:
+  - D-002
+  - D-027
+  - D-039
+  objective: Create the Intake, Inspect, Decide, Prepare, Verify, and Handover shell with requirements, evidence, and plan
+    regions and no privileged startup.
+  deliverables:
+  - src/ThirdLife.UI/App.xaml
+  - src/ThirdLife.UI/Shell
+  - tests/ThirdLife.UI.Tests
+  acceptance_criteria:
+  - The application starts unelevated.
+  - Primary navigation and controls are keyboard reachable with logical focus.
+  - Statuses include text and do not rely on color.
+  - Controls have accessible names and progress announcements.
+  - The layout remains usable at 200% scaling and reduced resolution.
+  - Unavailable later stages are visibly disabled without hiding criteria.
+  verification:
+  - Run UI automation smoke tests.
+  - Complete the audit shell with keyboard only.
+  - Test Narrator/NVDA, high contrast, and 200% scaling.
+  evidence: []
+  human_evidence_required:
+  - A human records keyboard-only and screen-reader smoke-test results.
+- id: TL-0114
+  title: Implement manual hardware-test capture
+  milestone: M1
+  workstream: ui
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0101
+  - TL-0111
+  - TL-0113
+  decision_refs:
+  - D-015
+  - D-016
+  - D-039
+  objective: Provide guided, resumable human tests for keyboard, pointer, display, audio, microphone, camera, network, charging,
+    sleep/wake, and representative ports.
+  deliverables:
+  - src/ThirdLife.UI/Features/ManualTests
+  - src/ThirdLife.Core/ManualTests
+  - tests/ThirdLife.Core.Tests/ManualTestTests.cs
+  acceptance_criteria:
+  - Each test records pass, fail, not tested, or not available plus operator, timestamp, notes, and evidence class.
+  - Detected presence does not automatically pass a functional test.
+  - The workflow can pause and resume.
+  - No test starts destructive stress or writes unknown removable media.
+  - Instructions are usable without a mouse and not color-dependent.
+  verification:
+  - Unit-test state transitions.
+  - Walk through the test set on a physical laptop.
+  - Verify an essential failure remains a blocker candidate.
+  evidence: []
+  human_evidence_required:
+  - A volunteer-style operator completes the procedure on a reference laptop.
+- id: TL-0115
+  title: Generate the audit-only workshop report
+  milestone: M1
+  workstream: reports
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0112
+  - TL-0114
+  - TL-0104
+  decision_refs:
+  - D-014
+  - D-015
+  - D-036
+  - D-037
+  objective: Render a deterministic workshop report that separates observations, unavailable evidence, and human-confirmed
+    tests without machine changes.
+  deliverables:
+  - src/ThirdLife.Reports/WorkshopReport
+  - tests/ThirdLife.Reports.Tests
+  - fixtures/expected-reports/M1
+  acceptance_criteria:
+  - Full device identity appears only in the workshop privacy class.
+  - Every item shows evidence class, provider/operator, and timestamp.
+  - Unknown values remain visible and never appear passed.
+  - Recipient identity is not required.
+  - Output is stable for identical job data.
+  verification:
+  - Golden-file test synthetic reports.
+  - Scan outputs for prohibited data.
+  - Compare a report with its job record.
+  evidence: []
+- id: TL-0116
+  title: Validate the M1 audit-only gate
+  milestone: M1
+  workstream: release
+  kind: gate
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0112
+  - TL-0113
+  - TL-0114
+  - TL-0115
+  decision_refs:
+  - D-006
+  - D-015
+  - D-039
+  - D-045
+  objective: Prove a volunteer can create a durable job, record sanitization, run a read-only assessment, complete human tests,
+    and produce a privacy-safe report.
+  deliverables:
+  - artifacts/gates/M1-audit-only.md
+  acceptance_criteria:
+  - The application performs no system-changing action.
+  - The normal flow runs without administrator rights.
+  - Identical observations produce identical normalized evidence.
+  - Missing evidence remains unknown.
+  - Jobs survive process termination and reopen.
+  - Normal logs exclude prohibited personal data.
+  - Keyboard-only and screen-reader smoke tests are recorded.
+  verification:
+  - Run the complete audit flow on the reference device.
+  - Run automated tests and bundle validation.
+  - Inspect logs, DB, temp, and report.
+  evidence: []
+  human_evidence_required:
+  - Project owner approves the M1 gate record.
+  - A representative volunteer completes the audit flow.
+- id: TL-0201
+  title: Implement the versioned policy schema and validator
+  milestone: M2
+  workstream: policy
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0116
+  - TL-0007
+  decision_refs:
+  - D-005
+  - D-017
+  - D-018
+  - D-019
+  objective: Create a strict non-executable schema for blocking, repairable, advisory, profile-dependent, and human-confirmed
+    requirements.
+  deliverables:
+  - src/ThirdLife.Policy/Schema
+  - schemas/policy.schema.json
+  - tests/ThirdLife.Policy.Tests/PolicySchemaTests.cs
+  acceptance_criteria:
+  - Unknown fields and rule types fail validation.
+  - Rules use stable IDs and explicit severity/decision semantics.
+  - Policy target, version, and effective metadata are required.
+  - No script, command, URL execution, or arbitrary expression language exists.
+  - The candidate pilot policy validates unchanged.
+  verification:
+  - Validate normal and adversarial policies.
+  - Fuzz depth, size, duplicate IDs, and path-like strings.
+  evidence: []
+- id: TL-0202
+  title: Implement deterministic policy evaluation
+  milestone: M2
+  workstream: policy
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0201
+  decision_refs:
+  - D-015
+  - D-017
+  - D-018
+  objective: Evaluate immutable evidence against a versioned policy and produce stable rule outcomes with evidence references.
+  deliverables:
+  - src/ThirdLife.Policy/Evaluation
+  - tests/ThirdLife.Policy.Tests/PolicyEvaluatorTests.cs
+  acceptance_criteria:
+  - The same evidence and policy produce stable outcomes.
+  - Observed, inferred, unavailable, and human-confirmed evidence are handled explicitly.
+  - Unavailable evidence cannot satisfy a required rule unless policy explicitly allows it.
+  - Evaluation mutates neither facts nor policy.
+  - Each outcome names its rule and evidence references.
+  verification:
+  - Table-test all rule categories and missing-data behavior.
+  - Property-test determinism and order independence.
+  evidence: []
+- id: TL-0203
+  title: Implement disposition and explanation generation
+  milestone: M2
+  workstream: policy
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0202
+  decision_refs:
+  - D-016
+  - D-017
+  - D-018
+  objective: Map rule outcomes to the five dispositions and produce concise operator explanations without a numeric health
+    score.
+  deliverables:
+  - src/ThirdLife.Policy/Disposition
+  - tests/ThirdLife.Policy.Tests/DispositionTests.cs
+  acceptance_criteria:
+  - All five dispositions are reachable through fixtures.
+  - Unsupported Windows cannot produce Ready to prepare.
+  - Repairable storage/battery rules identify repair and retest.
+  - Contradictory or insufficient evidence produces Human review required.
+  - Explanations cite controlling rules and evidence.
+  verification:
+  - Golden-test explanation text.
+  - Verify no aggregate numeric score is produced or serialized.
+  evidence: []
+- id: TL-0204
+  title: Implement human confirmations and governed exceptions
+  milestone: M2
+  workstream: policy
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0203
+  - TL-0102
+  decision_refs:
+  - D-015
+  - D-019
+  objective: Record human confirmations and policy-permitted exceptions with identity, reason, timestamp, authorization, and
+    immutable history.
+  deliverables:
+  - src/ThirdLife.Policy/Exceptions
+  - src/ThirdLife.Core/HumanConfirmation
+  - tests/ThirdLife.Policy.Tests/ExceptionTests.cs
+  acceptance_criteria:
+  - Prohibited rules cannot be overridden.
+  - Permitted exceptions require reason and local operator identity.
+  - Replacing an exception appends history.
+  - Reports distinguish pass, fail, exception, and pending confirmation.
+  - Exception input is sanitized before logging.
+  verification:
+  - Test authorization/prohibition cases.
+  - Test historical replay after policy changes.
+  evidence: []
+- id: TL-0205
+  title: Implement policy versioning and historical replay
+  milestone: M2
+  workstream: policy
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0201
+  - TL-0102
+  decision_refs:
+  - D-018
+  - D-019
+  - D-045
+  objective: Persist exact policy identity/content hash and support explicit reevaluation without overwriting history.
+  deliverables:
+  - src/ThirdLife.Policy/Versioning
+  - database migration for policy snapshots
+  - tests/ThirdLife.Policy.Tests/PolicyVersioningTests.cs
+  acceptance_criteria:
+  - Historical reports remain reproducible after active policy changes.
+  - Reevaluation creates a new decision record linked to prior evidence.
+  - Policy downgrade or same-version/different-content input is rejected.
+  - Content hashes are stable and documented.
+  - Migrations preserve prior policy snapshots.
+  verification:
+  - Test upgrades, downgrades, hash mismatch, and historical replay.
+  evidence: []
+- id: TL-0206
+  title: Implement device class, repair, and retest workflow
+  milestone: M2
+  workstream: workflow
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0203
+  - TL-0103
+  decision_refs:
+  - D-017
+  - D-018
+  objective: Allow policy-selected device classes, visible repair recommendations, and a new assessment cycle after recorded
+    repair without erasing prior evidence.
+  deliverables:
+  - src/ThirdLife.Core/Repairs
+  - src/ThirdLife.UI/Features/Disposition
+  - tests/ThirdLife.Core.Tests/RepairRetestTests.cs
+  acceptance_criteria:
+  - Mobile and stationary classes may apply different approved thresholds.
+  - A repair record identifies component, action, operator, and time.
+  - Retest creates new evidence linked to the prior failure.
+  - Prior failures remain visible.
+  - No model-specific unsafe repair procedure is generated.
+  verification:
+  - Test weak-battery mobile versus stationary outcomes.
+  - Test storage replacement followed by retest.
+  evidence: []
+- id: TL-0207
+  title: Upgrade reports and UI to separate facts from decisions
+  milestone: M2
+  workstream: reports
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0203
+  - TL-0204
+  - TL-0205
+  - TL-0115
+  decision_refs:
+  - D-015
+  - D-017
+  - D-018
+  - D-019
+  - D-036
+  objective: Present facts, policy rules, exceptions, and final disposition as separate traceable sections.
+  deliverables:
+  - src/ThirdLife.Reports/PolicySections
+  - src/ThirdLife.UI/Features/Disposition
+  - tests/ThirdLife.Reports.Tests/PolicyReportTests.cs
+  acceptance_criteria:
+  - Every disposition links to rule and evidence IDs.
+  - Exceptions are visible and never styled as ordinary passes.
+  - Policy name, version, and hash appear in the workshop report.
+  - Unknown evidence remains visible.
+  - The default view is plain language with expandable expert detail.
+  verification:
+  - Golden-test five dispositions and exception states.
+  - Keyboard-test explanation expansion and focus.
+  evidence: []
+- id: TL-0208
+  title: Validate the M2 explainable-disposition gate
+  milestone: M2
+  workstream: release
+  kind: gate
+  priority: P0
+  status: backlog
+  size: S
+  executor: hybrid
+  environment: any
+  depends_on:
+  - TL-0204
+  - TL-0205
+  - TL-0206
+  - TL-0207
+  decision_refs:
+  - D-006
+  - D-017
+  - D-018
+  - D-019
+  - D-045
+  objective: Prove every decision is reproducible, policy-backed, exception-aware, and historically stable.
+  deliverables:
+  - artifacts/gates/M2-disposition.md
+  acceptance_criteria:
+  - Every disposition cites evidence and policy.
+  - Blocking failures cannot silently become passes.
+  - Exceptions require reason and remain visible.
+  - Policy updates do not rewrite historical jobs.
+  - Reports distinguish facts from organization decisions.
+  verification:
+  - Run determinism and replay suites.
+  - Review representative reports with the pilot policy owner.
+  evidence: []
+  human_evidence_required:
+  - Pilot policy owner approves disposition wording and exception governance.
+- id: TL-0301
+  title: Implement the application catalog schema
+  milestone: M3
+  workstream: catalog
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0208
+  - TL-0007
+  decision_refs:
+  - D-022
+  - D-023
+  - D-025
+  - D-043
+  - D-047
+  - D-048
+  - D-050
+  - D-055
+  objective: Validate reviewed application metadata, package identity, license/privacy review, platform requirements, behavior,
+    and verification contracts.
+  deliverables:
+  - src/ThirdLife.Catalog/Schema
+  - schemas/catalog.schema.json
+  - tests/ThirdLife.Catalog.Tests/CatalogSchemaTests.cs
+  acceptance_criteria:
+  - Catalog entries require stable capability ID and catalog version.
+  - Source, exact package ID, scope, architectures, and minimum OS are explicit.
+  - Review metadata includes publisher, license, dates, and redistribution status.
+  - Behavior declares reboot, service, auto-update, network, and disk implications.
+  - Unknown fields and executable content fail closed.
+  - The B1 catalogue supports generic reviewed capabilities only and contains no sibling-application entry or live-release
+    discovery.
+  verification:
+  - Validate normal, stale, oversized, malicious, duplicate, and downgrade fixtures.
+  evidence: []
+- id: TL-0302
+  title: Implement workshop and recipient profile schemas
+  milestone: M3
+  workstream: profiles
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0208
+  - TL-0007
+  decision_refs:
+  - D-020
+  - D-021
+  - D-023
+  - D-040
+  - D-047
+  - D-048
+  - D-050
+  - D-055
+  objective: Represent outcome-based workshop capabilities, required checks, optional actions, and deferred recipient choices
+    without executable content.
+  deliverables:
+  - src/ThirdLife.Catalog/Profiles
+  - schemas/profile.schema.json
+  - tests/ThirdLife.Catalog.Tests/ProfileSchemaTests.cs
+  acceptance_criteria:
+  - Workshop and recipient sections are distinct.
+  - Capabilities resolve through catalog IDs, not raw package IDs or URLs.
+  - Essential and optional intent is explicit.
+  - Recipient secrets/accounts cannot be workshop actions.
+  - Unknown action or choice types fail validation.
+  - Profiles contain generic outcomes and recipient choices, not sibling product names, private schemas, or adapter commands.
+  verification:
+  - Validate Basic and Job Seeker fixtures.
+  - Test scripts, URLs, traversal, size, and duplicate capabilities.
+  evidence: []
+- id: TL-0303
+  title: Implement the compiled action registry and contracts
+  milestone: M3
+  workstream: actions
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0301
+  - TL-0302
+  - TL-0101
+  decision_refs:
+  - D-023
+  - D-029
+  - D-030
+  - D-032
+  objective: Define typed allowlisted action requests with impact, privilege, verification, rollback, idempotency, and serialization
+    contracts.
+  deliverables:
+  - src/ThirdLife.Actions/Contracts
+  - src/ThirdLife.Actions/Registry
+  - tests/ThirdLife.Actions.Tests
+  acceptance_criteria:
+  - Unknown action types are rejected before approval or broker contact.
+  - No action accepts arbitrary command line, executable path, URL, registry path, or script.
+  - Every action declares scope, elevation, reboot, network, verification, and rollback.
+  - Serialized requests have explicit versions and bounded fields.
+  - Domain and policy assemblies do not reference action implementations.
+  verification:
+  - Unit-test allowlists and adversarial deserialization.
+  - Static-scan DTOs for unbounded execution strings.
+  evidence: []
+- id: TL-0304
+  title: Implement deterministic plan resolution
+  milestone: M3
+  workstream: planning
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0301
+  - TL-0302
+  - TL-0303
+  - TL-0202
+  decision_refs:
+  - D-018
+  - D-020
+  - D-022
+  - D-025
+  - D-032
+  - D-047
+  - D-048
+  - D-050
+  - D-055
+  objective: Resolve profile, policy outcomes, catalog, and current evidence into an ordered immutable proposed plan.
+  deliverables:
+  - src/ThirdLife.Actions/Planning/PlanResolver.cs
+  - tests/ThirdLife.Actions.Tests/PlanResolverTests.cs
+  acceptance_criteria:
+  - The same inputs produce the same plan and hash.
+  - Blocked prerequisites do not produce executable preparation actions.
+  - Each action includes reason, essentiality, scope, and verification.
+  - Recipient choices remain deferred.
+  - Resolution makes no machine change or package download.
+  - Plan resolution does not assume a sibling application, shared content store, or portfolio service is present.
+  verification:
+  - Golden-test synthetic plans.
+  - Property-test order stability and duplicate elimination.
+  evidence: []
+- id: TL-0305
+  title: Implement impact and preapproval estimates
+  milestone: M3
+  workstream: planning
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0304
+  decision_refs:
+  - D-012
+  - D-020
+  - D-025
+  - D-032
+  objective: Calculate declared download, disk, privilege, restart, rollback, network, and verification impact before approval.
+  deliverables:
+  - src/ThirdLife.Actions/Planning/ImpactEstimator.cs
+  - tests/ThirdLife.Actions.Tests/ImpactEstimatorTests.cs
+  acceptance_criteria:
+  - Unknown estimates are labeled unknown rather than zero.
+  - Every action has an impact summary.
+  - Totals preserve per-action detail.
+  - Network categories use the frozen vocabulary.
+  - Estimates are not silently refreshed after approval.
+  verification:
+  - Test known, partial, conflicting, and unknown estimates.
+  evidence: []
+- id: TL-0306
+  title: Build the plan-review and approval UI
+  milestone: M3
+  workstream: ui
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0304
+  - TL-0305
+  - TL-0113
+  decision_refs:
+  - D-020
+  - D-025
+  - D-029
+  - D-039
+  - D-047
+  - D-048
+  - D-050
+  - D-055
+  objective: Show the complete plan, reasons, metadata, privilege, downloads, disk, restart, rollback, and verification before
+    any action starts.
+  deliverables:
+  - src/ThirdLife.UI/Features/PlanReview
+  - tests/ThirdLife.UI.Tests/PlanReviewTests.cs
+  acceptance_criteria:
+  - Profile selection alone cannot start an action.
+  - Operators can deselect optional actions.
+  - Skipping essential actions updates expected readiness.
+  - Resolved source, publisher, version, and scope are visible.
+  - The UI is keyboard operable and usable at 200% scaling.
+  - Approval records the exact plan hash.
+  verification:
+  - UI-test approve, decline, deselect, and details.
+  - Verify no broker starts before approval.
+  evidence: []
+- id: TL-0307
+  title: Detect material plan changes and require reapproval
+  milestone: M3
+  workstream: planning
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0304
+  - TL-0306
+  decision_refs:
+  - D-025
+  - D-032
+  objective: Compare approved and execution-time plans and invalidate approval when material fields change.
+  deliverables:
+  - src/ThirdLife.Actions/Planning/PlanDiff.cs
+  - tests/ThirdLife.Actions.Tests/PlanDiffTests.cs
+  acceptance_criteria:
+  - Material source, publisher, version, action, privilege, restart, verification, and impact fields are documented.
+  - Changed package version or source cannot execute under old approval.
+  - Non-material progress metadata does not cause an approval loop.
+  - The operator receives a plain-language diff.
+  - Old and new approvals remain in history.
+  verification:
+  - Mutation-test each material field.
+  - Golden-test diff text.
+  evidence: []
+- id: TL-0308
+  title: Implement the durable action journal
+  milestone: M3
+  workstream: execution
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0303
+  - TL-0102
+  decision_refs:
+  - D-014
+  - D-028
+  - D-032
+  - D-037
+  objective: Persist plans, approvals, state transitions, checkpoints, sanitized results, verification, rollback metadata,
+    and correlation IDs transactionally.
+  deliverables:
+  - src/ThirdLife.Actions/Journal
+  - database migrations for action journal
+  - tests/ThirdLife.Actions.Tests/JournalTests.cs
+  acceptance_criteria:
+  - Only valid state transitions are accepted.
+  - Applied cannot become verified without verification.
+  - Every transition records time, actor, correlation, and prior state.
+  - Sensitive output is sanitized before persistence.
+  - Restart or termination preserves recoverable state.
+  verification:
+  - Table-test state transitions.
+  - Failure-inject transaction boundaries.
+  - Verify plan/approval hashes.
+  evidence: []
+- id: TL-0309
+  title: Implement reboot checkpoints and resume tokens
+  milestone: M3
+  workstream: execution
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0308
+  - TL-0102
+  decision_refs:
+  - D-028
+  - D-032
+  - D-033
+  objective: Persist minimal authenticated restart checkpoints that reopen the correct job and require explicit operator resume.
+  deliverables:
+  - src/ThirdLife.Actions/Recovery
+  - tests/ThirdLife.Actions.Tests/RebootCheckpointTests.cs
+  acceptance_criteria:
+  - A checkpoint contains no recipient identity or secret.
+  - Stale, replayed, tampered, or cross-job tokens are rejected.
+  - Resume never re-executes a verified action.
+  - The operator can abandon resume while keeping the job reviewable.
+  - The application does not auto-elevate on login.
+  verification:
+  - Test tamper, expiry, replay, duplicate start, and abandoned resume.
+  evidence: []
+- id: TL-0310
+  title: Define the versioned broker protocol
+  milestone: M3
+  workstream: broker
+  kind: security
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0303
+  - TL-0009
+  decision_refs:
+  - D-023
+  - D-029
+  - D-030
+  - D-031
+  objective: Specify typed request, progress, result, cancellation, handshake, nonce, expiry, and error messages for a narrow
+    elevated broker.
+  deliverables:
+  - src/ThirdLife.Broker.Protocol
+  - schemas/broker-protocol.schema.json
+  - docs/security/broker-protocol.md
+  - tests/ThirdLife.Broker.Tests/ProtocolTests.cs
+  acceptance_criteria:
+  - Every message has protocol version, correlation ID, size limit, and validation rules.
+  - Requests reference allowlisted action types and bounded parameters.
+  - The protocol has no general process-launch or file-system primitive.
+  - Unknown versions/fields fail closed.
+  - Errors are structured and sanitized.
+  verification:
+  - Fuzz deserialization, depth, length, version, and unknown actions.
+  - Review against the threat model.
+  evidence: []
+- id: TL-0311
+  title: Implement the ephemeral broker and authenticated IPC
+  milestone: M3
+  workstream: broker
+  kind: code
+  priority: P0
+  status: backlog
+  size: XL
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0310
+  - TL-0002
+  decision_refs:
+  - D-029
+  - D-030
+  - D-031
+  objective: Start an elevated broker only after UAC approval, authenticate the initiating user/session over a restricted
+    named pipe, execute no-op allowlisted actions, and exit after the batch.
+  deliverables:
+  - src/ThirdLife.Broker
+  - src/ThirdLife.UI/BrokerClient
+  - tests/ThirdLife.Broker.Tests/IpcIntegrationTests.cs
+  acceptance_criteria:
+  - The UI remains unelevated.
+  - Pipe ACLs exclude other users/sessions.
+  - Nonce, expiry, and correlation are enforced.
+  - The broker validates against its own registry.
+  - Cancellation or broker crash returns a recoverable journal result.
+  - The broker exits after batch or timeout.
+  verification:
+  - Test UAC accept/decline, cross-user access, replay, timeout, client crash, and broker crash.
+  - Inspect token and lifetime.
+  evidence: []
+  human_evidence_required:
+  - A security reviewer inspects token, ACL, nonce, and process-lifetime evidence.
+- id: TL-0312
+  title: Add focused broker security tests
+  milestone: M3
+  workstream: broker
+  kind: security
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0311
+  - TL-0004
+  decision_refs:
+  - D-023
+  - D-029
+  - D-030
+  - D-031
+  objective: Exercise cross-user, replay, injection, oversized message, unknown action, path attack, junction, expiry, and
+    malformed protocol cases.
+  deliverables:
+  - tests/ThirdLife.Broker.SecurityTests
+  - artifacts/security/broker-test-plan.md
+  acceptance_criteria:
+  - Every broker abuse case has an automated test or documented manual rationale.
+  - Arbitrary executable, command, URL, and registry input is rejected.
+  - Another local user cannot reuse an active session.
+  - Test logs expose no nonce or sensitive payload.
+  - A failed test leaves no persistent elevated process.
+  verification:
+  - Run as administrator and standard user.
+  - Perform manual process/pipe ACL inspection.
+  evidence: []
+  human_evidence_required:
+  - A security reviewer signs the broker test record.
+- id: TL-0313
+  title: Connect approval, journal, UAC, broker, and result flow
+  milestone: M3
+  workstream: execution
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0306
+  - TL-0308
+  - TL-0311
+  decision_refs:
+  - D-025
+  - D-029
+  - D-032
+  objective: Implement end-to-end orchestration for an approved no-op privileged batch, including UAC decline, progress, cancellation,
+    persistence, and recovery.
+  deliverables:
+  - src/ThirdLife.Actions/Execution/ExecutionCoordinator.cs
+  - src/ThirdLife.UI/Features/Execution
+  - tests/ThirdLife.Actions.Tests/ExecutionCoordinatorTests.cs
+  acceptance_criteria:
+  - No action starts without active approval for the plan hash.
+  - UAC decline records no machine change and leaves a resumable job.
+  - Progress is bounded and correlated.
+  - Started and terminal states record exactly once.
+  - The UI can reopen after client or broker interruption.
+  verification:
+  - Test approve, decline, cancel, UI kill, broker kill, and reopen.
+  evidence: []
+- id: TL-0314
+  title: Validate the M3 safe-planning gate
+  milestone: M3
+  workstream: release
+  kind: gate
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0307
+  - TL-0309
+  - TL-0312
+  - TL-0313
+  decision_refs:
+  - D-006
+  - D-023
+  - D-025
+  - D-029
+  - D-030
+  - D-032
+  - D-045
+  - D-047
+  - D-048
+  - D-050
+  - D-055
+  objective: Prove profiles cannot execute code, complete plans precede changes, approval binds resolved content, and the
+    broker fails closed.
+  deliverables:
+  - artifacts/gates/M3-safe-planning.md
+  acceptance_criteria:
+  - Profiles/catalog cannot express arbitrary commands.
+  - The broker rejects unknown/malformed actions independently.
+  - Material changes require reapproval.
+  - Declining UAC leaves a valid job.
+  - Reboot checkpoints are durable and tamper-resistant.
+  - Broker security tests pass with human review.
+  verification:
+  - Run schema adversarial, plan-diff, broker security, and UAC recovery tests.
+  evidence: []
+  human_evidence_required:
+  - Security owner approves the privilege-boundary gate.
+- id: TL-0401
+  title: Spike structured WinGet integration paths
+  milestone: M4
+  workstream: packages
+  kind: spike
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0314
+  - TL-0006
+  decision_refs:
+  - D-022
+  - D-024
+  - D-025
+  - D-043
+  objective: Compare Microsoft.WinGet.Client and the WinGet COM API under ThirdLife's elevation, scope, progress, cancellation,
+    and verification requirements.
+  deliverables:
+  - docs/adr/ADR-004-winget-backend.md
+  - spikes/WinGet.BackendSpike
+  - artifacts/spikes/winget-backend-results.md
+  acceptance_criteria:
+  - Both candidate structured interfaces are exercised where the installed Windows/WinGet versions permit.
+  - The comparison covers machine scope, exact source and ID selection, progress, cancellation, timeout, reboot signaling,
+    system/elevated context, structured errors, and testability.
+  - Localized human-readable table output is not used as an integration contract.
+  - The selected production path and controlled fallback are recorded with known version constraints.
+  verification:
+  - Run the spike on the supported Windows test image.
+  - Capture API/library versions and representative success, failure, and cancellation results.
+  evidence: []
+  human_evidence_required:
+  - A maintainer reviews the spike evidence and approves ADR-004 before production adapter work begins.
+- id: TL-0402
+  title: Implement the production package-manager adapter
+  milestone: M4
+  workstream: packages
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0401
+  decision_refs:
+  - D-024
+  - D-025
+  - D-032
+  objective: Provide a replaceable structured package backend with typed operations and no dependency on localized console
+    tables.
+  deliverables:
+  - src/ThirdLife.Packages package-manager contracts
+  - selected WinGet adapter
+  - adapter integration tests
+  - fake package backend for deterministic tests
+  acceptance_criteria:
+  - Search/resolve, install, inspect, and version operations return structured models.
+  - The adapter accepts exact package ID, source, scope, and approved version constraints.
+  - Progress, cancellation, timeout, restart, and backend errors are represented explicitly.
+  - The adapter does not expose arbitrary command-line argument or shell execution surfaces.
+  - Tests run deterministically against the fake backend; Windows integration tests are separately tagged.
+  verification:
+  - Run package unit tests on any platform.
+  - Run tagged adapter integration tests on Windows.
+  evidence: []
+- id: TL-0403
+  title: Enforce package resolution and trust policy
+  milestone: M4
+  workstream: supply-chain
+  kind: security
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0402
+  - TL-0301
+  - TL-0307
+  decision_refs:
+  - D-022
+  - D-025
+  - D-043
+  - D-047
+  - D-048
+  - D-050
+  - D-055
+  objective: Bind an approved action to exact resolved package metadata and reject source, publisher, hash, architecture,
+    or policy mismatches.
+  deliverables:
+  - package resolution service
+  - trust-decision records
+  - material-change detector integration
+  - package trust tests
+  acceptance_criteria:
+  - Only catalog-listed package IDs and pinned sources can resolve.
+  - Resolved source, publisher, version, architecture, scope, and available installer trust data are recorded.
+  - Unexpected source substitution, identity mismatch, incompatible architecture/OS, and prohibited hash override fail closed.
+  - A material resolution change invalidates prior approval.
+  - Trust failures are privacy-safe and actionable without copying unbounded backend output.
+  verification:
+  - Run source-substitution, publisher-change, hash-mismatch, downgrade, and architecture-mismatch tests.
+  - Verify reapproval is required when resolved package data changes.
+  evidence: []
+- id: TL-0404
+  title: Implement one approved machine-wide package action
+  milestone: M4
+  workstream: actions
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0403
+  - TL-0313
+  decision_refs:
+  - D-022
+  - D-025
+  - D-029
+  - D-032
+  objective: Execute one curated machine-wide package installation through the approved plan, journal, broker, and package
+    adapter path.
+  deliverables:
+  - package.install compiled action
+  - broker-side package action handler
+  - one pilot catalog entry
+  - end-to-end action tests
+  acceptance_criteria:
+  - The UI cannot provide an arbitrary package ID, executable path, URL, or argument string to the broker.
+  - The broker independently revalidates action type, approved content digest, package identity, source, scope, and request
+    expiry.
+  - The journal records planned, approved, started, applied, and terminal states without marking applied as verified.
+  - Declined elevation and denied broker validation leave the job recoverable.
+  - The selected pilot package has recorded license and privacy review metadata.
+  verification:
+  - Install the pilot package on a clean Windows test image.
+  - Exercise denied UAC, malformed request, stale approval, and already-installed paths.
+  evidence: []
+- id: TL-0405
+  title: Handle progress, cancellation, timeout, and network loss
+  milestone: M4
+  workstream: execution
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0404
+  decision_refs:
+  - D-012
+  - D-032
+  - D-042
+  objective: Keep package execution observable and recoverable when operations are slow, cancelled, timed out, or interrupted
+    by connectivity loss.
+  deliverables:
+  - structured execution progress events
+  - cancellation and timeout policy
+  - network-loss failure classification
+  - operator recovery guidance
+  acceptance_criteria:
+  - Progress is correlated to one journaled action and is accessible to assistive technology.
+  - Cancellation is attempted only where the backend supports it and the resulting state is never misreported.
+  - Timeout does not imply rollback or success; the action enters a reviewable recoverable state.
+  - Network loss preserves the job and resolved approval data while requiring a safe retry decision.
+  - No raw package URL or sensitive backend stream is emitted to normal logs.
+  verification:
+  - Inject cancellation, timeout, network loss, and UI termination during package operations.
+  - Confirm the journal and UI distinguish failed, cancelled/review-required, and verified outcomes.
+  evidence: []
+- id: TL-0406
+  title: Verify package installation and application launch
+  milestone: M4
+  workstream: verification
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0404
+  decision_refs:
+  - D-032
+  - D-033
+  objective: Treat installation as successful only after independent package detection and a bounded launch probe pass.
+  deliverables:
+  - package verification service
+  - bounded launch-probe runner
+  - verification journal records
+  - verification test fixtures
+  acceptance_criteria:
+  - Verification is a distinct step from backend completion.
+  - The expected package identity/version is independently detected after installation.
+  - The launch probe uses an allowlisted executable identity derived from compiled/catalog data, not an arbitrary path.
+  - Probe timeout, immediate crash, absent executable, and version mismatch fail verification.
+  - Probe artifacts and processes are cleaned up or explicitly reported.
+  verification:
+  - Test success, backend-success/package-absent, wrong-version, immediate-crash, and probe-timeout cases.
+  - Confirm exit code zero alone never yields verified state.
+  evidence: []
+- id: TL-0407
+  title: Classify package failures and emit sanitized diagnostics
+  milestone: M4
+  workstream: diagnostics
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0405
+  - TL-0406
+  - TL-0005
+  decision_refs:
+  - D-014
+  - D-032
+  - D-037
+  objective: Convert backend and verification failures into stable result codes, operator guidance, and bounded privacy-safe
+    evidence.
+  deliverables:
+  - package error taxonomy
+  - sanitized diagnostic serializer
+  - remediation mapping
+  - redaction regression tests
+  acceptance_criteria:
+  - Stable ThirdLife result codes distinguish resolution, trust, elevation, download, installer, restart, detection, and launch
+    failures.
+  - Raw output is bounded and redacted before storage or export.
+  - Diagnostic records omit usernames, personal paths, Wi-Fi identifiers, IP addresses, serial numbers, and package download
+    URLs by default.
+  - Operator guidance never recommends bypassing trust, OS, ownership, or activation controls.
+  verification:
+  - Feed representative sensitive and malformed backend messages through diagnostics.
+  - Run log/export redaction tests and inspect generated artifacts.
+  evidence: []
+- id: TL-0408
+  title: Resume a package action safely after reboot or process loss
+  milestone: M4
+  workstream: recovery
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0309
+  - TL-0406
+  - TL-0407
+  decision_refs:
+  - D-032
+  - D-033
+  objective: Reconcile durable action state after reboot, UI termination, or broker termination without blindly repeating
+    privileged work.
+  deliverables:
+  - resume coordinator
+  - startup reconciliation rules
+  - reboot continuation UX
+  - recovery integration tests
+  acceptance_criteria:
+  - Startup identifies interrupted actions and re-observes actual package state before choosing a next state.
+  - A previously applied and now verifiable package is marked verified without reinstalling.
+  - Ambiguous or partially applied state requires review rather than automatic destructive rollback.
+  - Resume tokens are job/action-bound, expire appropriately, and cannot authorize a different action.
+  - The operator sees why an action resumed, retried, verified, or requires review.
+  verification:
+  - Terminate the UI and broker at documented action boundaries and restart Windows.
+  - Verify reconciliation for absent, installed, wrong-version, restart-required, and ambiguous package states.
+  evidence: []
+- id: TL-0409
+  title: Make package execution idempotent and safely retryable
+  milestone: M4
+  workstream: execution
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0408
+  decision_refs:
+  - D-032
+  - D-033
+  objective: Ensure rerunning or retrying an approved package action converges on the verified target without duplicate or
+    uncontrolled effects.
+  deliverables:
+  - idempotency policy
+  - retry eligibility evaluator
+  - retry UX and journal links
+  - idempotency tests
+  acceptance_criteria:
+  - A verified target short-circuits without reinstalling.
+  - Retry uses the still-valid approved resolution or requires reapproval after material change.
+  - Retries are linked to prior attempts and preserve complete audit history.
+  - Permanent trust/policy failures are not offered as ordinary retries.
+  - Retry limits and backoff prevent accidental unbounded loops.
+  verification:
+  - Run the same completed plan twice.
+  - Retry after network loss, restart, backend failure, and catalog change.
+  evidence: []
+- id: TL-0410
+  title: Complete the first write-capable end-to-end slice
+  milestone: M4
+  workstream: integration
+  kind: test
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0409
+  decision_refs:
+  - D-006
+  - D-015
+  - D-017
+  - D-020
+  - D-029
+  - D-032
+  - D-033
+  - D-036
+  - D-047
+  - D-048
+  - D-050
+  - D-055
+  objective: Demonstrate job creation through sanitized intake, assessment, disposition, profile selection, package plan,
+    approval, elevation, verification, reboot recovery, and reports.
+  deliverables:
+  - Windows end-to-end test harness
+  - reference-device/package test record
+  - artifacts/e2e/M4-first-write-slice.md
+  acceptance_criteria:
+  - The flow starts from a verified sanitization state and a policy-eligible Windows 11 x64 device.
+  - The complete resolved plan is visible before any privileged action.
+  - One approved package is installed through the ephemeral broker and independently verified.
+  - The flow survives at least one forced interruption or reboot checkpoint.
+  - Workshop and recipient draft reports distinguish observations, decisions, actions, and verification.
+  - A failure at any stage cannot produce a ready/handed-over result.
+  verification:
+  - Run the slice on a clean supported Windows image and the physical reference device.
+  - Repeat with UAC declined, network pulled, and installer-success/package-absent injections.
+  evidence: []
+  human_evidence_required:
+  - A human operator completes the flow on the reference device and records usability and hardware observations.
+- id: TL-0411
+  title: Validate the M4 package-installation gate
+  milestone: M4
+  workstream: release
+  kind: gate
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0410
+  decision_refs:
+  - D-006
+  - D-024
+  - D-025
+  - D-029
+  - D-032
+  - D-033
+  - D-045
+  objective: Prove the first write-capable slice is trusted, journaled, independently verified, recoverable, idempotent, and
+    privacy-safe.
+  deliverables:
+  - artifacts/gates/M4-package-vertical-slice.md
+  acceptance_criteria:
+  - No localized package table output is parsed.
+  - Exact approved identity/source data reaches a broker that independently validates it.
+  - Hash/trust bypasses are impossible through supported interfaces.
+  - Backend success without verification is failure.
+  - Network loss, UAC decline, UI/broker termination, and reboot remain recoverable.
+  - Rerunning the completed plan is idempotent.
+  - Package diagnostics pass privacy review.
+  verification:
+  - Run the M4 failure matrix, security checks, clean-checkout verification, and bundle validator.
+  evidence: []
+  human_evidence_required:
+  - Security owner approves package and broker evidence.
+  - Product owner approves the first write-capable slice.
+- id: TL-0501
+  title: Execute dependency-aware multi-action plans
+  milestone: M5
+  workstream: execution
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0411
+  decision_refs:
+  - D-020
+  - D-023
+  - D-032
+  - D-033
+  objective: Extend the verified single-action path into a deterministic action DAG with bounded concurrency and explicit
+    phase ordering.
+  deliverables:
+  - multi-action plan executor
+  - dependency and phase scheduler
+  - per-action progress aggregation
+  - multi-action recovery tests
+  acceptance_criteria:
+  - Actions run only after declared dependencies are verified or explicitly satisfied.
+  - The scheduler detects cycles and invalid phase ordering before approval.
+  - Independent failures do not erase prior verified results.
+  - Parallelism is disabled by default for privileged/install/update actions unless explicitly proven safe.
+  - Resume reconstructs per-action state from the journal rather than from UI memory.
+  verification:
+  - Run ordered, branching, failed-dependency, cyclic-plan, interruption, and resume test cases.
+  evidence: []
+- id: TL-0502
+  title: Implement essential and optional action semantics
+  milestone: M5
+  workstream: policy
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0501
+  - TL-0203
+  decision_refs:
+  - D-017
+  - D-019
+  - D-020
+  - D-032
+  objective: Make profile requirements and final disposition respond predictably when optional work is skipped or essential
+    work fails.
+  deliverables:
+  - essentiality model
+  - skip/decline decision records
+  - disposition integration
+  - essential/optional tests
+  acceptance_criteria:
+  - Every planned action is classified as essential or optional by reviewed profile/policy data.
+  - Skipping an optional action records the choice without falsely reporting it installed.
+  - Skipping or failing an essential action prevents a ready disposition unless a permitted named exception is recorded.
+  - Action essentiality cannot be changed after approval without plan reapproval.
+  - Reports explain all skipped and failed actions and their disposition effect.
+  verification:
+  - Test optional skip, optional failure, essential skip, essential failure, and governed exception scenarios.
+  evidence: []
+- id: TL-0503
+  title: Preflight disk, power, and resource requirements
+  milestone: M5
+  workstream: planning
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0501
+  - TL-0305
+  decision_refs:
+  - D-015
+  - D-025
+  - D-032
+  objective: Block or defer unsafe plans before changes begin when disk space, architecture, power, or other declared prerequisites
+    are insufficient.
+  deliverables:
+  - resource preflight service
+  - free-space reserve policy
+  - preflight evidence and UI
+  - resource-boundary tests
+  acceptance_criteria:
+  - Preflight accounts for declared download/install estimates, temporary overhead, and required post-setup reserve.
+  - Insufficient space blocks execution before download or installation.
+  - Architecture and minimum-OS checks are revalidated against current evidence.
+  - Portable-device plans warn or block under the pilot power policy when reliable external power is absent.
+  - Unknown estimates are shown as uncertainty rather than zero.
+  verification:
+  - Test boundary values, changing free space, low battery/no AC, incompatible architecture, and unknown estimates.
+  evidence: []
+- id: TL-0504
+  title: Implement a structured Windows Update workflow
+  milestone: M5
+  workstream: windows-update
+  kind: code
+  priority: P0
+  status: backlog
+  size: XL
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0503
+  - TL-0004
+  decision_refs:
+  - D-005
+  - D-032
+  - D-034
+  objective: Scan, download, install, journal, and rescan applicable Windows updates through structured Windows Update APIs.
+  deliverables:
+  - Windows Update adapter
+  - update scan/download/install compiled actions
+  - update classification and result models
+  - Windows Update integration tests
+  acceptance_criteria:
+  - The adapter uses structured Windows Update interfaces rather than screen scraping Settings.
+  - Scan results, applicable update identities, approval scope, progress, errors, and reboot requirements are structured and
+    journaled.
+  - The workflow cannot install an unapproved class of update outside the selected policy.
+  - Multiple scan/install/restart passes are supported with a finite convergence policy.
+  - Offline and service-unavailable states preserve inventory and yield actionable not-current evidence.
+  - Update identifiers and diagnostics are bounded and privacy-reviewed.
+  verification:
+  - Exercise no-updates, updates-available, download failure, install failure, service unavailable, reboot-required, and multi-pass
+    cases on Windows.
+  evidence: []
+  human_evidence_required:
+  - A maintainer records integration evidence against the supported Windows 11 releases.
+- id: TL-0505
+  title: Coordinate maintenance phases and restart checkpoints
+  milestone: M5
+  workstream: recovery
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0502
+  - TL-0504
+  - TL-0309
+  decision_refs:
+  - D-032
+  - D-033
+  - D-034
+  objective: Run OS maintenance, required restarts, packages, checks, final restart, and verification as explicit resumable
+    phases.
+  deliverables:
+  - phase coordinator
+  - restart reason/checkpoint model
+  - safe resume UX
+  - multi-restart integration tests
+  acceptance_criteria:
+  - The plan contains explicit phase boundaries before approval.
+  - A restart never loses job, action, approval, or verification state.
+  - Resume rechecks pending restart and actual system state before continuing.
+  - Unexpected restarts and repeated update passes are bounded and explained.
+  - The operator can stop safely at a phase boundary without receiving a false ready result.
+  verification:
+  - Run zero-, one-, and multi-restart paths plus unexpected shutdown at each boundary.
+  evidence: []
+- id: TL-0506
+  title: Implement the v0.1 security baseline providers
+  milestone: M5
+  workstream: security-baseline
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0505
+  - TL-0112
+  - TL-0004
+  decision_refs:
+  - D-005
+  - D-009
+  - D-015
+  - D-035
+  - D-038
+  objective: Collect and evaluate the defined Windows security and ownership baseline without claiming universal device security.
+  deliverables:
+  - firewall state provider
+  - malware-protection health provider
+  - UAC/time/restart state providers
+  - domain/MDM/management indicator provider
+  - remote-access and unexplained-admin review evidence
+  - security baseline policy integration
+  acceptance_criteria:
+  - Providers distinguish observed, inferred, unavailable, and human-confirmed evidence.
+  - Firewall, approved malware protection, UAC, time sync, pending restart, management indicators, activation, TPM/Secure
+    Boot, and OS support feed explicit policy rules.
+  - Unresolved organization management or ownership indicators block handover and are never automatically removed.
+  - Disk encryption is reported but not automatically enabled in v0.1.
+  - Unknown provider data cannot pass a required baseline.
+  - The UI/report says what was checked and avoids a blanket 'secure' claim.
+  verification:
+  - Test healthy, disabled, unavailable, conflicting-provider, managed-device, pending-restart, and unknown states.
+  - Review provider results on the physical device matrix.
+  evidence: []
+  human_evidence_required:
+  - Security owner reviews the provider coverage, wording, and residual blind spots.
+- id: TL-0507
+  title: Verify the complete machine profile
+  milestone: M5
+  workstream: verification
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0505
+  - TL-0506
+  decision_refs:
+  - D-020
+  - D-032
+  - D-033
+  - D-036
+  objective: Run a separate final verification pass over updates, packages, hardware evidence, security baseline, profile
+    capabilities, disk space, and restart state.
+  deliverables:
+  - profile verification orchestrator
+  - capability satisfaction records
+  - final verification summary
+  - exact-version and unresolved-warning report data
+  acceptance_criteria:
+  - Every required profile capability maps to one or more independently verified facts/actions.
+  - The final pass rechecks OS support/build, activation, updates, pending restart, security providers, package versions,
+    free space, storage evidence, key devices, and profile requirements.
+  - Stale pre-action observations are not reused where fresh verification is required.
+  - Essential failures and unknown blocking evidence prevent ready disposition.
+  - Exact resolved/installed versions and unresolved warnings are available to reports.
+  verification:
+  - Mutate system state between execution and final verification and confirm the change is detected.
+  - Test missing capability, stale evidence, pending restart, package downgrade/removal, and low-space cases.
+  evidence: []
+- id: TL-0508
+  title: Finalize the pilot catalog, policy, and profiles
+  milestone: M5
+  workstream: product
+  kind: data
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: any
+  depends_on:
+  - TL-0502
+  - TL-0503
+  - TL-0403
+  - TL-0006
+  decision_refs:
+  - D-005
+  - D-018
+  - D-020
+  - D-022
+  - D-025
+  - D-043
+  - D-047
+  - D-048
+  - D-050
+  - D-055
+  objective: Create the reviewed v0.1 Windows 11 x64 pilot inputs for generic basic and job-seeker machine outcomes using
+    public free essentials or synthetic test packages.
+  deliverables:
+  - catalog/v0.1/application-catalog.yaml
+  - policies/v0.1/community-laptop-policy.yaml
+  - profiles/v0.1/basic-machine.yaml
+  - profiles/v0.1/job-seeker.yaml
+  - docs/catalog/package-review-matrix.md
+  acceptance_criteria:
+  - Catalog entries are minimal, exact, reviewed, and include publisher, license, privacy, update, service, account, architecture,
+    storage, and redistribution metadata.
+  - Profiles reference capabilities/catalog IDs, never raw URLs, scripts, or arbitrary package IDs.
+  - Workshop and recipient choices remain separate.
+  - The pilot policy has explicit Windows 11, x64, memory, storage, battery, functions, activation, update, firmware/ownership,
+    sanitization, and finalization rules.
+  - Each threshold is labeled as pilot policy rather than universal truth.
+  - All schemas and signature/provenance placeholders validate.
+  - No PaperWorkShell or other sibling-specific catalogue/profile item is included; portfolio application profiles are deferred
+    to B4.
+  verification:
+  - Validate catalog, policy, and profile data against schemas.
+  - Resolve both profiles against the catalog without network access.
+  - Review the package-license matrix.
+  evidence: []
+  human_evidence_required:
+  - Product/pilot owner approves policy thresholds and application choices.
+  - License/privacy reviewers approve each included catalog entry.
+- id: TL-0509
+  title: Require final cold-boot verification
+  milestone: M5
+  workstream: verification
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0507
+  decision_refs:
+  - D-033
+  objective: Make a cold boot followed by fresh verification a required acceptance checkpoint for the full machine profile.
+  deliverables:
+  - cold-boot checkpoint
+  - post-boot verification trigger
+  - boot/session correlation evidence
+  - cold-boot tests
+  acceptance_criteria:
+  - A warm process restart cannot satisfy the cold-boot checkpoint.
+  - The job records the requested checkpoint and evidence from the later boot/session.
+  - Post-boot verification reruns restart-sensitive checks and launch probes.
+  - Failure to resume or any new blocker prevents ready status.
+  - The operator can see exactly which verification was completed after boot.
+  verification:
+  - Perform a real cold boot on the reference device.
+  - Test stale checkpoint, copied resume token, changed device/job, and post-boot failure.
+  evidence: []
+  human_evidence_required:
+  - A human confirms a physical cold boot and records representative hardware behavior after restart.
+- id: TL-0510
+  title: Run the full-profile and failure-injection matrix
+  milestone: M5
+  workstream: quality
+  kind: test
+  priority: P0
+  status: backlog
+  size: XL
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0503
+  - TL-0505
+  - TL-0507
+  - TL-0508
+  - TL-0509
+  decision_refs:
+  - D-006
+  - D-032
+  - D-033
+  - D-039
+  - D-042
+  - D-047
+  - D-048
+  - D-050
+  - D-055
+  objective: Prove the job-seeker machine profile converges safely across the supported VM and physical-device matrix and
+    common interruption modes.
+  deliverables:
+  - automated M5 end-to-end suite
+  - failure-injection harness/results
+  - physical-device matrix results
+  - performance and accessibility results
+  - artifacts/e2e/M5-full-profile.md
+  acceptance_criteria:
+  - The reference profile completes on supported Windows 11 test images and the approved physical reference device.
+  - Optional failures do not corrupt essential work; essential failures block ready status.
+  - Low space is detected before installation and multi-restart update paths recover.
+  - Network pull, UI kill, broker kill, disk fill, changed metadata, wrong clock, broken source, success-without-install,
+    and launch-crash cases are covered.
+  - Startup, inventory, resume, memory, UI responsiveness, and database growth are measured on low-spec hardware.
+  - Keyboard-only, screen-reader, 200% scaling, high contrast, and low-resolution paths are recorded.
+  verification:
+  - Run the published VM, physical, failure, accessibility, and performance procedures.
+  - Store versioned, reviewable results without personal data.
+  evidence: []
+  human_evidence_required:
+  - Human testers complete the physical-device and accessibility portions and record unresolved defects.
+- id: TL-0511
+  title: Validate the M5 full-machine-profile gate
+  milestone: M5
+  workstream: release
+  kind: gate
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0510
+  decision_refs:
+  - D-006
+  - D-017
+  - D-020
+  - D-032
+  - D-033
+  - D-034
+  - D-039
+  - D-045
+  - D-047
+  - D-048
+  - D-050
+  - D-055
+  objective: Prove ThirdLife can apply and verify the pilot machine profile across update, package, security, restart, and
+    failure scenarios.
+  deliverables:
+  - artifacts/gates/M5-full-machine-profile.md
+  acceptance_criteria:
+  - The job-seeker machine profile succeeds on the approved test matrix.
+  - Essential/optional semantics and free-space protection behave as specified.
+  - Windows Update and package work survive required restart cycles.
+  - The security baseline is evidence-based and ownership blockers fail closed.
+  - Final cold-boot verification records exact versions and unresolved warnings.
+  - Failure, accessibility, privacy, and performance results have no unresolved release blocker.
+  verification:
+  - Run clean-checkout verification, the M5 matrix, bundle validation, and gate review.
+  evidence: []
+  human_evidence_required:
+  - Product, security, accessibility, and pilot test owners approve the M5 gate record.
+- id: TL-0601
+  title: Implement finalization rules and checklist state
+  milestone: M6
+  workstream: finalization
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0511
+  decision_refs:
+  - D-021
+  - D-035
+  - D-036
+  objective: Represent every required workshop-cleanup and handover check as evidence-backed, blocking, advisory, or explicitly
+    not applicable state.
+  deliverables:
+  - finalization rule model
+  - finalization checklist engine
+  - operator confirmation UI
+  - finalization persistence and tests
+  acceptance_criteria:
+  - Rules cover workshop accounts, browser sessions, Wi-Fi profiles, credentials, shares, test media, diagnostics, downloads,
+    VPN/remote-support artifacts, clipboard/key material, and pending restart.
+  - Automated observations and human confirmations are distinguishable.
+  - Required unknown, failed, or unconfirmed rules block handover.
+  - Not-applicable requires a reason where policy demands it.
+  - Finalization history remains auditable and is not silently overwritten.
+  verification:
+  - Test passed, failed, unknown, human-confirmed, not-applicable, reopened-job, and changed-system-state cases.
+  evidence: []
+- id: TL-0602
+  title: Detect bounded workshop artifacts
+  milestone: M6
+  workstream: finalization
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0601
+  - TL-0005
+  - TL-0506
+  decision_refs:
+  - D-014
+  - D-035
+  - D-037
+  objective: Automate safe detection of known workshop residue while avoiding destructive cleanup claims or broad personal-data
+    scanning.
+  deliverables:
+  - allowlisted artifact detectors
+  - artifact evidence records
+  - manual-cleanup guidance
+  - privacy/security tests
+  acceptance_criteria:
+  - Detectors are narrow, documented, cancellable, and read-only unless a separately approved compiled cleanup action exists.
+  - Results cover known ThirdLife temp/report paths, configured workshop accounts, selected network/remote-support indicators,
+    and approved package caches.
+  - The detector does not search arbitrary recipient content or claim forensic removal.
+  - Sensitive values are summarized/redacted in normal UI, logs, and exports.
+  - Uncertain findings require review and cannot be auto-dismissed.
+  verification:
+  - Seed known artifacts and sensitive decoys, run detection, and inspect all stored/exported evidence.
+  - Run path traversal, junction/symlink, access-denied, and oversized-directory tests.
+  evidence: []
+- id: TL-0603
+  title: Support assisted and sealed handover models
+  milestone: M6
+  workstream: handover
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0601
+  decision_refs:
+  - D-020
+  - D-021
+  - D-035
+  - D-040
+  objective: Let organizations select an assisted or sealed handover path without creating recipient secrets or personal configurations
+    in the recipient's absence.
+  deliverables:
+  - handover-mode model
+  - assisted/sealed workflow UI
+  - recipient-choice deferral records
+  - handover-mode tests
+  acceptance_criteria:
+  - Assisted handover can record recipient-controlled choices without logging secret values.
+  - Sealed handover stops at the configured machine-level handover point.
+  - Backup, personal account, recovery key, browser, accessibility, and other recipient-owned setup can be marked deferred
+    with clear guidance.
+  - v0.1 does not automate arbitrary OOBE or Sysprep flows.
+  - Changing handover mode invalidates incompatible confirmations and reruns applicable finalization rules.
+  verification:
+  - Run both handover modes and inspect records for recipient-secret leakage.
+  - Test switching modes after partial completion.
+  evidence: []
+- id: TL-0604
+  title: Generate the technical workshop record
+  milestone: M6
+  workstream: reports
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0601
+  - TL-0507
+  decision_refs:
+  - D-014
+  - D-015
+  - D-018
+  - D-032
+  - D-036
+  objective: Produce an auditable workshop record containing full internal device/job evidence, repairs, decisions, actions,
+    verification, exceptions, and known limitations.
+  deliverables:
+  - workshop report model
+  - deterministic HTML/PDF-ready or printable renderer
+  - report provenance/version block
+  - golden report tests
+  acceptance_criteria:
+  - The record includes internal job/device identity, sanitization evidence, normalized observations, policy/version, disposition,
+    confirmations/exceptions, action journal summary, exact package versions, verification, operator/timestamps, and limitations.
+  - Observed facts, inferences, human confirmations, policy rules, and actions are visibly distinct.
+  - Historical results remain tied to the policy/catalog/profile/application versions used.
+  - Missing or unavailable evidence is not rendered as pass.
+  - Report generation is deterministic for fixed normalized input and handles hostile text safely.
+  verification:
+  - Compare golden reports for representative ready, repair, review, alternative-OS, and do-not-deploy jobs.
+  - Run HTML/markup injection and long-text tests.
+  evidence: []
+- id: TL-0605
+  title: Generate the plain-language recipient guide
+  milestone: M6
+  workstream: reports
+  kind: code
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: any
+  depends_on:
+  - TL-0603
+  - TL-0508
+  decision_refs:
+  - D-014
+  - D-021
+  - D-036
+  - D-039
+  - D-040
+  objective: Create an accessible handover guide explaining installed capabilities, updates, file/backup next steps, accessibility,
+    support, charger/device notes, and limitations.
+  deliverables:
+  - recipient guide model
+  - accessible printable renderer
+  - assisted/sealed guide variants
+  - plain-language and accessibility tests
+  acceptance_criteria:
+  - The guide covers what is installed, how updates work, ordinary file locations, backup not-configured/configured status,
+    accessibility entry points, support contact, preparation date, and known limitations.
+  - It contains no password, recovery key, workshop account, donor/previous-owner detail, or unnecessary security internals.
+  - Deferred recipient choices are explicit rather than silently assumed complete.
+  - Content has logical reading order, meaningful headings, high zoom support, and no status conveyed only by color.
+  - The renderer handles missing organization branding/contact data gracefully.
+  verification:
+  - Inspect generated guides for both handover modes at 200% zoom and with a screen reader.
+  - Run prohibited-field and hostile-text tests.
+  evidence: []
+  human_evidence_required:
+  - A representative nontechnical reviewer approves plain-language clarity.
+- id: TL-0606
+  title: Build a previewable sanitized diagnostic bundle
+  milestone: M6
+  workstream: diagnostics
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0602
+  - TL-0407
+  - TL-0604
+  decision_refs:
+  - D-014
+  - D-036
+  - D-037
+  objective: Export a bounded support bundle only after the operator previews exactly what will be included.
+  deliverables:
+  - diagnostic export schema
+  - sanitization pipeline
+  - preview and explicit-include UI
+  - safe archive writer
+  - redaction/export security tests
+  acceptance_criteria:
+  - Default content includes internal support ID, ThirdLife/build versions, OS version, generic hardware, check outcomes,
+    stable action codes, and sanitized errors.
+  - Default content omits names, usernames, Wi-Fi identifiers, serial numbers, IP addresses, personal paths, raw package URLs,
+    and unreviewed command output.
+  - The preview displays every field/file before export and supports explicit reviewed inclusion where policy permits.
+  - The archive writer defends against path traversal, links/reparse points, unsafe destinations, partial writes, and size
+    exhaustion.
+  - The job records export time, schema version, content digest, and operator without storing the destination's personal path
+    in general diagnostics.
+  verification:
+  - Run seeded-PII, path attack, symlink/junction, huge-input, cancelled-export, and hostile-destination tests.
+  - Manually inspect a representative bundle.
+  evidence: []
+- id: TL-0607
+  title: Enforce final sign-off and the blocking handover gate
+  milestone: M6
+  workstream: handover
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0602
+  - TL-0603
+  - TL-0604
+  - TL-0605
+  - TL-0606
+  decision_refs:
+  - D-017
+  - D-019
+  - D-033
+  - D-035
+  - D-036
+  objective: Prevent a device from being marked handed over until all required policy, verification, finalization, reporting,
+    and operator sign-off evidence is valid.
+  deliverables:
+  - handover eligibility evaluator
+  - operator sign-off record
+  - completed/archive state transition
+  - handover gate tests
+  acceptance_criteria:
+  - Only an eligible ready disposition can enter handed-over/completed state.
+  - Blocking policy, essential-action, verification, restart, ownership, sanitization, and finalization issues prevent sign-off.
+  - Every permitted exception is named, reasoned, attributable, policy-authorized, and shown in reports.
+  - Sign-off binds the report/guide/support-bundle versions or records their intentional omission.
+  - Any later material job/system change revokes the prior sign-off and requires re-verification.
+  - The UI cannot bypass the eligibility evaluator.
+  verification:
+  - Attempt sign-off with each blocker class, stale verification, missing report, unauthorized exception, and post-sign-off
+    mutation.
+  - Verify only the complete eligible path succeeds.
+  evidence: []
+- id: TL-0608
+  title: Complete the v0.1 accessibility audit
+  milestone: M6
+  workstream: accessibility
+  kind: test
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0605
+  - TL-0607
+  - TL-0510
+  decision_refs:
+  - D-003
+  - D-039
+  objective: Audit the complete operator and handover flow for keyboard, screen-reader, scaling, contrast, focus, announcements,
+    cancellation, and error recovery.
+  deliverables:
+  - artifacts/audits/v0.1-accessibility.md
+  - accessibility defect log
+  - automated accessibility checks where feasible
+  - remediation verification
+  acceptance_criteria:
+  - The primary workflow completes without a mouse.
+  - Narrator and NVDA expose meaningful names, roles, states, focus order, progress, errors, and recovery actions.
+  - The UI remains usable at 200% scaling, high contrast, large text, low resolution, and with long localized test strings.
+  - No required meaning is carried by color alone and no interaction is drag-only.
+  - Long operations announce progress and expose safe cancellation.
+  - All critical/high audit findings are fixed or explicitly block release.
+  verification:
+  - Run the documented accessibility matrix on supported Windows hardware.
+  - Attach issue/test evidence for each finding and fix.
+  evidence: []
+  human_evidence_required:
+  - A human accessibility reviewer signs the completed audit and residual finding list.
+- id: TL-0609
+  title: Complete the v0.1 security and privacy release review
+  milestone: M6
+  workstream: security
+  kind: security
+  priority: P0
+  status: backlog
+  size: XL
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0606
+  - TL-0607
+  - TL-0510
+  decision_refs:
+  - D-009
+  - D-011
+  - D-013
+  - D-014
+  - D-023
+  - D-025
+  - D-029
+  - D-030
+  - D-035
+  - D-037
+  - D-043
+  objective: Review the complete privileged, package, persistence, path, logging, export, and release surfaces against the
+    threat and privacy models.
+  deliverables:
+  - artifacts/audits/v0.1-security-privacy.md
+  - threat-model delta
+  - privacy data-flow delta
+  - dependency/SBOM and vulnerability results
+  - residual-risk register
+  acceptance_criteria:
+  - Broker authentication, authorization, replay, expiry, schema/size, path, junction/symlink, caller, and unknown-action
+    controls are tested.
+  - Profile/catalog/package downgrade, substitution, malformed metadata, injection, and trust failures are tested.
+  - Logs, DB, job directories, temp files, reports, and exports are inspected for prohibited personal data and unsafe permissions.
+  - Dependencies, licenses, SBOM, known vulnerabilities, release signing/update assumptions, and disclosure path are reviewed.
+  - No unresolved critical/high issue or unowned residual risk remains for the pilot.
+  - Review explicitly confirms unsupported OS, activation, ownership, firmware-password, and MDM bypasses are absent.
+  verification:
+  - Run the security test suite, dependency/SBOM checks, privacy fixtures, and focused manual review.
+  - Trace every high-risk threat to code/test evidence or an accepted blocker.
+  evidence: []
+  human_evidence_required:
+  - Named security and privacy owners sign the review and residual-risk register.
+- id: TL-0610
+  title: Package the controlled pilot and operating runbook
+  milestone: M6
+  workstream: release
+  kind: release
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0607
+  - TL-0608
+  - TL-0609
+  decision_refs:
+  - D-003
+  - D-006
+  - D-011
+  - D-012
+  - D-013
+  - D-036
+  - D-043
+  - D-046
+  - D-047
+  - D-056
+  objective: Produce a reproducible signed-or-clearly-development pilot build, deployment/rollback instructions, operator
+    procedure, support process, and evidence collection plan.
+  deliverables:
+  - pilot installer/package
+  - release manifest and checksums
+  - SBOM and third-party notices
+  - docs/pilot/operator-runbook.md
+  - docs/pilot/deployment-rollback.md
+  - docs/pilot/support-and-incident.md
+  - docs/pilot/metrics-export.md
+  - RELEASE_INTERFACE.md preview draft
+  acceptance_criteria:
+  - A clean Windows machine can install/run the build using documented prerequisites and remove/rollback it without losing
+    workshop records unintentionally.
+  - The runbook covers sanitization prerequisite, intake, assessment, decisions, plan approval, UAC, interruption/reboot,
+    finalization, reports, handover, support, and emergency stop.
+  - Network categories and offline behavior are documented; no ThirdLife account or cloud dependency is required.
+  - Telemetry remains off; any pilot metrics export is explicit, aggregate/pseudonymized, previewable, and optional.
+  - Build inputs, dependencies, version, checksums, SBOM, notices, policy/catalog/profile versions, and known issues are recorded.
+  - The partner knows how to report security/privacy incidents and stop using a compromised catalog/build.
+  - RELEASE_INTERFACE.md is populated with verified pilot behavior, marked preview/incomplete, and contains no speculative
+    sibling API or adapter promise.
+  - The runbook labels this as a controlled v0.1 pilot and does not claim that Team B/B1 or RELEASE_INTERFACE.md is complete.
+  verification:
+  - Reproduce the pilot package from a clean checkout.
+  - Perform install, upgrade/reinstall, rollback/uninstall, and operator-runbook rehearsals.
+  - Black-box review the pilot draft interface sheet against the packaged build and mark unknown/stable-only fields explicitly.
+  evidence: []
+  human_evidence_required:
+  - Pilot partner/operator rehearses the runbook and acknowledges known limitations.
+  - Release owner approves the manifest and rollback procedure.
+- id: TL-0611
+  title: Validate the M6 and v0.1 controlled-pilot gate
+  milestone: M6
+  workstream: release
+  kind: gate
+  priority: P0
+  status: backlog
+  size: M
+  executor: human
+  environment: windows
+  depends_on:
+  - TL-0610
+  decision_refs:
+  - D-006
+  - D-035
+  - D-036
+  - D-039
+  - D-043
+  - D-045
+  - D-046
+  - D-047
+  - D-056
+  - D-057
+  objective: Authorize a controlled partner pilot only after all technical gates, audits, reports, runbooks, and named human
+    approvals are complete.
+  deliverables:
+  - artifacts/gates/M6-v0.1-controlled-pilot.md
+  - v0.1 evidence index
+  - pilot go/no-go record
+  acceptance_criteria:
+  - Every predecessor and prior milestone gate is done with linked evidence.
+  - A device cannot be handed over while any blocking finalization check remains.
+  - Workshop, recipient, and diagnostic outputs meet their data-boundary rules.
+  - The support bundle is previewable before export.
+  - Security/privacy and accessibility audits have no unresolved release blocker.
+  - The pilot build and runbook reproduce on the approved Windows/device matrix.
+  - Known limitations state exactly what ThirdLife did and did not verify.
+  - Named owners approve scope, security, privacy, accessibility, licensing, and pilot operations.
+  - The gate record states that Core 1.0 accessibility/backup completion, stable lifecycle evidence, release-interface freeze,
+    and portfolio handoff remain pending in M7.
+  verification:
+  - Run the complete release verification command and validate every evidence link.
+  - Conduct the documented human go/no-go review.
+  evidence: []
+  human_evidence_required:
+  - Project/product owner signs go/no-go.
+  - Security and privacy owners sign.
+  - Accessibility owner signs.
+  - License/release owner signs.
+  - Pilot partner accepts the runbook, support path, and known limitations.
+  notes:
+  - Codex may prepare this gate record and evidence index, but it must never mark TL-0611 done or claim pilot authorization
+    without the named human approvals.
+  - Passing TL-0611 authorizes only the controlled pilot. It does not authorize Team B to leave B1 or begin B4 suite integration.
+- id: TL-0701
+  title: Implement recipient-controlled accessibility setup
+  milestone: M7
+  workstream: accessibility
+  kind: code
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0611
+  decision_refs:
+  - D-021
+  - D-039
+  - D-047
+  - D-057
+  objective: Guide a present recipient through supported accessibility choices with preview, explicit scope, journaling, verification,
+    and reversal while sealed handover leaves personal choices pending.
+  deliverables:
+  - recipient accessibility domain/contracts
+  - supported Windows accessibility-setting adapters
+  - accessible preview/apply/reverse UI
+  - journal and independent verification records
+  - tests and recipient guidance
+  acceptance_criteria:
+  - The recipient or authorized organization chooses settings; the operator is not asked to infer disability or preference.
+  - Every setting states whether it is machine-wide or current-user-specific before approval.
+  - Supported changes can be previewed or clearly explained, applied through reviewed actions, verified, and reversed where
+    Windows supports reversal.
+  - The flow is keyboard/screen-reader/scaling accessible and remains optional to machine-level acceptance.
+  - Sealed handover applies no recipient-specific accessibility preference and records the onboarding item as pending.
+  - No account, secret, or hidden behavioural record is created.
+  verification:
+  - Run adapter unit/integration tests for supported, unavailable, denied, applied, verified, reversed, and resume states.
+  - Run keyboard, Narrator, NVDA, scaling, and human recipient/proxy walkthroughs.
+  evidence: []
+  human_evidence_required:
+  - Accessibility reviewer validates the recipient-setting workflow and reversal limitations.
+  - A representative recipient or proxy completes the choice/preview/apply/verify or sealed-handover path.
+- id: TL-0702
+  title: Implement basic operating-system backup onboarding and restore verification
+  milestone: M7
+  workstream: resilience
+  kind: code
+  priority: P0
+  status: backlog
+  size: XL
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0611
+  decision_refs:
+  - D-021
+  - D-038
+  - D-040
+  - D-047
+  - D-053
+  - D-057
+  objective: Provide a recipient-present, basic operating-system backup onboarding workflow using supported mechanisms, destination
+    checks, a harmless restore test, and clear recovery ownership without building a backup engine.
+  deliverables:
+  - backup onboarding domain and state model
+  - supported operating-system backup/status adapter selected by ADR
+  - destination/capacity and recovery-ownership checks
+  - initial backup and harmless restore-test workflow where supported
+  - sealed-handover pending state and recipient instructions
+  - tests, journal, verification, and privacy controls
+  acceptance_criteria:
+  - ThirdLife does not implement cryptography, a repository format, or a general backup engine.
+  - The present recipient or authorized organization selects the destination and controls credentials/recovery material.
+  - Destination capacity and supported prerequisites are checked before configuration.
+  - Backup is not reported configured until a representative harmless file has been restored successfully; unsupported or
+    deferred paths remain explicit.
+  - Sealed handover creates no recipient account, key, credential, or backup job and reports backup onboarding as pending.
+  - Recovery material never enters ordinary logs, reports, support bundles, ThirdLife metadata, or future suite metadata.
+  - Backup Circle is not invoked, configured, or treated as a dependency.
+  verification:
+  - Run supported, unavailable, insufficient-space, credential-denied, interrupted, failed-backup, failed-restore, successful-restore,
+    and sealed-handover tests.
+  - Perform human restore drills on approved physical devices/destinations.
+  evidence: []
+  human_evidence_required:
+  - A recipient/proxy completes a supported backup and harmless restore test or records a truthful unsupported/pending outcome.
+  - Security/privacy owner confirms recovery-material isolation.
+- id: TL-0703
+  title: Finalize standalone data ownership, profile export, and uninstall semantics
+  milestone: M7
+  workstream: data
+  kind: docs
+  priority: P0
+  status: backlog
+  size: M
+  executor: codex
+  environment: any
+  depends_on:
+  - TL-0611
+  decision_refs:
+  - D-011
+  - D-014
+  - D-047
+  - D-052
+  - D-053
+  objective: Make every ThirdLife-owned data location, export, retention, migration, cleanup, and uninstall choice explicit
+    while proving no sibling content is owned or removed.
+  deliverables:
+  - docs/data-locations.md
+  - docs/profile-policy-export.md
+  - docs/retention-and-cleanup.md
+  - docs/uninstall-and-data-preservation.md
+  - data ownership tests/fixtures
+  acceptance_criteria:
+  - Configuration, jobs, attachments, caches, temporary files, logs, reports, support bundles, migration copies, and retention
+    are documented.
+  - Local profiles/policies are exportable in documented validated formats without a shared portfolio identity.
+  - Uninstall distinguishes application removal from an explicit separate choice about ThirdLife-owned job data.
+  - Uninstalling ThirdLife cannot delete sibling-application workspaces, content, keys, evidence, or settings.
+  - Support and export paths do not scan sibling private data.
+  verification:
+  - Run path/data-map tests and compare installer/uninstaller behavior with the documentation.
+  - Search the release package for undocumented persistent locations and sibling data access.
+  evidence: []
+- id: TL-0704
+  title: Harden install, update, repair, uninstall, and data preservation
+  milestone: M7
+  workstream: release
+  kind: release
+  priority: P0
+  status: backlog
+  size: XL
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0701
+  - TL-0702
+  - TL-0703
+  decision_refs:
+  - D-029
+  - D-031
+  - D-043
+  - D-047
+  - D-052
+  - D-053
+  - D-056
+  objective: Prove the standalone application lifecycle on clean and upgraded Windows installations without a mandatory account,
+    sibling app, permanent privileged service, or unintended data loss.
+  deliverables:
+  - production installer/package definition
+  - update and repair procedure
+  - rollback or explicit non-rollback procedure
+  - uninstall/data-preservation behavior
+  - clean-install and upgrade fixtures/tests
+  acceptance_criteria:
+  - A clean supported Windows machine can install, launch, update/repair, and uninstall ThirdLife Setup Core using documented
+    privileges and restart behavior.
+  - The main UI remains unelevated and no permanent privileged service is left installed.
+  - Jobs and user-selected reports are preserved or removed only through explicit documented choices.
+  - Interrupted install/update/repair/uninstall produces a recoverable or truthfully blocked state.
+  - No sibling application is installed, modified, removed, or required by the Core installer.
+  - A downgrade or rollback that is unsafe after migration is disclosed before change with export/recovery steps.
+  verification:
+  - Run clean install, reinstall/repair, upgrade from the pilot build, interruption, rollback/non-rollback, uninstall, and
+    data-preservation tests.
+  - Inspect services, scheduled tasks, startup entries, files, registry entries, and job data before/after lifecycle operations.
+  evidence: []
+  human_evidence_required:
+  - Release owner reviews the installer lifecycle and data-preservation behavior on the supported Windows matrix.
+- id: TL-0705
+  title: Finalize stable security, accessibility, low-spec, and support documentation
+  milestone: M7
+  workstream: quality
+  kind: docs
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0701
+  - TL-0702
+  - TL-0704
+  decision_refs:
+  - D-039
+  - D-043
+  - D-047
+  - D-052
+  - D-056
+  - D-057
+  objective: Replace placeholders in SECURITY.md, ACCESSIBILITY.md, LOW_SPEC.md, support guidance, and known limitations with
+    evidence from the complete Core 1.0 behavior.
+  deliverables:
+  - final SECURITY.md with reporting path and supported versions
+  - final ACCESSIBILITY.md and verified limitations
+  - final LOW_SPEC.md with measured resource evidence and claim boundaries
+  - docs/support.md
+  - docs/known-limitations.md
+  - documentation evidence index
+  acceptance_criteria:
+  - Every claim is linked to automated, Windows, physical, accessibility, or human evidence and distinguishes untested configurations.
+  - Security reporting, support, maintenance status, and stop-use guidance are defined.
+  - Practical resource evidence is published without converting limited tests into universal minimum claims.
+  - Accessibility and backup onboarding limitations are explicit.
+  - Documentation states that no sibling integration or B4 compatibility claim is included.
+  verification:
+  - Validate links/evidence references and review every support/limitation claim against test results.
+  - Run a documentation accessibility and plain-language review.
+  evidence: []
+  human_evidence_required:
+  - Security/privacy, accessibility, low-spec/release, and support owners approve their final sections and residual limitations.
+- id: TL-0706
+  title: Complete the minimal release interface and black-box samples
+  milestone: M7
+  workstream: portfolio
+  kind: docs
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: any
+  depends_on:
+  - TL-0703
+  - TL-0704
+  - TL-0705
+  decision_refs:
+  - D-047
+  - D-049
+  - D-050
+  - D-051
+  - D-052
+  - D-053
+  - D-056
+  objective: Publish the human-readable minimal black-box interface for the exact Core 1.0 release without creating a shared
+    API or sibling-specific integration contract.
+  deliverables:
+  - completed RELEASE_INTERFACE.md
+  - non-sensitive sample inputs/outputs/workspaces where applicable
+  - sample hashes and expected-result manifest
+  - sanitized support-bundle sample
+  - known-limitations cross-reference
+  acceptance_criteria:
+  - Identity, artifact, install/update/repair/remove, launch, data locations, inputs/outputs, offline, resource, privilege,
+    support, samples, limitations, and contacts are complete for the frozen version.
+  - Unknown fields remain explicit and unsupported behavior is not invented.
+  - Only independently useful launch/CLI behavior is documented; no speculative plugin, URI, shared schema, or sibling command
+    is added.
+  - Samples contain no personal data and require no sibling source or development build.
+  - The sheet states that B4 may consume it only after the stable gate and must use frozen artifacts/public behavior.
+  verification:
+  - Perform a black-box install/launch/open/export/support walkthrough using only RELEASE_INTERFACE.md and frozen candidate
+    artifacts.
+  - Validate sample hashes and inspect samples/support bundle for prohibited data.
+  evidence: []
+  human_evidence_required:
+  - Portfolio owner reviews the interface sheet for sufficiency without speculative coupling.
+- id: TL-0707
+  title: Run the Core 1.0 standalone stable-release matrix
+  milestone: M7
+  workstream: quality
+  kind: test
+  priority: P0
+  status: backlog
+  size: XL
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0701
+  - TL-0702
+  - TL-0704
+  - TL-0705
+  - TL-0706
+  decision_refs:
+  - D-006
+  - D-039
+  - D-040
+  - D-043
+  - D-047
+  - D-052
+  - D-056
+  - D-057
+  objective: Run the complete standalone, offline-core, low-spec, hostile-input, lifecycle, accessibility, backup, failure,
+    and data-preservation matrix for the Core 1.0 release candidate.
+  deliverables:
+  - artifacts/matrices/core-1.0-stable.md
+  - clean/upgrade/uninstall results
+  - offline and constrained-resource results
+  - accessibility and recipient-onboarding results
+  - security/privacy and hostile-input results
+  - physical-device and cold-boot results
+  - defect disposition and rerun evidence
+  acceptance_criteria:
+  - The full primary workflow works without a sibling application, account, ThirdLife server, or permanent privileged service.
+  - Inventory, policy, manual tests, evidence review, and reports work offline; network-dependent actions fail recoverably
+    and visibly.
+  - Low-resource tests show bounded memory/temp/cache behavior and no corruption or loss of safe cancellation.
+  - Recipient accessibility and supported backup/restore or explicit pending/unsupported paths pass their matrices.
+  - Install, upgrade/repair, migration, rollback/non-rollback, uninstall, and data preservation pass.
+  - All critical/high defects are fixed and rerun or block release.
+  - No test uses a sibling development build or private interface.
+  verification:
+  - Run clean-checkout repository verification and all documented VM/physical/security/privacy/accessibility/low-spec/lifecycle
+    matrices.
+  - Inspect generated reports, databases, logs, uninstall remnants, and support bundles.
+  evidence: []
+  human_evidence_required:
+  - Physical-device, accessibility, backup-restore, low-spec, and operator runs are signed by their authorized reviewers.
+- id: TL-0708
+  title: Freeze ThirdLife Setup Core 1.0 release artifacts
+  milestone: M7
+  workstream: release
+  kind: release
+  priority: P0
+  status: backlog
+  size: L
+  executor: hybrid
+  environment: windows
+  depends_on:
+  - TL-0706
+  - TL-0707
+  decision_refs:
+  - D-043
+  - D-047
+  - D-049
+  - D-052
+  - D-056
+  objective: Create the exact independently releasable Core 1.0 compatibility candidate and immutable evidence package that
+    a later B4 project may consume as a black box.
+  deliverables:
+  - ThirdLife Setup Core 1.0 installer/package
+  - artifact hashes and signature/development-signing record
+  - source revision and dependency lock
+  - SBOM, licence matrix, notices, and vulnerability results
+  - release notes and known limitations
+  - completed RELEASE_INTERFACE.md and sample manifest
+  - release evidence index
+  acceptance_criteria:
+  - Every artifact has an exact version and cryptographic hash and can be reproduced from the recorded source/dependency inputs.
+  - The release is independently installable/removable and has no sibling package or service dependency.
+  - The interface sheet and samples correspond exactly to the frozen artifacts.
+  - No B4 adapter, portfolio compatibility claim, or automatic adoption of future versions is bundled.
+  - The release evidence identifies residual risks, unsupported configurations, maintenance status, and support/security routes.
+  verification:
+  - Reproduce and hash the release from a clean checkout.
+  - Run a final black-box install/launch/workflow/uninstall smoke test using only frozen release documentation.
+  evidence: []
+  human_evidence_required:
+  - Release/licence owner approves the frozen manifest, SBOM, notices, and distribution rights.
+- id: TL-0709
+  title: Review standalone integrity and portfolio-boundary compliance
+  milestone: M7
+  workstream: portfolio
+  kind: test
+  priority: P0
+  status: backlog
+  size: M
+  executor: hybrid
+  environment: any
+  depends_on:
+  - TL-0708
+  decision_refs:
+  - D-046
+  - D-047
+  - D-048
+  - D-049
+  - D-050
+  - D-051
+  - D-052
+  - D-053
+  - D-054
+  - D-055
+  - D-056
+  objective: Prove the frozen release obeys the Team B/B1 boundary, remains standalone, exposes only the minimal release envelope,
+    and leaves all sibling adapters and suite work to B4.
+  deliverables:
+  - artifacts/reviews/core-1.0-portfolio-boundary.md
+  - dependency and data-access trace
+  - release-interface completeness checklist
+  - FUTURE_ASSEMBLY_NOTES.md disposition review
+  - Team B transition recommendation
+  acceptance_criteria:
+  - No build/runtime/test dependency references a sibling repository, private database, service, branch, or unfinished feature.
+  - No shared SDK, universal schema, plugin framework, central user-content store, or portfolio service was created.
+  - Generic profiles/catalogue entries do not contain sibling-specific behavior.
+  - ThirdLife uninstall leaves unrelated application data untouched.
+  - RELEASE_INTERFACE.md is sufficient for black-box deployment but does not promise speculative APIs.
+  - Future ideas remain deferred in FUTURE_ASSEMBLY_NOTES.md and are not active tasks.
+  - The transition recommendation sends Team B to Scam Explainer, not B4.
+  verification:
+  - Audit project references, dependencies, installer contents, data accesses, task graph, release artifacts, and documentation.
+  - Run the bundle validator and a repository-wide search for prohibited coupling patterns.
+  evidence: []
+  human_evidence_required:
+  - Portfolio owner approves the boundary review and Team B transition recommendation.
+- id: TL-0710
+  title: Validate the M7 and ThirdLife Setup Core 1.0 standalone release gate
+  milestone: M7
+  workstream: release
+  kind: gate
+  priority: P0
+  status: backlog
+  size: M
+  executor: human
+  environment: windows
+  depends_on:
+  - TL-0709
+  decision_refs:
+  - D-006
+  - D-039
+  - D-040
+  - D-043
+  - D-045
+  - D-046
+  - D-047
+  - D-048
+  - D-049
+  - D-050
+  - D-052
+  - D-053
+  - D-055
+  - D-056
+  - D-057
+  objective: Authorize ThirdLife Setup Core 1.0 as the independently releasable Team B/B1 product and freeze its portfolio
+    handoff without authorizing B4 suite work.
+  deliverables:
+  - artifacts/gates/M7-core-1.0-standalone-release.md
+  - Core 1.0 evidence index
+  - stable release go/no-go record
+  - portfolio release-matrix handoff package
+  - Team B transition record to Scam Explainer
+  acceptance_criteria:
+  - Every M0-M7 predecessor and gate is done with linked evidence.
+  - The frozen release completes the standalone device-assessment/setup/handover outcome without sibling applications or a
+    project-controlled server.
+  - Recipient-controlled accessibility and basic operating-system backup behavior meets D-057 and exposes no unauthorized
+    recovery material.
+  - Installer, update, repair, migration, rollback/non-rollback, uninstall, offline core, low-spec, security/privacy, accessibility,
+    and data-preservation evidence pass.
+  - Exact artifacts, hashes, source revision, dependency lock, SBOM, licences, notices, known limitations, samples, and RELEASE_INTERFACE.md
+    are frozen.
+  - The boundary review finds no live cross-project dependency or early shared integration infrastructure.
+  - The release handoff is suitable for a future black-box B4 compatibility cut but contains no adapter or suite support claim.
+  - Named owners approve release, security, privacy, accessibility, low-spec, licensing, support, product boundary, and Team
+    B transition.
+  verification:
+  - Run complete clean-checkout and stable-release verification and validate every evidence link/hash.
+  - Conduct the documented human stable-release and portfolio-boundary go/no-go review.
+  evidence: []
+  human_evidence_required:
+  - Project/product owner signs the Core 1.0 go/no-go.
+  - Security and privacy owners sign.
+  - Accessibility and low-spec/release owners sign.
+  - Licence/release/support owners sign.
+  - Portfolio owner accepts the release-interface handoff and confirms Team B moves to Scam Explainer.
+  notes:
+  - Codex may prepare the gate record and evidence index but must never mark TL-0710 done or claim stable-release approval
+    without all named human approvals.
+  - Passing this gate does not authorize ThirdLife Deployment and Suite Assembly B4 or any sibling adapter work.
+portfolio:
+  roadmap_version: '2.0'
+  development_posture: standalone project vacuum
+  integration_posture: late binding against frozen stable releases
+  active_cross_project_dependencies_allowed: false
+  sibling_specific_work_authorized: false
+  next_team_project_after_stable: Scam Explainer
