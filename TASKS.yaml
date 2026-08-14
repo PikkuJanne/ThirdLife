@@ -474,7 +474,7 @@ tasks:
   workstream: supply-chain
   kind: build
   priority: P0
-  status: backlog
+  status: review
   size: M
   executor: hybrid
   environment: any
@@ -505,7 +505,27 @@ tasks:
   - Restore with locked versions.
   - Generate and inspect an SBOM.
   - Run the chosen vulnerability audit and record limitations.
-  evidence: []
+  evidence:
+  - summary: The exact current dependency inventory reconciles 14 NuGet test packages and 6 build/toolchain inputs, with zero runtime or catalogue components; owner, version, source, purpose, candidate licence evidence, hashes where recorded, and separate installation/redistribution fields are present for every row.
+    result: passed; named human licence and redistribution review pending
+    environment: Windows 11 x64; checked-in locks, manifests, workflow, and CSV review
+    date: '2026-08-14'
+    reference: docs/supply-chain/license-matrix.csv (20 rows; sha256:a78e91964dd9280580d01eaba9d7eff4c31a89d953b1c9c8dfc87d3867937469); docs/supply-chain/dependencies.md
+  - summary: Offline generation produced byte-identical CycloneDX 1.7 development SBOMs, repository inspection confirmed the required format, version, and populated component structure, and release mode fails closed while licence and rights decisions remain pending.
+    result: passed
+    environment: Windows 11 x64; PowerShell 7.6.4; Python 3.14.7
+    date: '2026-08-14'
+    reference: eng/generate-sbom.ps1; tools/generate_sbom.py; 20 components; sha256:aaddb641f67efbf93d24bf940ce5975cdbaf79261b866cf220fdd65c5bb6231b
+  - summary: Locked NuGet restore audited direct and transitive dependencies at low-or-higher severity, and the explicit vulnerable-package query returned no known advisory for the resolved graph at the time of review; time-of-check and non-NuGet limitations are recorded without a security guarantee.
+    result: passed
+    environment: Windows 11 x64; .NET SDK 10.0.400; nuget.org audit source
+    date: '2026-08-14'
+    reference: dotnet restore --locked-mode with NuGetAudit=true/NuGetAuditMode=all/NuGetAuditLevel=low; dotnet package list --vulnerable --include-transitive; docs/supply-chain/dependencies.md Vulnerability review
+  - summary: Supply-chain regression probes and the complete deterministic repository gate passed with the synchronized manifest, including locked restore, SBOM generation, formatting, Release build, and tests.
+    result: passed
+    environment: Windows 11 x64; .NET SDK 10.0.400; Python 3.14.7; PyYAML 6.0.3
+    date: '2026-08-14'
+    reference: eng/verify.ps1 passed 56 governance tests, bundle/repository validators, deterministic 20-component SBOM, locked restore, formatting, Release build with 0 warnings/errors, and 14 .NET tests
   human_evidence_required:
   - A human reviews licenses and redistribution claims before a release gate.
 - id: TL-0007

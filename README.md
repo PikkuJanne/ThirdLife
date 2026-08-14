@@ -43,6 +43,9 @@ See `CHANGELOG.md` for the file-level change record.
 | [`docs/security/threat-model.md`](docs/security/threat-model.md) | Assets, actors, threats, control/task mappings, residual-risk decisions, and named-owner approval state tracked by `TL-0004`. |
 | [`docs/security/data-flow.md`](docs/security/data-flow.md) | Accessible diagram and textual inventory of processes, stores, flows, validation, recovery, and distinct trust boundaries. |
 | [`docs/security/abuse-cases.md`](docs/security/abuse-cases.md) | Stable adversarial scenarios with detection, fail-closed behavior, recovery, task traceability, and residual risks. |
+| [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) | Dependency classes, provenance controls, vulnerability-review method, SBOM scope, limitations, and release evidence mapping. |
+| [`docs/supply-chain/license-matrix.csv`](docs/supply-chain/license-matrix.csv) | Machine-readable component ownership, purpose, source, licence evidence, and separate installation/redistribution decisions. |
+| [`eng/generate-sbom.ps1`](eng/generate-sbom.ps1) | Offline deterministic CycloneDX development/release SBOM entry point; release mode fails closed until human rights review is complete. |
 | `CODEX_START_PROMPT.md` | First-session prompt and reusable execution, review, gate, security, accessibility, recovery, deferral, release-interface, and handoff prompts. |
 | `RELEASE_INTERFACE.md` | Human-readable black-box release sheet, populated as a preview draft at `TL-0610`, completed at `TL-0706`, and frozen before `TL-0710`; not a shared API. |
 | `FUTURE_ASSEMBLY_NOTES.md` | Non-binding B4 backlog for cross-project ideas; nothing here can block or expand B1. |
@@ -92,7 +95,7 @@ Install the exact .NET SDK and Python versions named under **Repository verifica
 
 ```powershell
 py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --no-deps --requirement tools\requirements.txt
+.\.venv\Scripts\python.exe -m pip install --no-deps --require-hashes --only-binary=:all: --index-url https://pypi.org/simple --requirement tools\requirements.txt
 ```
 
 Run the complete clean-checkout gate:
@@ -199,7 +202,7 @@ The verification toolchain is pinned to .NET SDK `10.0.400` by `global.json`, Py
 
 ```powershell
 py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --no-deps --requirement tools\requirements.txt
+.\.venv\Scripts\python.exe -m pip install --no-deps --require-hashes --only-binary=:all: --index-url https://pypi.org/simple --requirement tools\requirements.txt
 ```
 
 Then run the complete repository gate from the repository root:
@@ -210,7 +213,15 @@ Then run the complete repository gate from the repository root:
 
 The scripts resolve repository paths relative to themselves, so an absolute script path also works from another directory. Git Bash on Windows may run `./eng/verify.sh`. Non-Windows hosts fail clearly because the authoritative solution includes WPF and Windows-targeted projects.
 
-The verifier runs governance-validator regression probes, then checks the governed bundle and machine-readable portfolio metadata, the bundle hash manifest, solution and WPF boundaries, exact SDK and central package policy, project-local NuGet lock files, the hardened Windows workflow, formatting, the Release build with warnings as errors, and all Release tests. Restore uses only `NuGet.Config` and `--locked-mode`; it does not rewrite the dependency graph.
+The verifier runs governance-validator regression probes, then checks the governed bundle and machine-readable portfolio metadata, the bundle hash manifest, solution and WPF boundaries, exact SDK and central package policy, project-local NuGet lock files, the hardened Windows workflow, and a byte-for-byte deterministic development SBOM generated from checked-in inputs. It then checks formatting, the Release build with warnings as errors, and all Release tests. Restore uses only `NuGet.Config` and `--locked-mode`; it does not rewrite the dependency graph.
+
+Generate an inspectable CycloneDX development SBOM without changing the repository:
+
+```powershell
+.\eng\generate-sbom.ps1 -OutputPath "$env:TEMP\ThirdLife.development.cdx.json"
+```
+
+The generator is offline and records the checked-in source/development dependency inventory. It does not claim to describe a future installer or release payload. Release mode remains blocked until the licence matrix has named human approval.
 
 When an intentional package-version change is approved, update `Directory.Packages.props`, run `dotnet restore ThirdLife.sln --configfile NuGet.Config --force-evaluate`, inspect every lock-file change, and rerun the full verifier. Environment-specific checks must be reported truthfully. Do not disable security, accessibility, low-spec, provenance, analyzer, or failing-test gates.
 
