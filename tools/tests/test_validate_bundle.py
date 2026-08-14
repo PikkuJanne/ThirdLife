@@ -30,6 +30,13 @@ SECURITY_DOCUMENTS = (
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
 )
+TESTING_DOCUMENTS = (
+    "docs/testing/accessibility-matrix.md",
+    "docs/testing/device-matrix.md",
+    "docs/testing/failure-injection.md",
+    "docs/testing/manual-hardware-tests.md",
+    "LOW_SPEC.md",
+)
 TASK_DOCUMENT = validate_bundle.yaml.safe_load(
     (REPOSITORY_ROOT / "TASKS.yaml").read_text(encoding="utf-8")
 )
@@ -823,6 +830,918 @@ class GovernanceDocumentContractTests(unittest.TestCase):
             self.assertTrue(
                 any("M0 through M6" in error for error in validation.errors)
             )
+
+
+class TestingDocumentContractTests(unittest.TestCase):
+    REVIEWED_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+    REVIEW_DATE = "2026-08-14"
+    OWNER_AND_ROLE = "PikkuJanne — Workshop test owner"
+    REFERENCE_DEVICE = "LAB-DEVICE-001"
+
+    def copy_testing_documents(self, root: Path) -> None:
+        for relative in TESTING_DOCUMENTS:
+            destination = root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                (REPOSITORY_ROOT / relative).read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+    def validate_documents(
+        self,
+        root: Path,
+        task_by_id: dict[str, dict[str, object]] | None = None,
+    ) -> validate_bundle.Validation:
+        validation = validate_bundle.Validation()
+        reviewed_sources = getattr(self, "reviewed_sources", {}).get(root)
+
+        def commit_is_reachable(commit: str) -> bool:
+            return reviewed_sources is not None and commit == self.REVIEWED_COMMIT
+
+        def text_at_commit(commit: str, relative: str) -> str | None:
+            if commit != self.REVIEWED_COMMIT or reviewed_sources is None:
+                return None
+            return reviewed_sources.get(relative)
+
+        with patch.object(validate_bundle, "ROOT", root):
+            validate_bundle.validate_testing_documents(
+                validation,
+                task_by_id or TASK_BY_ID,
+                DECISION_IDS,
+                commit_is_reachable,
+                text_at_commit,
+            )
+        return validation
+
+    def replace_once(self, path: Path, old: str, new: str) -> None:
+        text = path.read_text(encoding="utf-8")
+        self.assertEqual(text.count(old), 1, f"expected one occurrence of {old!r}")
+        path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+    def refresh_recorded_digests(
+        self,
+        root: Path,
+        task_by_id: dict[str, dict[str, object]],
+        *,
+        procedure: bool = False,
+    ) -> dict[str, dict[str, object]]:
+        device_path = root / "docs/testing/device-matrix.md"
+        manual_path = root / "docs/testing/manual-hardware-tests.md"
+        device_text = device_path.read_text(encoding="utf-8")
+        manual_text = manual_path.read_text(encoding="utf-8")
+        if procedure:
+            procedure_digest = validate_bundle.testing_procedure_digest(
+                {
+                    relative: (root / relative).read_text(encoding="utf-8")
+                    for relative in TESTING_DOCUMENTS[:4]
+                },
+                (root / "LOW_SPEC.md").read_text(encoding="utf-8"),
+            )
+            device_text = re.sub(
+                r"(?m)^\*\*Procedure digest:\*\* [0-9a-f]{64}$",
+                f"**Procedure digest:** {procedure_digest}",
+                device_text,
+            )
+            device_path.write_text(device_text, encoding="utf-8")
+        evidence_digest = validate_bundle.testing_evidence_digest(
+            device_text,
+            manual_text,
+        )
+        for path in (device_path, manual_path):
+            text = path.read_text(encoding="utf-8")
+            text = re.sub(
+                r"(?m)^\*\*Evidence digest:\*\* [0-9a-f]{64}$",
+                f"**Evidence digest:** {evidence_digest}",
+                text,
+            )
+            path.write_text(text, encoding="utf-8")
+
+        updated_tasks = {task_id: dict(task) for task_id, task in task_by_id.items()}
+        task = dict(updated_tasks["TL-0008"])
+        evidence = [dict(item) for item in task.get("evidence", [])]
+        for item in evidence:
+            reference = str(item.get("reference", ""))
+            if procedure:
+                reference = re.sub(
+                    r"procedure sha256:[0-9a-f]{64}",
+                    f"procedure sha256:{procedure_digest}",
+                    reference,
+                )
+            item["reference"] = re.sub(
+                r"evidence sha256:[0-9a-f]{64}",
+                f"evidence sha256:{evidence_digest}",
+                reference,
+            )
+        task["evidence"] = evidence
+        updated_tasks["TL-0008"] = task
+        return updated_tasks
+
+    def make_recorded_testing_evidence(
+        self,
+        root: Path,
+    ) -> dict[str, dict[str, object]]:
+        if not hasattr(self, "reviewed_sources"):
+            self.reviewed_sources: dict[Path, dict[str, str]] = {}
+        self.reviewed_sources[root] = {
+            relative: (root / relative).read_text(encoding="utf-8")
+            for relative in TESTING_DOCUMENTS
+        }
+
+        recorded_status = validate_bundle.TESTING_STATUS_RECORDED
+        for relative in TESTING_DOCUMENTS[:4]:
+            self.replace_once(
+                root / relative,
+                "**Status:** Draft procedure; human evidence pending",
+                f"**Status:** {recorded_status}",
+            )
+        self.replace_once(
+            root / "LOW_SPEC.md",
+            "**Procedure status:** Draft procedure; human evidence pending",
+            f"**Procedure status:** {recorded_status}",
+        )
+
+        device_path = root / "docs/testing/device-matrix.md"
+        device_text = device_path.read_text(encoding="utf-8")
+        updated_lines: list[str] = []
+        gap_rows: list[str] = []
+        covered_requirements = {
+            "DMX-001": "Supported reference state",
+            "DMX-004": "Laptop",
+            "DMX-008": "8 GB",
+            "DMX-011": "NVMe",
+            "DMX-013": "Present on AC; immediate charging indication observed",
+            "DMX-014": "Brief battery operation observed",
+            "DMX-017": "TPM present and ready",
+            "DMX-020": "Secure Boot enabled",
+            "DMX-023": "Wired network observed",
+            "DMX-024": "Wi-Fi observed",
+            "DMX-031": "Full powered-off cold boot observed",
+        }
+        coverage_result_rows: list[str] = []
+        for line in device_text.splitlines():
+            match = re.match(r"^\| `(DMX-\d{3})` \|", line)
+            if match is None:
+                updated_lines.append(line)
+                continue
+            requirement_id = match.group(1)
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            if requirement_id in covered_requirements:
+                cells[5] = f"{self.REFERENCE_DEVICE} / RUN-001"
+                cells[6] = "Covered"
+                cells[7] = "None"
+                coverage_result_rows.append(
+                    f"| {self.REFERENCE_DEVICE} | {requirement_id} | "
+                    f"{covered_requirements[requirement_id]} | Physical | Interactive lab | "
+                    "None | Direct physical observation | "
+                    "docs/testing/manual-hardware-tests.md#human-walkthrough-and-sign-off | "
+                    "`Pass` | `Human confirmed` | Point-in-time evidence only |"
+                )
+            else:
+                gap_id = f"GAP-{requirement_id}"
+                cells[5] = "None"
+                cells[6] = "Missing"
+                cells[7] = f"`{gap_id}`"
+                gap_rows.append(
+                    f"| `{gap_id}` | `{requirement_id}` | Equipment not in current pool | "
+                    "Explicit pilot coverage gap | Acquire approved equipment or retain limitation | "
+                    f"{self.OWNER_AND_ROLE} | {self.REVIEW_DATE} | Open |"
+                )
+            updated_lines.append("| " + " | ".join(cells) + " |")
+        device_path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
+
+        replacements = (
+            (
+                "**Actual device-pool record:** Pending",
+                "**Actual device-pool record:** docs/testing/device-matrix.md#actual-device-pool",
+            ),
+            (
+                "**Physical reference device:** Pending",
+                f"**Physical reference device:** {self.REFERENCE_DEVICE}",
+            ),
+            (
+                "**Human recorder and role:** Pending",
+                f"**Human recorder and role:** {self.OWNER_AND_ROLE}",
+            ),
+            ("**Walkthrough result:** Pending", "**Walkthrough result:** Pass"),
+            (
+                "**Walkthrough date:** Pending",
+                f"**Walkthrough date:** {self.REVIEW_DATE}",
+            ),
+            (
+                "**Reviewed source commit:** Pending",
+                f"**Reviewed source commit:** {self.REVIEWED_COMMIT}",
+            ),
+            (
+                "| Pending — no pool entry recorded | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Human evidence required |",
+                (
+                    f"| {self.REFERENCE_DEVICE} | Available | Yes | Laptop | Windows 11 build 26100; Supported | "
+                    "x64 | Supported | 8 GB | NVMe | Present on AC; immediate charging indication observed | "
+                    "Present and ready | Enabled | Wired and Wi-Fi available | None known | "
+                    + ", ".join(covered_requirements)
+                    + " | "
+                    f"PikkuJanne / {self.REVIEW_DATE} | Point-in-time reference |"
+                ),
+            ),
+            (
+                "| Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | `Not run` | `Not available` | Human pool record and test run pending |",
+                "\n".join(coverage_result_rows),
+            ),
+            (
+                "| Pending | Actual pool not yet recorded | Human inventory pending | Pilot coverage cannot yet be assessed | Record the sanitized pool and map every `DMX-*` requirement | Pending | Pending | Pending |",
+                "\n".join(gap_rows),
+            ),
+            (
+                "The actual device pool, reference-device availability, equipment gaps, and representative-device walkthrough are all **Pending**. This draft supplies no physical-device, cold-boot, workshop, accessibility, or long-term reliability evidence. `TL-0008` must remain short of `done` until the required human records exist and the repository verification and documented human walkthrough have both passed.",
+                "The sanitized device pool, reference-device availability, equipment gaps, and representative-device walkthrough are recorded for this procedure revision. This is point-in-time evidence only; it is not release authorization, accessibility conformance, a minimum-spec claim, or proof of long-term reliability.",
+            ),
+        )
+        for old, new in replacements:
+            self.replace_once(device_path, old, new)
+
+        manual_path = root / "docs/testing/manual-hardware-tests.md"
+        gap_summary = ", ".join(
+            re.findall(r"GAP-DMX-\d{3}", "\n".join(gap_rows))
+        )
+        manual_replacements = (
+            ("**Human walkthrough result:** Pending", "**Human walkthrough result:** Pass"),
+            (
+                "**Walkthrough owner and role:** Pending",
+                f"**Walkthrough owner and role:** {self.OWNER_AND_ROLE}",
+            ),
+            (
+                "**Walkthrough date:** Pending",
+                f"**Walkthrough date:** {self.REVIEW_DATE}",
+            ),
+            (
+                "**Reviewed source commit:** Pending",
+                f"**Reviewed source commit:** {self.REVIEWED_COMMIT}",
+            ),
+            ("**Reference device ID:** Pending", f"**Reference device ID:** {self.REFERENCE_DEVICE}"),
+            (
+                "**Walkthrough evidence reference:** Pending",
+                "**Walkthrough evidence reference:** docs/testing/manual-hardware-tests.md#human-walkthrough-and-sign-off",
+            ),
+            ("| Walkthrough result | Pending |", "| Walkthrough result | Pass |"),
+            ("| Human recorder and role | Pending |", f"| Human recorder and role | {self.OWNER_AND_ROLE} |"),
+            ("| Date and timestamp with offset | Pending |", f"| Date and timestamp with offset | {self.REVIEW_DATE}T12:00:00+02:00 |"),
+            ("| Reviewed source commit | Pending |", f"| Reviewed source commit | {self.REVIEWED_COMMIT} |"),
+            ("| Physical reference device ID | Pending |", f"| Physical reference device ID | {self.REFERENCE_DEVICE} |"),
+            ("| Windows edition/build/architecture | Pending |", "| Windows edition/build/architecture | Windows 11 build 26100 / x64 / supported |"),
+            ("| Tests physically executed | Pending |", "| Tests physically executed | MHT-001 through MHT-021 |"),
+            ("| Tests reviewed only or not run | Pending |", "| Tests reviewed only or not run | None |"),
+            ("| Cold-boot result and evidence class | Pending |", "| Cold-boot result and evidence class | Pass / Human confirmed |"),
+            ("| Interruption/resume result and evidence class | Pending |", "| Interruption/resume result and evidence class | Pass / Human confirmed |"),
+            ("| Missing equipment and pilot blockers | Pending |", f"| Missing equipment and pilot blockers | {gap_summary} |"),
+            ("| Limitations and defects | Pending |", "| Limitations and defects | Point-in-time evidence only |"),
+            ("| Sanitized evidence reference/hash | Pending |", "| Sanitized evidence reference/hash | docs/testing/manual-hardware-tests.md#human-walkthrough-and-sign-off |"),
+            ("| Cleanup/recovery result | Pending |", "| Cleanup/recovery result | Pass; no unexpected residue |"),
+            (
+                "The actual representative-device walkthrough is **Pending**. The placeholder below is not evidence and must not be changed to `Pass` without a real human run on the exact referenced procedure and source commit.",
+                "The representative-device walkthrough below was completed by the named workshop test owner on the exact referenced procedure and source commit.",
+            ),
+            (
+                "This draft records no actual device pool, physical run, cold boot, workshop observation, accessibility review, or reliability evidence. `TL-0008` must remain short of `done` until a human records the real pool, confirms an available reference device, completes the representative walkthrough, records equipment gaps as explicit pilot blockers, and repository verification passes.",
+                "This record proves only the documented point-in-time pool and representative walkthrough. It is not accessibility conformance, release authorization, a minimum-spec claim, or proof of long-term reliability.",
+            ),
+        )
+        for old, new in manual_replacements:
+            self.replace_once(manual_path, old, new)
+
+        manual_lines = manual_path.read_text(encoding="utf-8").splitlines()
+        in_result_table = False
+        for index, line in enumerate(manual_lines):
+            if line == (
+                "| Test ID | Record/run ID | Test result | Evidence class | "
+                "Hardware/context/source | Timestamp with offset | Observation and criterion | "
+                "Artifact reference/hash or none | Continuity/checkpoint | Cleanup/recovery | "
+                "Defect, blocker, or limitation |"
+            ):
+                in_result_table = True
+                continue
+            if in_result_table and line.startswith("| `MHT-"):
+                cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+                test_id = cells[0].strip("`")
+                cells[1] = f"RUN-001-{test_id}"
+                if test_id == "MHT-021":
+                    cells[2] = "`Not available`"
+                    cells[3] = "`Not available`"
+                else:
+                    cells[2] = "`Pass`"
+                    cells[3] = "`Human confirmed`"
+                cells[4] = "Physical / Interactive lab / Direct physical observation"
+                cells[5] = f"{self.REVIEW_DATE}T12:00:00+02:00"
+                cells[6] = (
+                    "No detected or pre-existing partial failure; applicability checked"
+                    if test_id == "MHT-021"
+                    else "Criterion met in bounded walkthrough"
+                )
+                cells[7] = "none"
+                if test_id == "MHT-019":
+                    cells[8] = "Cold-boot checkpoint linked"
+                elif test_id == "MHT-020":
+                    cells[8] = "Resume checkpoint linked"
+                else:
+                    cells[8] = "RUN-001 checkpoint linked"
+                cells[9] = "Pass; safe final state"
+                cells[10] = (
+                    "capability_absent; no partial failure to exercise"
+                    if test_id == "MHT-021"
+                    else "Point-in-time physical walkthrough"
+                )
+                manual_lines[index] = "| " + " | ".join(cells) + " |"
+        manual_path.write_text("\n".join(manual_lines) + "\n", encoding="utf-8")
+
+        procedure_texts = {
+            relative: (root / relative).read_text(encoding="utf-8")
+            for relative in TESTING_DOCUMENTS[:4]
+        }
+        procedure_digest = validate_bundle.testing_procedure_digest(
+            procedure_texts,
+            (root / "LOW_SPEC.md").read_text(encoding="utf-8"),
+        )
+        self.replace_once(
+            device_path,
+            "**Procedure digest:** Pending",
+            f"**Procedure digest:** {procedure_digest}",
+        )
+        evidence_digest = validate_bundle.testing_evidence_digest(
+            device_path.read_text(encoding="utf-8"),
+            manual_path.read_text(encoding="utf-8"),
+        )
+        self.replace_once(
+            device_path,
+            "**Evidence digest:** Pending",
+            f"**Evidence digest:** {evidence_digest}",
+        )
+        self.replace_once(
+            manual_path,
+            "**Evidence digest:** Pending",
+            f"**Evidence digest:** {evidence_digest}",
+        )
+
+        task_by_id = {task_id: dict(task) for task_id, task in TASK_BY_ID.items()}
+        task = dict(task_by_id["TL-0008"])
+        task["status"] = "done"
+        task["evidence"] = [
+            {
+                "summary": (
+                    f"{self.OWNER_AND_ROLE} confirmed the sanitized actual device pool and "
+                    f"completed the representative-device walkthrough with result Pass on {self.REFERENCE_DEVICE}."
+                ),
+                "result": "passed",
+                "environment": f"Physical Windows 11 x64 reference device {self.REFERENCE_DEVICE}",
+                "date": self.REVIEW_DATE,
+                "reference": (
+                    "docs/testing/manual-hardware-tests.md#human-walkthrough-and-sign-off; "
+                    f"reviewed commit {self.REVIEWED_COMMIT}; procedure sha256:{procedure_digest}; "
+                    f"evidence sha256:{evidence_digest}"
+                ),
+            }
+        ]
+        task_by_id["TL-0008"] = task
+        return task_by_id
+
+    def test_current_testing_documents_satisfy_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            validation = self.validate_documents(root)
+            self.assertEqual(validation.errors, [])
+
+    def test_coherent_recorded_device_evidence_can_validate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            task_by_id = self.make_recorded_testing_evidence(root)
+            validation = self.validate_documents(root, task_by_id)
+            self.assertEqual(validation.errors, [])
+
+    def test_missing_or_reordered_matrix_id_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/device-matrix.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "`DMX-009`",
+                    "`DMX-099`",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(any("DMX rows must exactly equal" in error for error in validation.errors))
+
+    def test_shared_procedure_revision_is_enforced(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/accessibility-matrix.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "**Procedure revision:** TL-0008 draft 1",
+                    "**Procedure revision:** TL-0008 draft 2",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(any("must share procedure revision" in error for error in validation.errors))
+
+    def test_human_confirmation_cannot_become_a_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/device-matrix.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "`Human confirmed` is an evidence class, not a result",
+                    "`Human confirmed` is a passing result",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(any("not a result" in error for error in validation.errors))
+
+    def test_cold_boot_cannot_be_replaced_by_restart(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/manual-hardware-tests.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "Full powered-off cold boot and recheck",
+                    "Warm restart and recheck",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(any("Full powered-off cold boot" in error for error in validation.errors))
+
+    def test_low_spec_test_classes_cannot_become_minimum_claims(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "LOW_SPEC.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    (
+                        "A 4 GB or 8 GB device in the test matrix is a **test class**, "
+                        "not an automatic support promise."
+                    ),
+                    "A 4 GB device is the supported minimum.",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(any("test class" in error for error in validation.errors))
+
+    def test_missing_matrix_class_requires_gap_blocker(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/device-matrix.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "| Pending | Pending | Pending |",
+                    "| Pending | Missing | Pending |",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(any("requires a GAP-DMX blocker" in error for error in validation.errors))
+
+    def test_done_task_cannot_retain_pending_human_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            task_by_id = dict(TASK_BY_ID)
+            task = dict(task_by_id["TL-0008"])
+            task["status"] = "done"
+            task["evidence"] = []
+            task_by_id["TL-0008"] = task
+            validation = self.validate_documents(root, task_by_id)
+            self.assertTrue(any("TL-0008 done requires" in error for error in validation.errors))
+
+    def test_forged_or_negated_done_evidence_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            task_by_id = self.make_recorded_testing_evidence(root)
+            device_path = root / "docs/testing/device-matrix.md"
+            replacements = (
+                (
+                    "**Actual device-pool record:** docs/testing/device-matrix.md#actual-device-pool",
+                    "**Actual device-pool record:** No pool was recorded",
+                ),
+                (
+                    f"**Human recorder and role:** {self.OWNER_AND_ROLE}",
+                    "**Human recorder and role:** Robot — CI",
+                ),
+                ("**Walkthrough result:** Pass", "**Walkthrough result:** Pass not performed"),
+                (
+                    f"**Reviewed source commit:** {self.REVIEWED_COMMIT}",
+                    "**Reviewed source commit:** 0000000000000000000000000000000000000000",
+                ),
+            )
+            for old, new in replacements:
+                self.replace_once(device_path, old, new)
+            task = dict(task_by_id["TL-0008"])
+            task["evidence"] = [
+                {
+                    "summary": "Physical walkthrough was not performed.",
+                    "result": "passed",
+                    "environment": "Nonphysical simulation only",
+                    "date": self.REVIEW_DATE,
+                    "reference": "fabricated",
+                }
+            ]
+            task_by_id["TL-0008"] = task
+            validation = self.validate_documents(root, task_by_id)
+            self.assertGreaterEqual(len(validation.errors), 4)
+
+    def test_recorded_manual_signoff_and_per_test_evidence_are_enforced(self) -> None:
+        mutations = (
+            (
+                "| Cold-boot result and evidence class | Pass / Human confirmed |",
+                "| Cold-boot result and evidence class | Fail / Not available |",
+                "exact passed physical walkthrough",
+            ),
+            (
+                f"| Date and timestamp with offset | {self.REVIEW_DATE}T12:00:00+02:00 |",
+                f"| Date and timestamp with offset | {self.REVIEW_DATE}T99:99:99+99:99 |",
+                "timestamp with UTC offset",
+            ),
+            (
+                "| `MHT-019` | RUN-001-MHT-019 | `Pass` | `Human confirmed` |",
+                "| `MHT-019` | RUN-001-MHT-019 | `Not run` | `Not available` |",
+                "invalid or unrun result for MHT-019",
+            ),
+        )
+        for old, new, expected_error in mutations:
+            with self.subTest(old=old), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                task_by_id = self.make_recorded_testing_evidence(root)
+                self.replace_once(
+                    root / "docs/testing/manual-hardware-tests.md",
+                    old,
+                    new,
+                )
+                task_by_id = self.refresh_recorded_digests(root, task_by_id)
+                validation = self.validate_documents(root, task_by_id)
+                self.assertTrue(
+                    any(expected_error in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_recorded_gap_rows_require_attributable_open_blockers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            task_by_id = self.make_recorded_testing_evidence(root)
+            path = root / "docs/testing/device-matrix.md"
+            text = path.read_text(encoding="utf-8")
+            text = re.sub(
+                r"(?m)^\| `GAP-DMX-002` \|.*$",
+                "| `GAP-DMX-002` | `DMX-002` | None | None | None | Robot | not-a-date | Closed |",
+                text,
+                count=1,
+            )
+            path.write_text(text, encoding="utf-8")
+            task_by_id = self.refresh_recorded_digests(root, task_by_id)
+            validation = self.validate_documents(root, task_by_id)
+            self.assertTrue(
+                any("attributable open pilot blocker" in error for error in validation.errors)
+            )
+
+    def test_recorded_tables_require_meaningful_physical_evidence(self) -> None:
+        mutations = (
+            (
+                "docs/testing/manual-hardware-tests.md",
+                "| `MHT-002` | RUN-001-MHT-002 | `Pass` | `Human confirmed` | Physical / Interactive lab / Direct physical observation | 2026-08-14T12:00:00+02:00 | Criterion met in bounded walkthrough |",
+                "| `MHT-002` | RUN-001-MHT-002 | `Pass` | `Human confirmed` | Physical / Interactive lab / Direct physical observation | 2026-08-14T12:00:00+02:00 | . |",
+                "bounded observation",
+            ),
+            (
+                "docs/testing/device-matrix.md",
+                "| LAB-DEVICE-001 | DMX-001 | Supported reference state |",
+                "| LAB-DEVICE-001 | DMX-001 | . |",
+                "meaningful actual state",
+            ),
+            (
+                "docs/testing/device-matrix.md",
+                "| `GAP-DMX-002` | `DMX-002` | Equipment not in current pool | Explicit pilot coverage gap | Acquire approved equipment or retain limitation |",
+                "| `GAP-DMX-002` | `DMX-002` | . | . | . |",
+                "attributable open pilot blocker",
+            ),
+        )
+        for relative, old, new, expected_error in mutations:
+            with self.subTest(relative=relative, old=old), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                task_by_id = self.make_recorded_testing_evidence(root)
+                self.replace_once(root / relative, old, new)
+                task_by_id = self.refresh_recorded_digests(root, task_by_id)
+                validation = self.validate_documents(root, task_by_id)
+                self.assertTrue(
+                    any(expected_error in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_recorded_reference_cannot_pass_a_physical_safety_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            task_by_id = self.make_recorded_testing_evidence(root)
+            path = root / "docs/testing/manual-hardware-tests.md"
+            line_pattern = r"(?m)^\| `MHT-001` \| RUN-001-MHT-001 \|.*$"
+            line = re.search(line_pattern, path.read_text(encoding="utf-8"))
+            self.assertIsNotNone(line)
+            cells = [cell.strip() for cell in line.group(0).strip().strip("|").split("|")]
+            cells[2] = "`Fail`"
+            cells[3] = "`Human confirmed`"
+            cells[6] = "Battery swelling observed; safety criterion failed"
+            cells[10] = "DEFECT-001 safety stop"
+            text = re.sub(
+                line_pattern,
+                "| " + " | ".join(cells) + " |",
+                path.read_text(encoding="utf-8"),
+                count=1,
+            )
+            path.write_text(text, encoding="utf-8")
+            task_by_id = self.refresh_recorded_digests(root, task_by_id)
+            validation = self.validate_documents(root, task_by_id)
+            self.assertTrue(
+                any("MHT-001 requires a physical human-confirmed Pass" in error for error in validation.errors)
+            )
+
+    def test_testing_tables_require_real_markdown_separators(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/device-matrix.md"
+            text = path.read_text(encoding="utf-8")
+            pool_section = validate_bundle.numbered_markdown_section(text, 5)
+            separator = next(
+                line
+                for line in pool_section.splitlines()
+                if line.startswith("|---")
+            )
+            self.replace_once(path, separator, "| this is not a Markdown separator |")
+            validation = self.validate_documents(root)
+            self.assertTrue(any("actual-pool table" in error for error in validation.errors))
+
+    def test_recorded_reviewed_commit_must_be_reachable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            task_by_id = self.make_recorded_testing_evidence(root)
+            fake_commit = "fedcba9876543210fedcba9876543210fedcba98"
+            for relative in (
+                "docs/testing/device-matrix.md",
+                "docs/testing/manual-hardware-tests.md",
+            ):
+                path = root / relative
+                path.write_text(
+                    path.read_text(encoding="utf-8").replace(
+                        self.REVIEWED_COMMIT,
+                        fake_commit,
+                    ),
+                    encoding="utf-8",
+                )
+            task = dict(task_by_id["TL-0008"])
+            task["evidence"] = [
+                {
+                    **dict(task["evidence"][0]),
+                    "reference": str(task["evidence"][0]["reference"]).replace(
+                        self.REVIEWED_COMMIT,
+                        fake_commit,
+                    ),
+                }
+            ]
+            task_by_id["TL-0008"] = task
+            task_by_id = self.refresh_recorded_digests(root, task_by_id)
+            validation = self.validate_documents(root, task_by_id)
+            self.assertTrue(any("reachable Git ancestor" in error for error in validation.errors))
+
+    def test_reviewed_normative_content_cannot_drift_after_signoff(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            task_by_id = self.make_recorded_testing_evidence(root)
+            path = root / "docs/testing/accessibility-matrix.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\nAccessibility may be disabled during constrained runs.\n",
+                encoding="utf-8",
+            )
+            task_by_id = self.refresh_recorded_digests(
+                root,
+                task_by_id,
+                procedure=True,
+            )
+            validation = self.validate_documents(root, task_by_id)
+            self.assertTrue(
+                any("exact reviewed source commit" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_recorded_task_evidence_reference_must_be_exact_and_affirmative(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            task_by_id = self.make_recorded_testing_evidence(root)
+            task = dict(task_by_id["TL-0008"])
+            task["evidence"] = [
+                {
+                    **dict(task["evidence"][0]),
+                    "reference": "NOT APPROVED; binding is false; "
+                    + str(task["evidence"][0]["reference"]),
+                }
+            ]
+            task_by_id["TL-0008"] = task
+            validation = self.validate_documents(root, task_by_id)
+            self.assertTrue(any("passed physical" in error for error in validation.errors))
+
+    def test_pass_requires_available_observed_or_human_evidence(self) -> None:
+        mutations = (
+            (
+                "docs/testing/failure-injection.md",
+                "| `TL-0105`, `TL-0112` | `Not run` | `Not available` |",
+                "| `TL-0105`, `TL-0112` | `Pass` | `Not available` |",
+            ),
+            (
+                "docs/testing/accessibility-matrix.md",
+                "| `AXE-001` | `TL-0608` | `Not run` | `Not available` |",
+                "| `AXE-001` | `TL-0608` | `Pass` | `Not available` |",
+            ),
+        )
+        for relative, old, new in mutations:
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                self.replace_once(root / relative, old, new)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any("requires Observed or Human confirmed evidence" in error for error in validation.errors)
+                )
+
+    def test_low_spec_template_is_structurally_validated(self) -> None:
+        mutations = (
+            ("record_kind: template_not_evidence", "record_kind: benchmark_result"),
+            ("device_id: Pending\n", ""),
+            ("source_revision: Pending", "source_revision: ["),
+            ("device_id: Pending", "device_id: LAB-DEVICE-001"),
+            ("device_id: Pending", '"device_id": Pending\ndevice_id: Pending'),
+            ("device_id: Pending", 'device_id: Pending\n"unexpected": value'),
+            ("device_id: Pending", "device_id: &hidden Pending"),
+        )
+        for old, new in mutations:
+            with self.subTest(old=old), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                self.replace_once(root / "LOW_SPEC.md", old, new)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any("provisional resource template" in error or "template " in error for error in validation.errors)
+                )
+
+    def test_unknown_cross_document_reference_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/accessibility-matrix.md"
+            path.write_text(
+                path.read_text(encoding="utf-8") + "\nRequired follow-up: `A11Y-999`.\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(any("unknown testing IDs" in error for error in validation.errors))
+
+    def test_sensitive_or_encoded_physical_evidence_is_rejected(self) -> None:
+        examples = (
+            "operator@example.invalid",
+            "192.0.2.10",
+            "02:00:5e:10:00:00",
+            "gh" + "p_" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456",
+            "%43%3A%5CUsers%5CDonor%5Csecret.txt",
+            "hostname=donor-device",
+            "2001:db8::1",
+            "aabb.ccdd.eeff",
+            "serial number PF3ABC123",
+            "service tag ABC123",
+            "Bearer ABCDEFGHIJKLMNOPQRSTUVWX",
+            "xox" + "b-1234567890-ABCDEFGHIJ",
+            "../../private/secret.txt",
+            "AK" + "IAABCDEFGHIJKLMNOP",
+            "Asset tag: DONOR-123456",
+            "//fileserver/private-share/evidence.log",
+            "%TEMP%\\donor-evidence.log",
+        )
+        for example in examples:
+            with self.subTest(example=example), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                path = root / "docs/testing/device-matrix.md"
+                path.write_text(
+                    path.read_text(encoding="utf-8") + f"\nEvidence value: {example}\n",
+                    encoding="utf-8",
+                )
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(
+                        "machine-specific path" in error
+                        or "path-traversal" in error
+                        or "prohibited" in error
+                        for error in validation.errors
+                    )
+                )
+
+    def test_affirmative_minimum_or_reliability_claim_is_rejected(self) -> None:
+        claims = (
+            "A 4 GB physical device is the supported minimum.",
+            "VM evidence proves physical reliability.",
+            "Automation proves long-term reliability.",
+            "Human confirmed is a passing result.",
+            "Warm restart satisfies cold boot.",
+            "The procedure certifies the device.",
+            "Accessibility may be disabled during constrained runs.",
+        )
+        for claim in claims:
+            with self.subTest(claim=claim), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                path = root / "LOW_SPEC.md"
+                path.write_text(
+                    path.read_text(encoding="utf-8") + f"\n{claim}\n",
+                    encoding="utf-8",
+                )
+                validation = self.validate_documents(root)
+                self.assertTrue(any("prohibited support/reliability claim" in error for error in validation.errors))
+
+    def test_unknown_task_reference_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/failure-injection.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "`TL-0105`",
+                    "`TL-9999`",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(any("unknown task IDs" in error for error in validation.errors))
+
+    def test_machine_specific_evidence_path_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/manual-hardware-tests.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\nEvidence: C:\\Users\\ExamplePerson\\device.log\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(any("machine-specific path" in error for error in validation.errors))
+
+    def test_duplicate_status_metadata_is_rejected(self) -> None:
+        duplicates = (
+            "**Status:** Procedure recorded; reference-device evidence complete",
+            " **sTaTuS:** Procedure recorded; reference-device evidence complete",
+        )
+        for duplicate in duplicates:
+            with self.subTest(duplicate=duplicate), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                path = root / "docs/testing/accessibility-matrix.md"
+                path.write_text(
+                    path.read_text(encoding="utf-8") + f"\n{duplicate}\n",
+                    encoding="utf-8",
+                )
+                validation = self.validate_documents(root)
+                self.assertTrue(any("exactly one Status" in error for error in validation.errors))
+
+    def test_governed_metadata_cannot_be_hidden_in_a_code_fence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/device-matrix.md"
+            self.replace_once(
+                path,
+                "**Status:** Draft procedure; human evidence pending",
+                "```markdown\n**Status:** Draft procedure; human evidence pending\n```",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(any("fenced code blocks" in error for error in validation.errors))
 
 
 if __name__ == "__main__":

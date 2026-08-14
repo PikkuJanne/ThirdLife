@@ -557,7 +557,7 @@ tasks:
   workstream: quality
   kind: docs
   priority: P0
-  status: backlog
+  status: review
   size: M
   executor: hybrid
   environment: windows
@@ -589,7 +589,17 @@ tasks:
   verification:
   - Walk through the procedure on a representative device.
   - Record missing equipment as an explicit pilot blocker.
-  evidence: []
+  evidence:
+  - summary: TL-0008 testing documents, stable coverage IDs, evidence semantics, cold-boot and interruption contracts, and low-spec benchmark template passed the complete governance regression suite; physical-device and human walkthrough evidence remain Pending.
+    result: passed
+    environment: Windows 11 x64, Python 3.14.7
+    date: '2026-08-14'
+    reference: tools/tests/test_validate_bundle.py; docs/testing; LOW_SPEC.md
+  - summary: Full governed repository verification passed with locked restore, formatting, zero-warning Release build, and all 14 .NET tests; this is automated evidence only and does not satisfy the physical-device walkthrough.
+    result: passed
+    environment: Windows 11 x64, .NET SDK 10.0.400, Python 3.14.7
+    date: '2026-08-14'
+    reference: eng/verify.ps1 on codex/tl-0008-device-test-procedure
   human_evidence_required:
   - A human records the actual device pool and confirms at least one reference device is available.
 - id: TL-0009

@@ -33,7 +33,7 @@ See `CHANGELOG.md` for the file-level change record.
 | `PROJECT_BOUNDARY.md` | Canonical **Owns / Does not own**, data boundary, project-vacuum rules, and future B4 late-integration contract. |
 | `SECURITY.md` | Threat baseline, privilege/package/data/update controls, reporting placeholder, and release security obligations. |
 | `ACCESSIBILITY.md` | Operator and recipient accessibility requirements, test evidence, and limitation policy. |
-| `LOW_SPEC.md` | Resource budgets, constrained-test method, benchmark evidence, and graceful-degradation rules. |
+| `LOW_SPEC.md` | Measurement fields, constrained test classes, provisional benchmark procedure, and graceful-degradation rules. |
 | `TASKS.yaml` | Machine-readable DAG with 91 tasks, dependencies, deliverables, acceptance, verification, executor, environment, and evidence. |
 | `AGENTS.md` | Codex operating contract: read order, task selection, allowed edits, project-vacuum rules, architecture, testing, and reporting. |
 | [`docs/product-contract.md`](docs/product-contract.md) | Concise product identity, outcome, delivery cuts, Team B queue, standalone rules, and quality-baseline map. |
@@ -43,6 +43,10 @@ See `CHANGELOG.md` for the file-level change record.
 | [`docs/security/threat-model.md`](docs/security/threat-model.md) | Assets, actors, threats, control/task mappings, residual-risk decisions, and named-owner approval state tracked by `TL-0004`. |
 | [`docs/security/data-flow.md`](docs/security/data-flow.md) | Accessible diagram and textual inventory of processes, stores, flows, validation, recovery, and distinct trust boundaries. |
 | [`docs/security/abuse-cases.md`](docs/security/abuse-cases.md) | Stable adversarial scenarios with detection, fail-closed behavior, recovery, task traceability, and residual risks. |
+| [`docs/testing/device-matrix.md`](docs/testing/device-matrix.md) | Planned hardware/environment coverage, sanitized actual-pool record template, reference-device rule, and explicit equipment gaps. |
+| [`docs/testing/manual-hardware-tests.md`](docs/testing/manual-hardware-tests.md) | Repeatable workshop hardware checks, cold-boot re-verification, evidence semantics, safety stops, and recovery. |
+| [`docs/testing/failure-injection.md`](docs/testing/failure-injection.md) | Safe synthetic/disposable interruption scenarios with truthful state, recovery, cleanup, and future-task ownership. |
+| [`docs/testing/accessibility-matrix.md`](docs/testing/accessibility-matrix.md) | Human and automated accessibility test coverage, assistive-technology environments, defect policy, and low-resource cross-checks. |
 | `CODEX_START_PROMPT.md` | First-session prompt and reusable execution, review, gate, security, accessibility, recovery, deferral, release-interface, and handoff prompts. |
 | `RELEASE_INTERFACE.md` | Human-readable black-box release sheet, populated as a preview draft at `TL-0610`, completed at `TL-0706`, and frozen before `TL-0710`; not a shared API. |
 | `FUTURE_ASSEMBLY_NOTES.md` | Non-binding B4 backlog for cross-project ideas; nothing here can block or expand B1. |
