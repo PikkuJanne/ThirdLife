@@ -1,19 +1,19 @@
 # ThirdLife Setup Core — Privacy and Data Lifecycle Model
 
-**Status:** Draft for privacy-owner review  
+**Status:** Approved privacy model  
 **Model revision:** TL-0005 draft 1  
 **Draft date:** 2026-08-14  
-**Privacy-owner approval:** **Pending**  
-**Approving owner and role:** Pending  
-**Approval date:** Pending  
-**Reviewed source commit:** Pending  
-**Approval reference:** Pending  
+**Privacy-owner approval:** **Approved**  
+**Approving owner and role:** PikkuJanne — Privacy owner  
+**Approval date:** 2026-08-14  
+**Reviewed source commit:** e1880667619793e0a784020d1234f58c37ac2b5f  
+**Approval reference:** TASKS.yaml TL-0005 privacy-owner approval evidence  
 **Authority:** Derived analysis under `DECISIONS.md`, `ROADMAP.md`, `PROJECT_BOUNDARY.md`, `SECURITY.md`, `ACCESSIBILITY.md`, and `LOW_SPEC.md`  
 **Decision coverage:** D-011, D-013, D-014, D-036, D-037, and D-053
 
 This draft translates the binding product and project boundaries into a candidate privacy contract for later implementation tasks. It is not a new authority tier, a legal-compliance determination, a release approval, or evidence that persistence, logging, redaction, support export, retention, deletion, or uninstall controls have been implemented or verified. Higher-authority repository documents prevail if any statement conflicts.
 
-No privacy-owner approval is recorded in this draft. Every control, schema, default, period, limit, and lifecycle behavior below is **planned or proposed** until a named privacy owner approves this exact revision and later implementation tasks provide verification evidence.
+Named privacy-owner approval is recorded for this exact revision. Every control, schema, default, period, limit, and lifecycle behavior below is **planned or proposed** until a named privacy owner approves this exact revision and later implementation tasks provide verification evidence.
 
 ## 1. Purpose and scope
 
@@ -242,26 +242,26 @@ Material review triggers include a new data field or sink, new network or crash-
 
 ## 12. Privacy-owner review and approval
 
-No approval is present in this draft. `TL-0005` must remain in review until a named privacy owner approves the classifications and default retention guidance for an exact committed revision. Repository ownership alone is not privacy approval; the person must explicitly act in the privacy-owner role.
+Named privacy-owner approval covers the classifications and default retention guidance for this exact committed revision. Repository ownership alone is not privacy approval; the person must explicitly act in the privacy-owner role.
 
 The reviewer is asked to record an explicit result for every item:
 
-- [ ] `PR-01` — Confirm this document is derived guidance and does not weaken D-011, D-013, D-014, D-036, D-037, D-053, or the canonical Owns / Does not own boundary.
-- [ ] `PR-02` — Approve, reject, or condition each classification `PC-01` through `PC-08`, including the rule that a projection never lowers the source classification implicitly.
-- [ ] `PR-03` — Approve normal job creation without recipient identity and the absence of optional free-form recipient identity from the proposed minimum contract.
-- [ ] `PR-04` — Approve the full-serial restriction to the workshop-record domain and default omission from logs, filenames, commands, guide, support, metrics, task evidence, and public samples.
-- [ ] `PR-05` — Review every data-map row `PD-01` through `PD-22` for purpose, owner, classification, copy/reference/export behavior, and exclusion.
-- [ ] `PR-06` — Approve the separation of `CH-01` through `CH-11` and confirm that logs, workshop records, recipient guides, support bundles, pilot metrics, crash diagnostics, and public evidence are not interchangeable.
-- [ ] `PR-07` — Approve every proposed support field and nested member in the allowlist, the deny-unknown rule, and omission of invalid values.
-- [ ] `PR-08` — Approve every prohibited diagnostic category and the rule to omit or reject before persistence rather than rely on export-time redaction.
-- [ ] `PR-09` — Approve treating raw provider, command, installer, update, exception, and child-process payloads as bounded `PC-08` input that is discarded by default.
-- [ ] `PR-10` — Approve telemetry absence/off-by-default and the strict separation of explicit previewed aggregate or pseudonymized pilot-metrics export from background collection or upload.
-- [ ] `PR-11` — Approve or condition the 30-day draft-job review point, 180-day finalized-job review point, 14-day log age-expiry threshold and 20-MiB/five-file hard limits, maintenance-point-only cleanup, possible physical over-retention, bounded quota failure, 24-hour orphan-cleanup eligibility threshold, and 7-day cache/migration cleanup-eligibility thresholds.
-- [ ] `PR-12` — Approve the no-silent-delete posture for active, ambiguous, failed, review-required, and historical job data, plus coherent whole-job deletion.
-- [ ] `PR-13` — Approve the candidate update, repair, standard-uninstall, explicit-data-removal, remaining-export, and no-secure-erasure guidance.
-- [ ] `PR-14` — Confirm the project-vacuum exclusions cover sibling workspaces, private databases, content, evidence, recordings, messages, application records, repositories, backup data, credentials, and recovery keys.
-- [ ] `PR-15` — Accept, reject, or condition each residual limitation and identify any additional privacy review trigger.
-- [ ] `PR-16` — Confirm that later implementation must supply exact paths, ACL and cross-user tests, adversarial redaction fixtures, retention/cleanup tests, migration/uninstall evidence, accessible preview evidence, and low-spec bounds before release claims.
+- [x] `PR-01` — Confirm this document is derived guidance and does not weaken D-011, D-013, D-014, D-036, D-037, D-053, or the canonical Owns / Does not own boundary. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-02` — Approve, reject, or condition each classification `PC-01` through `PC-08`, including the rule that a projection never lowers the source classification implicitly. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-03` — Approve normal job creation without recipient identity and the absence of optional free-form recipient identity from the proposed minimum contract. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-04` — Approve the full-serial restriction to the workshop-record domain and default omission from logs, filenames, commands, guide, support, metrics, task evidence, and public samples. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-05` — Review every data-map row `PD-01` through `PD-22` for purpose, owner, classification, copy/reference/export behavior, and exclusion. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-06` — Approve the separation of `CH-01` through `CH-11` and confirm that logs, workshop records, recipient guides, support bundles, pilot metrics, crash diagnostics, and public evidence are not interchangeable. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-07` — Approve every proposed support field and nested member in the allowlist, the deny-unknown rule, and omission of invalid values. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-08` — Approve every prohibited diagnostic category and the rule to omit or reject before persistence rather than rely on export-time redaction. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-09` — Approve treating raw provider, command, installer, update, exception, and child-process payloads as bounded `PC-08` input that is discarded by default. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-10` — Approve telemetry absence/off-by-default and the strict separation of explicit previewed aggregate or pseudonymized pilot-metrics export from background collection or upload. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-11` — Approve or condition the 30-day draft-job review point, 180-day finalized-job review point, 14-day log age-expiry threshold and 20-MiB/five-file hard limits, maintenance-point-only cleanup, possible physical over-retention, bounded quota failure, 24-hour orphan-cleanup eligibility threshold, and 7-day cache/migration cleanup-eligibility thresholds. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-12` — Approve the no-silent-delete posture for active, ambiguous, failed, review-required, and historical job data, plus coherent whole-job deletion. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-13` — Approve the candidate update, repair, standard-uninstall, explicit-data-removal, remaining-export, and no-secure-erasure guidance. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-14` — Confirm the project-vacuum exclusions cover sibling workspaces, private databases, content, evidence, recordings, messages, application records, repositories, backup data, credentials, and recovery keys. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-15` — Accept, reject, or condition each residual limitation and identify any additional privacy review trigger. **Disposition:** Approve — reviewed without conditions.
+- [x] `PR-16` — Confirm that later implementation must supply exact paths, ACL and cross-user tests, adversarial redaction fixtures, retention/cleanup tests, migration/uninstall evidence, accessible preview evidence, and low-spec bounds before release claims. **Disposition:** Approve — reviewed without conditions.
 
 An approval record is proposed to contain:
 

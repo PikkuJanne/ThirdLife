@@ -1,7 +1,7 @@
 schema_version: 1
 model_revision: TL-0005 draft 1
 fixture_type: synthetic privacy redaction cases
-privacy_owner_approval: Pending
+privacy_owner_approval: Approved
 
 expectation_output_contract:
   ordinary_log: exact registered safe-field fragment before required closed-envelope assembly

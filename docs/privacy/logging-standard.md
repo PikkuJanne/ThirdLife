@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Logging Standard
 
-**Status:** Draft for privacy-owner review  
+**Status:** Approved privacy model  
 **Model revision:** TL-0005 draft 1  
 **Draft date:** 2026-08-14  
 **Authority:** Derived implementation contract under `DECISIONS.md`, `ROADMAP.md`, `PROJECT_BOUNDARY.md`, `SECURITY.md`, `ACCESSIBILITY.md`, and `LOW_SPEC.md`  
@@ -241,8 +241,8 @@ The named privacy owner must review the exact Git commit and record name, role, 
 
 The owner records one result: approved, approved with recorded conditions, or changes required. Approval of this standard does not implement logging, approve a release, accept a residual privacy risk, or authorize telemetry.
 
-**Review result:** Pending
+**Review result:** Approved
 
-No named privacy owner has approved this exact revision, its classifications, prohibited and allowed fields, sink contracts, or proposed default retention guidance. This pending draft does not satisfy the human evidence required by `TL-0005`. Privacy-model approval does not authorize implementation or release claims.
+Named privacy-owner approval covers this exact revision, its classifications, prohibited and allowed fields, sink contracts, and proposed default retention guidance. Approval evidence is recorded for the exact reviewed source and named owner. Privacy-model approval does not authorize implementation or release claims.
 
-Human approval of the classifications and default retention guidance remains pending.
+Named privacy-owner approval covers the classifications and default retention guidance.

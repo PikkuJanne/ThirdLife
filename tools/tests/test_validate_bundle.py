@@ -37,6 +37,7 @@ PRIVACY_DOCUMENTS = (
     "docs/privacy/privacy-model.md",
     "docs/privacy/redaction-test-cases.yaml",
 )
+PRIVACY_REVIEWED_COMMIT = "e1880667619793e0a784020d1234f58c37ac2b5f"
 TASK_DOCUMENT = validate_bundle.yaml.safe_load(
     (REPOSITORY_ROOT / "TASKS.yaml").read_text(encoding="utf-8")
 )
@@ -771,28 +772,23 @@ class PrivacyDocumentContractTests(unittest.TestCase):
         reviewed_commit_reachable: bool = True,
     ) -> validate_bundle.Validation:
         validation = validate_bundle.Validation()
+        if reviewed_sources is None:
+            reviewed_sources = self.reviewed_privacy_sources()
         with patch.object(validate_bundle, "ROOT", root):
-            if reviewed_sources is None:
+            with patch.object(
+                validate_bundle,
+                "git_commit_is_reachable",
+                return_value=reviewed_commit_reachable,
+            ), patch.object(
+                validate_bundle,
+                "read_git_text_at_commit",
+                side_effect=lambda _commit, relative: reviewed_sources.get(relative),
+            ):
                 validate_bundle.validate_privacy_documents(
                     validation,
                     TASK_BY_ID if task_by_id is None else task_by_id,
                     DECISION_IDS,
                 )
-            else:
-                with patch.object(
-                    validate_bundle,
-                    "git_commit_is_reachable",
-                    return_value=reviewed_commit_reachable,
-                ), patch.object(
-                    validate_bundle,
-                    "read_git_text_at_commit",
-                    side_effect=lambda _commit, relative: reviewed_sources.get(relative),
-                ):
-                    validate_bundle.validate_privacy_documents(
-                        validation,
-                        TASK_BY_ID if task_by_id is None else task_by_id,
-                        DECISION_IDS,
-                    )
         return validation
 
     def read_fixture(self, root: Path) -> dict[str, object]:
@@ -841,14 +837,47 @@ class PrivacyDocumentContractTests(unittest.TestCase):
         self.assertEqual(text.count(old), 1, f"Expected one occurrence of {old!r}")
         path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
+    def reviewed_privacy_sources(self) -> dict[str, str]:
+        cached_sources = getattr(self, "_reviewed_privacy_sources_cache", None)
+        if cached_sources is not None:
+            return dict(cached_sources)
+        self.assertTrue(
+            validate_bundle.git_commit_is_reachable(PRIVACY_REVIEWED_COMMIT),
+            f"Reviewed privacy commit is not reachable: {PRIVACY_REVIEWED_COMMIT}",
+        )
+        reviewed_sources: dict[str, str] = {}
+        for relative in PRIVACY_DOCUMENTS:
+            content = validate_bundle.read_git_text_at_commit(
+                PRIVACY_REVIEWED_COMMIT, relative
+            )
+            if content is None:
+                self.fail(
+                    f"Reviewed privacy source is unavailable at "
+                    f"{PRIVACY_REVIEWED_COMMIT}:{relative}"
+                )
+            reviewed_sources[relative] = content
+        self._reviewed_privacy_sources_cache = dict(reviewed_sources)
+        return dict(reviewed_sources)
+
+    def restore_reviewed_privacy_sources(
+        self, root: Path, reviewed_sources: dict[str, str]
+    ) -> None:
+        for relative, content in reviewed_sources.items():
+            destination = root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(content, encoding="utf-8")
+
+    def make_pending_privacy_review(self, root: Path) -> None:
+        self.restore_reviewed_privacy_sources(
+            root, self.reviewed_privacy_sources()
+        )
+
     def make_approved_privacy_review(
         self, root: Path
     ) -> tuple[str, dict[str, str]]:
-        reviewed_commit = "a" * 40
-        reviewed_sources = {
-            relative: (root / relative).read_text(encoding="utf-8")
-            for relative in PRIVACY_DOCUMENTS
-        }
+        reviewed_commit = PRIVACY_REVIEWED_COMMIT
+        reviewed_sources = self.reviewed_privacy_sources()
+        self.restore_reviewed_privacy_sources(root, reviewed_sources)
         model_path = root / "docs/privacy/privacy-model.md"
         model_replacements = (
             ("**Status:** Draft for privacy-owner review", "**Status:** Approved privacy model"),
@@ -1079,11 +1108,16 @@ class PrivacyDocumentContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_privacy_documents(root)
+            self.make_pending_privacy_review(root)
             task_by_id = dict(TASK_BY_ID)
             privacy_task = dict(task_by_id["TL-0005"])
-            privacy_task["status"] = "done"
+            privacy_task["status"] = "review"
             privacy_task["evidence"] = []
             task_by_id["TL-0005"] = privacy_task
+            validation = self.validate_documents(root, task_by_id)
+            self.assertEqual(validation.errors, [])
+
+            privacy_task["status"] = "done"
             validation = self.validate_documents(root, task_by_id)
             self.assertIn(
                 "TL-0005 cannot be done while privacy-owner approval is Pending",
