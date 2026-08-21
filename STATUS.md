@@ -1,98 +1,142 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-21  
+**Snapshot preparation time:** 2026-08-21T16:01:19+02:00  
 **Bundle baseline:** 0.3.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M0 — Foundation and product contract  
-**Current task: `TL-0008` — Define the same-machine validation system and manual-test specification**
+**Current task:** `TL-0005` — Define the privacy and logging model  
+**Task state:** `review`
 
 ## Current state
 
-The v0.3.0 governance and task-contract transition is complete on the active Codex machine, and `TL-0008` is `done`. The former physical-device procedure is archived as historical material and the active testing contract uses tiered, risk-based, same-machine evidence. No physical hardware walkthrough was performed or is required for revised `TL-0008`.
+The automatable part of `TL-0005` is complete. The repository now contains a governed privacy model, logging standard, and machine-validated synthetic redaction fixture set. They define classifications, retention guidance, audience-separated outputs, prohibited diagnostic content, the exact sanitized-support allowlist, raw-input handling, and telemetry-off behavior before logging code is built.
 
-The commit containing this file is the TL-0008 checkpoint. Because a commit cannot embed its own hash, resolve that identity with `git rev-parse HEAD`; the session completion report records the resolved hash and the post-push equality check.
+`TL-0005` is correctly in `review`, not `done`. Its required human evidence is still absent: a named privacy owner must approve the classifications and default retention guidance. The documents and fixtures explicitly preserve that pending state and do not claim runtime redaction, logging, deletion, export, or telemetry controls already exist.
 
-## Verified Git state
+The commit containing this file is the TL-0005 checkpoint. Because a commit cannot embed its own hash, resolve that identity with `git rev-parse HEAD`; the session completion report records the resolved hash and the post-push equality check.
+
+## Git state
 
 | Field | Verified value |
 |---|---|
-| Snapshot time after implementation push | `2026-08-21T14:21:06+02:00` |
-| Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` over SSH |
-| Branch | `codex/tl-0008-device-test-procedure` |
-| HEAD at session start | `4fa3ea050fd5e9985fde9cc8218281698d371cc8` |
-| HEAD before checkpoint commit | `4fa3ea050fd5e9985fde9cc8218281698d371cc8` |
-| Verified implementation checkpoint | `0ded6a1778a6e747071a7f7dfea578c7f82b00ed` |
-| Final handoff-record HEAD | The commit containing this file; resolve with `git rev-parse HEAD` |
-| Upstream | `origin/codex/tl-0008-device-test-procedure` |
-| Upstream commit at session start | `4fa3ea050fd5e9985fde9cc8218281698d371cc8` |
-| Initial divergence | `0` ahead, `0` behind after authenticated fetch |
-| Historical source relation | Current at session start; no reset or history rewrite performed |
-| Verified upstream and GitHub branch | `0ded6a1778a6e747071a7f7dfea578c7f82b00ed` |
-| Verified implementation divergence | `0` ahead, `0` behind after authenticated push and fetch |
-| Final handoff push invariant | Before reporting completion, current HEAD must again equal the fetched upstream; the completion report records that resolved hash |
+| Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
+| Branch | `codex/tl-0005-privacy-logging-model` |
+| Session baseline | `c77966ba90a31b99e790a2d1097b598c1f127961` |
+| History handling | Continued from the fetched baseline; no reset, rebase, force push, or history rewrite |
+| Checkpoint | The commit containing this file; resolve with `git rev-parse HEAD` |
+| Upstream | Created by the first checkpoint push to `origin/codex/tl-0005-privacy-logging-model` |
+| Final push invariant | Before handoff, current HEAD must equal the fetched upstream; the completion report records the resolved hash |
 
-The configured SSH remote rejected unattended public-key authentication on this machine. Synchronization used GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential. The checkpoint is pushed through the same bounded bridge and compared with the fetched upstream before handoff.
+The configured SSH remote rejected unattended public-key authentication on this machine. Fetch and checkpoint publication use GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
 
-## Historical reference superseded
+## Preserved testing-transition provenance
 
-| Item | Historical value |
+The historical `TL-0008` draft-1 physical-device procedure remains **superseded** and must not be executed. Its source commit was `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, and its archived procedure SHA-256 is `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`. No physical hardware walkthrough was performed for the v0.3.0 transition; the active testing contract remains the same-machine, tiered contract in `TESTING.md`.
+
+## Privacy outcome
+
+The contracts establish these fail-closed invariants:
+
+- recipient identity is unnecessary for ordinary workshop jobs;
+- a full serial number is restricted to the technical workshop record and omitted from recipient and support outputs;
+- sibling workspaces, private databases, personal content, assessment evidence, and backup or recovery keys are outside ThirdLife-owned data;
+- raw command or provider output is untrusted sensitive input, is not persisted, and may produce only a bounded typed projection;
+- support exports use an exact allowlist, are preview-bound, and require explicit operator approval;
+- telemetry and background upload remain off by default;
+- workshop record, recipient guide, and sanitized support bundle remain distinct output contracts.
+
+The privacy model defines eight classifications: public reference, operational safe, workshop restricted, recipient guide, support sanitized, raw untrusted sensitive, secret or personal content excluded, and sibling private excluded.
+
+## Proposed default retention guidance
+
+These are proposed, ready-for-review design defaults, not approved or implemented cleanup behavior:
+
+| Data | Proposed default |
 |---|---|
-| Procedure | `TL-0008 draft 1` |
-| Source commit | `4fa3ea050fd5e9985fde9cc8218281698d371cc8` |
-| Normalized procedure digest | `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b` |
-| Former active paths | `docs/testing/manual-hardware-tests.md`; `docs/testing/device-matrix.md` |
-| Former action | Build a physical device pool and execute `MHT-001`–`MHT-021` |
-| Current disposition | Superseded and preserved under `docs/history/` with a **DO NOT EXECUTE** notice |
+| Active job records and typed history | Active job plus 180 days |
+| Sanitized application logs | 14 days with a size cap |
+| Raw provider or command output | Process lifetime only; zero persistent retention |
+| Temporary and staging data | Remove on success; reap abandoned data within 24 hours |
+| Exported support bundle | Operator-controlled file; guide recommends removal within 30 days |
+| Unreferenced superseded profile, policy, and catalogue snapshots | 90 days after supersession unless a retained job still references them |
+| Migration and recovery backup | Successful verification plus 7 days |
+| Package cache | 30 days unless an active job or rollback still references it |
+| Secrets, personal content, sibling-private data, and telemetry payloads | Zero owned retention |
 
-The digest was reproduced from the former governed normalization algorithm before the active files were replaced. `MHT-001`–`MHT-021` remain product-workflow specifications only; none was run in this transition.
+## Governed artifacts
 
-## Task-contract migration
-
-The supplied 0.3.0 contracts contained the same 91 task IDs as the live repository. The governed merge replaced immutable contract fields while preserving each task's prior `status`, `evidence`, and `blocked_reason` presence and value. The only later mutable edit is the authorized `TL-0008` lifecycle/evidence update.
-
-| Check | Result |
+| Artifact | Recorded SHA-256 |
 |---|---|
-| Pre-merge live `TASKS.yaml` SHA-256 | `610bc8a54f48bf57eb40c3b83a98dd01587cdde3c44381939416452ac8b5d4d5` |
-| Immediate post-merge SHA-256 | `213451fdcc9c7c7ea6c863dabad434134d5be181aa23da9ae968e34ee23027ff` |
-| Task-ID comparison | 91 exact IDs; none added, removed, or duplicated |
-| Mutable-field comparison | 0 unauthorized presence or value differences |
-| `TL-0008` dependency state | `TL-0003` and `TL-0004` are `done` |
-| `TL-0008` transition | Historical `review` → authorized `in_progress` → `review` → `done` after verification |
+| `docs/privacy/privacy-model.md` | `a10e3248703ceb359a005173dccde9941de4595cf10b382ecb3d9acbb819f5ee` |
+| `docs/privacy/logging-standard.md` | `5f0d27cd93ba921b768f621401b91710d3f04263fe47152cb1baf8ffec6eb880` |
+| `docs/privacy/redaction-test-cases.yaml` | `6f43b2f31565f614218b7a58cbf8b43b157efeb03767ec51d60ddc5a3f0e354a` |
 
-## Verification state
+The fixture contains 56 contiguous, wholly synthetic cases. It covers recipient identifiers, full serial handling, secrets and recovery material, personal and sibling-private data, raw output, URLs and paths, exact digest binding, ordinary allowlisted metadata, unknown fields, and telemetry suppression.
 
-| Tier/check | Command | Duration | Result |
-|---|---|---:|---|
-| Baseline environment probe | `python tools/validate_bundle.py` | 3.3 s | Failed before repository validation: the WindowsApps Python environment lacks PyYAML; no dependency was installed |
-| Baseline governed validator | `.venv\Scripts\python.exe tools/validate_bundle.py` | 1.78 s | Passed against the pre-transition v0.2 repository; `jsonschema` was unavailable and the validator used its custom structural checks |
-| Focused validator regression | `.venv\Scripts\python.exe tools\tests\test_validate_bundle.py` | 14.686 s | Passed, 54/54 |
-| Live governed validator | Activate `.venv`, then `python tools/validate_bundle.py` | 1.178 s | Passed: 91 tasks, 8 milestones, 66 decisions, valid DAG; optional `jsonschema` unavailable, custom structural checks used |
-| Integration quick | `powershell.exe -File eng/verify.ps1 -Tier Quick` | 16.572 s | Passed: validator regression, governance, manifest, repository boundary, locked-package, and optional workflow checks |
-| Final implementation quick | `powershell.exe -File eng/verify.ps1 -Tier Quick` after final task/evidence/status/manifest state | 15.310 s | Passed; no application/runtime, full, or extended tier included |
-| Targeted | Not triggered | 0 s | Documentation, schema, governance, and validator migration did not change application/runtime behavior |
-| Full | Not triggered | 0 s | Revised `TL-0008` contract declares no full-tier trigger |
-| Extended/stress | Explicitly not triggered | 0 s | Scenarios are defined for later invoking tasks; none is run at revised `TL-0008` |
-| Manual `MHT-001`–`MHT-021` | Prohibited for this transition | 0 s | Not run; specification only |
+## Verification evidence
 
-## Machine and evidence scope
+| Scope | Result | Duration |
+|---|---|---:|
+| Pre-change validator tests | 54/54 passed | 13.140 s test / 14.073 s wall |
+| Pre-change live bundle validator | Passed: 91 tasks, 8 milestones, 66 decisions, valid DAG | 1.330 s wall |
+| Final privacy-focused regression tests | 25/25 passed | 29.177 s test / 29.945 s wall |
+| Final complete validator regression suite | 79/79 passed | 42.366 s test / 43.207 s wall |
+| Final live bundle validator before handoff metadata | Passed: 91 tasks, 8 milestones, 66 decisions, valid DAG | 1.328 s wall |
+| Initial governed Quick tier | Passed | 25.536 s wall |
 
-The sanitized reference profile is `REF-CODEX-001`, revision `2026-08-21.1`. It records only coarse Windows, CPU/memory, storage-class/free-space-bucket, GPU-presence, and toolchain facts needed to interpret reproducible development evidence. It contains no machine name, serial or asset ID, account name, network identifier, credential, personal path, donor/recipient data, or personal-media detail.
+The exact-tree Quick tier is run after this status record and the bundle manifest are finalized. Its result is recorded in the session completion report without changing the verified tree afterward. Full and extended tiers have no `TL-0005` triggers and are not required for this documentation/schema task.
 
-Single-machine constrained scenarios improve regression detection and architectural discipline, but they do not prove behavior on every modest computer, manufacturer, storage type, battery state, firmware configuration, or peripheral set. They are not hardware certification.
+The validator now fails closed on privacy-contract drift, including:
 
-## Continuation state
+- exact Markdown retention and support-field tables;
+- exact fixture schema, case IDs, actions, persistence, and support outcomes;
+- secret-like test input before any synthetic-data exemption;
+- aliases, anchors, merge keys, duplicate or non-string mapping keys, unsafe scalar types, and bounded hostile YAML;
+- false approval wording, placeholder reviewers, incomplete scope, and approval references that do not bind the current governed blobs to a real Git commit.
 
-- Working tree before checkpoint: expected TL-0008 tracked/new files plus one pre-existing unrelated untracked roadmap DOCX. The unrelated document is preserved untouched and excluded from staging. After push, this is the only expected working-tree item.
-- Removed active draft: `docs/testing/device-matrix.md`, only after both former files matched the named source commit exactly in the historical archive. The deletion is recoverable from Git history and the archive.
-- Boundary impact: no sibling repository, private interface, or cross-project dependency was inspected or introduced.
-- Data/migration impact: governance/task-contract files and sanitized evidence templates only; no product data or persistent schema migration.
-- Release-interface impact: the draft placeholder now records the same-machine evidence scope and explicitly disclaims cross-hardware certification.
-- Next dependency-ready task after verified TL-0008 completion: `TL-0005` — Define privacy/logging model. It has not been started.
+The optional `jsonschema` package is unavailable in the active environment, so the repository's custom structural checks ran. That is an informational warning, not a skipped governed check.
+
+## Boundary and risk impact
+
+- **Project vacuum / sibling integration:** No sibling repository was browsed or coupled. Sibling-private data is explicitly excluded and adversarially tested.
+- **Data / migration:** No runtime data, database, or migration was added. The task defines future retention and deletion contracts only.
+- **Release interface:** No public runtime interface was added or guessed. `RELEASE_INTERFACE.md` is unchanged.
+- **Security / privacy:** The task reduces design ambiguity and adds fail-closed semantic validation. Human privacy approval and later runtime implementation remain required.
+- **Accessibility / low-spec:** No UI, background work, runtime storage, network activity, or resource-consuming service was added. Later user-visible export and cleanup work must preserve plain language, keyboard access, bounded work, cancellation, and recovery.
+- **Security baseline provenance:** `docs/security/threat-model.md`, `docs/security/data-flow.md`, and `docs/security/abuse-cases.md` contain traceability/status annotations only. They do not claim a new security review or change the previously approved threat set, residual risks, or sign-off.
 
 ## Changed paths
 
-- Governance and handoff: `ACCESSIBILITY.md`, `AGENTS.md`, `BUNDLE_MANIFEST.sha256`, `CHANGELOG.md`, `CODEX_START_PROMPT.md`, `CODEX_TL0008_TRANSITION_PROMPT.md`, `DECISIONS.md`, `DEVELOPMENT_WORKFLOW.md`, `FUTURE_ASSEMBLY_NOTES.md`, `LOW_SPEC.md`, `PROJECT_BOUNDARY.md`, `README.md`, `RELEASE_INTERFACE.md`, `ROADMAP.md`, `SECURITY.md`, `STATUS.md`, `TASKS.schema.json`, `TASKS.yaml`, `TESTING.md`, and `TL-0008_TRANSITION.md`.
-- Governed details: `docs/change-control.md` and `docs/security/abuse-cases.md`.
-- Testing contracts: `docs/testing/accessibility-matrix.md`, `docs/testing/capability-risk-matrix.md`, `docs/testing/failure-injection.md`, `docs/testing/manual-hardware-tests.md`, `docs/testing/reference-machine-profile.md`, and `docs/testing/same-machine-constraints.md`.
-- Historical transition: added `docs/history/TL-0008-draft-1-superseded.md`; removed the superseded active `docs/testing/device-matrix.md` after exact archive verification.
-- Verification tooling: `eng/verify.ps1`, `eng/verify.sh`, `tools/merge_task_contracts.py`, `tools/validate_bundle.py`, `tools/tests/test_validate_bundle.py`, and a success-message-only update in `tools/validate_repository.py`.
+- `docs/privacy/privacy-model.md`
+- `docs/privacy/logging-standard.md`
+- `docs/privacy/redaction-test-cases.yaml`
+- `tools/validate_bundle.py`
+- `tools/tests/test_validate_bundle.py`
+- `README.md`
+- `SECURITY.md`
+- `docs/product-contract.md`
+- `docs/glossary.md`
+- `docs/security/threat-model.md`
+- `docs/security/data-flow.md`
+- `docs/security/abuse-cases.md`
+- `TASKS.yaml`
+- `STATUS.md`
+- `BUNDLE_MANIFEST.sha256`
+
+The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` was present before this task and remains untouched and unstaged.
+
+## Outstanding human evidence
+
+A named privacy owner must review and approve all of the following before `TL-0005` may move from `review` to `done`:
+
+1. the complete classification model;
+2. every proposed default retention period and cleanup trigger;
+3. the redaction and omission behavior represented by the synthetic fixtures;
+4. the prohibited diagnostic content and exact sanitized-support allowlist.
+
+The approval record must identify the reviewer and privacy-owner role, date the review, cover the complete scope, record conditions or residual risks, and bind the reviewed governed artifacts to a real commit. No such approval is fabricated here.
+
+## Next dependency-ready task
+
+`TL-0006` — Create dependency, license, and SBOM controls.

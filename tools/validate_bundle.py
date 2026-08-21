@@ -7,6 +7,7 @@ Run from any directory:
 
 from __future__ import annotations
 
+import hashlib
 import ipaddress
 import json
 import re
@@ -14,10 +15,10 @@ import subprocess
 import sys
 import unicodedata
 from collections import defaultdict, deque
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit
 
 import yaml
 
@@ -48,6 +49,9 @@ REQUIRED_FILES = (
     "docs/non-goals.md",
     "docs/product-contract.md",
     "docs/history/TL-0008-draft-1-superseded.md",
+    "docs/privacy/logging-standard.md",
+    "docs/privacy/privacy-model.md",
+    "docs/privacy/redaction-test-cases.yaml",
     "docs/security/abuse-cases.md",
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
@@ -176,6 +180,235 @@ TESTING_DOCUMENTS = (
     "docs/testing/same-machine-constraints.md",
     "docs/history/TL-0008-draft-1-superseded.md",
 )
+PRIVACY_DOCUMENTS = (
+    "docs/privacy/privacy-model.md",
+    "docs/privacy/logging-standard.md",
+    "docs/privacy/redaction-test-cases.yaml",
+)
+REDACTION_FIXTURE_SCHEMA_VERSION = "thirdlife.redaction-fixtures.v1"
+REDACTION_CASE_ID_RE = re.compile(r"^RDX-[0-9]{3}$")
+REDACTION_CASE_IDS = tuple(f"RDX-{index:03d}" for index in range(1, 57))
+REDACTION_CLASSIFICATIONS = (
+    "direct_personal_identifier",
+    "account_identifier",
+    "network_identifier",
+    "device_identifier",
+    "personal_path",
+    "sensitive_url",
+    "secret",
+    "personal_content",
+    "raw_untrusted_output",
+    "sibling_private_data",
+    "pseudonymous_operational_identifier",
+    "operational_metadata",
+    "unknown_field",
+)
+REDACTION_CONTEXTS = (
+    "ordinary_log",
+    "crash_report",
+    "workshop_record",
+    "support_export",
+    "command_ingest",
+    "provider_ingest",
+    "installer_ingest",
+    "external_private_input",
+    "telemetry",
+)
+REDACTION_ACTIONS = (
+    "redact",
+    "omit",
+    "reject_and_do_not_persist",
+    "preserve_workshop_only",
+    "reject_raw_and_extract_allowlisted_fields",
+    "reject_out_of_scope",
+    "preserve_allowlisted",
+    "suppress_telemetry",
+)
+REDACTION_PERSISTENCE_VALUES = (
+    "redacted_value_only",
+    "none",
+    "workshop_record_only",
+    "none_in_support_export",
+    "structured_projection_only",
+    "structured_value_only",
+    "none_for_telemetry",
+)
+SUPPORT_EXPORT_OUTCOMES = (
+    "omit",
+    "omit_by_default_truncation_requires_explicit_review",
+    "omit_raw_allow_structured_projection_only",
+    "include_unchanged_if_allowlisted_and_previewed",
+)
+SUPPORT_EXPORT_TABLE_ROWS = (
+    ("schema_version", "Exact reviewed support schema version."),
+    ("manifest_version", "Exact reviewed manifest version."),
+    (
+        "internal_support_id",
+        "Fresh opaque random export ID with no encoded job/device/user value.",
+    ),
+    ("application_version", "Installed ThirdLife Setup Core version."),
+    ("build_version", "Reviewed source/build revision identifier."),
+    ("os_version", "Normalized OS version/build, not a product/device ID."),
+    ("hardware_architecture", "Fixed architecture enum."),
+    (
+        "memory_bucket",
+        "Reviewed coarse capacity bucket, not module identifiers.",
+    ),
+    (
+        "storage_class",
+        "Reviewed generic storage class, not disk identity or path.",
+    ),
+    ("event_time_utc", "Offset-aware UTC time only for an included event."),
+    ("export_created_at_utc", "Exact preview/export creation time."),
+    ("check_id", "Registered check ID."),
+    ("check_outcome", "Registered bounded outcome enum."),
+    ("action_code", "Registered compiled action code, not a command or argument."),
+    ("result_code", "Registered stable result code."),
+    ("component_id", "Registered stable component ID."),
+    ("operation_type", "Registered bounded operation enum."),
+    ("evidence_state", "Registered evidence/availability state."),
+    (
+        "sanitized_error_category",
+        "Registered category; no backend/exception prose.",
+    ),
+    ("retryable", "Boolean determined by reviewed recovery policy."),
+    (
+        "duration_ms",
+        "Bounded non-negative duration for the included operation.",
+    ),
+    (
+        "bounded_count",
+        "Bounded non-negative count whose meaning is fixed by the record schema.",
+    ),
+    ("limitation_code", "Registered stable limitation code."),
+    (
+        "preview_content_digest_sha256",
+        "Digest of exact preview bytes; never a hash of omitted personal data.",
+    ),
+    (
+        "export_content_digest_sha256",
+        "Digest of exact exported bytes for preview/export equality.",
+    ),
+)
+SUPPORT_EXPORT_ALLOWLIST = tuple(
+    field for field, _ in SUPPORT_EXPORT_TABLE_ROWS
+)
+PRIVACY_RESERVED_SYNTHETIC_RAW_OUTPUTS = (
+    (
+        "raw_command_output",
+        "SyntheticPerson 192.0.2.44 SYNTHETIC-NOT-A-REAL-TOKEN",
+    ),
+    (
+        "raw_provider_output",
+        r"user=synthetic_user path=C:\Users\SyntheticPerson\synthetic.txt",
+    ),
+    (
+        "raw_installer_output",
+        "download=https://packages.example.test/synthetic/app.msix result=0",
+    ),
+)
+REDACTION_REQUIRED_APPROVAL_SCOPE = (
+    "field and context classifications",
+    "default retention guidance",
+    "redaction and omission actions",
+    "support-export allowlist",
+)
+SYNTHETIC_SUPPORT_DIGEST_BYTES = b"thirdlife-synthetic-preview-export-v1\n"
+SYNTHETIC_SUPPORT_CONTENT_SHA256 = hashlib.sha256(
+    SYNTHETIC_SUPPORT_DIGEST_BYTES
+).hexdigest()
+PRIVACY_FIXTURE_MAX_BYTES = 256 * 1024
+PRIVACY_FIXTURE_MAX_NODES = 8_192
+PRIVACY_FIXTURE_MAX_DEPTH = 32
+PRIVACY_FIXTURE_MAX_SCALAR_CHARS = 16_384
+PRIVACY_FIXTURE_MAX_AGGREGATE_SCALAR_CHARS = 128 * 1024
+PRIVACY_PENDING_STATUS = "Draft contract complete; named privacy-owner approval pending"
+PRIVACY_APPROVED_STATUS = "Approved initial privacy contract"
+PRIVACY_APPROVAL_PATHS = (
+    "docs/privacy/privacy-model.md",
+    "docs/privacy/logging-standard.md",
+    "docs/privacy/redaction-test-cases.yaml",
+)
+PRIVACY_RETENTION_ROWS = (
+    (
+        "Active or interrupted job and workshop evidence",
+        "Retain while the job is active; then 180 days after handover, do-not-deploy closure, or explicit abandonment",
+        "Unresolved recovery/blocker state pauses ordinary deletion only under a named review record",
+        "Warn before expiry, preserve attributable history until deletion, and make deletion distinct from reversible archive",
+    ),
+    (
+        "Job-bound policy/profile/catalogue snapshots and rendered workshop/recipient copies",
+        "Same as the owning job",
+        "Delete with the explicit job-data deletion operation",
+        "Do not leave orphaned files; exported copies are not silently deleted",
+    ),
+    (
+        "Sanitized operational logs",
+        "14 days",
+        "Rotate by age and by a separately measured, configured byte ceiling; whichever occurs first",
+        "Delete whole records/files safely; report cleanup failure only with a stable sanitized code",
+    ),
+    (
+        "Raw provider/backend/installer/command/exception content",
+        "Process lifetime only; zero persistent retention by default",
+        "Release immediately after bounded normalization or failure",
+        "No database/log/support fallback; an explicitly contracted raw attachment becomes workshop-restricted and follows job retention",
+    ),
+    (
+        "Temporary, preview, and staging files",
+        "Operation lifetime; stale owned files no longer than 24 hours",
+        "Remove on success, cancellation, and failure; sweep only verified owned stale files at next startup",
+        "Never follow links/reparse points or delete outside the registered internal root; preserve truthful cleanup failure",
+    ),
+    (
+        "Support preview and application-owned staged bundle",
+        "Preview session only",
+        "Remove after export/cancel/failure and on the bounded stale-file sweep",
+        "Keep only export audit metadata, not a duplicate archive",
+    ),
+    (
+        "User-exported support bundle",
+        "Outside product control; recommend deletion when the support case closes and no later than 30 days absent a documented need",
+        "Operator/support recipient owns deletion",
+        "Show handling guidance before export; ThirdLife cannot claim deletion of an external copy",
+    ),
+    (
+        "User-exported workshop record or recipient guide",
+        "Outside product control",
+        "Workshop/recipient policy owns deletion",
+        "Explain the audience and sensitivity at export; do not record a personal destination path in ordinary logs",
+    ),
+    (
+        "Support export audit metadata",
+        "Same as the owning job",
+        "Delete with explicit job-data deletion",
+        "Retain only support ID, schema version, content digest, export time, and protected operator attribution",
+    ),
+    (
+        "Migration/recovery copy",
+        "Until migration/recovery is verified, then 7 days",
+        "Start only for a named operation; a failure retains the original and records a bounded review state",
+        "Later persistence work must prove safe cleanup, access denial handling, and no orphan/partial copy before enabling the default",
+    ),
+    (
+        "Unreferenced superseded configuration",
+        "90 days after supersession",
+        "A version referenced by a retained job follows that job instead",
+        "Never rewrite the snapshot of a historical job",
+    ),
+    (
+        "Package/update cache",
+        "30 days after last verified use by default; keep longer only while an active/recoverable job explicitly references the exact artifact",
+        "Evict by age and by a separately measured byte ceiling after checking active plan, resume, provenance, and recovery references",
+        "Evict only cache-owned artifacts; never retain raw provider/output text with the artifact, and let later package work tighten this pending default when supply-chain or rollback evidence requires it",
+    ),
+    (
+        "Secrets, recovery material, personal content, telemetry, and sibling-private data",
+        "Zero",
+        "Never collect or persist",
+        "A discovered attempted value is rejected/redacted; do not retain it for debugging",
+    ),
+)
 SECURITY_MACHINE_PATH_RE = re.compile(
     r"(?i)(?:\b[a-z]:[\\/]|\\\\[^\\/\s]+[\\/][^\\/\s]+|"
     r"file:/+(?:[a-z]:|/)|/(?:home|users)/[^/\s]+/)"
@@ -272,6 +505,162 @@ def load_yaml(path: Path, validation: Validation) -> dict[str, Any]:
     return value
 
 
+class UniqueKeySafeLoader(yaml.SafeLoader):
+    """SafeLoader variant that rejects ambiguous duplicate mapping keys."""
+
+
+def construct_unique_yaml_mapping(
+    loader: UniqueKeySafeLoader,
+    node: Any,
+    deep: bool = False,
+) -> dict[Any, Any]:
+    if any(
+        key_node.tag == "tag:yaml.org,2002:merge"
+        for key_node, _ in node.value
+    ):
+        raise yaml.constructor.ConstructorError(
+            "while constructing a mapping",
+            node.start_mark,
+            "YAML merge keys are prohibited",
+            node.start_mark,
+        )
+    loader.flatten_mapping(node)
+    mapping: dict[Any, Any] = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if not isinstance(key, str):
+            raise yaml.constructor.ConstructorError(
+                "while constructing a mapping",
+                node.start_mark,
+                "mapping keys must be strings",
+                key_node.start_mark,
+            )
+        try:
+            duplicate = key in mapping
+        except TypeError as exc:
+            raise yaml.constructor.ConstructorError(
+                "while constructing a mapping",
+                node.start_mark,
+                f"unhashable mapping key: {exc}",
+                key_node.start_mark,
+            ) from exc
+        if duplicate:
+            raise yaml.constructor.ConstructorError(
+                "while constructing a mapping",
+                node.start_mark,
+                "duplicate mapping key",
+                key_node.start_mark,
+            )
+        mapping[key] = loader.construct_object(value_node, deep=deep)
+    return mapping
+
+
+UniqueKeySafeLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+    construct_unique_yaml_mapping,
+)
+
+
+def load_unique_key_yaml(path: Path, validation: Validation) -> dict[str, Any]:
+    """Load a bounded fixture while rejecting aliases and key ambiguity."""
+
+    try:
+        with path.open("rb") as stream:
+            raw = stream.read(PRIVACY_FIXTURE_MAX_BYTES + 1)
+    except OSError as exc:
+        validation.error(f"{path.name}: cannot read YAML: {exc}")
+        return {}
+    if len(raw) > PRIVACY_FIXTURE_MAX_BYTES:
+        validation.error(
+            f"{path.name}: YAML exceeds {PRIVACY_FIXTURE_MAX_BYTES} byte limit"
+        )
+        return {}
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        validation.error(f"{path.name}: YAML is not UTF-8: {exc}")
+        return {}
+
+    collection_starts = (
+        yaml.tokens.BlockMappingStartToken,
+        yaml.tokens.BlockSequenceStartToken,
+        yaml.tokens.FlowMappingStartToken,
+        yaml.tokens.FlowSequenceStartToken,
+    )
+    collection_ends = (
+        yaml.tokens.BlockEndToken,
+        yaml.tokens.FlowMappingEndToken,
+        yaml.tokens.FlowSequenceEndToken,
+    )
+    depth = 0
+    node_count = 0
+    aggregate_scalar_chars = 0
+    try:
+        for token in yaml.scan(text):
+            if isinstance(token, (yaml.tokens.AnchorToken, yaml.tokens.AliasToken)):
+                validation.error(
+                    f"{path.name}: YAML anchors and aliases are prohibited"
+                )
+                return {}
+            if isinstance(token, collection_starts):
+                depth += 1
+                node_count += 1
+                if depth > PRIVACY_FIXTURE_MAX_DEPTH:
+                    validation.error(
+                        f"{path.name}: YAML nesting exceeds {PRIVACY_FIXTURE_MAX_DEPTH} levels"
+                    )
+                    return {}
+            elif isinstance(token, collection_ends):
+                depth = max(0, depth - 1)
+            elif isinstance(token, yaml.tokens.ScalarToken):
+                node_count += 1
+                scalar_chars = len(str(token.value))
+                aggregate_scalar_chars += scalar_chars
+                if scalar_chars > PRIVACY_FIXTURE_MAX_SCALAR_CHARS:
+                    validation.error(
+                        f"{path.name}: YAML scalar exceeds "
+                        f"{PRIVACY_FIXTURE_MAX_SCALAR_CHARS} character limit"
+                    )
+                    return {}
+                if (
+                    aggregate_scalar_chars
+                    > PRIVACY_FIXTURE_MAX_AGGREGATE_SCALAR_CHARS
+                ):
+                    validation.error(
+                        f"{path.name}: YAML aggregate scalar content exceeds "
+                        f"{PRIVACY_FIXTURE_MAX_AGGREGATE_SCALAR_CHARS} characters"
+                    )
+                    return {}
+            if node_count > PRIVACY_FIXTURE_MAX_NODES:
+                validation.error(
+                    f"{path.name}: YAML exceeds {PRIVACY_FIXTURE_MAX_NODES} node limit"
+                )
+                return {}
+    except Exception:
+        validation.error(f"{path.name}: cannot scan YAML safely")
+        return {}
+
+    try:
+        value = yaml.load(
+            text,
+            Loader=UniqueKeySafeLoader,
+        )
+    except Exception as exc:  # diagnostic boundary
+        problem = str(getattr(exc, "problem", ""))
+        safe_problems = {
+            "duplicate mapping key",
+            "mapping keys must be strings",
+            "YAML merge keys are prohibited",
+        }
+        safe_problem = problem if problem in safe_problems else "invalid YAML structure"
+        validation.error(f"{path.name}: cannot parse YAML: {safe_problem}")
+        return {}
+    if not isinstance(value, dict):
+        validation.error(f"{path.name}: top-level value must be a mapping")
+        return {}
+    return value
+
+
 def require_nonempty_string(
     owner: str, mapping: dict[str, Any], field: str, validation: Validation
 ) -> None:
@@ -326,6 +715,87 @@ def markdown_level_two_sections(text: str) -> dict[str, str]:
         end = headings[index + 1].start() if index + 1 < len(headings) else len(text)
         sections[heading.group(1).strip().casefold()] = text[start:end].strip()
     return sections
+
+
+def markdown_table_after_heading(
+    text: str,
+    heading: str,
+    relative: str,
+    validation: Validation,
+) -> tuple[tuple[str, ...], tuple[tuple[str, ...], ...]] | None:
+    """Parse one simple governed Markdown table below an exact heading."""
+
+    heading_match = re.fullmatch(r"(#{1,6})\s+(.+)", heading)
+    if heading_match is None:
+        raise ValueError(f"invalid governed heading {heading!r}")
+    level = len(heading_match.group(1))
+    matches = list(
+        re.finditer(rf"^{re.escape(heading)}\s*$", text, re.MULTILINE)
+    )
+    if len(matches) != 1:
+        validation.error(
+            f"{relative}: expected exactly one heading {heading!r}"
+        )
+        return None
+    start = matches[0].end()
+    next_heading = re.search(
+        rf"^#{{1,{level}}}\s+",
+        text[start:],
+        re.MULTILINE,
+    )
+    end = start + next_heading.start() if next_heading is not None else len(text)
+    section_lines = text[start:end].splitlines()
+
+    def cells(line: str) -> tuple[str, ...] | None:
+        stripped = line.strip()
+        if not stripped.startswith("|") or not stripped.endswith("|"):
+            return None
+        values: list[str] = []
+        current: list[str] = []
+        escaped = False
+        for character in stripped[1:-1]:
+            if escaped:
+                current.append(character)
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == "|":
+                values.append(re.sub(r"\s+", " ", "".join(current).strip()))
+                current = []
+            else:
+                current.append(character)
+        if escaped:
+            current.append("\\")
+        values.append(re.sub(r"\s+", " ", "".join(current).strip()))
+        return tuple(values)
+
+    table_start = next(
+        (index for index, line in enumerate(section_lines) if cells(line) is not None),
+        None,
+    )
+    if table_start is None or table_start + 1 >= len(section_lines):
+        validation.error(f"{relative}: missing table below {heading!r}")
+        return None
+    header = cells(section_lines[table_start])
+    separator = cells(section_lines[table_start + 1])
+    if header is None or separator is None or len(header) != len(separator):
+        validation.error(f"{relative}: malformed table below {heading!r}")
+        return None
+    if any(re.fullmatch(r":?-{3,}:?", cell) is None for cell in separator):
+        validation.error(f"{relative}: malformed table separator below {heading!r}")
+        return None
+    rows: list[tuple[str, ...]] = []
+    for line in section_lines[table_start + 2 :]:
+        row = cells(line)
+        if row is None:
+            break
+        if len(row) != len(header):
+            validation.error(
+                f"{relative}: table row below {heading!r} has {len(row)} cells; expected {len(header)}"
+            )
+            continue
+        rows.append(row)
+    return header, tuple(rows)
 
 
 def markdown_security_entries(
@@ -1267,6 +1737,1232 @@ def testing_sensitive_match(text: str) -> str | None:
     return None
 
 
+def privacy_high_risk_secret_match(text: str) -> str | None:
+    """Detect secret shapes before any synthetic/example exemption."""
+
+    patterns = (
+        ("GitHub token", r"\bgh[pousr]_[A-Za-z0-9]{20,}\b"),
+        ("bearer token", r"(?i)\bbearer\s+[A-Za-z0-9._~+/-]{12,}={0,2}\b"),
+        ("Slack token", r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b"),
+        ("cloud access key", r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
+        ("private-key material", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+        ("recovery-key shaped value", r"\b\d{6}(?:-\d{6}){7}\b"),
+    )
+    canonical = canonical_testing_scan_text(text)
+    for label, pattern in patterns:
+        if re.search(pattern, canonical):
+            return label
+    return None
+
+
+def privacy_yaml_scalar_paths(
+    value: Any,
+    path: tuple[str | int, ...] = (),
+) -> list[tuple[tuple[str | int, ...], Any]]:
+    """Return bounded scalar paths without recursive or alias traversal."""
+
+    scalars: list[tuple[tuple[str | int, ...], Any]] = []
+    stack: list[tuple[tuple[str | int, ...], Any, int]] = [(path, value, 0)]
+    seen_containers: set[int] = set()
+    visited = 0
+    while stack:
+        current_path, current, depth = stack.pop()
+        visited += 1
+        if visited > PRIVACY_FIXTURE_MAX_NODES:
+            raise ValueError("fixture traversal exceeds node limit")
+        if depth > PRIVACY_FIXTURE_MAX_DEPTH:
+            raise ValueError("fixture traversal exceeds depth limit")
+        if isinstance(current, (dict, list)):
+            identity = id(current)
+            if identity in seen_containers:
+                raise ValueError("fixture contains an alias or cycle")
+            seen_containers.add(identity)
+        if isinstance(current, dict):
+            items = list(current.items())
+            for key, child in reversed(items):
+                if not isinstance(key, str):
+                    raise ValueError("fixture mapping keys must be strings")
+                stack.append(((*current_path, key), child, depth + 1))
+        elif isinstance(current, list):
+            for index in range(len(current) - 1, -1, -1):
+                stack.append(((*current_path, index), current[index], depth + 1))
+        else:
+            if isinstance(current, str) and len(current) > PRIVACY_FIXTURE_MAX_SCALAR_CHARS:
+                raise ValueError("fixture scalar exceeds character limit")
+            scalars.append((current_path, current))
+    return scalars
+
+
+def privacy_path_text(path: tuple[str | int, ...]) -> str:
+    rendered = ""
+    for component in path:
+        if isinstance(component, int):
+            rendered += f"[{component}]"
+        else:
+            rendered += ("." if rendered else "") + component
+    return rendered
+
+
+def reject_unknown_mapping_fields(
+    owner: str,
+    mapping: dict[str, Any],
+    allowed_fields: tuple[str, ...] | set[str],
+    validation: Validation,
+) -> None:
+    non_string_keys = [key for key in mapping if not isinstance(key, str)]
+    if non_string_keys:
+        validation.error(f"{owner}: mapping keys must be strings")
+        return
+    unknown = sorted(set(mapping) - set(allowed_fields))
+    if unknown:
+        validation.error(
+            f"{owner}: contains unknown fields (count {len(unknown)})"
+        )
+
+
+def is_explicitly_synthetic_sensitive_value(
+    value: Any,
+    input_field: Any,
+    field_class: Any,
+) -> bool:
+    """Recognize reserved examples, never arbitrary live-looking identifiers."""
+
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or not isinstance(input_field, str)
+        or not isinstance(field_class, str)
+    ):
+        return False
+    canonical = canonical_testing_scan_text(value).strip()
+    folded = canonical.casefold()
+
+    try:
+        address = ipaddress.ip_address(canonical)
+    except ValueError:
+        address = None
+    if address is not None and input_field in {"ipv4_address", "ipv6_address"}:
+        documentation_networks = (
+            ipaddress.ip_network("192.0.2.0/24"),
+            ipaddress.ip_network("198.51.100.0/24"),
+            ipaddress.ip_network("203.0.113.0/24"),
+            ipaddress.ip_network("2001:db8::/32"),
+        )
+        return any(address in network for network in documentation_networks)
+
+    if input_field == "mac_address":
+        return re.fullmatch(r"02:00:00:00:00:[0-9a-fA-F]{2}", canonical) is not None
+    if input_field == "email_address":
+        return re.fullmatch(
+            r"(?i)synthetic(?:\.[a-z0-9_-]+)*@example\.test",
+            canonical,
+        ) is not None
+    if input_field == "package_download_url":
+        parsed = urlsplit(canonical)
+        return (
+            parsed.scheme == "https"
+            and parsed.hostname is not None
+            and (
+                parsed.hostname == "example.test"
+                or parsed.hostname.endswith(".example.test")
+            )
+            and parsed.username is None
+            and parsed.password is None
+            and "synthetic" in folded
+        )
+    if input_field in {"file_path", "network_path"}:
+        return (
+            "synthetic" in folded
+            and SECURITY_MACHINE_PATH_RE.search(canonical) is not None
+            and ".." not in canonical
+        )
+    if input_field == "windows_sid":
+        return re.fullmatch(
+            r"S-1-[0-9-]*SYNTHETIC-NOT-REAL",
+            canonical,
+            re.IGNORECASE,
+        ) is not None
+    if field_class == "raw_untrusted_output":
+        return (input_field, canonical) in PRIVACY_RESERVED_SYNTHETIC_RAW_OUTPUTS
+
+    explicit_marker = (
+        "synthetic" in folded
+        or "not-a-real" in folded
+        or "not a real" in folded
+    )
+    if not explicit_marker:
+        return False
+    if testing_sensitive_match(canonical) is not None:
+        return False
+    if SECURITY_MACHINE_PATH_RE.search(canonical) or re.search(r"(?i)https?://", canonical):
+        return False
+    return True
+
+
+def privacy_approval_state(value: str) -> str:
+    """Return an exact leading approval token, never substring semantics."""
+
+    return value.split("—", 1)[0].strip().casefold()
+
+
+def canonical_privacy_approval_blob(relative: str, text: str) -> str:
+    """Remove only unavoidable post-commit self-reference annotations."""
+
+    canonical = text.replace("\r\n", "\n").replace("\r", "\n")
+    if relative == "docs/privacy/privacy-model.md":
+        canonical = re.sub(
+            r"^\*\*Reviewed commit/reference:\*\*.*$",
+            "**Reviewed commit/reference:** <BOUND-AFTER-REVIEW>",
+            canonical,
+            flags=re.MULTILINE,
+        )
+    elif relative == "docs/privacy/redaction-test-cases.yaml":
+        canonical = re.sub(
+            r"^  approval_reference:.*$",
+            "  approval_reference: <BOUND-AFTER-REVIEW>",
+            canonical,
+            flags=re.MULTILINE,
+        )
+    return canonical
+
+
+def validate_privacy_approval_commit(
+    reviewed_commit: str,
+    validation: Validation,
+) -> None:
+    """Bind approved current contracts to real blobs in the reviewed commit."""
+
+    def git(arguments: list[str]) -> subprocess.CompletedProcess[bytes] | None:
+        try:
+            return subprocess.run(
+                ["git", "-C", str(ROOT), *arguments],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+
+    commit_check = git(["cat-file", "-e", f"{reviewed_commit}^{{commit}}"])
+    if commit_check is None or commit_check.returncode != 0:
+        validation.error(
+            "Privacy approval reference must name an existing reviewed Git commit"
+        )
+        return
+
+    for relative in PRIVACY_APPROVAL_PATHS:
+        object_name = f"{reviewed_commit}:{relative}"
+        size_result = git(["cat-file", "-s", object_name])
+        if size_result is None or size_result.returncode != 0:
+            validation.error(
+                f"Privacy approval commit is missing governed blob {relative}"
+            )
+            continue
+        try:
+            blob_size = int(size_result.stdout.decode("ascii").strip())
+        except (UnicodeDecodeError, ValueError):
+            validation.error(
+                f"Privacy approval commit has unreadable blob metadata for {relative}"
+            )
+            continue
+        if blob_size > PRIVACY_FIXTURE_MAX_BYTES:
+            validation.error(
+                f"Privacy approval commit blob {relative} exceeds the review bound"
+            )
+            continue
+        blob_result = git(["show", object_name])
+        if blob_result is None or blob_result.returncode != 0:
+            validation.error(
+                f"Privacy approval commit blob {relative} cannot be read"
+            )
+            continue
+        try:
+            reviewed_text = blob_result.stdout.decode("utf-8")
+            current_text = (ROOT / relative).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            validation.error(
+                f"Privacy approval contract {relative} must be readable UTF-8"
+            )
+            continue
+        if canonical_privacy_approval_blob(
+            relative, reviewed_text
+        ) != canonical_privacy_approval_blob(relative, current_text):
+            validation.error(
+                f"Privacy approval commit does not bind current contract {relative}"
+            )
+
+
+def validate_privacy_documents(
+    validation: Validation,
+    task_by_id: dict[str, dict[str, Any]],
+    decision_ids: set[str],
+) -> None:
+    """Validate TL-0005's design contracts without claiming runtime controls."""
+
+    model_relative = "docs/privacy/privacy-model.md"
+    logging_relative = "docs/privacy/logging-standard.md"
+    fixture_relative = "docs/privacy/redaction-test-cases.yaml"
+
+    model_text = require_phrases(
+        model_relative,
+        (
+            "It does not claim that those controls are implemented",
+            "## Privacy invariants",
+            "Recipient name, email, account, address, phone number, or other identity is unnecessary",
+            "Telemetry is off by default",
+            "## Classification model",
+            "`WORKSHOP_RESTRICTED`",
+            "`RECIPIENT_GUIDE`",
+            "`SUPPORT_SANITIZED`",
+            "`RAW_UNTRUSTED_SENSITIVE`",
+            "`SECRET_OR_PERSONAL_CONTENT_EXCLUDED`",
+            "`SIBLING_PRIVATE_EXCLUDED`",
+            "## Logical data map",
+            "## Three output contracts",
+            "### Technical workshop record",
+            "### Plain-language recipient guide",
+            "### Sanitized diagnostic bundle",
+            "## Proposed default retention guidance",
+            "`TL-0703`",
+            "## Access, export, and deletion rules",
+            "## Review and implementation gates",
+            "Passing a fixture validator proves only that the contract is internally complete",
+            "## Privacy-owner approval record",
+            "Current privacy-owner:",
+            "Current privacy-owner role:",
+            "Current review date:",
+            "Reviewed commit/reference:",
+            "Approval scope:",
+            "Conditions/residual risks:",
+            "Current result:",
+        ),
+        validation,
+    )
+    logging_text = require_phrases(
+        logging_relative,
+        (
+            "It is a design contract, not a claim that a logger or redactor exists",
+            "## Required architecture",
+            "Redaction and bounds are applied before the first database, file, UI, report, or queue write",
+            "There is no telemetry or background upload path",
+            "## Ordinary event envelope",
+            "No free-form `message`, `details`, `data`, `context`, `payload`, `command`, `arguments`, `environment`, or arbitrary dictionary field is permitted",
+            "## Prohibited diagnostic fields and values",
+            "## Raw input normalization",
+            "Default persistent retention is zero",
+            "## Fixed redaction representation",
+            "## Sanitized support schema",
+            "## Preview-bound export procedure",
+            "Require explicit operator approval",
+            "There is no send, upload, remote-support, or analytics shortcut",
+            "## Retention, bounds, and cleanup",
+            "14-day sanitized-log default",
+            "## Verification contract for later implementation",
+            "Automated fixture/schema checks in `TL-0005` validate the design artifacts only",
+            "production redactor",
+            "## Change and approval rule",
+        ),
+        validation,
+    )
+
+    support_table = markdown_table_after_heading(
+        logging_text,
+        "### Default fields",
+        logging_relative,
+        validation,
+    )
+    if support_table is not None:
+        support_header, support_rows = support_table
+        if support_header != ("Field", "Constraint"):
+            validation.error(
+                f"{logging_relative}: support table header must be Field | Constraint"
+            )
+        support_fields: list[str] = []
+        for row in support_rows:
+            field_match = re.fullmatch(r"`([a-z0-9_]+)`", row[0])
+            if field_match is None:
+                validation.error(
+                    f"{logging_relative}: support field names must be backticked snake_case"
+                )
+                continue
+            support_fields.append(field_match.group(1))
+            if not row[1]:
+                validation.error(
+                    f"{logging_relative}: support field {row[0]} needs a constraint"
+                )
+        if tuple(support_fields) != SUPPORT_EXPORT_ALLOWLIST:
+            validation.error(
+                f"{logging_relative}: support table fields must exactly equal "
+                f"{list(SUPPORT_EXPORT_ALLOWLIST)!r}"
+            )
+        expected_support_rows = tuple(
+            (f"`{field}`", constraint)
+            for field, constraint in SUPPORT_EXPORT_TABLE_ROWS
+        )
+        if support_rows != expected_support_rows:
+            validation.error(
+                f"{logging_relative}: support table rows and constraints must "
+                "exactly match the governed TL-0005 contract"
+            )
+
+    retention_table = markdown_table_after_heading(
+        model_text,
+        "## Proposed default retention guidance",
+        model_relative,
+        validation,
+    )
+    if retention_table is not None:
+        retention_header, retention_rows = retention_table
+        expected_header = (
+            "Data",
+            "Proposed default",
+            "Start/cleanup rule",
+            "Required implementation behavior",
+        )
+        if retention_header != expected_header:
+            validation.error(
+                f"{model_relative}: retention table header must exactly match the governed contract"
+            )
+        if retention_rows != PRIVACY_RETENTION_ROWS:
+            validation.error(
+                f"{model_relative}: retention rows and values must exactly match the governed TL-0005 contract"
+            )
+
+    model_revision = security_field(model_text, "Model revision")
+    logging_revision = security_field(logging_text, "Standard revision")
+    if not model_revision or model_revision != logging_revision:
+        validation.error(
+            "Privacy documents must share one exact TL-0005 revision"
+        )
+    model_status = security_field(model_text, "Status")
+    logging_status = security_field(logging_text, "Status")
+    approval_result = security_field(model_text, "Approval result")
+    approval_fields = {
+        field: security_field(model_text, field)
+        for field in (
+            "Current privacy-owner",
+            "Current privacy-owner role",
+            "Current review date",
+            "Reviewed commit/reference",
+            "Approval scope",
+            "Conditions/residual risks",
+            "Current result",
+        )
+    }
+    for field, value in approval_fields.items():
+        if not value:
+            validation.error(
+                f"{model_relative}: missing approval metadata {field!r}"
+            )
+
+    for relative, text in (
+        (model_relative, model_text),
+        (logging_relative, logging_text),
+    ):
+        if SECURITY_MACHINE_PATH_RE.search(text):
+            validation.error(f"{relative}: contains a machine-specific path")
+
+    combined_privacy_text = "\n".join((model_text, logging_text))
+    unknown_decisions = sorted(
+        set(re.findall(r"\bD-\d{3}\b", combined_privacy_text)) - decision_ids
+    )
+    if unknown_decisions:
+        validation.error(
+            f"Privacy documents reference unknown decisions {unknown_decisions!r}"
+        )
+    unknown_tasks = sorted(
+        set(re.findall(r"\bTL-\d{4}\b", combined_privacy_text))
+        - set(task_by_id)
+    )
+    if unknown_tasks:
+        validation.error(
+            f"Privacy documents reference unknown roadmap tasks {unknown_tasks!r}"
+        )
+
+    fixture = load_unique_key_yaml(ROOT / fixture_relative, validation)
+    if not fixture:
+        return
+    reject_unknown_mapping_fields(
+        fixture_relative,
+        fixture,
+        {
+            "schema_version",
+            "fixture_set_id",
+            "synthetic_data",
+            "description",
+            "policy",
+            "review",
+            "support_export_allowlist",
+            "transform_invariants",
+            "schema",
+            "cases",
+        },
+        validation,
+    )
+    if fixture.get("schema_version") != REDACTION_FIXTURE_SCHEMA_VERSION:
+        validation.error(
+            f"{fixture_relative}: schema_version must equal "
+            f"{REDACTION_FIXTURE_SCHEMA_VERSION!r}"
+        )
+    if fixture.get("fixture_set_id") != "TL-0005":
+        validation.error(f"{fixture_relative}: fixture_set_id must equal 'TL-0005'")
+    if fixture.get("synthetic_data") is not True:
+        validation.error(f"{fixture_relative}: synthetic_data must be true")
+    require_nonempty_string(fixture_relative, fixture, "description", validation)
+
+    policy = fixture.get("policy")
+    if not isinstance(policy, dict):
+        validation.error(f"{fixture_relative}: policy must be a mapping")
+        policy = {}
+    policy_contract: dict[str, Any] = {
+        "telemetry_default": "off",
+        "redaction_stage": "before_persistence",
+        "support_export_mode": "allowlist_and_preview_required",
+        "unknown_field_action": "omit",
+        "raw_output_action": "reject_raw_and_extract_allowlisted_fields",
+        "recipient_identity_required": False,
+        "full_serial_default_support_action": "omit",
+    }
+    for field, expected in policy_contract.items():
+        if policy.get(field) != expected:
+            validation.error(
+                f"{fixture_relative}: policy.{field} must equal {expected!r}"
+            )
+    reject_unknown_mapping_fields(
+        f"{fixture_relative}: policy",
+        policy,
+        set(policy_contract),
+        validation,
+    )
+
+    transform_invariants = fixture.get("transform_invariants")
+    if not isinstance(transform_invariants, dict):
+        validation.error(
+            f"{fixture_relative}: transform_invariants must be a mapping"
+        )
+        transform_invariants = {}
+    boolean_invariants = (
+        "deterministic",
+        "idempotent",
+        "diagnostic_sensitive_seeds_absent_after_transform",
+        "unknown_fields_omitted",
+        "raw_output_replaced_by_typed_projection_only",
+        "telemetry_emission_disabled",
+        "synthetic_inputs_reserved_for_tests_only",
+    )
+    for field in boolean_invariants:
+        if transform_invariants.get(field) is not True:
+            validation.error(
+                f"{fixture_relative}: transform_invariants.{field} must be true"
+            )
+    if transform_invariants.get("workshop_only_exception_fields") != [
+        "full_serial_number"
+    ]:
+        validation.error(
+            f"{fixture_relative}: the only workshop-only seed exception must be full_serial_number"
+        )
+    reject_unknown_mapping_fields(
+        f"{fixture_relative}: transform_invariants",
+        transform_invariants,
+        {*boolean_invariants, "workshop_only_exception_fields"},
+        validation,
+    )
+
+    allowlist = fixture.get("support_export_allowlist")
+    allowlist_is_string_list = isinstance(allowlist, list) and all(
+        isinstance(field, str) and bool(field.strip()) for field in allowlist
+    )
+    if not allowlist_is_string_list:
+        validation.error(
+            f"{fixture_relative}: support_export_allowlist must contain only non-empty strings"
+        )
+    if not allowlist_is_string_list or tuple(allowlist) != SUPPORT_EXPORT_ALLOWLIST:
+        validation.error(
+            f"{fixture_relative}: support_export_allowlist must exactly equal "
+            f"{list(SUPPORT_EXPORT_ALLOWLIST)!r}"
+        )
+        allowlist_set = set(SUPPORT_EXPORT_ALLOWLIST)
+    else:
+        allowlist_set = set(allowlist)
+    if allowlist_is_string_list and len(allowlist) != len(set(allowlist)):
+        validation.error(
+            f"{fixture_relative}: support_export_allowlist values must be unique"
+        )
+
+    schema = fixture.get("schema")
+    if not isinstance(schema, dict):
+        validation.error(f"{fixture_relative}: schema must be a mapping")
+        schema = {}
+    if schema.get("case_id_pattern") != r"^RDX-[0-9]{3}$":
+        validation.error(
+            f"{fixture_relative}: schema.case_id_pattern must remain '^RDX-[0-9]{{3}}$'"
+        )
+    if schema.get("contiguous_ids_required") is not True:
+        validation.error(
+            f"{fixture_relative}: schema.contiguous_ids_required must be true"
+        )
+    schema_lists = {
+        "required_case_fields": (
+            "id",
+            "title",
+            "classification",
+            "input",
+            "expected",
+            "support_export",
+            "rationale",
+        ),
+        "classification_required_fields": ("field", "context"),
+        "input_required_fields": ("field", "value", "synthetic"),
+        "expected_required_fields": ("action", "redacted_form", "persistence"),
+        "support_export_required_fields": ("outcome", "exported_form"),
+        "field_classification_values": REDACTION_CLASSIFICATIONS,
+        "context_classification_values": REDACTION_CONTEXTS,
+        "expected_action_values": REDACTION_ACTIONS,
+        "persistence_values": REDACTION_PERSISTENCE_VALUES,
+        "support_export_outcome_values": SUPPORT_EXPORT_OUTCOMES,
+    }
+    for field, expected in schema_lists.items():
+        value = schema.get(field)
+        if not isinstance(value, list) or tuple(value) != expected:
+            validation.error(
+                f"{fixture_relative}: schema.{field} must exactly equal {list(expected)!r}"
+            )
+    require_nonempty_string(
+        f"{fixture_relative}: schema",
+        schema,
+        "redacted_form_semantics",
+        validation,
+    )
+    reject_unknown_mapping_fields(
+        f"{fixture_relative}: schema",
+        schema,
+        {
+            "case_id_pattern",
+            "contiguous_ids_required",
+            *schema_lists,
+            "redacted_form_semantics",
+        },
+        validation,
+    )
+
+    review = fixture.get("review")
+    if not isinstance(review, dict):
+        validation.error(f"{fixture_relative}: review must be a mapping")
+        review = {}
+    review_fields = (
+        "privacy_owner",
+        "owner_role",
+        "status",
+        "result",
+        "approved_at_utc",
+        "approval_reference",
+        "approval_scope",
+        "required_approval_scope",
+        "note",
+    )
+    for field in review_fields:
+        if field not in review:
+            validation.error(f"{fixture_relative}: review is missing {field!r}")
+    reject_unknown_mapping_fields(
+        f"{fixture_relative}: review",
+        review,
+        set(review_fields),
+        validation,
+    )
+    required_scope = review.get("required_approval_scope")
+    if (
+        not isinstance(required_scope, list)
+        or tuple(required_scope) != REDACTION_REQUIRED_APPROVAL_SCOPE
+    ):
+        validation.error(
+            f"{fixture_relative}: review.required_approval_scope must exactly equal "
+            f"{list(REDACTION_REQUIRED_APPROVAL_SCOPE)!r}"
+        )
+    require_nonempty_string(
+        f"{fixture_relative}: review", review, "note", validation
+    )
+
+    review_status = review.get("status")
+    reviewed_commit = ""
+    if review_status == "pending":
+        pending_fields = (
+            "privacy_owner",
+            "owner_role",
+            "result",
+            "approved_at_utc",
+            "approval_reference",
+            "approval_scope",
+        )
+        if any(review.get(field) is not None for field in pending_fields):
+            validation.error(
+                f"{fixture_relative}: pending review metadata must remain null"
+            )
+        if "named privacy owner" not in str(review.get("note", "")).casefold():
+            validation.error(
+                f"{fixture_relative}: pending review must name the required human approval"
+            )
+        if (
+            model_status != PRIVACY_PENDING_STATUS
+            or logging_status != PRIVACY_PENDING_STATUS
+            or privacy_approval_state(approval_result) != "pending"
+            or privacy_approval_state(approval_fields["Current result"]) != "pending"
+        ):
+            validation.error(
+                "Pending privacy review requires Pending status in both Markdown contracts"
+            )
+        if any(
+            not value.casefold().startswith("pending")
+            for value in approval_fields.values()
+            if value
+        ):
+            validation.error(
+                f"{model_relative}: pending approval metadata must remain Pending"
+            )
+    elif review_status == "approved":
+        owner = review.get("privacy_owner")
+        role = review.get("owner_role")
+        placeholders = {"pending", "privacy owner", "tbd", "unknown", "reviewer"}
+        if (
+            not isinstance(owner, str)
+            or len(owner.strip()) < 3
+            or owner.strip().casefold() in placeholders
+        ):
+            validation.error(
+                f"{fixture_relative}: approved review needs a non-placeholder named privacy owner"
+            )
+        if not isinstance(role, str) or "privacy" not in role.casefold():
+            validation.error(
+                f"{fixture_relative}: approved review needs the privacy-owner role"
+            )
+        review_result = review.get("result")
+        if not isinstance(review_result, str) or review_result not in (
+            "approved",
+            "approved_with_conditions",
+        ):
+            validation.error(
+                f"{fixture_relative}: approved review result must be approved or approved_with_conditions"
+            )
+        if re.search(
+            r"^\s*(?:the\s+)?(?:named\s+)?privacy[- ]owner approved\b",
+            str(review.get("note", "")),
+            re.IGNORECASE,
+        ) is None:
+            validation.error(
+                f"{fixture_relative}: approved review note must record the human approval"
+            )
+        approved_at = review.get("approved_at_utc")
+        approved_date = ""
+        if isinstance(approved_at, str) and approved_at.endswith("Z"):
+            try:
+                approved_date = datetime.fromisoformat(
+                    approved_at[:-1] + "+00:00"
+                ).date().isoformat()
+            except ValueError:
+                approved_date = ""
+        if not approved_date:
+            validation.error(
+                f"{fixture_relative}: approved review needs a real UTC approval timestamp"
+            )
+        reference = review.get("approval_reference")
+        commit_match = re.fullmatch(
+            r"reviewed commit ([0-9a-f]{40})",
+            reference if isinstance(reference, str) else "",
+        )
+        if commit_match is None:
+            validation.error(
+                f"{fixture_relative}: approved review needs exact 'reviewed commit <40-lowercase-hex>' metadata"
+            )
+        else:
+            reviewed_commit = commit_match.group(1)
+        approved_scope = review.get("approval_scope")
+        if (
+            not isinstance(approved_scope, list)
+            or tuple(approved_scope) != REDACTION_REQUIRED_APPROVAL_SCOPE
+        ):
+            validation.error(
+                f"{fixture_relative}: approved review must cover every required approval scope"
+            )
+        expected_markdown_result = (
+            review_result.replace("_", " ")
+            if isinstance(review_result, str)
+            else ""
+        )
+        if (
+            model_status != PRIVACY_APPROVED_STATUS
+            or logging_status != PRIVACY_APPROVED_STATUS
+            or privacy_approval_state(approval_result) != expected_markdown_result
+            or privacy_approval_state(approval_fields["Current result"])
+            != expected_markdown_result
+        ):
+            validation.error(
+                "Approved privacy review requires Approved status in both Markdown contracts"
+            )
+        if isinstance(owner, str) and approval_fields[
+            "Current privacy-owner"
+        ].strip() != owner.strip():
+            validation.error(
+                f"{model_relative}: approved owner must match fixture review metadata"
+            )
+        if isinstance(role, str) and approval_fields[
+            "Current privacy-owner role"
+        ].strip() != role.strip():
+            validation.error(
+                f"{model_relative}: approved owner role must match fixture review metadata"
+            )
+        if approved_date and approval_fields["Current review date"].strip() != approved_date:
+            validation.error(
+                f"{model_relative}: approved date must match fixture review metadata"
+            )
+        if isinstance(reference, str) and approval_fields[
+            "Reviewed commit/reference"
+        ].strip() != reference:
+            validation.error(
+                f"{model_relative}: reviewed commit must match fixture review metadata"
+            )
+        approval_scope_text = approval_fields["Approval scope"].casefold()
+        for required_term in ("classification", "retention", "redaction", "support"):
+            if required_term not in approval_scope_text:
+                validation.error(
+                    f"{model_relative}: approval scope must include {required_term} review"
+                )
+        pending_claims = (
+            "named privacy-owner approval pending",
+            "does not satisfy the human evidence required by `TL-0005`",
+            "deliberately marked **not approved**",
+            "human privacy approval exists",
+            "it is currently pending",
+        )
+        stale_claims = [
+            claim
+            for claim in pending_claims
+            if claim.casefold() in combined_privacy_text.casefold()
+        ]
+        if stale_claims:
+            validation.error(
+                "Approved privacy documents cannot retain pending/no-approval claims"
+            )
+        if reviewed_commit:
+            validate_privacy_approval_commit(reviewed_commit, validation)
+    else:
+        validation.error(
+            f"{fixture_relative}: review.status must be 'pending' or 'approved'"
+        )
+
+    cases = fixture.get("cases")
+    if not isinstance(cases, list) or not cases:
+        validation.error(f"{fixture_relative}: cases must be a non-empty list")
+        cases = []
+    if len(cases) != len(REDACTION_CASE_IDS):
+        validation.error(
+            f"{fixture_relative}: cases must contain exactly {len(REDACTION_CASE_IDS)} entries"
+        )
+    bounded_cases = cases[: len(REDACTION_CASE_IDS)]
+
+    case_ids: list[str] = []
+    preserve_fields: list[str] = []
+    support_digest_values: dict[str, Any] = {}
+    sensitive_seeds: list[tuple[str, str]] = []
+    workshop_seed_paths: set[tuple[str | int, ...]] = set()
+    observed_actions: set[str] = set()
+    observed_contexts: set[str] = set()
+    observed_classifications: set[str] = set()
+    expected_persistence = {
+        "redact": "redacted_value_only",
+        "omit": "none_in_support_export",
+        "reject_and_do_not_persist": "none",
+        "preserve_workshop_only": "workshop_record_only",
+        "reject_raw_and_extract_allowlisted_fields": "structured_projection_only",
+        "reject_out_of_scope": "none",
+        "preserve_allowlisted": "structured_value_only",
+        "suppress_telemetry": "none_for_telemetry",
+    }
+    sentinel_prefix = {
+        "redact": "REDACTED",
+        "omit": "OMITTED",
+        "reject_and_do_not_persist": "REDACTED",
+        "reject_raw_and_extract_allowlisted_fields": "OMITTED",
+        "reject_out_of_scope": "REJECTED",
+        "suppress_telemetry": "NOT-EMITTED",
+    }
+    non_sensitive_classes = {
+        "operational_metadata",
+        "pseudonymous_operational_identifier",
+    }
+
+    for index, case in enumerate(bounded_cases):
+        owner = f"{fixture_relative}: cases[{index}]"
+        if not isinstance(case, dict):
+            validation.error(f"{owner} must be a mapping")
+            continue
+        for field in schema_lists["required_case_fields"]:
+            if field not in case:
+                validation.error(f"{owner} is missing {field!r}")
+        reject_unknown_mapping_fields(
+            owner,
+            case,
+            set(schema_lists["required_case_fields"]),
+            validation,
+        )
+        case_id = case.get("id")
+        if not isinstance(case_id, str) or REDACTION_CASE_ID_RE.fullmatch(case_id) is None:
+            validation.error(f"{owner}.id must match RDX-NNN")
+            case_id = f"cases[{index}]"
+        else:
+            case_ids.append(case_id)
+            owner = f"{fixture_relative}: {case_id}"
+        require_nonempty_string(owner, case, "title", validation)
+        require_nonempty_string(owner, case, "rationale", validation)
+
+        classification = case.get("classification")
+        if not isinstance(classification, dict):
+            validation.error(f"{owner}.classification must be a mapping")
+            classification = {}
+        reject_unknown_mapping_fields(
+            f"{owner}.classification",
+            classification,
+            set(schema_lists["classification_required_fields"]),
+            validation,
+        )
+        for field in ("field", "context"):
+            require_nonempty_string(
+                f"{owner}.classification", classification, field, validation
+            )
+        field_class = classification.get("field")
+        context = classification.get("context")
+        if field_class not in REDACTION_CLASSIFICATIONS:
+            validation.error(
+                f"{owner}.classification.field has unapproved value"
+            )
+        else:
+            observed_classifications.add(field_class)
+        if context not in REDACTION_CONTEXTS:
+            validation.error(
+                f"{owner}.classification.context has unapproved value"
+            )
+        else:
+            observed_contexts.add(context)
+
+        input_value = case.get("input")
+        if not isinstance(input_value, dict):
+            validation.error(f"{owner}.input must be a mapping")
+            input_value = {}
+        reject_unknown_mapping_fields(
+            f"{owner}.input",
+            input_value,
+            set(schema_lists["input_required_fields"]),
+            validation,
+        )
+        require_nonempty_string(f"{owner}.input", input_value, "field", validation)
+        if "value" not in input_value or isinstance(input_value.get("value"), (dict, list)):
+            validation.error(f"{owner}.input.value must be a scalar")
+        if input_value.get("synthetic") is not True:
+            validation.error(f"{owner}.input.synthetic must be true")
+        raw_value = input_value.get("value")
+        input_field = input_value.get("field")
+        if input_field == "retryable":
+            if not isinstance(raw_value, bool):
+                validation.error(f"{owner}.input.value must be a boolean")
+        elif input_field in ("duration_ms", "bounded_count"):
+            if (
+                not isinstance(raw_value, int)
+                or isinstance(raw_value, bool)
+                or raw_value < 0
+                or raw_value > 86_400_000
+            ):
+                validation.error(
+                    f"{owner}.input.value must be a bounded non-negative integer"
+                )
+        elif not isinstance(raw_value, str) or not raw_value.strip():
+            validation.error(
+                f"{owner}.input.value must be a non-empty string for this field"
+            )
+        if isinstance(raw_value, str):
+            high_risk_secret = privacy_high_risk_secret_match(raw_value)
+            if high_risk_secret is not None:
+                validation.error(
+                    f"{owner}.input.value contains prohibited {high_risk_secret}"
+                )
+        if isinstance(input_field, str) and input_field in {
+            "preview_content_digest_sha256",
+            "export_content_digest_sha256",
+        }:
+            support_digest_values[str(input_field)] = raw_value
+            if not isinstance(raw_value, str) or re.fullmatch(
+                r"[0-9a-f]{64}", raw_value
+            ) is None:
+                validation.error(
+                    f"{owner}.input.value must be a lowercase 64-hex SHA-256 digest"
+                )
+        is_non_sensitive_class = (
+            isinstance(field_class, str) and field_class in non_sensitive_classes
+        )
+        if not is_non_sensitive_class:
+            if not is_explicitly_synthetic_sensitive_value(
+                raw_value,
+                input_field,
+                field_class,
+            ):
+                validation.error(
+                    f"{owner}.input.value is not an explicitly synthetic or reserved test value"
+                )
+            if isinstance(raw_value, str):
+                sensitive_seeds.append((case_id, raw_value))
+        elif isinstance(raw_value, str):
+            canonical_input = canonical_testing_scan_text(raw_value)
+            sensitive_kind = testing_sensitive_match(canonical_input)
+            if sensitive_kind or SECURITY_MACHINE_PATH_RE.search(canonical_input) or re.search(
+                r"(?i)https?://", canonical_input
+            ):
+                validation.error(
+                    f"{owner}.input.value is sensitive but classified as operational metadata"
+                )
+
+        expected = case.get("expected")
+        if not isinstance(expected, dict):
+            validation.error(f"{owner}.expected must be a mapping")
+            expected = {}
+        reject_unknown_mapping_fields(
+            f"{owner}.expected",
+            expected,
+            set(schema_lists["expected_required_fields"]),
+            validation,
+        )
+        action = expected.get("action")
+        persistence = expected.get("persistence")
+        if action not in REDACTION_ACTIONS:
+            validation.error(f"{owner}.expected.action has unapproved value")
+        else:
+            observed_actions.add(action)
+            if persistence != expected_persistence[action]:
+                validation.error(
+                    f"{owner}.expected.persistence must equal "
+                    f"{expected_persistence[action]!r} for action {action!r}"
+                )
+        if "redacted_form" not in expected or expected.get("redacted_form") is None:
+            validation.error(f"{owner}.expected.redacted_form must be present")
+        redacted_form = expected.get("redacted_form")
+        if isinstance(action, str) and action in sentinel_prefix:
+            marker = sentinel_prefix[action]
+            if not isinstance(redacted_form, str) or re.fullmatch(
+                rf"\[{marker}:[a-z0-9-]+\]", redacted_form
+            ) is None:
+                validation.error(
+                    f"{owner}.expected.redacted_form must be an exact {marker} sentinel"
+                )
+        elif action in ("preserve_allowlisted", "preserve_workshop_only"):
+            if redacted_form != raw_value:
+                validation.error(
+                    f"{owner}.expected.redacted_form must equal the permitted input value"
+                )
+
+        support = case.get("support_export")
+        if not isinstance(support, dict):
+            validation.error(f"{owner}.support_export must be a mapping")
+            support = {}
+        reject_unknown_mapping_fields(
+            f"{owner}.support_export",
+            support,
+            set(schema_lists["support_export_required_fields"]),
+            validation,
+        )
+        outcome = support.get("outcome")
+        if outcome not in SUPPORT_EXPORT_OUTCOMES:
+            validation.error(
+                f"{owner}.support_export.outcome has unapproved value"
+            )
+        if "exported_form" not in support:
+            validation.error(f"{owner}.support_export.exported_form must be present")
+        exported_form = support.get("exported_form")
+        if outcome == "include_unchanged_if_allowlisted_and_previewed":
+            if not isinstance(input_field, str) or input_field not in allowlist_set:
+                validation.error(
+                    f"{owner}: included support field is not allowlisted"
+                )
+            if exported_form != raw_value:
+                validation.error(
+                    f"{owner}.support_export.exported_form must equal the allowlisted input value"
+                )
+        elif exported_form is not None:
+            validation.error(
+                f"{owner}.support_export.exported_form must be null when the field is omitted"
+            )
+
+        if action == "preserve_allowlisted":
+            preserve_fields.append(str(input_field))
+            if not is_non_sensitive_class or context != "support_export":
+                validation.error(
+                    f"{owner}: preserve_allowlisted requires safe support-export metadata"
+                )
+            if outcome != "include_unchanged_if_allowlisted_and_previewed":
+                validation.error(
+                    f"{owner}: preserve_allowlisted requires the reviewed include outcome"
+                )
+        if action == "preserve_workshop_only":
+            if (
+                field_class != "device_identifier"
+                or context != "workshop_record"
+                or input_field != "full_serial_number"
+                or exported_form is not None
+            ):
+                validation.error(
+                    f"{owner}: preserve_workshop_only is restricted to the non-exported full serial"
+                )
+            workshop_seed_paths.add(("cases", index, "expected", "redacted_form"))
+        if field_class == "raw_untrusted_output" and action != "reject_raw_and_extract_allowlisted_fields":
+            validation.error(f"{owner}: raw untrusted output must use the typed-projection action")
+        if field_class == "sibling_private_data" and action != "reject_out_of_scope":
+            validation.error(f"{owner}: sibling-private data must be rejected as out of scope")
+        if field_class == "unknown_field" and action != "omit":
+            validation.error(f"{owner}: unknown fields must be omitted")
+        if context == "telemetry" and action != "suppress_telemetry":
+            validation.error(f"{owner}: telemetry input must be suppressed")
+        if action == "suppress_telemetry" and context != "telemetry":
+            validation.error(f"{owner}: suppress_telemetry requires telemetry context")
+        if action == "suppress_telemetry" and (
+            outcome != "omit" or exported_form is not None
+        ):
+            validation.error(
+                f"{owner}: suppressed telemetry must have no support-export output surface"
+            )
+        if input_field == "full_serial_number" and exported_form is not None:
+            validation.error(f"{owner}: full serial must never have a support exported_form")
+        if not is_non_sensitive_class and action != "preserve_workshop_only":
+            if exported_form is not None:
+                validation.error(f"{owner}: sensitive values must be absent from support export")
+            if redacted_form == raw_value:
+                validation.error(f"{owner}: sensitive expected output echoes its input")
+
+    if tuple(case_ids) != REDACTION_CASE_IDS:
+        validation.error(
+            f"{fixture_relative}: case IDs must exactly equal {list(REDACTION_CASE_IDS)!r}"
+        )
+    if len(case_ids) != len(set(case_ids)):
+        validation.error(f"{fixture_relative}: case IDs must be unique")
+    if (
+        set(preserve_fields) != set(SUPPORT_EXPORT_ALLOWLIST)
+        or len(preserve_fields) != len(SUPPORT_EXPORT_ALLOWLIST)
+    ):
+        validation.error(
+            f"{fixture_relative}: preserve_allowlisted cases must cover each support field exactly once"
+        )
+    preview_digest = support_digest_values.get("preview_content_digest_sha256")
+    export_digest = support_digest_values.get("export_content_digest_sha256")
+    if preview_digest != export_digest:
+        validation.error(
+            f"{fixture_relative}: preview and export content digests must be equal"
+        )
+    if (
+        preview_digest != SYNTHETIC_SUPPORT_CONTENT_SHA256
+        or export_digest != SYNTHETIC_SUPPORT_CONTENT_SHA256
+    ):
+        validation.error(
+            f"{fixture_relative}: content digests must hash the declared synthetic preview/export bytes"
+        )
+    if observed_actions != set(REDACTION_ACTIONS):
+        validation.error(f"{fixture_relative}: cases must cover every allowed action")
+    if observed_contexts != set(REDACTION_CONTEXTS):
+        validation.error(f"{fixture_relative}: cases must cover every allowed context")
+    if observed_classifications != set(REDACTION_CLASSIFICATIONS):
+        validation.error(f"{fixture_relative}: cases must cover every field classification")
+
+    try:
+        scalar_paths = privacy_yaml_scalar_paths(fixture)
+    except ValueError as exc:
+        validation.error(f"{fixture_relative}: unsafe fixture graph: {exc}")
+        scalar_paths = []
+    input_paths = {
+        path
+        for path, _ in scalar_paths
+        if len(path) >= 2 and path[-2:] == ("input", "value")
+    }
+    folded_seed_ids: dict[str, str] = {}
+    for seed_id, seed in sensitive_seeds:
+        folded_seed = canonical_testing_scan_text(seed).casefold()
+        if folded_seed:
+            folded_seed_ids.setdefault(folded_seed, seed_id)
+    seed_pattern = (
+        re.compile(
+            "|".join(
+                re.escape(seed)
+                for seed in sorted(folded_seed_ids, key=len, reverse=True)
+            )
+        )
+        if folded_seed_ids
+        else None
+    )
+    for path, value in scalar_paths:
+        if path in input_paths or not isinstance(value, str):
+            continue
+        if path not in workshop_seed_paths:
+            canonical_value = canonical_testing_scan_text(value)
+            sensitive_kind = testing_sensitive_match(canonical_value)
+            if sensitive_kind is not None:
+                validation.error(
+                    f"{fixture_relative}: prohibited {sensitive_kind} appears outside synthetic input at {privacy_path_text(path)}"
+                )
+            if SECURITY_MACHINE_PATH_RE.search(canonical_value):
+                validation.error(
+                    f"{fixture_relative}: prohibited machine path appears outside synthetic input at {privacy_path_text(path)}"
+                )
+            if re.search(r"(?i)https?://", canonical_value):
+                validation.error(
+                    f"{fixture_relative}: prohibited URL appears outside synthetic input at {privacy_path_text(path)}"
+                )
+        if path in workshop_seed_paths or seed_pattern is None:
+            continue
+        folded_value = canonical_testing_scan_text(value).casefold()
+        seed_match = seed_pattern.search(folded_value)
+        if seed_match is not None:
+            seed_id = folded_seed_ids[seed_match.group(0)]
+            validation.error(
+                f"{fixture_relative}: sensitive seed from {seed_id} leaks outside synthetic input at {privacy_path_text(path)}"
+            )
+
+    privacy_task = task_by_id.get("TL-0005", {})
+    evidence = privacy_task.get("evidence", [])
+    evidence_claims_approval = isinstance(evidence, list) and any(
+        isinstance(entry, dict)
+        and re.search(
+            r"^\s*(?:named\s+)?privacy[- ]owner approved\b",
+            str(entry.get("summary", "")),
+            re.IGNORECASE,
+        )
+        is not None
+        and str(entry.get("result", "")).casefold() == "passed"
+        for entry in evidence
+    )
+    if review_status != "approved" and evidence_claims_approval:
+        validation.error(
+            "TL-0005 evidence cannot claim privacy-owner approval while the review is Pending"
+        )
+    if privacy_task.get("status") == "done":
+        if review_status != "approved":
+            validation.error(
+                "TL-0005 cannot be done while privacy-owner approval is Pending"
+            )
+        approval_evidence = (
+            bool(reviewed_commit)
+            and isinstance(evidence, list)
+            and any(
+                isinstance(entry, dict)
+                and re.search(
+                    r"^\s*(?:named\s+)?privacy[- ]owner approved\b",
+                    str(entry.get("summary", "")),
+                    re.IGNORECASE,
+                )
+                is not None
+                and str(entry.get("result", "")).casefold() == "passed"
+                and reviewed_commit in str(entry.get("reference", "")).casefold()
+                for entry in evidence
+            )
+        )
+        if not approval_evidence:
+            validation.error(
+                "TL-0005 done evidence must record named privacy-owner approval for the reviewed commit"
+            )
+
+
 def testing_document_ids(text: str, prefix: str) -> tuple[str, ...]:
     """Return first-column testing IDs, accepting harmless Markdown styling."""
 
@@ -2158,6 +3854,7 @@ def validate() -> int:
 
     validate_governance_documents(validation)
     validate_security_documents(validation, task_by_id, decision_set)
+    validate_privacy_documents(validation, task_by_id, decision_set)
     validate_testing_documents(validation, task_by_id, decision_set)
     validate_v030_document_markers(validation)
 

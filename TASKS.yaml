@@ -519,7 +519,7 @@ tasks:
   workstream: privacy
   kind: security
   priority: P0
-  status: backlog
+  status: review
   size: M
   executor: hybrid
   environment: any
@@ -554,7 +554,56 @@ tasks:
   verification:
   - Review synthetic sensitive-data examples.
   - Confirm each example has an expected redacted form.
-  evidence: []
+  evidence:
+  - summary: Privacy classifications, logical data map, audience separation, concrete proposed retention defaults, prohibited
+      diagnostics, exact support allowlist, and 56 wholly synthetic redaction/omission cases were reviewed against every
+      TL-0005 acceptance criterion.
+    task: TL-0005
+    command_or_review: Structured semantic review of the three governed privacy artifacts against the task contract
+    tier: targeted
+    result: passed; technical contract complete and named privacy-owner approval pending
+    environment: Repository semantic review on Windows 11 x64
+    date: '2026-08-21'
+    duration: Not separately timed; completed during the bounded implementation review
+    reference: docs/privacy/privacy-model.md sha256:a10e3248703ceb359a005173dccde9941de4595cf10b382ecb3d9acbb819f5ee;
+      docs/privacy/logging-standard.md sha256:5f0d27cd93ba921b768f621401b91710d3f04263fe47152cb1baf8ffec6eb880;
+      docs/privacy/redaction-test-cases.yaml sha256:6f43b2f31565f614218b7a58cbf8b43b157efeb03767ec51d60ddc5a3f0e354a
+    limitation: Design artifacts only; named privacy-owner approval and runtime implementation remain pending
+  - summary: Targeted privacy-contract regressions passed strict schema, bounded hostile-YAML, secret-first, full-serial,
+      raw-output, sibling-data, telemetry, digest, Markdown-table, support-allowlist, Git-bound approval, and truthful-state
+      cases.
+    task: TL-0005
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_validate_bundle.PrivacyDocumentContractTests
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; PyYAML 6.0.3
+    date: '2026-08-21'
+    duration: 29.177 s test; 29.945 s wall
+    reference: 25/25 passed; fixture sha256:6f43b2f31565f614218b7a58cbf8b43b157efeb03767ec51d60ddc5a3f0e354a
+    limitation: Validates design contracts and synthetic fixtures only; no production redactor or human approval is claimed
+  - summary: The complete validator regression suite and live governed bundle validation passed after the privacy validators
+      were added.
+    task: TL-0005
+    command_or_review: .venv\Scripts\python.exe tools\tests\test_validate_bundle.py; .venv\Scripts\python.exe tools\validate_bundle.py
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; PyYAML 6.0.3; optional jsonschema unavailable so custom structural checks
+      ran
+    date: '2026-08-21'
+    duration: 42.366 s test; 43.207 s wall for regression suite; live validator 1.328 s before final metadata
+    reference: 79/79 passed; live validator passed 91 tasks, 8 milestones, 66 decisions, and valid DAG
+    limitation: Repository contract validation only; optional jsonschema was unavailable and no runtime or human privacy check ran
+  - summary: The governed Quick documentation, schema, static, manifest, repository-boundary, and locked-package checks passed
+      against the completed privacy deliverables before the final handoff metadata update.
+    task: TL-0005
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick
+    tier: quick
+    result: passed
+    environment: Active Codex machine; Windows 11 x64; same-machine repository verification
+    date: '2026-08-21'
+    duration: 25.536 s wall
+    reference: Governed Quick checks passed against the completed privacy deliverables before final handoff metadata
+    limitation: Same-machine design/repository evidence only; full and extended tiers were not triggered and human approval remains pending
   human_evidence_required:
   - A named privacy owner approves classifications and default retention guidance.
   expected_test_tier: targeted

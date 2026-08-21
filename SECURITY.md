@@ -111,6 +111,8 @@ Never place the following in command arguments, ordinary logs, crash reports, su
 
 Use structured allowlisted fields and stable result codes. Redact before persistence, not only at export. Support bundles are previewable and use an allowlist.
 
+The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md), [`docs/privacy/logging-standard.md`](docs/privacy/logging-standard.md), and synthetic [`docs/privacy/redaction-test-cases.yaml`](docs/privacy/redaction-test-cases.yaml) define the current `TL-0005` classification, proposed retention, diagnostic-field, and expected-redaction contracts. Their named privacy-owner approval and later runtime implementation remain pending.
+
 ## 10. Filesystem and persistence
 
 - SQLite migrations are explicit and tested.

@@ -53,6 +53,7 @@ Core 1.0 includes recipient-controlled accessibility setup and basic operating-s
 ## Specialized quality baselines
 
 - `SECURITY.md` defines the security objective, trust boundaries, privileged-broker invariants, supply-chain controls, and release evidence.
+- `docs/privacy/privacy-model.md` and `docs/privacy/logging-standard.md` define the three audience classes, excluded data, proposed retention defaults, prohibited diagnostics, and support allowlist; their named privacy-owner approval remains pending until evidenced in `TL-0005`.
 - `ACCESSIBILITY.md` defines the operator and recipient accessibility baseline and the required human evidence.
 - `LOW_SPEC.md` defines bounded-resource and graceful-degradation rules; numerical support claims require measurements.
 - `RELEASE_INTERFACE.md` is populated only from verified preview or frozen release behavior. It is not a shared API or an early adapter contract.

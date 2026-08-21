@@ -5,6 +5,8 @@
 **Draft date:** 2026-08-14  
 **Authority:** Supporting analysis for [`threat-model.md`](threat-model.md); binding boundaries remain in the root authority files
 
+**Post-approval maintenance:** 2026-08-21 — `TL-0005` traceability/status annotation only. The approved base remains commit `917b5ebd5f5e4cf273a087a05dd381da54324235`; threats, residual decisions, and security approval were not changed or re-approved.
+
 This document decomposes the planned v0.1 system into external entities, processes, stores, trust boundaries, and numbered flows. It describes intended security properties, not implemented or verified behavior. The tables are the accessible textual equivalent of the diagram.
 
 ## Context and non-flows
@@ -142,7 +144,7 @@ There is deliberately no direct `P-01` → arbitrary command/backend flow and no
 
 ## Data classes and minimization handoff
 
-This task does not define the final privacy/retention schema owned by `TL-0005`. It establishes the security separation that model must preserve:
+This approved security model established the separation that the draft [`privacy-model.md`](../privacy/privacy-model.md), [`logging-standard.md`](../privacy/logging-standard.md), and synthetic [`redaction-test-cases.yaml`](../privacy/redaction-test-cases.yaml) now specify for `TL-0005`:
 
 - workshop-confidential job evidence and full internal device identity;
 - recipient-facing guidance with no workshop secrets;
@@ -151,7 +153,7 @@ This task does not define the final privacy/retention schema owned by `TL-0005`.
 - transient untrusted raw provider/backend content that is bounded, sanitized, and not copied wholesale; and
 - public frozen release documentation/samples with no job or sibling-private content.
 
-Retention, deletion periods, and exact redacted forms remain pending `TL-0005`; this DFD does not pre-approve them.
+Those files contain proposed retention defaults and exact synthetic redacted forms. `TL-0005` remains incomplete while named privacy-owner approval is pending, and later runtime tasks must implement and verify the controls. This DFD does not itself approve the pending privacy guidance or claim a redactor exists.
 
 ## Interruption and split-state rules
 

@@ -30,6 +30,11 @@ SECURITY_DOCUMENTS = (
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
 )
+PRIVACY_DOCUMENTS = (
+    "docs/privacy/privacy-model.md",
+    "docs/privacy/logging-standard.md",
+    "docs/privacy/redaction-test-cases.yaml",
+)
 TESTING_DOCUMENTS = (
     "TESTING.md",
     "DEVELOPMENT_WORKFLOW.md",
@@ -272,6 +277,996 @@ class TrackedTextDiscoveryTests(unittest.TestCase):
             self.assertTrue(
                 all("tracked text is not UTF-8" in error for error in validation.errors)
             )
+
+
+class PrivacyDocumentContractTests(unittest.TestCase):
+    def copy_privacy_documents(self, root: Path) -> None:
+        for relative in PRIVACY_DOCUMENTS:
+            destination = root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                (REPOSITORY_ROOT / relative).read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+    def validate_documents(
+        self,
+        root: Path,
+        task_by_id: dict[str, dict[str, object]] | None = None,
+    ) -> validate_bundle.Validation:
+        validation = validate_bundle.Validation()
+        with patch.object(validate_bundle, "ROOT", root):
+            validate_bundle.validate_privacy_documents(
+                validation,
+                TASK_BY_ID if task_by_id is None else task_by_id,
+                DECISION_IDS,
+            )
+        return validation
+
+    def fixture_path(self, root: Path) -> Path:
+        return root / "docs/privacy/redaction-test-cases.yaml"
+
+    def read_fixture(self, root: Path) -> dict[str, object]:
+        return validate_bundle.yaml.safe_load(
+            self.fixture_path(root).read_text(encoding="utf-8")
+        )
+
+    def write_fixture(self, root: Path, fixture: dict[str, object]) -> None:
+        self.fixture_path(root).write_text(
+            validate_bundle.yaml.safe_dump(
+                fixture,
+                sort_keys=False,
+                allow_unicode=True,
+            ),
+            encoding="utf-8",
+        )
+
+    def replace_once(self, path: Path, old: str, new: str) -> None:
+        text = path.read_text(encoding="utf-8")
+        self.assertIn(old, text)
+        path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+    def make_approved_privacy_review(self, root: Path) -> str:
+        fixture = self.read_fixture(root)
+        review = fixture["review"]
+        self.assertIsInstance(review, dict)
+        review.update(
+            {
+                "privacy_owner": "Contract Test Reviewer",
+                "owner_role": "Privacy owner",
+                "status": "approved",
+                "result": "approved",
+                "approved_at_utc": "2026-08-21T12:00:00Z",
+                "approval_reference": None,
+                "approval_scope": list(
+                    validate_bundle.REDACTION_REQUIRED_APPROVAL_SCOPE
+                ),
+                "note": "Named privacy owner approved the exact fixture contract.",
+            }
+        )
+        self.write_fixture(root, fixture)
+
+        model_path = root / "docs/privacy/privacy-model.md"
+        model_replacements = (
+            (
+                "**Status:** Draft contract complete; named privacy-owner approval pending",
+                "**Status:** Approved initial privacy contract",
+            ),
+            (
+                "**Model revision:** TL-0005 review 1",
+                "**Model revision:** TL-0005 approved 1",
+            ),
+            (
+                "**Approval result:** Pending — this document does not satisfy the human evidence required by `TL-0005`",
+                "**Approval result:** Approved — named privacy-owner review recorded for the exact commit",
+            ),
+            (
+                "deliberately marked **not approved** until a named privacy owner reviews",
+                "approved by the named privacy owner for the exact reviewed commit; changes require review of",
+            ),
+            (
+                "**Current privacy-owner:** Pending",
+                "**Current privacy-owner:** Contract Test Reviewer",
+            ),
+            (
+                "**Current privacy-owner role:** Pending",
+                "**Current privacy-owner role:** Privacy owner",
+            ),
+            (
+                "**Current review date:** Pending",
+                "**Current review date:** 2026-08-21",
+            ),
+            (
+                "**Reviewed commit/reference:** Pending",
+                "**Reviewed commit/reference:** Binding added after reviewed commit",
+            ),
+            (
+                "**Approval scope:** Pending — field/context classifications, default retention guidance, redaction/omission, and support-export allowlist",
+                "**Approval scope:** Approved — classifications, retention, redaction, and support-export allowlist",
+            ),
+            (
+                "**Conditions/residual risks:** Pending",
+                "**Conditions/residual risks:** None recorded",
+            ),
+            (
+                "**Current result:** Pending — automated checks cannot supply this human evidence.",
+                "**Current result:** Approved — exact-commit contract review recorded.",
+            ),
+        )
+        for old, new in model_replacements:
+            self.replace_once(model_path, old, new)
+
+        logging_path = root / "docs/privacy/logging-standard.md"
+        logging_replacements = (
+            (
+                "**Status:** Draft contract complete; named privacy-owner approval pending",
+                "**Status:** Approved initial privacy contract",
+            ),
+            (
+                "**Standard revision:** TL-0005 review 1",
+                "**Standard revision:** TL-0005 approved 1",
+            ),
+            (
+                "They do not claim a production redactor, logger, retention job, support exporter, or human privacy approval exists.",
+                "They do not claim a production redactor, logger, retention job, or support exporter exists; the separate approval record covers only human contract review.",
+            ),
+            (
+                "it is currently pending.",
+                "it is approved for the exact reviewed commit.",
+            ),
+        )
+        for old, new in logging_replacements:
+            self.replace_once(logging_path, old, new)
+
+        git_commands = (
+            ("init", "--quiet"),
+            ("config", "user.name", "Contract Test Reviewer"),
+            ("config", "user.email", "reviewer@example.test"),
+            ("add", "docs/privacy"),
+            ("commit", "--quiet", "-m", "Approved privacy contract fixture"),
+        )
+        for arguments in git_commands:
+            result = subprocess.run(
+                ["git", "-C", str(root), *arguments],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+        reviewed_commit_result = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self.assertEqual(reviewed_commit_result.returncode, 0)
+        reviewed_commit = reviewed_commit_result.stdout.strip()
+        self.assertRegex(reviewed_commit, r"^[0-9a-f]{40}$")
+
+        fixture = self.read_fixture(root)
+        fixture["review"]["approval_reference"] = (
+            f"reviewed commit {reviewed_commit}"
+        )
+        self.write_fixture(root, fixture)
+        self.replace_once(
+            model_path,
+            "**Reviewed commit/reference:** Binding added after reviewed commit",
+            f"**Reviewed commit/reference:** reviewed commit {reviewed_commit}",
+        )
+        return reviewed_commit
+
+    def set_privacy_approval_commit(self, root: Path, reviewed_commit: str) -> None:
+        fixture = self.read_fixture(root)
+        fixture["review"]["approval_reference"] = (
+            f"reviewed commit {reviewed_commit}"
+        )
+        self.write_fixture(root, fixture)
+        model_path = root / "docs/privacy/privacy-model.md"
+        model_text = model_path.read_text(encoding="utf-8")
+        model_text, count = re.subn(
+            r"^\*\*Reviewed commit/reference:\*\*.*$",
+            f"**Reviewed commit/reference:** reviewed commit {reviewed_commit}",
+            model_text,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        self.assertEqual(count, 1)
+        model_path.write_text(model_text, encoding="utf-8")
+
+    def test_current_privacy_documents_satisfy_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            validation = self.validate_documents(root)
+            self.assertEqual(validation.errors, [])
+
+    def test_required_runtime_and_human_claim_limitations_cannot_be_removed(self) -> None:
+        mutations = (
+            (
+                "docs/privacy/privacy-model.md",
+                "It does not claim that those controls are implemented",
+                "Those controls are implemented",
+            ),
+            (
+                "docs/privacy/logging-standard.md",
+                "It is a design contract, not a claim that a logger or redactor exists",
+                "A production logger and redactor exist",
+            ),
+            (
+                "docs/privacy/logging-standard.md",
+                "Automated fixture/schema checks in `TL-0005` validate the design artifacts only",
+                "Automated checks validate production controls",
+            ),
+        )
+        for relative, old, new in mutations:
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                self.replace_once(root / relative, old, new)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any("missing required contract phrase" in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_normative_support_and_retention_tables_cannot_drift(self) -> None:
+        support_row = (
+            "| `schema_version` | Exact reviewed support schema version. |"
+        )
+        support_mutations = (
+            (support_row, "", "support table fields must exactly equal"),
+            (
+                support_row,
+                support_row
+                + "\n| `raw_message` | Arbitrary troubleshooting text. |",
+                "support table fields must exactly equal",
+            ),
+            (
+                support_row,
+                "| `raw_message` | Arbitrary troubleshooting text. |",
+                "support table fields must exactly equal",
+            ),
+            (
+                support_row,
+                "| `schema_version` | Arbitrary unreviewed troubleshooting payload permitted. |",
+                "support table rows and constraints must exactly match",
+            ),
+        )
+        for old, new, expected in support_mutations:
+            with self.subTest(new=new), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                self.replace_once(
+                    root / "docs/privacy/logging-standard.md",
+                    old,
+                    new,
+                )
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            self.replace_once(
+                root / "docs/privacy/privacy-model.md",
+                "| Sanitized operational logs | 14 days |",
+                "| Sanitized operational logs | Indefinitely |",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("retention rows and values must exactly match" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_unknown_schema_version_and_fields_are_rejected(self) -> None:
+        mutations = (
+            (
+                lambda fixture: fixture.__setitem__("schema_version", "unknown.v9"),
+                "schema_version must equal",
+            ),
+            (
+                lambda fixture: fixture.__setitem__("undeclared_top_level", True),
+                "contains unknown fields",
+            ),
+            (
+                lambda fixture: fixture["cases"][0].__setitem__("debug_value", "unsafe"),
+                "contains unknown fields",
+            ),
+            (
+                lambda fixture: fixture["cases"][0]["expected"].__setitem__(
+                    "fallback", "raw"
+                ),
+                "contains unknown fields",
+            ),
+        )
+        for mutate, expected in mutations:
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                mutate(fixture)
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_duplicate_yaml_mapping_key_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            fixture_path = self.fixture_path(root)
+            self.replace_once(
+                fixture_path,
+                'schema_version: "thirdlife.redaction-fixtures.v1"',
+                (
+                    'schema_version: "thirdlife.redaction-fixtures.v1"\n'
+                    'schema_version: "thirdlife.redaction-fixtures.v1"'
+                ),
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("duplicate mapping key" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_yaml_anchors_aliases_merge_and_non_string_keys_are_rejected(self) -> None:
+        mutations = (
+            (
+                lambda text: text.replace(
+                    "description: >-",
+                    "description: &fixture_description >-",
+                    1,
+                ),
+                "anchors and aliases are prohibited",
+            ),
+            (
+                lambda text: text
+                + "\nhostile_cycle: &hostile_cycle\n  self: *hostile_cycle\n",
+                "anchors and aliases are prohibited",
+            ),
+            (
+                lambda text: text.replace(
+                    "policy:\n",
+                    "policy:\n  <<: {hostile: value}\n",
+                    1,
+                ),
+                "YAML merge keys are prohibited",
+            ),
+            (
+                lambda text: text + "\n1: hostile-non-string-key\n",
+                "mapping keys must be strings",
+            ),
+        )
+        for mutate, expected in mutations:
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture_path = self.fixture_path(root)
+                fixture_path.write_text(
+                    mutate(fixture_path.read_text(encoding="utf-8")),
+                    encoding="utf-8",
+                )
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_yaml_resource_bounds_fail_closed(self) -> None:
+        def deep_nesting(text: str) -> str:
+            lines = ["\nhostile_depth:"]
+            for depth in range(validate_bundle.PRIVACY_FIXTURE_MAX_DEPTH + 2):
+                lines.append("  " * (depth + 1) + f"level_{depth}:")
+            lines.append(
+                "  " * (validate_bundle.PRIVACY_FIXTURE_MAX_DEPTH + 3)
+                + "value: end"
+            )
+            return text + "\n".join(lines) + "\n"
+
+        def node_flood(text: str) -> str:
+            count = validate_bundle.PRIVACY_FIXTURE_MAX_NODES + 10
+            return text + "\nhostile_nodes:\n" + "  - x\n" * count
+
+        def aggregate_scalars(text: str) -> str:
+            scalar = "x" * 15_000
+            return text + "\nhostile_aggregate:\n" + "".join(
+                f'  - "{scalar}"\n' for _ in range(9)
+            )
+
+        text_mutations = (
+            (deep_nesting, "YAML nesting exceeds"),
+            (node_flood, "YAML exceeds 8192 node limit"),
+            (aggregate_scalars, "YAML aggregate scalar content exceeds"),
+            (
+                lambda text: text
+                + "\n#"
+                + "x" * validate_bundle.PRIVACY_FIXTURE_MAX_BYTES,
+                "YAML exceeds 262144 byte limit",
+            ),
+        )
+        for mutate, expected in text_mutations:
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture_path = self.fixture_path(root)
+                fixture_path.write_text(
+                    mutate(fixture_path.read_text(encoding="utf-8")),
+                    encoding="utf-8",
+                )
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            fixture = self.read_fixture(root)
+            fixture["cases"][0]["input"]["value"] = "x" * (
+                validate_bundle.PRIVACY_FIXTURE_MAX_SCALAR_CHARS + 1
+            )
+            self.write_fixture(root, fixture)
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("YAML scalar exceeds" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_malformed_nested_types_report_errors_without_crashing(self) -> None:
+        mutations = (
+            (
+                lambda fixture: fixture["cases"][0]["classification"].__setitem__(
+                    "field", []
+                ),
+                "classification.field has unapproved value",
+            ),
+            (
+                lambda fixture: fixture["cases"][0]["input"].__setitem__(
+                    "field", {}
+                ),
+                "input: field must be a non-empty string",
+            ),
+            (
+                lambda fixture: fixture["cases"][0]["expected"].__setitem__(
+                    "action", []
+                ),
+                "expected.action has unapproved value",
+            ),
+            (
+                lambda fixture: fixture["cases"][0]["support_export"].__setitem__(
+                    "outcome", {}
+                ),
+                "support_export.outcome has unapproved value",
+            ),
+            (
+                lambda fixture: fixture["cases"][0]["input"].__setitem__(
+                    "value", b"synthetic-binary"
+                ),
+                "input.value must be a non-empty string",
+            ),
+            (
+                lambda fixture: fixture["cases"][0]["input"].__setitem__(
+                    "value", validate_bundle.date(2026, 8, 21)
+                ),
+                "input.value must be a non-empty string",
+            ),
+            (
+                lambda fixture: fixture["cases"][0]["input"].__setitem__(
+                    "value", 1.25
+                ),
+                "input.value must be a non-empty string",
+            ),
+        )
+        for mutate, expected in mutations:
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                mutate(fixture)
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_extra_cases_are_rejected_before_unbounded_case_processing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            fixture = self.read_fixture(root)
+            fixture["cases"].append({"hostile": ["x"] * 100})
+            self.write_fixture(root, fixture)
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("cases must contain exactly 56 entries" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_case_ids_must_be_unique_contiguous_and_ordered(self) -> None:
+        def duplicate(fixture: dict[str, object]) -> None:
+            fixture["cases"][1]["id"] = fixture["cases"][0]["id"]
+
+        def reorder(fixture: dict[str, object]) -> None:
+            fixture["cases"][0], fixture["cases"][1] = (
+                fixture["cases"][1],
+                fixture["cases"][0],
+            )
+
+        def remove(fixture: dict[str, object]) -> None:
+            fixture["cases"].pop()
+
+        for mutate in (duplicate, reorder, remove):
+            with self.subTest(mutate=mutate.__name__), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                mutate(fixture)
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any("case IDs must exactly equal" in error for error in validation.errors),
+                    validation.errors,
+                )
+                if mutate is duplicate:
+                    self.assertTrue(
+                        any("case IDs must be unique" in error for error in validation.errors)
+                    )
+
+    def test_every_input_must_be_wholly_and_explicitly_synthetic(self) -> None:
+        def top_level_false(fixture: dict[str, object]) -> None:
+            fixture["synthetic_data"] = False
+
+        def case_false(fixture: dict[str, object]) -> None:
+            fixture["cases"][0]["input"]["synthetic"] = False
+
+        def live_looking_name(fixture: dict[str, object]) -> None:
+            fixture["cases"][0]["input"]["value"] = "Actual Person"
+
+        def misclassified_email(fixture: dict[str, object]) -> None:
+            case = fixture["cases"][28]
+            case["input"]["value"] = "person@real.example.com"
+            case["expected"]["redacted_form"] = "person@real.example.com"
+            case["support_export"]["exported_form"] = "person@real.example.com"
+
+        mutations = (
+            (top_level_false, "synthetic_data must be true"),
+            (case_false, "input.synthetic must be true"),
+            (live_looking_name, "not an explicitly synthetic"),
+            (misclassified_email, "classified as operational metadata"),
+        )
+        for mutate, expected in mutations:
+            with self.subTest(mutate=mutate.__name__), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                mutate(fixture)
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_synthetic_marker_never_exempts_high_risk_secret_shapes(self) -> None:
+        secret_values = (
+            (
+                "SYNTHETIC ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+                "GitHub token",
+            ),
+            (
+                "SYNTHETIC -----BEGIN PRIVATE KEY-----",
+                "private-key material",
+            ),
+            (
+                "SYNTHETIC 123456-123456-123456-123456-123456-123456-123456-123456",
+                "recovery-key shaped value",
+            ),
+            (
+                "SYNTHETIC Bearer ABCDEFGHIJKLMNOPQRSTUV",
+                "bearer token",
+            ),
+            (
+                "SYNTHETIC AKIAABCDEFGHIJKLMNOP",
+                "cloud access key",
+            ),
+        )
+        for value, label in secret_values:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                fixture["cases"][12]["input"]["value"] = value
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(f"contains prohibited {label}" in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_synthetic_marker_never_exempts_live_identifiers_in_raw_output(self) -> None:
+        live_values = (
+            "SYNTHETIC person@gmail.com",
+            "SYNTHETIC 8.8.8.8",
+            "SYNTHETIC hostname=REAL-LAPTOP",
+        )
+        for value in live_values:
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                fixture["cases"][19]["input"]["value"] = value
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(
+                        "not an explicitly synthetic or reserved test value" in error
+                        for error in validation.errors
+                    ),
+                    validation.errors,
+                )
+
+    def test_cases_require_action_redacted_form_and_exported_form(self) -> None:
+        mutations = (
+            ("expected", "action", "expected.action has unapproved value"),
+            ("expected", "redacted_form", "expected.redacted_form must be present"),
+            (
+                "support_export",
+                "exported_form",
+                "support_export.exported_form must be present",
+            ),
+        )
+        for section, field, expected in mutations:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                del fixture["cases"][0][section][field]
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_fixture_cannot_self_authorize_unknown_enums(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            fixture = self.read_fixture(root)
+            fixture["schema"]["expected_action_values"].append("upload_raw")
+            fixture["cases"][0]["expected"]["action"] = "upload_raw"
+            fixture["cases"][0]["classification"]["context"] = "remote_service"
+            fixture["cases"][0]["support_export"]["outcome"] = "automatic_upload"
+            self.write_fixture(root, fixture)
+            validation = self.validate_documents(root)
+            for expected in (
+                "schema.expected_action_values must exactly equal",
+                "expected.action has unapproved value",
+                "classification.context has unapproved value",
+                "support_export.outcome has unapproved value",
+            ):
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_allowlist_is_exact_and_every_field_has_one_preserve_case(self) -> None:
+        def broaden(fixture: dict[str, object]) -> None:
+            fixture["support_export_allowlist"].append("raw_message")
+
+        def duplicate_coverage(fixture: dict[str, object]) -> None:
+            fixture["cases"][25]["input"]["field"] = "manifest_version"
+
+        def non_string_field(fixture: dict[str, object]) -> None:
+            fixture["support_export_allowlist"][0] = {"raw": "field"}
+
+        mutations = (
+            (broaden, "support_export_allowlist must exactly equal"),
+            (duplicate_coverage, "cover each support field exactly once"),
+            (non_string_field, "must contain only non-empty strings"),
+        )
+        for mutate, expected in mutations:
+            with self.subTest(mutate=mutate.__name__), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                mutate(fixture)
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_preview_and_export_digests_are_valid_equal_synthetic_hashes(self) -> None:
+        def invalid_shape(fixture: dict[str, object]) -> None:
+            case = fixture["cases"][47]
+            case["input"]["value"] = "SYNTHETIC-SHA256-NOT-HEX"
+            case["expected"]["redacted_form"] = "SYNTHETIC-SHA256-NOT-HEX"
+            case["support_export"]["exported_form"] = "SYNTHETIC-SHA256-NOT-HEX"
+
+        def mismatched_digest(fixture: dict[str, object]) -> None:
+            case = fixture["cases"][48]
+            case["input"]["value"] = "f" * 64
+            case["expected"]["redacted_form"] = "f" * 64
+            case["support_export"]["exported_form"] = "f" * 64
+
+        mutations = (
+            (invalid_shape, "must be a lowercase 64-hex SHA-256 digest"),
+            (mismatched_digest, "preview and export content digests must be equal"),
+        )
+        for mutate, expected in mutations:
+            with self.subTest(mutate=mutate.__name__), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                mutate(fixture)
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_sensitive_values_cannot_leak_outside_explicit_input(self) -> None:
+        def seeded_leak(fixture: dict[str, object]) -> None:
+            fixture["cases"][0]["rationale"] += " SYNTHETIC-NOT-A-REAL-TOKEN"
+
+        def unseeded_email(fixture: dict[str, object]) -> None:
+            fixture["cases"][0]["rationale"] += " person@outside.example.com"
+
+        def full_serial_export(fixture: dict[str, object]) -> None:
+            case = fixture["cases"][7]
+            case["support_export"]["outcome"] = (
+                "include_unchanged_if_allowlisted_and_previewed"
+            )
+            case["support_export"]["exported_form"] = case["input"]["value"]
+
+        mutations = (
+            (seeded_leak, "sensitive seed from RDX-014 leaks"),
+            (unseeded_email, "prohibited email address appears outside synthetic input"),
+            (full_serial_export, "full serial must never have a support exported_form"),
+        )
+        for mutate, expected in mutations:
+            with self.subTest(mutate=mutate.__name__), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                mutate(fixture)
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_raw_sibling_unknown_and_telemetry_actions_fail_closed(self) -> None:
+        mutations = (
+            (19, "redact", "raw untrusted output must use the typed-projection action"),
+            (22, "redact", "sibling-private data must be rejected as out of scope"),
+            (50, "redact", "unknown fields must be omitted"),
+        )
+        for index, action, expected in mutations:
+            with self.subTest(index=index), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                fixture = self.read_fixture(root)
+                case = fixture["cases"][index]
+                case["expected"]["action"] = action
+                case["expected"]["persistence"] = "redacted_value_only"
+                case["expected"]["redacted_form"] = "[REDACTED:test-value]"
+                self.write_fixture(root, fixture)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            fixture = self.read_fixture(root)
+            telemetry_case = fixture["cases"][55]
+            telemetry_case["support_export"]["outcome"] = (
+                "include_unchanged_if_allowlisted_and_previewed"
+            )
+            telemetry_case["support_export"]["exported_form"] = (
+                telemetry_case["input"]["value"]
+            )
+            self.write_fixture(root, fixture)
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("suppressed telemetry must have no support-export output surface" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_pending_review_cannot_support_done_or_approval_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            task_by_id = dict(TASK_BY_ID)
+            privacy_task = dict(task_by_id["TL-0005"])
+            privacy_task["status"] = "done"
+            privacy_task["evidence"] = []
+            task_by_id["TL-0005"] = privacy_task
+            validation = self.validate_documents(root, task_by_id)
+            self.assertIn(
+                "TL-0005 cannot be done while privacy-owner approval is Pending",
+                validation.errors,
+            )
+            self.assertTrue(
+                any("done evidence must record" in error for error in validation.errors)
+            )
+
+            privacy_task["status"] = "review"
+            privacy_task["evidence"] = [
+                {
+                    "summary": "Privacy owner approved the classifications and retention.",
+                    "result": "passed",
+                    "reference": "unbound review",
+                }
+            ]
+            validation = self.validate_documents(root, task_by_id)
+            self.assertIn(
+                "TL-0005 evidence cannot claim privacy-owner approval while the review is Pending",
+                validation.errors,
+            )
+
+    def test_incoherent_approved_review_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            fixture = self.read_fixture(root)
+            fixture["review"]["status"] = "approved"
+            self.write_fixture(root, fixture)
+            validation = self.validate_documents(root)
+            for expected in (
+                "non-placeholder named privacy owner",
+                "exact 'reviewed commit <40-lowercase-hex>' metadata",
+                "Approved status in both Markdown contracts",
+            ):
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_not_approved_never_satisfies_exact_approval_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            self.make_approved_privacy_review(root)
+            model_path = root / "docs/privacy/privacy-model.md"
+            logging_path = root / "docs/privacy/logging-standard.md"
+            self.replace_once(
+                model_path,
+                "**Status:** Approved initial privacy contract",
+                "**Status:** Not approved",
+            )
+            self.replace_once(
+                logging_path,
+                "**Status:** Approved initial privacy contract",
+                "**Status:** Not approved",
+            )
+            self.replace_once(
+                model_path,
+                "**Approval result:** Approved — named privacy-owner review recorded for the exact commit",
+                "**Approval result:** Not approved",
+            )
+            self.replace_once(
+                model_path,
+                "**Current result:** Approved — exact-commit contract review recorded.",
+                "**Current result:** Not approved",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("requires Approved status" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_approved_review_rejects_nonexistent_and_unbound_commits(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            self.make_approved_privacy_review(root)
+            self.set_privacy_approval_commit(root, "f" * 40)
+            validation = self.validate_documents(root)
+            self.assertIn(
+                "Privacy approval reference must name an existing reviewed Git commit",
+                validation.errors,
+            )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            self.make_approved_privacy_review(root)
+            logging_path = root / "docs/privacy/logging-standard.md"
+            current_logging = logging_path.read_text(encoding="utf-8")
+            logging_path.write_text(
+                current_logging + "\nUnbound reviewed mutation.\n",
+                encoding="utf-8",
+            )
+            for arguments in (
+                ("add", "docs/privacy/logging-standard.md"),
+                ("commit", "--quiet", "-m", "Unbound privacy mutation"),
+            ):
+                result = subprocess.run(
+                    ["git", "-C", str(root), *arguments],
+                    check=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+            commit_result = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(commit_result.returncode, 0, commit_result.stderr)
+            unbound_commit = commit_result.stdout.strip()
+            logging_path.write_text(current_logging, encoding="utf-8")
+            self.set_privacy_approval_commit(root, unbound_commit)
+            validation = self.validate_documents(root)
+            self.assertIn(
+                "Privacy approval commit does not bind current contract docs/privacy/logging-standard.md",
+                validation.errors,
+            )
+
+    def test_post_approval_contract_mutation_breaks_commit_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            self.make_approved_privacy_review(root)
+            logging_path = root / "docs/privacy/logging-standard.md"
+            logging_path.write_text(
+                logging_path.read_text(encoding="utf-8")
+                + "\nPost-approval contract mutation.\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertIn(
+                "Privacy approval commit does not bind current contract docs/privacy/logging-standard.md",
+                validation.errors,
+            )
+
+    def test_coherent_approved_state_requires_commit_bound_passed_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_privacy_documents(root)
+            reviewed_commit = self.make_approved_privacy_review(root)
+            validation = self.validate_documents(root)
+            self.assertEqual(validation.errors, [])
+
+            task_by_id = dict(TASK_BY_ID)
+            privacy_task = dict(task_by_id["TL-0005"])
+            privacy_task["status"] = "done"
+            privacy_task["evidence"] = [
+                {
+                    "summary": "Named privacy owner approved the classifications and retention guidance.",
+                    "result": "failed",
+                    "reference": f"reviewed commit {reviewed_commit}",
+                }
+            ]
+            task_by_id["TL-0005"] = privacy_task
+            validation = self.validate_documents(root, task_by_id)
+            self.assertTrue(
+                any("done evidence must record" in error for error in validation.errors)
+            )
+
+            privacy_task["evidence"][0]["result"] = "passed"
+            validation = self.validate_documents(root, task_by_id)
+            self.assertEqual(validation.errors, [])
 
 
 class SecurityDocumentContractTests(unittest.TestCase):
@@ -1188,6 +2183,8 @@ class TestingDocumentContractTests(unittest.TestCase):
             "docs/testing/capability-risk-matrix.md",
             validate_bundle.REQUIRED_FILES,
         )
+        for relative in PRIVACY_DOCUMENTS:
+            self.assertIn(relative, validate_bundle.REQUIRED_FILES)
         self.assertNotIn(
             "docs/testing/device-matrix.md",
             validate_bundle.REQUIRED_FILES,

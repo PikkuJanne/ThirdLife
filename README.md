@@ -45,6 +45,9 @@ See `CHANGELOG.md` for the file-level change record.
 | [`docs/security/threat-model.md`](docs/security/threat-model.md) | Assets, actors, threats, control/task mappings, residual-risk decisions, and named-owner approval state tracked by `TL-0004`. |
 | [`docs/security/data-flow.md`](docs/security/data-flow.md) | Accessible diagram and textual inventory of processes, stores, flows, validation, recovery, and distinct trust boundaries. |
 | [`docs/security/abuse-cases.md`](docs/security/abuse-cases.md) | Stable adversarial scenarios with detection, fail-closed behavior, recovery, task traceability, and residual risks. |
+| [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md) | Privacy classes, Core data map, audience separation, proposed default retention, exclusions, and pending owner-approval record. |
+| [`docs/privacy/logging-standard.md`](docs/privacy/logging-standard.md) | Typed logging envelope, prohibited fields, raw-input rules, exact support allowlist, preview-bound export, and verification contract. |
+| [`docs/privacy/redaction-test-cases.yaml`](docs/privacy/redaction-test-cases.yaml) | Wholly synthetic exact redaction/omission/support projections and truthful privacy-review metadata. |
 | [`docs/testing/reference-machine-profile.md`](docs/testing/reference-machine-profile.md) | Sanitized active-machine and toolchain facts for reproducible evidence. |
 | [`docs/testing/capability-risk-matrix.md`](docs/testing/capability-risk-matrix.md) | Hardware/provider variants mapped to deterministic coverage or explicit limitations; not device inventory. |
 | [`docs/testing/same-machine-constraints.md`](docs/testing/same-machine-constraints.md) | Safe, reversible, independently invokable constraint profiles and claim limits. |

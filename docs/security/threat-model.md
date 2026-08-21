@@ -9,6 +9,8 @@
 **Approval reference:** reviewed commit 917b5ebd5f5e4cf273a087a05dd381da54324235  
 **Authority:** Derived analysis under `DECISIONS.md`, `ROADMAP.md`, `PROJECT_BOUNDARY.md`, and `SECURITY.md`
 
+**Post-approval maintenance:** 2026-08-21 — `TL-0005` traceability/status annotation only. The approved base remains commit `917b5ebd5f5e4cf273a087a05dd381da54324235`; threats, residual decisions, and security approval were not changed or re-approved.
+
 This document identifies security risks in the planned ThirdLife Setup Core architecture. It is not a new authority tier, a certification, or evidence that a planned control has been implemented. Frozen decisions and the canonical **Owns / Does not own** boundary prevail.
 
 ## Purpose and review posture
@@ -200,7 +202,7 @@ The boundaries are intentionally separate; “local machine” is not a single t
 **Abuse cases:** `AC-008`, `AC-018`  
 **Decisions:** D-014, D-036, D-037, D-053  
 **Planned controls/tasks:** `TL-0005`, `TL-0104`, `TL-0115`, `TL-0207`, `TL-0308`, `TL-0407`, `TL-0604`, `TL-0605`, `TL-0606`, `TL-0609`  
-**Control status:** Planned  
+**Control status:** Planned; the `TL-0005` classification/logging specification and synthetic fixtures exist in draft, but named privacy-owner approval and every runtime control remain pending  
 **Target residual risk:** Medium — allowlisted schemas and redaction before persistence reduce leakage; an operator can still export to an unsafe destination or forward an approved artifact.  
 **Review trigger:** New logged field, raw backend/provider capture, crash reporting, export field, report audience, or telemetry proposal.
 

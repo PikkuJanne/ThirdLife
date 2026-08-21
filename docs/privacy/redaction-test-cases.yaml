@@ -1,0 +1,1166 @@
+schema_version: "thirdlife.redaction-fixtures.v1"
+fixture_set_id: "TL-0005"
+synthetic_data: true
+description: >-
+  Synthetic examples defining the default redact-before-persistence and
+  allowlisted support-export behavior. No value in this file is a real person,
+  device identifier, network identifier, path, credential, key, or user file.
+
+policy:
+  telemetry_default: "off"
+  redaction_stage: "before_persistence"
+  support_export_mode: "allowlist_and_preview_required"
+  unknown_field_action: "omit"
+  raw_output_action: "reject_raw_and_extract_allowlisted_fields"
+  recipient_identity_required: false
+  full_serial_default_support_action: "omit"
+
+review:
+  privacy_owner: null
+  owner_role: null
+  status: "pending"
+  result: null
+  approved_at_utc: null
+  approval_reference: null
+  approval_scope: null
+  required_approval_scope:
+    - "field and context classifications"
+    - "default retention guidance"
+    - "redaction and omission actions"
+    - "support-export allowlist"
+  note: >-
+    A named privacy owner must approve the classifications and default retention
+    guidance before TL-0005 can be marked done.
+
+support_export_allowlist:
+  - schema_version
+  - manifest_version
+  - internal_support_id
+  - application_version
+  - build_version
+  - os_version
+  - hardware_architecture
+  - memory_bucket
+  - storage_class
+  - event_time_utc
+  - export_created_at_utc
+  - check_id
+  - check_outcome
+  - action_code
+  - result_code
+  - component_id
+  - operation_type
+  - evidence_state
+  - sanitized_error_category
+  - retryable
+  - duration_ms
+  - bounded_count
+  - limitation_code
+  - preview_content_digest_sha256
+  - export_content_digest_sha256
+
+transform_invariants:
+  deterministic: true
+  idempotent: true
+  diagnostic_sensitive_seeds_absent_after_transform: true
+  unknown_fields_omitted: true
+  raw_output_replaced_by_typed_projection_only: true
+  telemetry_emission_disabled: true
+  synthetic_inputs_reserved_for_tests_only: true
+  workshop_only_exception_fields:
+    - full_serial_number
+
+schema:
+  case_id_pattern: '^RDX-[0-9]{3}$'
+  contiguous_ids_required: true
+  required_case_fields:
+    - id
+    - title
+    - classification
+    - input
+    - expected
+    - support_export
+    - rationale
+  classification_required_fields:
+    - field
+    - context
+  input_required_fields:
+    - field
+    - value
+    - synthetic
+  expected_required_fields:
+    - action
+    - redacted_form
+    - persistence
+  support_export_required_fields:
+    - outcome
+    - exported_form
+  field_classification_values:
+    - direct_personal_identifier
+    - account_identifier
+    - network_identifier
+    - device_identifier
+    - personal_path
+    - sensitive_url
+    - secret
+    - personal_content
+    - raw_untrusted_output
+    - sibling_private_data
+    - pseudonymous_operational_identifier
+    - operational_metadata
+    - unknown_field
+  context_classification_values:
+    - ordinary_log
+    - crash_report
+    - workshop_record
+    - support_export
+    - command_ingest
+    - provider_ingest
+    - installer_ingest
+    - external_private_input
+    - telemetry
+  expected_action_values:
+    - redact
+    - omit
+    - reject_and_do_not_persist
+    - preserve_workshop_only
+    - reject_raw_and_extract_allowlisted_fields
+    - reject_out_of_scope
+    - preserve_allowlisted
+    - suppress_telemetry
+  persistence_values:
+    - redacted_value_only
+    - none
+    - workshop_record_only
+    - none_in_support_export
+    - structured_projection_only
+    - structured_value_only
+    - none_for_telemetry
+  support_export_outcome_values:
+    - omit
+    - omit_by_default_truncation_requires_explicit_review
+    - omit_raw_allow_structured_projection_only
+    - include_unchanged_if_allowlisted_and_previewed
+  redacted_form_semantics: >-
+    A null exported_form means the field is absent. For preserve_workshop_only
+    and preserve_allowlisted cases, redacted_form is the unchanged permitted
+    value; every other action uses an explicit non-sensitive sentinel.
+
+cases:
+  - id: "RDX-001"
+    title: "Person name in an ordinary log"
+    classification:
+      field: "direct_personal_identifier"
+      context: "ordinary_log"
+    input:
+      field: "person_name"
+      value: "Synthetic Person"
+      synthetic: true
+    expected:
+      action: "redact"
+      redacted_form: "[REDACTED:person-name]"
+      persistence: "redacted_value_only"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Names are unnecessary for normal workshop jobs and diagnostics."
+
+  - id: "RDX-002"
+    title: "Username in a support candidate"
+    classification:
+      field: "account_identifier"
+      context: "support_export"
+    input:
+      field: "username"
+      value: "synthetic_user"
+      synthetic: true
+    expected:
+      action: "omit"
+      redacted_form: "[OMITTED:username]"
+      persistence: "none_in_support_export"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Usernames are prohibited from sanitized diagnostic output."
+
+  - id: "RDX-003"
+    title: "Email address in a crash report"
+    classification:
+      field: "direct_personal_identifier"
+      context: "crash_report"
+    input:
+      field: "email_address"
+      value: "synthetic.person@example.test"
+      synthetic: true
+    expected:
+      action: "redact"
+      redacted_form: "[REDACTED:email-address]"
+      persistence: "redacted_value_only"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Crash diagnostics must not retain or export email addresses."
+
+  - id: "RDX-004"
+    title: "Wi-Fi SSID in an ordinary log"
+    classification:
+      field: "network_identifier"
+      context: "ordinary_log"
+    input:
+      field: "wifi_ssid"
+      value: "SYNTHETIC-NETWORK-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "redact"
+      redacted_form: "[REDACTED:wifi-ssid]"
+      persistence: "redacted_value_only"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Wi-Fi names can identify a household or organization."
+
+  - id: "RDX-005"
+    title: "Documentation IPv4 address in a support candidate"
+    classification:
+      field: "network_identifier"
+      context: "support_export"
+    input:
+      field: "ipv4_address"
+      value: "192.0.2.44"
+      synthetic: true
+    expected:
+      action: "omit"
+      redacted_form: "[OMITTED:ip-address]"
+      persistence: "none_in_support_export"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "IP addresses are not allowed in default sanitized support output."
+
+  - id: "RDX-006"
+    title: "Documentation IPv6 address in an ordinary log"
+    classification:
+      field: "network_identifier"
+      context: "ordinary_log"
+    input:
+      field: "ipv6_address"
+      value: "2001:db8::44"
+      synthetic: true
+    expected:
+      action: "redact"
+      redacted_form: "[REDACTED:ip-address]"
+      persistence: "redacted_value_only"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "IPv6 addresses receive the same treatment as IPv4 addresses."
+
+  - id: "RDX-007"
+    title: "Locally administered synthetic MAC address"
+    classification:
+      field: "network_identifier"
+      context: "ordinary_log"
+    input:
+      field: "mac_address"
+      value: "02:00:00:00:00:44"
+      synthetic: true
+    expected:
+      action: "redact"
+      redacted_form: "[REDACTED:mac-address]"
+      persistence: "redacted_value_only"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Hardware network identifiers are unnecessary in ordinary diagnostics."
+
+  - id: "RDX-008"
+    title: "Full serial in the restricted workshop record"
+    classification:
+      field: "device_identifier"
+      context: "workshop_record"
+    input:
+      field: "full_serial_number"
+      value: "SYNTHETIC-SERIAL-000000"
+      synthetic: true
+    expected:
+      action: "preserve_workshop_only"
+      redacted_form: "SYNTHETIC-SERIAL-000000"
+      persistence: "workshop_record_only"
+    support_export:
+      outcome: "omit_by_default_truncation_requires_explicit_review"
+      exported_form: null
+    rationale: >-
+      D-014 permits a full serial in the workshop record, while default support
+      output omits it; truncation requires explicit review.
+
+  - id: "RDX-009"
+    title: "Full serial in a support candidate"
+    classification:
+      field: "device_identifier"
+      context: "support_export"
+    input:
+      field: "full_serial_number"
+      value: "SYNTHETIC-SERIAL-111111"
+      synthetic: true
+    expected:
+      action: "omit"
+      redacted_form: "[OMITTED:full-serial]"
+      persistence: "none_in_support_export"
+    support_export:
+      outcome: "omit_by_default_truncation_requires_explicit_review"
+      exported_form: null
+    rationale: "A sanitized support export must not include the full serial."
+
+  - id: "RDX-010"
+    title: "Personal local path in a crash report"
+    classification:
+      field: "personal_path"
+      context: "crash_report"
+    input:
+      field: "file_path"
+      value: 'C:\Users\SyntheticPerson\Documents\synthetic-file.txt'
+      synthetic: true
+    expected:
+      action: "redact"
+      redacted_form: "[REDACTED:personal-path]"
+      persistence: "redacted_value_only"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Personal paths can disclose usernames and content organization."
+
+  - id: "RDX-011"
+    title: "Personal UNC path in an ordinary log"
+    classification:
+      field: "personal_path"
+      context: "ordinary_log"
+    input:
+      field: "network_path"
+      value: '\\SYNTHETIC-HOST\Users\SyntheticPerson\synthetic-file.txt'
+      synthetic: true
+    expected:
+      action: "redact"
+      redacted_form: "[REDACTED:personal-path]"
+      persistence: "redacted_value_only"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Network paths can expose usernames, hostnames, and private file names."
+
+  - id: "RDX-012"
+    title: "Package download URL in provider data"
+    classification:
+      field: "sensitive_url"
+      context: "provider_ingest"
+    input:
+      field: "package_download_url"
+      value: "https://packages.example.test/synthetic/app.msix?token=SYNTHETIC-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "redact"
+      redacted_form: "[REDACTED:package-download-url]"
+      persistence: "redacted_value_only"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Package URLs may disclose tokens, sources, or private endpoints."
+
+  - id: "RDX-013"
+    title: "Credential-like value"
+    classification:
+      field: "secret"
+      context: "ordinary_log"
+    input:
+      field: "credential"
+      value: "SYNTHETIC-NOT-A-REAL-CREDENTIAL"
+      synthetic: true
+    expected:
+      action: "reject_and_do_not_persist"
+      redacted_form: "[REDACTED:credential]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Credentials are prohibited from logs, persistence, and exports."
+
+  - id: "RDX-014"
+    title: "Token-like value"
+    classification:
+      field: "secret"
+      context: "crash_report"
+    input:
+      field: "access_token"
+      value: "SYNTHETIC-NOT-A-REAL-TOKEN"
+      synthetic: true
+    expected:
+      action: "reject_and_do_not_persist"
+      redacted_form: "[REDACTED:token]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Tokens must never enter crash data or support artifacts."
+
+  - id: "RDX-015"
+    title: "Password-like value"
+    classification:
+      field: "secret"
+      context: "installer_ingest"
+    input:
+      field: "password"
+      value: "SYNTHETIC-NOT-A-REAL-PASSWORD"
+      synthetic: true
+    expected:
+      action: "reject_and_do_not_persist"
+      redacted_form: "[REDACTED:password]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Passwords are never valid diagnostic or support fields."
+
+  - id: "RDX-016"
+    title: "Recovery-key-like value"
+    classification:
+      field: "secret"
+      context: "workshop_record"
+    input:
+      field: "recovery_key"
+      value: "SYNTHETIC-RECOVERY-KEY-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "reject_and_do_not_persist"
+      redacted_form: "[REDACTED:recovery-key]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "ThirdLife does not take custody of recovery material."
+
+  - id: "RDX-017"
+    title: "Encryption-key-like value"
+    classification:
+      field: "secret"
+      context: "provider_ingest"
+    input:
+      field: "encryption_key"
+      value: "SYNTHETIC-ENCRYPTION-KEY-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "reject_and_do_not_persist"
+      redacted_form: "[REDACTED:encryption-key]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Encryption keys are prohibited regardless of source."
+
+  - id: "RDX-018"
+    title: "Donor personal content"
+    classification:
+      field: "personal_content"
+      context: "provider_ingest"
+    input:
+      field: "donor_file_content"
+      value: "SYNTHETIC DONOR CONTENT — NOT A REAL FILE"
+      synthetic: true
+    expected:
+      action: "reject_and_do_not_persist"
+      redacted_form: "[REDACTED:donor-content]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Donor content is outside Core's diagnostic data boundary."
+
+  - id: "RDX-019"
+    title: "Recipient personal content"
+    classification:
+      field: "personal_content"
+      context: "support_export"
+    input:
+      field: "recipient_file_content"
+      value: "SYNTHETIC RECIPIENT CONTENT — NOT A REAL FILE"
+      synthetic: true
+    expected:
+      action: "reject_and_do_not_persist"
+      redacted_form: "[REDACTED:recipient-content]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Recipient content never belongs in a support export."
+
+  - id: "RDX-020"
+    title: "Raw command output"
+    classification:
+      field: "raw_untrusted_output"
+      context: "command_ingest"
+    input:
+      field: "raw_command_output"
+      value: "SyntheticPerson 192.0.2.44 SYNTHETIC-NOT-A-REAL-TOKEN"
+      synthetic: true
+    expected:
+      action: "reject_raw_and_extract_allowlisted_fields"
+      redacted_form: "[OMITTED:raw-command-output]"
+      persistence: "structured_projection_only"
+    support_export:
+      outcome: "omit_raw_allow_structured_projection_only"
+      exported_form: null
+    rationale: "Raw command text is untrusted, sensitive, localized, and unbounded."
+
+  - id: "RDX-021"
+    title: "Raw provider output"
+    classification:
+      field: "raw_untrusted_output"
+      context: "provider_ingest"
+    input:
+      field: "raw_provider_output"
+      value: 'user=synthetic_user path=C:\Users\SyntheticPerson\synthetic.txt'
+      synthetic: true
+    expected:
+      action: "reject_raw_and_extract_allowlisted_fields"
+      redacted_form: "[OMITTED:raw-provider-output]"
+      persistence: "structured_projection_only"
+    support_export:
+      outcome: "omit_raw_allow_structured_projection_only"
+      exported_form: null
+    rationale: "Providers must return normalized typed observations, not stored raw text."
+
+  - id: "RDX-022"
+    title: "Raw installer output"
+    classification:
+      field: "raw_untrusted_output"
+      context: "installer_ingest"
+    input:
+      field: "raw_installer_output"
+      value: "download=https://packages.example.test/synthetic/app.msix result=0"
+      synthetic: true
+    expected:
+      action: "reject_raw_and_extract_allowlisted_fields"
+      redacted_form: "[OMITTED:raw-installer-output]"
+      persistence: "structured_projection_only"
+    support_export:
+      outcome: "omit_raw_allow_structured_projection_only"
+      exported_form: null
+    rationale: "Installer output can contain paths, URLs, secrets, and hostile text."
+
+  - id: "RDX-023"
+    title: "Sibling private database record"
+    classification:
+      field: "sibling_private_data"
+      context: "external_private_input"
+    input:
+      field: "sibling_private_database_record"
+      value: "SYNTHETIC-SIBLING-PRIVATE-RECORD-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "reject_out_of_scope"
+      redacted_form: "[REJECTED:out-of-scope-private-data]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Core does not own or read sibling private databases."
+
+  - id: "RDX-024"
+    title: "Sibling assessment evidence"
+    classification:
+      field: "sibling_private_data"
+      context: "external_private_input"
+    input:
+      field: "sibling_assessment_evidence"
+      value: "SYNTHETIC-SIBLING-ASSESSMENT-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "reject_out_of_scope"
+      redacted_form: "[REJECTED:out-of-scope-assessment]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Another project's assessment evidence remains outside the B1 boundary."
+
+  - id: "RDX-025"
+    title: "Sibling backup or recovery key"
+    classification:
+      field: "sibling_private_data"
+      context: "external_private_input"
+    input:
+      field: "sibling_backup_key"
+      value: "SYNTHETIC-SIBLING-BACKUP-KEY-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "reject_out_of_scope"
+      redacted_form: "[REJECTED:out-of-scope-secret]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Sibling backup credentials and keys are explicitly excluded."
+
+  - id: "RDX-026"
+    title: "Support schema version"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "schema_version"
+      value: "thirdlife.support.synthetic.v1"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "thirdlife.support.synthetic.v1"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "thirdlife.support.synthetic.v1"
+    rationale: "A bounded schema identifier is required to interpret an export."
+
+  - id: "RDX-027"
+    title: "Application version"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "application_version"
+      value: "0.0.0-synthetic"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "0.0.0-synthetic"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "0.0.0-synthetic"
+    rationale: "A product version is non-personal support metadata."
+
+  - id: "RDX-028"
+    title: "UTC event timestamp"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "event_time_utc"
+      value: "2030-01-01T00:00:00Z"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "2030-01-01T00:00:00Z"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "2030-01-01T00:00:00Z"
+    rationale: "A UTC timestamp supports ordering without identifying a person."
+
+  - id: "RDX-029"
+    title: "Stable result code"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "result_code"
+      value: "provider_unavailable"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "provider_unavailable"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "provider_unavailable"
+    rationale: "Stable result codes replace sensitive raw error text."
+
+  - id: "RDX-030"
+    title: "Compiled component identifier"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "component_id"
+      value: "synthetic_storage_observer"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "synthetic_storage_observer"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "synthetic_storage_observer"
+    rationale: "A compiled bounded component ID is useful without exposing paths."
+
+  - id: "RDX-031"
+    title: "Compiled operation type"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "operation_type"
+      value: "synthetic_observe_storage"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "synthetic_observe_storage"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "synthetic_observe_storage"
+    rationale: "A typed operation name avoids arbitrary command capture."
+
+  - id: "RDX-032"
+    title: "Evidence state"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "evidence_state"
+      value: "not_available"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "not_available"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "not_available"
+    rationale: "Evidence state communicates uncertainty without raw source data."
+
+  - id: "RDX-033"
+    title: "Retryable flag"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "retryable"
+      value: false
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: false
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: false
+    rationale: "A boolean recovery hint is bounded and non-personal."
+
+  - id: "RDX-034"
+    title: "Bounded duration"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "duration_ms"
+      value: 125
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: 125
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: 125
+    rationale: "A bounded duration supports diagnosis without content capture."
+
+  - id: "RDX-035"
+    title: "Bounded item count"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "bounded_count"
+      value: 3
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: 3
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: 3
+    rationale: "A bounded count is safer than exporting the counted records."
+
+  - id: "RDX-036"
+    title: "Stable limitation code"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "limitation_code"
+      value: "capability_not_present"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "capability_not_present"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "capability_not_present"
+    rationale: "A stable limitation code states what is unknown without raw output."
+
+  - id: "RDX-037"
+    title: "Pseudonymous internal support identifier"
+    classification:
+      field: "pseudonymous_operational_identifier"
+      context: "support_export"
+    input:
+      field: "internal_support_id"
+      value: "SUP-SYNTHETIC-0001"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "SUP-SYNTHETIC-0001"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "SUP-SYNTHETIC-0001"
+    rationale: >-
+      A random internal support ID may correlate reviewed support records without
+      embedding a name, serial, username, or machine-derived identifier.
+
+  - id: "RDX-038"
+    title: "Build version"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "build_version"
+      value: "synthetic-build-0001"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "synthetic-build-0001"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "synthetic-build-0001"
+    rationale: "A bounded build version identifies product behavior without user data."
+
+  - id: "RDX-039"
+    title: "Operating-system version"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "os_version"
+      value: "SYNTHETIC-OS-VERSION"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "SYNTHETIC-OS-VERSION"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "SYNTHETIC-OS-VERSION"
+    rationale: "The OS version is diagnostic metadata when kept free of host identity."
+
+  - id: "RDX-040"
+    title: "Generic hardware architecture"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "hardware_architecture"
+      value: "x64"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "x64"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "x64"
+    rationale: "A generic architecture is useful without exposing a hardware serial."
+
+  - id: "RDX-041"
+    title: "Generic memory bucket"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "memory_bucket"
+      value: "8-15 GiB"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "8-15 GiB"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "8-15 GiB"
+    rationale: "A coarse resource bucket is less identifying than raw inventory."
+
+  - id: "RDX-042"
+    title: "Generic storage class"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "storage_class"
+      value: "ssd"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "ssd"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "ssd"
+    rationale: "A generic storage class excludes serial, path, volume, and model data."
+
+  - id: "RDX-043"
+    title: "Stable check identifier"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "check_id"
+      value: "synthetic_storage_capacity_check"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "synthetic_storage_capacity_check"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "synthetic_storage_capacity_check"
+    rationale: "A compiled check ID replaces provider or command text."
+
+  - id: "RDX-044"
+    title: "Stable check outcome"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "check_outcome"
+      value: "not_available"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "not_available"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "not_available"
+    rationale: "A stable outcome communicates uncertainty without leaking observations."
+
+  - id: "RDX-045"
+    title: "Stable action code"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "action_code"
+      value: "synthetic_observe_only"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "synthetic_observe_only"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "synthetic_observe_only"
+    rationale: "A compiled action code is bounded and contains no arbitrary command."
+
+  - id: "RDX-046"
+    title: "Sanitized error category"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "sanitized_error_category"
+      value: "provider_timeout"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "provider_timeout"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "provider_timeout"
+    rationale: "A reviewed error category replaces raw exception and backend text."
+
+  - id: "RDX-047"
+    title: "Support manifest version"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "manifest_version"
+      value: "thirdlife.support-manifest.synthetic.v1"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "thirdlife.support-manifest.synthetic.v1"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "thirdlife.support-manifest.synthetic.v1"
+    rationale: "A manifest version makes the previewed field list interpretable."
+
+  - id: "RDX-048"
+    title: "Preview content digest"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "preview_content_digest_sha256"
+      value: "00347ba72e5a15b003127444a084fc2db1c15ea1199ccfb4cfb40c732cc4562d"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "00347ba72e5a15b003127444a084fc2db1c15ea1199ccfb4cfb40c732cc4562d"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "00347ba72e5a15b003127444a084fc2db1c15ea1199ccfb4cfb40c732cc4562d"
+    rationale: >-
+      This is the SHA-256 of the declared synthetic bytes
+      "thirdlife-synthetic-preview-export-v1\n" and binds the reviewed preview.
+
+  - id: "RDX-049"
+    title: "Export content digest"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "export_content_digest_sha256"
+      value: "00347ba72e5a15b003127444a084fc2db1c15ea1199ccfb4cfb40c732cc4562d"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "00347ba72e5a15b003127444a084fc2db1c15ea1199ccfb4cfb40c732cc4562d"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "00347ba72e5a15b003127444a084fc2db1c15ea1199ccfb4cfb40c732cc4562d"
+    rationale: >-
+      This is the same declared synthetic-byte digest; equality verifies that
+      exported bytes match the reviewed preview.
+
+  - id: "RDX-050"
+    title: "Support export creation timestamp"
+    classification:
+      field: "operational_metadata"
+      context: "support_export"
+    input:
+      field: "export_created_at_utc"
+      value: "2030-01-01T00:01:00Z"
+      synthetic: true
+    expected:
+      action: "preserve_allowlisted"
+      redacted_form: "2030-01-01T00:01:00Z"
+      persistence: "structured_value_only"
+    support_export:
+      outcome: "include_unchanged_if_allowlisted_and_previewed"
+      exported_form: "2030-01-01T00:01:00Z"
+    rationale: "A UTC creation timestamp is bounded export metadata."
+
+  - id: "RDX-051"
+    title: "Unknown support field"
+    classification:
+      field: "unknown_field"
+      context: "support_export"
+    input:
+      field: "unrecognized_synthetic_field"
+      value: "SYNTHETIC-UNKNOWN-VALUE"
+      synthetic: true
+    expected:
+      action: "omit"
+      redacted_form: "[OMITTED:unknown-field]"
+      persistence: "none_in_support_export"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Support export is allowlist-based; unknown fields fail closed."
+
+  - id: "RDX-052"
+    title: "Personal device or hostname"
+    classification:
+      field: "device_identifier"
+      context: "ordinary_log"
+    input:
+      field: "device_name"
+      value: "SYNTHETIC-DEVICE-NAME-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "redact"
+      redacted_form: "[REDACTED:device-name]"
+      persistence: "redacted_value_only"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "A personal device name can expose a person, household, or organization."
+
+  - id: "RDX-053"
+    title: "Clipboard-secret-like value"
+    classification:
+      field: "secret"
+      context: "provider_ingest"
+    input:
+      field: "clipboard_secret"
+      value: "SYNTHETIC-CLIPBOARD-SECRET-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "reject_and_do_not_persist"
+      redacted_form: "[REDACTED:clipboard-secret]"
+      persistence: "none"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Clipboard secrets are prohibited from logs, persistence, and exports."
+
+  - id: "RDX-054"
+    title: "Windows SID-like account identifier"
+    classification:
+      field: "account_identifier"
+      context: "crash_report"
+    input:
+      field: "windows_sid"
+      value: "S-1-5-21-SYNTHETIC-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "redact"
+      redacted_form: "[REDACTED:windows-sid]"
+      persistence: "redacted_value_only"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "A Windows SID is an account identifier and is not support metadata."
+
+  - id: "RDX-055"
+    title: "Asset tag in a support candidate"
+    classification:
+      field: "device_identifier"
+      context: "support_export"
+    input:
+      field: "asset_tag"
+      value: "SYNTHETIC-ASSET-TAG-NOT-REAL"
+      synthetic: true
+    expected:
+      action: "omit"
+      redacted_form: "[OMITTED:asset-tag]"
+      persistence: "none_in_support_export"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: "Asset tags can identify a specific device or organization."
+
+  - id: "RDX-056"
+    title: "Allowlisted field presented to disabled telemetry"
+    classification:
+      field: "operational_metadata"
+      context: "telemetry"
+    input:
+      field: "result_code"
+      value: "synthetic_success"
+      synthetic: true
+    expected:
+      action: "suppress_telemetry"
+      redacted_form: "[NOT-EMITTED:telemetry-disabled]"
+      persistence: "none_for_telemetry"
+    support_export:
+      outcome: "omit"
+      exported_form: null
+    rationale: >-
+      Telemetry remains off and emits nothing to persistence or support output,
+      even when the underlying value is ordinarily allowlisted elsewhere.
