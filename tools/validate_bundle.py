@@ -1906,21 +1906,144 @@ def privacy_approval_state(value: str) -> str:
 
 
 def canonical_privacy_approval_blob(relative: str, text: str) -> str:
-    """Remove only unavoidable post-commit self-reference annotations."""
+    """Exclude only approval-record state from the reviewed contract bytes.
+
+    A privacy owner reviews a real pre-approval commit. Recording that decision
+    necessarily changes status and approval metadata afterward, so those exact
+    state-only variants are canonicalized. Contract classifications, retention
+    values, allowlists, fixture cases, and runtime-control disclaimers remain
+    byte-bound to the reviewed commit.
+    """
+
+    def canonical_exact_line(
+        value: str, variants: tuple[str, ...], replacement: str
+    ) -> str:
+        pattern = r"^(?:" + "|".join(re.escape(item) for item in variants) + r")\s*$"
+        return re.sub(pattern, replacement, value, flags=re.MULTILINE)
 
     canonical = text.replace("\r\n", "\n").replace("\r", "\n")
     if relative == "docs/privacy/privacy-model.md":
-        canonical = re.sub(
-            r"^\*\*Reviewed commit/reference:\*\*.*$",
-            "**Reviewed commit/reference:** <BOUND-AFTER-REVIEW>",
+        canonical = canonical_exact_line(
             canonical,
-            flags=re.MULTILINE,
+            (
+                f"**Status:** {PRIVACY_PENDING_STATUS}",
+                f"**Status:** {PRIVACY_APPROVED_STATUS}",
+            ),
+            "**Status:** <APPROVAL-STATE>",
         )
+        canonical = canonical_exact_line(
+            canonical,
+            (
+                "**Model revision:** TL-0005 review 1",
+                "**Model revision:** TL-0005 approved 1",
+            ),
+            "**Model revision:** <APPROVAL-STATE>",
+        )
+        canonical = canonical_exact_line(
+            canonical,
+            (
+                "**Approval result:** Pending — this document does not satisfy "
+                "the human evidence required by `TL-0005`",
+                "**Approval result:** Approved — named privacy-owner review "
+                "recorded for the exact commit",
+            ),
+            "**Approval result:** <APPROVAL-STATE>",
+        )
+        canonical = canonical_exact_line(
+            canonical,
+            (
+                "The following values are the proposed safe defaults for later "
+                "implementation. They are deliberately marked **not approved** "
+                "until a named privacy owner reviews the classifications and "
+                "durations. Organization policy may shorten them. An extension "
+                "must name the data class, reason, accountable owner, review date, "
+                "and deletion condition; silent indefinite retention is not permitted.",
+                "The following values are the reviewed safe defaults for later "
+                "implementation. They are approved by the named privacy owner for "
+                "the exact reviewed commit; changes require review of the "
+                "classifications and durations. Organization policy may shorten "
+                "them. An extension must name the data class, reason, accountable "
+                "owner, review date, and deletion condition; silent indefinite "
+                "retention is not permitted.",
+            ),
+            "<APPROVAL-STATE:RETENTION-INTRO>",
+        )
+        for state in ("pending", "reviewed"):
+            canonical = canonical.replace(
+                f"this {state} default when supply-chain or rollback evidence requires it",
+                "this <APPROVAL-STATE> default when supply-chain or rollback evidence requires it",
+            )
+        for field in (
+            "Current privacy-owner",
+            "Current privacy-owner role",
+            "Current review date",
+            "Reviewed commit/reference",
+            "Approval scope",
+            "Conditions/residual risks",
+            "Current result",
+        ):
+            canonical = re.sub(
+                rf"^\*\*{re.escape(field)}:\*\*.*$",
+                f"**{field}:** <APPROVAL-RECORD>",
+                canonical,
+                flags=re.MULTILINE,
+            )
+    elif relative == "docs/privacy/logging-standard.md":
+        canonical = canonical_exact_line(
+            canonical,
+            (
+                f"**Status:** {PRIVACY_PENDING_STATUS}",
+                f"**Status:** {PRIVACY_APPROVED_STATUS}",
+            ),
+            "**Status:** <APPROVAL-STATE>",
+        )
+        canonical = canonical_exact_line(
+            canonical,
+            (
+                "**Standard revision:** TL-0005 review 1",
+                "**Standard revision:** TL-0005 approved 1",
+            ),
+            "**Standard revision:** <APPROVAL-STATE>",
+        )
+        for state_fragment in (
+            "the proposed 14-day sanitized-log default from `privacy-model.md` "
+            "only after privacy-owner approval, together",
+            "the approved 14-day sanitized-log default from `privacy-model.md` together",
+        ):
+            canonical = canonical.replace(
+                state_fragment,
+                "the <APPROVAL-STATE> 14-day sanitized-log default from "
+                "`privacy-model.md` together",
+            )
+        for state_sentence in (
+            "They do not claim a production redactor, logger, retention job, "
+            "support exporter, or human privacy approval exists.",
+            "They do not claim a production redactor, logger, retention job, or "
+            "support exporter exists; the separate approval record covers only "
+            "human contract review.",
+        ):
+            canonical = canonical.replace(
+                state_sentence,
+                "<APPROVAL-STATE:HUMAN-REVIEW>; no production redactor, logger, "
+                "retention job, or support exporter is claimed.",
+            )
+        for state_sentence in (
+            "The privacy-owner approval record is maintained in `privacy-model.md`; "
+            "it is currently pending.",
+            "The privacy-owner approval record is maintained in `privacy-model.md`; "
+            "it is approved for the exact reviewed commit.",
+        ):
+            canonical = canonical.replace(
+                state_sentence,
+                "The privacy-owner approval record is maintained in "
+                "`privacy-model.md`; <APPROVAL-STATE>.",
+            )
     elif relative == "docs/privacy/redaction-test-cases.yaml":
         canonical = re.sub(
-            r"^  approval_reference:.*$",
-            "  approval_reference: <BOUND-AFTER-REVIEW>",
+            r"^review:\n(?:^(?:[ \t].*)?\n)*?^support_export_allowlist:",
+            "review:\n  <APPROVAL-RECORD>\n\nsupport_export_allowlist:",
             canonical,
+            count=1,
             flags=re.MULTILINE,
         )
     return canonical
@@ -2065,6 +2188,7 @@ def validate_privacy_documents(
         ),
         validation,
     )
+    model_status = security_field(model_text, "Status")
 
     support_table = markdown_table_after_heading(
         logging_text,
@@ -2124,7 +2248,16 @@ def validate_privacy_documents(
             validation.error(
                 f"{model_relative}: retention table header must exactly match the governed contract"
             )
-        if retention_rows != PRIVACY_RETENTION_ROWS:
+        expected_retention_rows = PRIVACY_RETENTION_ROWS
+        if model_status == PRIVACY_APPROVED_STATUS:
+            expected_retention_rows = tuple(
+                tuple(
+                    cell.replace("this pending default", "this reviewed default")
+                    for cell in row
+                )
+                for row in PRIVACY_RETENTION_ROWS
+            )
+        if retention_rows != expected_retention_rows:
             validation.error(
                 f"{model_relative}: retention rows and values must exactly match the governed TL-0005 contract"
             )
@@ -2135,7 +2268,6 @@ def validate_privacy_documents(
         validation.error(
             "Privacy documents must share one exact TL-0005 revision"
         )
-    model_status = security_field(model_text, "Status")
     logging_status = security_field(logging_text, "Status")
     approval_result = security_field(model_text, "Approval result")
     approval_fields = {

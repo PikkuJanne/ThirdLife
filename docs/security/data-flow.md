@@ -144,7 +144,7 @@ There is deliberately no direct `P-01` → arbitrary command/backend flow and no
 
 ## Data classes and minimization handoff
 
-This approved security model established the separation that the draft [`privacy-model.md`](../privacy/privacy-model.md), [`logging-standard.md`](../privacy/logging-standard.md), and synthetic [`redaction-test-cases.yaml`](../privacy/redaction-test-cases.yaml) now specify for `TL-0005`:
+This approved security model established the separation that the approved [`privacy-model.md`](../privacy/privacy-model.md), [`logging-standard.md`](../privacy/logging-standard.md), and synthetic [`redaction-test-cases.yaml`](../privacy/redaction-test-cases.yaml) now specify for `TL-0005`:
 
 - workshop-confidential job evidence and full internal device identity;
 - recipient-facing guidance with no workshop secrets;
@@ -153,7 +153,7 @@ This approved security model established the separation that the draft [`privacy
 - transient untrusted raw provider/backend content that is bounded, sanitized, and not copied wholesale; and
 - public frozen release documentation/samples with no job or sibling-private content.
 
-Those files contain proposed retention defaults and exact synthetic redacted forms. `TL-0005` remains incomplete while named privacy-owner approval is pending, and later runtime tasks must implement and verify the controls. This DFD does not itself approve the pending privacy guidance or claim a redactor exists.
+Those files contain approved retention guidance and exact synthetic redacted forms. The named privacy-owner approval for `TL-0005` is recorded against the exact reviewed commit; later runtime tasks must still implement and verify the controls. This DFD does not itself expand that approval or claim a redactor exists.
 
 ## Interruption and split-state rules
 

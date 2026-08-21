@@ -16,21 +16,26 @@ policy:
   full_serial_default_support_action: "omit"
 
 review:
-  privacy_owner: null
-  owner_role: null
-  status: "pending"
-  result: null
-  approved_at_utc: null
-  approval_reference: null
-  approval_scope: null
+  privacy_owner: "Janne Vuorela"
+  owner_role: "Privacy Owner — Principal Software Architect & Sole Project Owner"
+  status: "approved"
+  result: "approved"
+  approved_at_utc: "2026-08-21T14:30:34Z"
+  approval_reference: "reviewed commit 118240955b01ea4a0b941b00d357ea165b035981"
+  approval_scope:
+    - "field and context classifications"
+    - "default retention guidance"
+    - "redaction and omission actions"
+    - "support-export allowlist"
   required_approval_scope:
     - "field and context classifications"
     - "default retention guidance"
     - "redaction and omission actions"
     - "support-export allowlist"
   note: >-
-    A named privacy owner must approve the classifications and default retention
-    guidance before TL-0005 can be marked done.
+    Named privacy owner approved the exact TL-0005 classification, default
+    retention, redaction and omission, and support-export contract without
+    conditions. Runtime implementation and verification remain separate.
 
 support_export_allowlist:
   - schema_version

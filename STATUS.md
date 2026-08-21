@@ -1,18 +1,18 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-21  
-**Snapshot preparation time:** 2026-08-21T16:01:19+02:00  
+**Snapshot preparation time:** 2026-08-21T16:30:34+02:00  
 **Bundle baseline:** 0.3.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M0 — Foundation and product contract  
 **Current task:** `TL-0005` — Define the privacy and logging model  
-**Task state:** `review`
+**Task state:** `done`
 
 ## Current state
 
-The automatable part of `TL-0005` is complete. The repository now contains a governed privacy model, logging standard, and machine-validated synthetic redaction fixture set. They define classifications, retention guidance, audience-separated outputs, prohibited diagnostic content, the exact sanitized-support allowlist, raw-input handling, and telemetry-off behavior before logging code is built.
+`TL-0005` is complete. The repository contains a governed privacy model, logging standard, and machine-validated synthetic redaction fixture set defining classifications, approved retention guidance, audience-separated outputs, prohibited diagnostic content, the exact sanitized-support allowlist, raw-input handling, and telemetry-off behavior before logging code is built.
 
-`TL-0005` is correctly in `review`, not `done`. Its required human evidence is still absent: a named privacy owner must approve the classifications and default retention guidance. The documents and fixtures explicitly preserve that pending state and do not claim runtime redaction, logging, deletion, export, or telemetry controls already exist.
+Janne Vuorela, Privacy Owner — Principal Software Architect & Sole Project Owner, gave unconditional full-scope approval on 2026-08-21 for the exact contract at commit `118240955b01ea4a0b941b00d357ea165b035981`. The approval covers classifications, default retention guidance, redaction/omission actions, and the support-export allowlist. It does not claim runtime redaction, logging, deletion, export, or telemetry controls already exist.
 
 The commit containing this file is the TL-0005 checkpoint. Because a commit cannot embed its own hash, resolve that identity with `git rev-parse HEAD`; the session completion report records the resolved hash and the post-push equality check.
 
@@ -22,10 +22,11 @@ The commit containing this file is the TL-0005 checkpoint. Because a commit cann
 |---|---|
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
 | Branch | `codex/tl-0005-privacy-logging-model` |
-| Session baseline | `c77966ba90a31b99e790a2d1097b598c1f127961` |
+| Original implementation baseline | `c77966ba90a31b99e790a2d1097b598c1f127961` |
+| Approval-session baseline and reviewed contract | `118240955b01ea4a0b941b00d357ea165b035981` |
 | History handling | Continued from the fetched baseline; no reset, rebase, force push, or history rewrite |
 | Checkpoint | The commit containing this file; resolve with `git rev-parse HEAD` |
-| Upstream | Created by the first checkpoint push to `origin/codex/tl-0005-privacy-logging-model` |
+| Upstream | `origin/codex/tl-0005-privacy-logging-model` |
 | Final push invariant | Before handoff, current HEAD must equal the fetched upstream; the completion report records the resolved hash |
 
 The configured SSH remote rejected unattended public-key authentication on this machine. Fetch and checkpoint publication use GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
@@ -48,9 +49,9 @@ The contracts establish these fail-closed invariants:
 
 The privacy model defines eight classifications: public reference, operational safe, workshop restricted, recipient guide, support sanitized, raw untrusted sensitive, secret or personal content excluded, and sibling private excluded.
 
-## Proposed default retention guidance
+## Approved default retention guidance
 
-These are proposed, ready-for-review design defaults, not approved or implemented cleanup behavior:
+These are approved design defaults, not implemented cleanup behavior:
 
 | Data | Proposed default |
 |---|---|
@@ -68,9 +69,9 @@ These are proposed, ready-for-review design defaults, not approved or implemente
 
 | Artifact | Recorded SHA-256 |
 |---|---|
-| `docs/privacy/privacy-model.md` | `a10e3248703ceb359a005173dccde9941de4595cf10b382ecb3d9acbb819f5ee` |
-| `docs/privacy/logging-standard.md` | `5f0d27cd93ba921b768f621401b91710d3f04263fe47152cb1baf8ffec6eb880` |
-| `docs/privacy/redaction-test-cases.yaml` | `6f43b2f31565f614218b7a58cbf8b43b157efeb03767ec51d60ddc5a3f0e354a` |
+| `docs/privacy/privacy-model.md` | `923a7f1d0a6b3c5b3614da5d0474dafdb08f182a1e3cc591fbf8b6b9638d8e62` |
+| `docs/privacy/logging-standard.md` | `76cac1284cf83a1913590c715bdf8d3e38ac03c2b6081754aa3a9aae899c6e07` |
+| `docs/privacy/redaction-test-cases.yaml` | `26fca97a6e0ef5e350b041ba586638975a675e4fc16585bcca33a98b70cbb530` |
 
 The fixture contains 56 contiguous, wholly synthetic cases. It covers recipient identifiers, full serial handling, secrets and recovery material, personal and sibling-private data, raw output, URLs and paths, exact digest binding, ordinary allowlisted metadata, unknown fields, and telemetry suppression.
 
@@ -80,10 +81,13 @@ The fixture contains 56 contiguous, wholly synthetic cases. It covers recipient 
 |---|---|---:|
 | Pre-change validator tests | 54/54 passed | 13.140 s test / 14.073 s wall |
 | Pre-change live bundle validator | Passed: 91 tasks, 8 milestones, 66 decisions, valid DAG | 1.330 s wall |
-| Final privacy-focused regression tests | 25/25 passed | 29.177 s test / 29.945 s wall |
-| Final complete validator regression suite | 79/79 passed | 42.366 s test / 43.207 s wall |
-| Final live bundle validator before handoff metadata | Passed: 91 tasks, 8 milestones, 66 decisions, valid DAG | 1.328 s wall |
+| Implementation privacy-focused regression tests | 25/25 passed | 29.177 s test / 29.945 s wall |
+| Implementation complete validator regression suite | 79/79 passed | 42.366 s test / 43.207 s wall |
+| Implementation live bundle validator before handoff metadata | Passed: 91 tasks, 8 milestones, 66 decisions, valid DAG | 1.328 s wall |
 | Initial governed Quick tier | Passed | 25.536 s wall |
+| Post-approval privacy regression tests | 26/26 passed | 44.868 s test / 45.582 s wall |
+| Post-approval complete validator regression suite | 80/80 passed | 57.684 s test / 58.481 s wall |
+| Post-approval governed Quick tier | Passed, including 80 validator tests | 53.339 s test / 57.064 s wall |
 
 The exact-tree Quick tier is run after this status record and the bundle manifest are finalized. Its result is recorded in the session completion report without changing the verified tree afterward. Full and extended tiers have no `TL-0005` triggers and are not required for this documentation/schema task.
 
@@ -102,7 +106,7 @@ The optional `jsonschema` package is unavailable in the active environment, so t
 - **Project vacuum / sibling integration:** No sibling repository was browsed or coupled. Sibling-private data is explicitly excluded and adversarially tested.
 - **Data / migration:** No runtime data, database, or migration was added. The task defines future retention and deletion contracts only.
 - **Release interface:** No public runtime interface was added or guessed. `RELEASE_INTERFACE.md` is unchanged.
-- **Security / privacy:** The task reduces design ambiguity and adds fail-closed semantic validation. Human privacy approval and later runtime implementation remain required.
+- **Security / privacy:** The task reduces design ambiguity, records exact-commit human privacy approval, and adds fail-closed semantic validation. Later runtime implementation and verification remain required.
 - **Accessibility / low-spec:** No UI, background work, runtime storage, network activity, or resource-consuming service was added. Later user-visible export and cleanup work must preserve plain language, keyboard access, bounded work, cancellation, and recovery.
 - **Security baseline provenance:** `docs/security/threat-model.md`, `docs/security/data-flow.md`, and `docs/security/abuse-cases.md` contain traceability/status annotations only. They do not claim a new security review or change the previously approved threat set, residual risks, or sign-off.
 
@@ -126,16 +130,11 @@ The optional `jsonschema` package is unavailable in the active environment, so t
 
 The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` was present before this task and remains untouched and unstaged.
 
-## Outstanding human evidence
+## Approval evidence and remaining implementation boundary
 
-A named privacy owner must review and approve all of the following before `TL-0005` may move from `review` to `done`:
+The `TL-0005` human-evidence requirement is satisfied. The approval record identifies the named reviewer and privacy-owner role, date, complete scope, unconditional result, and exact reviewed commit.
 
-1. the complete classification model;
-2. every proposed default retention period and cleanup trigger;
-3. the redaction and omission behavior represented by the synthetic fixtures;
-4. the prohibited diagnostic content and exact sanitized-support allowlist.
-
-The approval record must identify the reviewer and privacy-owner role, date the review, cover the complete scope, record conditions or residual risks, and bind the reviewed governed artifacts to a real commit. No such approval is fabricated here.
+No human evidence remains outstanding for `TL-0005`. Runtime logging, redaction, retention cleanup, and support-export implementation and verification remain owned by their later roadmap tasks; contract approval is not evidence that those controls already run.
 
 ## Next dependency-ready task
 

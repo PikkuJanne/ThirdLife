@@ -142,7 +142,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Sensitive domain wrappers, structured allowlists, redact-before-persist, stable error codes, Unicode/control/markup escaping, bounded fields/records/bytes, audience-schema separation, and adversarial fixtures.  
 **Fail-closed response:** Drop/reject unsafe fields, preserve a bounded sanitized diagnostic, fail rendering/export without raw fallback, and keep unknown/limitations visible.  
 **Planned controls/tasks:** D-014, D-036, D-037; `TL-0005`, `TL-0104`, `TL-0115`, `TL-0207`, `TL-0308`, `TL-0407`, `TL-0604`, `TL-0605`, `TL-0606`, `TL-0609`  
-**Control status:** Planned; `TL-0005` now supplies a draft classification/logging contract and synthetic adversarial fixtures, but named privacy-owner approval and runtime enforcement remain pending  
+**Control status:** Planned; `TL-0005` supplies the approved classification/logging contract and synthetic adversarial fixtures, while runtime enforcement remains pending  
 **Recovery/manual path:** Correct the source/field contract, regenerate from normalized data, inspect the preview, and securely remove any exposed artifact under incident guidance.  
 **Residual risk:** `RR-006`; exported data can be mishandled after release.
 
@@ -282,7 +282,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Frozen preview manifest/content digest, audience field/file allowlist, revalidation immediately before final write, final-object/type/reparse/ACL/capacity/overwrite checks, archive byte/file/count bounds, atomic placement and partial cleanup.  
 **Fail-closed response:** Abort export and leave existing target unchanged; remove or clearly identify an owned partial file; keep the exact preview for retry; persist only sanitized export metadata.  
 **Planned controls/tasks:** D-036, D-037; `TL-0005`, `TL-0604`, `TL-0605`, `TL-0606`, `TL-0607`, `TL-0609`, `TL-0703`  
-**Control status:** Planned; `TL-0005` now supplies the draft support allowlist and preview/redaction contract, but named privacy-owner approval and runtime export controls remain pending  
+**Control status:** Planned; `TL-0005` supplies the approved support allowlist and preview/redaction contract, while runtime export controls remain pending  
 **Recovery/manual path:** Re-preview after any data change and select a safe reviewed destination or manual transfer process.  
 **Residual risk:** `RR-006`; subsequent handling of a valid export is outside product control.
 

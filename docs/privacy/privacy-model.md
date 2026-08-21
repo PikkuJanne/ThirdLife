@@ -1,10 +1,10 @@
 # ThirdLife Setup Core — Privacy Model
 
-**Status:** Draft contract complete; named privacy-owner approval pending  
-**Model revision:** TL-0005 review 1  
+**Status:** Approved initial privacy contract  
+**Model revision:** TL-0005 approved 1  
 **Draft date:** 2026-08-21  
 **Authority:** Derived from D-011, D-013, D-014, D-036, D-037, D-053, D-058, D-059, D-061, and D-063  
-**Approval result:** Pending — this document does not satisfy the human evidence required by `TL-0005`
+**Approval result:** Approved — named privacy-owner review recorded for the exact commit
 
 This model defines the privacy classes, data map, default retention guidance, output separation, and review rules that later persistence, logging, reporting, support, and uninstall work must implement. It does not claim that those controls are implemented. Higher-authority decisions and the canonical **Owns / Does not own** boundary prevail.
 
@@ -86,7 +86,7 @@ The bundle is generated only from the enumerated support schema in `logging-stan
 
 ## Proposed default retention guidance
 
-The following values are the proposed safe defaults for later implementation. They are deliberately marked **not approved** until a named privacy owner reviews the classifications and durations. Organization policy may shorten them. An extension must name the data class, reason, accountable owner, review date, and deletion condition; silent indefinite retention is not permitted.
+The following values are the reviewed safe defaults for later implementation. They are approved by the named privacy owner for the exact reviewed commit; changes require review of the classifications and durations. Organization policy may shorten them. An extension must name the data class, reason, accountable owner, review date, and deletion condition; silent indefinite retention is not permitted.
 
 | Data | Proposed default | Start/cleanup rule | Required implementation behavior |
 |---|---|---|---|
@@ -101,7 +101,7 @@ The following values are the proposed safe defaults for later implementation. Th
 | Support export audit metadata | Same as the owning job | Delete with explicit job-data deletion | Retain only support ID, schema version, content digest, export time, and protected operator attribution |
 | Migration/recovery copy | Until migration/recovery is verified, then 7 days | Start only for a named operation; a failure retains the original and records a bounded review state | Later persistence work must prove safe cleanup, access denial handling, and no orphan/partial copy before enabling the default |
 | Unreferenced superseded configuration | 90 days after supersession | A version referenced by a retained job follows that job instead | Never rewrite the snapshot of a historical job |
-| Package/update cache | 30 days after last verified use by default; keep longer only while an active/recoverable job explicitly references the exact artifact | Evict by age and by a separately measured byte ceiling after checking active plan, resume, provenance, and recovery references | Evict only cache-owned artifacts; never retain raw provider/output text with the artifact, and let later package work tighten this pending default when supply-chain or rollback evidence requires it |
+| Package/update cache | 30 days after last verified use by default; keep longer only while an active/recoverable job explicitly references the exact artifact | Evict by age and by a separately measured byte ceiling after checking active plan, resume, provenance, and recovery references | Evict only cache-owned artifacts; never retain raw provider/output text with the artifact, and let later package work tighten this reviewed default when supply-chain or rollback evidence requires it |
 | Secrets, recovery material, personal content, telemetry, and sibling-private data | Zero | Never collect or persist | A discovered attempted value is rejected/redacted; do not retain it for debugging |
 
 Changing an approved retention default is a privacy and threat-model review trigger. Later code must test expiration, interrupted cleanup, access denial, full disk, corrupt metadata, clock changes, links/reparse points, and the distinction between archive, export, and deletion. Until implementation exists, this table is guidance rather than a deletion claim.
@@ -145,10 +145,10 @@ The approving reviewer must inspect the exact commit and record:
 - confirmation that raw output, telemetry, secrets, and sibling-private data handling is acceptable; and
 - explicit result: approved, approved with recorded conditions, or changes required.
 
-**Current privacy-owner:** Pending  
-**Current privacy-owner role:** Pending  
-**Current review date:** Pending  
-**Reviewed commit/reference:** Pending  
-**Approval scope:** Pending — field/context classifications, default retention guidance, redaction/omission, and support-export allowlist  
-**Conditions/residual risks:** Pending  
-**Current result:** Pending — automated checks cannot supply this human evidence.
+**Current privacy-owner:** Janne Vuorela  
+**Current privacy-owner role:** Privacy Owner — Principal Software Architect & Sole Project Owner  
+**Current review date:** 2026-08-21  
+**Reviewed commit/reference:** reviewed commit 118240955b01ea4a0b941b00d357ea165b035981  
+**Approval scope:** Approved — field/context classifications, default retention guidance, redaction/omission actions, and support-export allowlist  
+**Conditions/residual risks:** None recorded; approval is unconditional. Runtime implementation and verification remain separately required.  
+**Current result:** Approved — exact-commit contract review recorded.

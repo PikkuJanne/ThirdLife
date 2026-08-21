@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Logging and Diagnostic Export Standard
 
-**Status:** Draft contract complete; named privacy-owner approval pending  
-**Standard revision:** TL-0005 review 1  
+**Status:** Approved initial privacy contract  
+**Standard revision:** TL-0005 approved 1  
 **Draft date:** 2026-08-21  
 **Authority:** [`privacy-model.md`](privacy-model.md), D-011, D-013, D-014, D-036, D-037, and D-053
 
@@ -157,7 +157,7 @@ There is no send, upload, remote-support, or analytics shortcut. Manual transfer
 
 ## Retention, bounds, and cleanup
 
-Logging code must implement the proposed 14-day sanitized-log default from `privacy-model.md` only after privacy-owner approval, together with a measured/configured byte ceiling. Retention is enforced by both age and size. Individual values, records, collections, files, queues, retries, and render/export operations also require reviewed bounds; dropping data due to a bound remains an explicit sanitized state.
+Logging code must implement the approved 14-day sanitized-log default from `privacy-model.md` together with a measured/configured byte ceiling. Retention is enforced by both age and size. Individual values, records, collections, files, queues, retries, and render/export operations also require reviewed bounds; dropping data due to a bound remains an explicit sanitized state.
 
 Temporary and staged diagnostic bytes use random internal names, restrictive creation, and operation-scoped lifetime. Cleanup handles interruption, access denial, full disk, corrupt metadata, wrong clock, and links/reparse points without broad deletion. A cleanup failure never copies a prohibited path/value into another log.
 
@@ -173,8 +173,8 @@ Temporary and staged diagnostic bytes use random internal names, restrictive cre
 - prove no telemetry SDK, background uploader, hidden network category, recipient identity dependency, or sibling data access exists; and
 - record durations, bounds, fixture hashes, environment, cleanup, and claim limitations on the active Codex machine under the applicable test tier.
 
-Automated fixture/schema checks in `TL-0005` validate the design artifacts only. They do not claim a production redactor, logger, retention job, support exporter, or human privacy approval exists.
+Automated fixture/schema checks in `TL-0005` validate the design artifacts only. They do not claim a production redactor, logger, retention job, or support exporter exists; the separate approval record covers only human contract review.
 
 ## Change and approval rule
 
-Adding a logged field, raw attachment, exception detail, support field/file, new output audience, telemetry proposal, or retention change triggers privacy and threat-model review. A lower-authority implementation cannot silently broaden this standard. The privacy-owner approval record is maintained in `privacy-model.md`; it is currently pending.
+Adding a logged field, raw attachment, exception detail, support field/file, new output audience, telemetry proposal, or retention change triggers privacy and threat-model review. A lower-authority implementation cannot silently broaden this standard. The privacy-owner approval record is maintained in `privacy-model.md`; it is approved for the exact reviewed commit.

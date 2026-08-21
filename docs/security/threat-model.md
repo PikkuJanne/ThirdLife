@@ -202,7 +202,7 @@ The boundaries are intentionally separate; “local machine” is not a single t
 **Abuse cases:** `AC-008`, `AC-018`  
 **Decisions:** D-014, D-036, D-037, D-053  
 **Planned controls/tasks:** `TL-0005`, `TL-0104`, `TL-0115`, `TL-0207`, `TL-0308`, `TL-0407`, `TL-0604`, `TL-0605`, `TL-0606`, `TL-0609`  
-**Control status:** Planned; the `TL-0005` classification/logging specification and synthetic fixtures exist in draft, but named privacy-owner approval and every runtime control remain pending  
+**Control status:** Planned; the `TL-0005` classification/logging specification and synthetic fixtures have named privacy-owner approval, while every runtime control remains pending  
 **Target residual risk:** Medium — allowlisted schemas and redaction before persistence reduce leakage; an operator can still export to an unsafe destination or forward an approved artifact.  
 **Review trigger:** New logged field, raw backend/provider capture, crash reporting, export field, report audience, or telemetry proposal.
 

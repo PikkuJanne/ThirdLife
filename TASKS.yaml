@@ -519,7 +519,7 @@ tasks:
   workstream: privacy
   kind: security
   priority: P0
-  status: review
+  status: done
   size: M
   executor: hybrid
   environment: any
@@ -561,14 +561,14 @@ tasks:
     task: TL-0005
     command_or_review: Structured semantic review of the three governed privacy artifacts against the task contract
     tier: targeted
-    result: passed; technical contract complete and named privacy-owner approval pending
+    result: passed; technical contract complete and named privacy-owner approval had not yet been recorded at this technical-review checkpoint
     environment: Repository semantic review on Windows 11 x64
     date: '2026-08-21'
     duration: Not separately timed; completed during the bounded implementation review
     reference: docs/privacy/privacy-model.md sha256:a10e3248703ceb359a005173dccde9941de4595cf10b382ecb3d9acbb819f5ee;
       docs/privacy/logging-standard.md sha256:5f0d27cd93ba921b768f621401b91710d3f04263fe47152cb1baf8ffec6eb880;
       docs/privacy/redaction-test-cases.yaml sha256:6f43b2f31565f614218b7a58cbf8b43b157efeb03767ec51d60ddc5a3f0e354a
-    limitation: Design artifacts only; named privacy-owner approval and runtime implementation remain pending
+    limitation: Design artifacts only; named privacy-owner approval was pending when reviewed and runtime implementation remains pending
   - summary: Targeted privacy-contract regressions passed strict schema, bounded hostile-YAML, secret-first, full-serial,
       raw-output, sibling-data, telemetry, digest, Markdown-table, support-allowlist, Git-bound approval, and truthful-state
       cases.
@@ -603,7 +603,43 @@ tasks:
     date: '2026-08-21'
     duration: 25.536 s wall
     reference: Governed Quick checks passed against the completed privacy deliverables before final handoff metadata
-    limitation: Same-machine design/repository evidence only; full and extended tiers were not triggered and human approval remains pending
+    limitation: Same-machine design/repository evidence only; full and extended tiers were not triggered and human approval was pending when this run completed
+  - summary: Named privacy owner approved the complete TL-0005 classification, default-retention, redaction/omission, and
+      support-export contract without conditions.
+    task: TL-0005
+    command_or_review: Explicit human privacy-owner approval supplied in the Codex task and recorded in the governed artifacts
+    tier: human review
+    result: passed
+    environment: Human governance review by Janne Vuorela, Privacy Owner — Principal Software Architect & Sole Project Owner
+    date: '2026-08-21'
+    duration: Explicit approval recorded at 2026-08-21T14:30:34Z; not an automated timed test
+    reference: reviewed commit 118240955b01ea4a0b941b00d357ea165b035981; docs/privacy/privacy-model.md;
+      docs/privacy/logging-standard.md; docs/privacy/redaction-test-cases.yaml
+    limitation: Approves the design contract only; runtime implementation and verification remain owned by later tasks
+  - summary: Post-approval regressions proved that approval metadata binds to the exact pre-approval contract commit while
+      substantive mutations to any governed privacy artifact fail validation.
+    task: TL-0005
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_validate_bundle.PrivacyDocumentContractTests;
+      .venv\Scripts\python.exe tools\tests\test_validate_bundle.py
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; PyYAML 6.0.3
+    date: '2026-08-21'
+    duration: 44.868 s test and 45.582 s wall for privacy tests; 57.684 s test and 58.481 s wall for full validator regressions
+    reference: 26/26 privacy tests and 80/80 complete validator tests passed; reviewed commit
+      118240955b01ea4a0b941b00d357ea165b035981
+    limitation: Proves design-contract and approval-record integrity only; no runtime privacy control was exercised
+  - summary: The governed post-approval Quick gate passed the validator regressions, exact contract binding, bundle manifest,
+      repository boundaries, locked dependencies, and static documentation checks.
+    task: TL-0005
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick
+    tier: quick
+    result: passed
+    environment: Active Codex machine; Windows 11 x64; same-machine repository verification
+    date: '2026-08-21'
+    duration: 53.339 s for 80 validator tests; 57.064 s wall for the complete Quick gate
+    reference: Quick gate passed with reviewed commit 118240955b01ea4a0b941b00d357ea165b035981 and TL-0005 in done state
+    limitation: Design/repository evidence only; full and extended tiers were not triggered and no runtime privacy control was exercised
   human_evidence_required:
   - A named privacy owner approves classifications and default retention guidance.
   expected_test_tier: targeted

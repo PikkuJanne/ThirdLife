@@ -294,11 +294,18 @@ class PrivacyDocumentContractTests(unittest.TestCase):
         root: Path,
         task_by_id: dict[str, dict[str, object]] | None = None,
     ) -> validate_bundle.Validation:
+        effective_tasks = TASK_BY_ID if task_by_id is None else task_by_id
+        if task_by_id is None and root != REPOSITORY_ROOT:
+            effective_tasks = dict(TASK_BY_ID)
+            privacy_task = dict(effective_tasks["TL-0005"])
+            privacy_task["status"] = "review"
+            privacy_task["evidence"] = []
+            effective_tasks["TL-0005"] = privacy_task
         validation = validate_bundle.Validation()
         with patch.object(validate_bundle, "ROOT", root):
             validate_bundle.validate_privacy_documents(
                 validation,
-                TASK_BY_ID if task_by_id is None else task_by_id,
+                effective_tasks,
                 DECISION_IDS,
             )
         return validation
@@ -326,7 +333,104 @@ class PrivacyDocumentContractTests(unittest.TestCase):
         self.assertIn(old, text)
         path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
-    def make_approved_privacy_review(self, root: Path) -> str:
+    def set_markdown_field(
+        self, path: Path, field: str, value: str
+    ) -> None:
+        text = path.read_text(encoding="utf-8")
+        text, count = re.subn(
+            rf"^\*\*{re.escape(field)}:\*\*.*$",
+            f"**{field}:** {value}",
+            text,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        self.assertEqual(count, 1, field)
+        path.write_text(text, encoding="utf-8")
+
+    def make_pending_privacy_review(self, root: Path) -> None:
+        fixture = self.read_fixture(root)
+        review = fixture["review"]
+        self.assertIsInstance(review, dict)
+        review.update(
+            {
+                "privacy_owner": None,
+                "owner_role": None,
+                "status": "pending",
+                "result": None,
+                "approved_at_utc": None,
+                "approval_reference": None,
+                "approval_scope": None,
+                "note": (
+                    "A named privacy owner must approve the classifications and "
+                    "default retention guidance before TL-0005 can be marked done."
+                ),
+            }
+        )
+        self.write_fixture(root, fixture)
+
+        model_path = root / "docs/privacy/privacy-model.md"
+        self.set_markdown_field(
+            model_path, "Status", validate_bundle.PRIVACY_PENDING_STATUS
+        )
+        self.set_markdown_field(model_path, "Model revision", "TL-0005 review 1")
+        self.set_markdown_field(
+            model_path,
+            "Approval result",
+            "Pending — this document does not satisfy the human evidence required by `TL-0005`",
+        )
+        model_text = model_path.read_text(encoding="utf-8")
+        model_text = model_text.replace(
+            "The following values are the reviewed safe defaults for later "
+            "implementation. They are approved by the named privacy owner for "
+            "the exact reviewed commit; changes require review of the "
+            "classifications and durations.",
+            "The following values are the proposed safe defaults for later "
+            "implementation. They are deliberately marked **not approved** until "
+            "a named privacy owner reviews the classifications and durations.",
+        ).replace("this reviewed default", "this pending default")
+        model_path.write_text(model_text, encoding="utf-8")
+        pending_fields = {
+            "Current privacy-owner": "Pending",
+            "Current privacy-owner role": "Pending",
+            "Current review date": "Pending",
+            "Reviewed commit/reference": "Pending",
+            "Approval scope": (
+                "Pending — field/context classifications, default retention "
+                "guidance, redaction/omission, and support-export allowlist"
+            ),
+            "Conditions/residual risks": "Pending",
+            "Current result": (
+                "Pending — automated checks cannot supply this human evidence."
+            ),
+        }
+        for field, value in pending_fields.items():
+            self.set_markdown_field(model_path, field, value)
+
+        logging_path = root / "docs/privacy/logging-standard.md"
+        self.set_markdown_field(
+            logging_path, "Status", validate_bundle.PRIVACY_PENDING_STATUS
+        )
+        self.set_markdown_field(
+            logging_path, "Standard revision", "TL-0005 review 1"
+        )
+        logging_text = logging_path.read_text(encoding="utf-8")
+        logging_text = logging_text.replace(
+            "the approved 14-day sanitized-log default from `privacy-model.md` together",
+            "the proposed 14-day sanitized-log default from `privacy-model.md` "
+            "only after privacy-owner approval, together",
+        ).replace(
+            "They do not claim a production redactor, logger, retention job, or "
+            "support exporter exists; the separate approval record covers only "
+            "human contract review.",
+            "They do not claim a production redactor, logger, retention job, "
+            "support exporter, or human privacy approval exists.",
+        ).replace(
+            "it is approved for the exact reviewed commit.",
+            "it is currently pending.",
+        )
+        logging_path.write_text(logging_text, encoding="utf-8")
+
+    def apply_approved_privacy_review(self, root: Path) -> None:
         fixture = self.read_fixture(root)
         review = fixture["review"]
         self.assertIsInstance(review, dict)
@@ -347,83 +451,73 @@ class PrivacyDocumentContractTests(unittest.TestCase):
         self.write_fixture(root, fixture)
 
         model_path = root / "docs/privacy/privacy-model.md"
-        model_replacements = (
-            (
-                "**Status:** Draft contract complete; named privacy-owner approval pending",
-                "**Status:** Approved initial privacy contract",
-            ),
-            (
-                "**Model revision:** TL-0005 review 1",
-                "**Model revision:** TL-0005 approved 1",
-            ),
-            (
-                "**Approval result:** Pending — this document does not satisfy the human evidence required by `TL-0005`",
-                "**Approval result:** Approved — named privacy-owner review recorded for the exact commit",
-            ),
-            (
-                "deliberately marked **not approved** until a named privacy owner reviews",
-                "approved by the named privacy owner for the exact reviewed commit; changes require review of",
-            ),
-            (
-                "**Current privacy-owner:** Pending",
-                "**Current privacy-owner:** Contract Test Reviewer",
-            ),
-            (
-                "**Current privacy-owner role:** Pending",
-                "**Current privacy-owner role:** Privacy owner",
-            ),
-            (
-                "**Current review date:** Pending",
-                "**Current review date:** 2026-08-21",
-            ),
-            (
-                "**Reviewed commit/reference:** Pending",
-                "**Reviewed commit/reference:** Binding added after reviewed commit",
-            ),
-            (
-                "**Approval scope:** Pending — field/context classifications, default retention guidance, redaction/omission, and support-export allowlist",
-                "**Approval scope:** Approved — classifications, retention, redaction, and support-export allowlist",
-            ),
-            (
-                "**Conditions/residual risks:** Pending",
-                "**Conditions/residual risks:** None recorded",
-            ),
-            (
-                "**Current result:** Pending — automated checks cannot supply this human evidence.",
-                "**Current result:** Approved — exact-commit contract review recorded.",
-            ),
+        self.set_markdown_field(
+            model_path, "Status", validate_bundle.PRIVACY_APPROVED_STATUS
         )
-        for old, new in model_replacements:
-            self.replace_once(model_path, old, new)
+        self.set_markdown_field(model_path, "Model revision", "TL-0005 approved 1")
+        self.set_markdown_field(
+            model_path,
+            "Approval result",
+            "Approved — named privacy-owner review recorded for the exact commit",
+        )
+        model_text = model_path.read_text(encoding="utf-8")
+        model_text = model_text.replace(
+            "The following values are the proposed safe defaults for later "
+            "implementation. They are deliberately marked **not approved** until "
+            "a named privacy owner reviews the classifications and durations.",
+            "The following values are the reviewed safe defaults for later "
+            "implementation. They are approved by the named privacy owner for "
+            "the exact reviewed commit; changes require review of the "
+            "classifications and durations.",
+        ).replace("this pending default", "this reviewed default")
+        model_path.write_text(model_text, encoding="utf-8")
+        approved_fields = {
+            "Current privacy-owner": "Contract Test Reviewer",
+            "Current privacy-owner role": "Privacy owner",
+            "Current review date": "2026-08-21",
+            "Reviewed commit/reference": "Binding added after reviewed commit",
+            "Approval scope": (
+                "Approved — classifications, retention, redaction, and "
+                "support-export allowlist"
+            ),
+            "Conditions/residual risks": "None recorded",
+            "Current result": "Approved — exact-commit contract review recorded.",
+        }
+        for field, value in approved_fields.items():
+            self.set_markdown_field(model_path, field, value)
 
         logging_path = root / "docs/privacy/logging-standard.md"
-        logging_replacements = (
-            (
-                "**Status:** Draft contract complete; named privacy-owner approval pending",
-                "**Status:** Approved initial privacy contract",
-            ),
-            (
-                "**Standard revision:** TL-0005 review 1",
-                "**Standard revision:** TL-0005 approved 1",
-            ),
-            (
-                "They do not claim a production redactor, logger, retention job, support exporter, or human privacy approval exists.",
-                "They do not claim a production redactor, logger, retention job, or support exporter exists; the separate approval record covers only human contract review.",
-            ),
-            (
-                "it is currently pending.",
-                "it is approved for the exact reviewed commit.",
-            ),
+        self.set_markdown_field(
+            logging_path, "Status", validate_bundle.PRIVACY_APPROVED_STATUS
         )
-        for old, new in logging_replacements:
-            self.replace_once(logging_path, old, new)
+        self.set_markdown_field(
+            logging_path, "Standard revision", "TL-0005 approved 1"
+        )
+        logging_text = logging_path.read_text(encoding="utf-8")
+        logging_text = logging_text.replace(
+            "the proposed 14-day sanitized-log default from `privacy-model.md` "
+            "only after privacy-owner approval, together",
+            "the approved 14-day sanitized-log default from `privacy-model.md` together",
+        ).replace(
+            "They do not claim a production redactor, logger, retention job, "
+            "support exporter, or human privacy approval exists.",
+            "They do not claim a production redactor, logger, retention job, or "
+            "support exporter exists; the separate approval record covers only "
+            "human contract review.",
+        ).replace(
+            "it is currently pending.",
+            "it is approved for the exact reviewed commit.",
+        )
+        logging_path.write_text(logging_text, encoding="utf-8")
+
+    def commit_privacy_documents(self, root: Path, message: str) -> str:
 
         git_commands = (
             ("init", "--quiet"),
             ("config", "user.name", "Contract Test Reviewer"),
             ("config", "user.email", "reviewer@example.test"),
             ("add", "docs/privacy"),
-            ("commit", "--quiet", "-m", "Approved privacy contract fixture"),
+            ("commit", "--quiet", "-m", message),
         )
         for arguments in git_commands:
             result = subprocess.run(
@@ -444,17 +538,24 @@ class PrivacyDocumentContractTests(unittest.TestCase):
         self.assertEqual(reviewed_commit_result.returncode, 0)
         reviewed_commit = reviewed_commit_result.stdout.strip()
         self.assertRegex(reviewed_commit, r"^[0-9a-f]{40}$")
+        return reviewed_commit
 
-        fixture = self.read_fixture(root)
-        fixture["review"]["approval_reference"] = (
-            f"reviewed commit {reviewed_commit}"
+    def make_approved_privacy_review(self, root: Path) -> str:
+        self.make_pending_privacy_review(root)
+        self.apply_approved_privacy_review(root)
+        reviewed_commit = self.commit_privacy_documents(
+            root, "Approved privacy contract fixture"
         )
-        self.write_fixture(root, fixture)
-        self.replace_once(
-            model_path,
-            "**Reviewed commit/reference:** Binding added after reviewed commit",
-            f"**Reviewed commit/reference:** reviewed commit {reviewed_commit}",
+        self.set_privacy_approval_commit(root, reviewed_commit)
+        return reviewed_commit
+
+    def make_preapproval_bound_privacy_review(self, root: Path) -> str:
+        self.make_pending_privacy_review(root)
+        reviewed_commit = self.commit_privacy_documents(
+            root, "Pre-approval privacy contract fixture"
         )
+        self.apply_approved_privacy_review(root)
+        self.set_privacy_approval_commit(root, reviewed_commit)
         return reviewed_commit
 
     def set_privacy_approval_commit(self, root: Path, reviewed_commit: str) -> None:
@@ -476,11 +577,8 @@ class PrivacyDocumentContractTests(unittest.TestCase):
         model_path.write_text(model_text, encoding="utf-8")
 
     def test_current_privacy_documents_satisfy_contract(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            self.copy_privacy_documents(root)
-            validation = self.validate_documents(root)
-            self.assertEqual(validation.errors, [])
+        validation = self.validate_documents(REPOSITORY_ROOT)
+        self.assertEqual(validation.errors, [])
 
     def test_required_runtime_and_human_claim_limitations_cannot_be_removed(self) -> None:
         mutations = (
@@ -1093,6 +1191,7 @@ class PrivacyDocumentContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_privacy_documents(root)
+            self.make_pending_privacy_review(root)
             task_by_id = dict(TASK_BY_ID)
             privacy_task = dict(task_by_id["TL-0005"])
             privacy_task["status"] = "done"
@@ -1125,6 +1224,7 @@ class PrivacyDocumentContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_privacy_documents(root)
+            self.make_pending_privacy_review(root)
             fixture = self.read_fixture(root)
             fixture["review"]["status"] = "approved"
             self.write_fixture(root, fixture)
@@ -1222,6 +1322,45 @@ class PrivacyDocumentContractTests(unittest.TestCase):
                 "Privacy approval commit does not bind current contract docs/privacy/logging-standard.md",
                 validation.errors,
             )
+
+    def test_preapproval_commit_binds_only_substantive_contract_bytes(self) -> None:
+        mutations = (
+            (
+                "docs/privacy/privacy-model.md",
+                "| Sanitized operational logs | 14 days |",
+                "| Sanitized operational logs | 15 days |",
+            ),
+            (
+                "docs/privacy/logging-standard.md",
+                "There is no telemetry or background upload path.",
+                "A telemetry path may be enabled.",
+            ),
+            (
+                "docs/privacy/redaction-test-cases.yaml",
+                None,
+                None,
+            ),
+        )
+        for relative, old, new in mutations:
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_privacy_documents(root)
+                reviewed_commit = self.make_preapproval_bound_privacy_review(root)
+                self.assertRegex(reviewed_commit, r"^[0-9a-f]{40}$")
+                validation = self.validate_documents(root)
+                self.assertEqual(validation.errors, [])
+
+                if old is None:
+                    fixture = self.read_fixture(root)
+                    fixture["policy"]["telemetry_default"] = "on"
+                    self.write_fixture(root, fixture)
+                else:
+                    self.replace_once(root / relative, old, new)
+                validation = self.validate_documents(root)
+                self.assertIn(
+                    f"Privacy approval commit does not bind current contract {relative}",
+                    validation.errors,
+                )
 
     def test_post_approval_contract_mutation_breaks_commit_binding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
