@@ -198,7 +198,7 @@ Environment: Windows, .NET SDK 10.0.400, and CPython 3.14.7. The NuGet result is
 
 | Release-interface evidence | TL-0006 source |
 |---|---|
-| Product licence | The earlier 20-component matrix review remains historical evidence; the current 24-component candidate matrix is pending review after adding four synthetic placeholders, and the final product licence remains TBD at release freeze |
+| Product licence | The current 24-component candidate matrix review is approved and bound below; the final product licence remains TBD at release freeze |
 | Dependency-lock revision | Frozen source commit plus dependency-input digest emitted in the SBOM |
 | SBOM/third-party notices | Generated CycloneDX file, its SHA-256, matrix digest, review record, and later release-specific notices |
 | Source commit | Exact checked-out `HEAD` supplied as `-SourceRevision`, with every governed input verified against that commit |
@@ -217,18 +217,18 @@ This task does not produce a release artifact hash, signature, installer, third-
 
 ## Human licence and rights review
 
-The global review is pending because `TL-0007` added four project-created synthetic catalogue rows and thereby materially changed the matrix. The earlier approval remains historical evidence for its exact 20-component digest only; it does not approve the current 24-component matrix or any placeholder. Pending review does not convert a withheld right into an allowed right or authorize installation, redistribution, production use, or release.
+The global review is approved for the exact 24-component matrix and reviewed commit recorded below. The approval accepts the proposals and limitations exactly as written; it does not convert a withheld right into an allowed right or authorize blanket installation, redistribution, production use, or release.
 
 | Field | Value |
 |---|---|
-| Review status | Pending |
-| Reviewer | Not recorded |
-| Role | Not recorded |
-| Review date | Not recorded |
-| Result | Not recorded |
-| Reviewed commit | Not recorded |
-| Matrix SHA-256 | Not recorded |
+| Review status | Approved |
+| Reviewer | Janne Vuorela |
+| Role | Principal Software Architect & Sole Project Owner |
+| Review date | 2026-08-21 |
+| Result | Approved without conditions |
+| Reviewed commit | 7afc6c7599523fb56a66774a29e9107e6a9a0aac |
+| Matrix SHA-256 | 32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193 |
 
-The current unreviewed candidate matrix SHA-256 is `32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193`; this computed value is inventory evidence, not a completed review record. A named reviewer must inspect the exact commit and this exact matrix before the table can change from pending. The review must preserve the mutable licence-evidence limitation for `xunit.abstractions`, withheld redistribution of `.NET SDK` and `CPython` pending exact installer provenance, hashes/signatures, applicable licences, and notices, and the four placeholders' `NOASSERTION`, non-installable, no-artifact, `not-shipped`, and separately withheld-rights state. Any later approval is governance evidence for the recorded dependency plan only, not legal advice, a final product-licence decision, or release authorization.
+Janne Vuorela supplied the explicit approval in the Codex task, acting as Principal Software Architect & Sole Project Owner. The governed result `Approved without conditions` means no additional unrecorded condition was added; all limitations already written into the contract remain binding. In particular, the approval preserves the mutable licence-evidence limitation for `xunit.abstractions`, withheld redistribution of `.NET SDK` and `CPython` pending exact installer provenance, hashes/signatures, applicable licences, and notices, and the four placeholders' `NOASSERTION`, non-installable, no-artifact, `not-shipped`, and separately withheld-rights state. It grants no blanket redistribution right and is not legal advice, a final product-licence decision, production admission, or release authorization.
 
 A material version, source, publisher, licence, integrity, purpose, scope, relationship, distribution-plan, or matrix change invalidates this review and requires a new named approval bound to the changed commit and digest.

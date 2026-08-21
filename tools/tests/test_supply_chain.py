@@ -268,7 +268,7 @@ class CurrentInventoryTests(SupplyChainTestCase):
             Counter(component.relationship for component in result.inventory),
             Counter({"ci": 3, "direct": 9, "toolchain": 2, "transitive": 10}),
         )
-        self.assertEqual(result.approval_state.casefold(), "pending")
+        self.assertEqual(result.approval_state.casefold(), "approved")
         self.assertRegex(result.lock_digest, r"\A[0-9a-f]{64}\Z")
         self.assertRegex(result.matrix_digest, r"\A[0-9a-f]{64}\Z")
         self.assertTrue(result.dependency_graph)

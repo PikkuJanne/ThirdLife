@@ -819,6 +819,22 @@ tasks:
     limitation: Working-tree SBOM source revision was intentionally omitted because the approval metadata changes were not yet
       committed; the separate clean-checkout proof remains bound to checkpoint 46de0c8597f462ad083284797e6f1fa09d52d47b,
       and this approval does not authorize a release or broaden any redistribution right
+  - summary: Named human licence and rights reviewer approved the amended 24-component proposal contract exactly as written,
+      preserving every recorded limitation and withheld right rather than granting blanket redistribution permission.
+    task: TL-0006
+    command_or_review: Explicit renewed approval supplied by Janne Vuorela in the Codex task and authorized for append-only
+      recording in TL-0006 evidence
+    tier: human review
+    result: passed
+    environment: Human governance review by Janne Vuorela, Principal Software Architect & Sole Project Owner
+    date: '2026-08-21'
+    duration: Explicit approval recorded at 2026-08-21T19:42:10Z; not an automated timed test
+    reference: reviewed commit 7afc6c7599523fb56a66774a29e9107e6a9a0aac; matrix
+      sha256:32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193;
+      docs/supply-chain/dependencies.md; docs/supply-chain/license-matrix.csv
+    limitation: Approves the governance contract exactly as written; preserves the xunit.abstractions evidence limitation,
+      withheld .NET SDK and CPython redistribution, and every synthetic placeholder's NOASSERTION, non-installable,
+      no-artifact, not-shipped, and separately withheld-rights state; grants no blanket right or release authorization
   human_evidence_required:
   - A human reviews licenses and redistribution claims before a release gate.
   expected_test_tier: targeted
@@ -830,7 +846,7 @@ tasks:
   workstream: test-data
   kind: test
   priority: P0
-  status: review
+  status: done
   size: M
   executor: hybrid
   environment: any
@@ -937,6 +953,50 @@ tasks:
       repository errors require current review Approved, TL-0006 done consistency, and named evidence for this exact digest
     limitation: This checkpoint cannot become green until the named matrix review is supplied and authorized evidence is
       recorded; no approval, right, exception, or security-policy bypass was inferred
+  - summary: Pilot owner Janne Vuorela approved the candidate policy values and initial capability set exactly as reviewed.
+    task: TL-0007
+    command_or_review: Explicit approval supplied by Janne Vuorela in the Codex task
+    tier: human review
+    result: passed
+    environment: Human pilot-governance review by Janne Vuorela, Pilot Owner and Principal Software Architect & Sole Project
+      Owner
+    date: '2026-08-21'
+    duration: Explicit approval recorded at 2026-08-21T19:42:10Z; not an automated timed test
+    reference: reviewed commit 7afc6c7599523fb56a66774a29e9107e6a9a0aac; fixture-set
+      sha256:1df6bbed058da9397555e747e6d3f4e4443934d261366a54145f2003e5fc8743
+    limitation: Approval covers only the exact candidate values and initial four generic capabilities; it does not make the
+      candidate policy effective, certify hardware, approve a real package, grant redistribution rights, or authorize release
+  - summary: Post-approval focused regressions accepted the exact pilot-owner and current-matrix approvals while preserving
+      digest binding, non-production catalogue state, limitations, and withheld rights.
+    task: TL-0007
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_pilot_fixtures;
+      .venv\Scripts\python.exe -m unittest tools.tests.test_supply_chain;
+      .venv\Scripts\python.exe tools\validate_bundle.py; .venv\Scripts\python.exe tools\supply_chain.py
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; approval working tree
+    date: '2026-08-21'
+    duration: 19 pilot-fixture tests in 22.956 s; 21 supply-chain tests in 49.548 s; both live validators passed
+    reference: reviewed commit 7afc6c7599523fb56a66774a29e9107e6a9a0aac; fixture-set
+      sha256:1df6bbed058da9397555e747e6d3f4e4443934d261366a54145f2003e5fc8743; matrix
+      sha256:32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193; review approved
+    limitation: Approval metadata changes are not part of the reviewed fixture or matrix bytes; at this checkpoint the final
+      governed Quick and remote publication checks remained to be recorded
+  - summary: The final governed Quick gate passed all validator regressions, both live validators, manifest coverage, repository
+      boundaries, package locks, catalogue hash binding, and exact human-approval controls.
+    task: TL-0007
+    command_or_review: .\eng\verify.ps1 -Tier Quick
+    tier: quick
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; approval working tree with regenerated bundle manifest
+    date: '2026-08-21'
+    duration: 120 Python tests in 111.413 s; live bundle and repository validators also passed
+    reference: 24 governed components; licence review approved; reviewed commit
+      7afc6c7599523fb56a66774a29e9107e6a9a0aac; fixture-set
+      sha256:1df6bbed058da9397555e747e6d3f4e4443934d261366a54145f2003e5fc8743; matrix
+      sha256:32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193
+    limitation: jsonschema was not installed and the checked-in custom structural validator was used as designed; no Full or
+      extended trigger applies to TL-0007, and the inherited Smart App Control release-gate limitation remains recorded
   human_evidence_required:
   - A pilot owner approves candidate policy values and the initial capability set.
   expected_test_tier: targeted
