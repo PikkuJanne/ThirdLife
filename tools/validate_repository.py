@@ -722,7 +722,7 @@ def validate() -> int:
     print(
         "OK: repository controls valid; "
         f"{len(project_paths)} projects, {len(project_paths)} lock files, "
-        "central packages and pinned Windows CI verified"
+        "central packages and optional Windows workflow configuration verified"
     )
     return 0
 

@@ -294,7 +294,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Exact SDK/tool/direct/transitive resolution, source mapping and locks, change review, owner/licence/redistribution record, SBOM and vulnerability review, clean-build provenance, exact source revision, artifact hashes/signature or explicit development labeling, and gate comparison of reviewed bytes.  
 **Fail-closed response:** Reject restore/build/package/release or quarantine the candidate; never silently fetch “latest,” weaken a lock/trust check, substitute a source, or publish mismatched evidence.  
 **Planned controls/tasks:** D-043; `TL-0002`, `TL-0006`, `TL-0610`, `TL-0704`, `TL-0706`, `TL-0708`, `TL-0709`, `TL-0710`  
-**Control status:** `TL-0002` verified the pinned SDK, central direct-package versions, locked restore, and Windows CI baseline. Ownership/licence/SBOM, packaging provenance, lifecycle, and freeze checks remain planned.  
+**Control status:** `TL-0002` verified the pinned SDK, central direct-package versions, locked restore, and the then-current optional Windows workflow configuration. Under D-063, authoritative runtime evidence is produced on the active Codex machine; remote workflow results are non-authoritative convenience signals. Ownership/licence/SBOM, packaging provenance, lifecycle, and freeze checks remain planned.  
 **Recovery/manual path:** Restore the reviewed source/lock/toolchain, investigate the changed input, regenerate every affected artifact/evidence item, and repeat independent verification before a new candidate.  
 **Residual risk:** `RR-002`; an approved upstream or build environment may itself be compromised.
 

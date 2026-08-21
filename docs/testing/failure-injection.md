@@ -1,147 +1,104 @@
-# ThirdLife Setup Core — Failure-Injection Procedure
+# ThirdLife Setup Core — Failure-injection scenario register
 
-**Status:** Draft procedure; human evidence pending  
-**Procedure revision:** TL-0008 draft 1  
+**Status:** Active specification; defined but not executed at revised `TL-0008`  
+**Procedure revision:** TL-0008 same-machine revision 2  
 **Task:** `TL-0008`  
-**Authority:** `DECISIONS.md`, `ROADMAP.md`, `PROJECT_BOUNDARY.md`, `SECURITY.md`, `ACCESSIBILITY.md`, `LOW_SPEC.md`, and `AGENTS.md`  
-**Execution state:** No failure-injection run or human result is recorded by this document.
+**Execution state:** `FI-001`–`FI-012` are defined and individually addressable; all are `Not run`.
 
 ## 1. Purpose and claim boundary
 
-This document defines repeatable, reviewable failure scenarios for ThirdLife Setup Core. It is a plan for later implementation and lab tasks, not evidence that the application, broker, persistence, package, update, report, accessibility, or recovery behavior already exists or has passed.
+This register consolidates the detailed provider, network, resource, process, broker, package, persistence, interruption, update, manual-workflow, and cold-boot failure cases into twelve canonical scenarios. Each scenario retains fail-closed state, integrity, accessibility, recovery, cleanup, and evidence requirements. Revised `TL-0008` defines the cases, tier triggers, and non-executable command placeholders only; it does not inject a fault or run a broad matrix.
 
-The procedure supports D-015 evidence semantics, D-033 cold-boot verification, and the failure-injection layer in the binding roadmap. A scenario passes only when the deliberately introduced fault produces the scenario's expected safe, truthful, recoverable outcome. A rejected or failed operation can therefore be a **Pass** for a failure-injection scenario; it does not mean the underlying operation succeeded.
+A scenario passes only when the deliberately introduced fault is observed and every expected safe, truthful, recoverable invariant holds. A rejected or failed product operation can therefore be a **Pass** for the injection scenario; it never means the underlying operation succeeded.
 
-Automation and VM results cannot prove physical-device behavior or long-term hardware reliability. A future physical result must be recorded separately and human confirmed. Nothing in this procedure authorizes unsupported Windows installation, processor/TPM/Secure Boot bypass, activation or ownership bypass, firmware flashing, TPM clearing, destructive storage testing, malware cleanup, or work on donor data.
+All development execution is hosted by the active Codex machine. Fixtures, adapters, hosted environments, and constraints prove only the represented fault and recorded environment. They do not certify physical hardware, another machine, a minimum specification, or long-term reliability.
 
 ## 2. Result and evidence semantics
 
-`test_result` and `evidence_class` are separate fields.
+`test_result` and `evidence_class` are independent.
 
 | Field | Exact value | Meaning |
 |---|---|---|
-| `test_result` | `Pass` | The complete scenario was run, the injected fault was observed, every required invariant held, and required recovery and cleanup succeeded. |
-| `test_result` | `Fail` | An expected invariant, recovery, cleanup, accessibility, security, or integrity condition did not hold. False success, corruption, unsafe retry, or unexplained state is always a failure. |
-| `test_result` | `Not available` | The required capability, safe injection mechanism, environment, or evidence source was unavailable. It is not a pass. |
-| `test_result` | `Not run` | The scenario was not started or not completed. A reason is required. It is not a pass. |
-| `evidence_class` | `Observed` | A bounded provider, harness, journal, store, operating-system, or artifact observation was captured with source and provenance. |
-| `evidence_class` | `Inferred` | A conclusion was derived from identified observations and its limits are stated. Inference alone cannot establish a required pass. |
-| `evidence_class` | `Not available` | Required evidence could not be collected. Missing evidence remains unknown. |
-| `evidence_class` | `Human confirmed` | A named human actually observed the physical or interaction result and recorded provider, timestamp, and provenance. Codex cannot create this evidence. |
+| `test_result` | `Pass` | The complete scenario ran, the intended fault occurred, all invariants held, and required cleanup/recovery succeeded. |
+| `test_result` | `Fail` | An invariant, integrity, security/privacy, accessibility, recovery, or cleanup condition failed. False success or unexplained state always fails. |
+| `test_result` | `Not available` | A required safe injection mechanism, implemented capability, environment, or evidence source was unavailable. It is not a pass. |
+| `test_result` | `Not run` | The scenario was not started/completed; an attributable reason is required. It is not a pass. |
+| `evidence_class` | `Observed` | A bounded provider, harness, journal, store, operating-system, or artifact observation was captured with provenance. |
+| `evidence_class` | `Inferred` | A conclusion was derived from named observations; inference alone cannot establish a required pass. |
+| `evidence_class` | `Not available` | Required evidence was unavailable; missing evidence remains unknown. |
+| `evidence_class` | `Human confirmed` | A human actually performed/observed a later interaction/physical procedure and recorded role, timestamp, and provenance. |
 
-Allowed reason codes for `Not available` include `capability_absent`, `equipment_missing`, `environment_unavailable`, `provider_unavailable`, `permission_denied`, and `unsafe_to_run`. `Not run` uses a reason such as `future_control_not_implemented`, `awaiting_approved_build`, `blocked_by_prerequisite`, `cancelled_before_injection`, or `human_run_pending`.
+Synthetic fixtures/harnesses are evidence sources, not real-device evidence classes. A passing deterministic test never becomes a real job result or `Human confirmed` evidence.
 
-A `Pass` must have at least one available evidence item. `Pass` paired only with `Not available` evidence is invalid. Human confirmation is evidence provenance, not a substitute for an application, journal, or integrity assertion that can be independently observed.
+Allowed `Not available` reasons include `capability_absent`, `environment_unavailable`, `provider_unavailable`, `permission_denied`, and `unsafe_to_run`. `Not run` reasons include `future_control_not_implemented`, `blocked_by_prerequisite`, `cancelled_before_injection`, and `later_trigger_not_reached`.
 
-## 3. Permitted environments and safety limits
+## 3. Active-machine environments and prohibitions
 
-Every run records hardware environment (`Physical` or `Virtual`), execution context (`Interactive lab` or `CI`), constraint profile (`None` or a named imposed constraint), and evidence source (direct observation, named provider/harness, or `Synthetic`) as orthogonal fields. The combinations below describe permitted setups; they do not replace those fields. A constrained VM remains virtual evidence, and a synthetic result cannot satisfy a physical-device or D-033 cold-boot requirement.
+All direct and hosted environments use the active Codex machine:
 
-| Environment class | Permitted use | Limitation |
+| Environment | Safe use | Limitation |
 |---|---|---|
-| `Synthetic` | Deterministic provider, journal, parser, storage, clock, and backend outcomes using non-personal fixtures. | Does not prove Windows integration or physical behavior. |
-| `VM` | A disposable VM used for process termination, restart, service/backend loss, bounded virtual-disk exhaustion, corrupted copied stores, and recovery from a known snapshot. | Does not prove physical power, battery, firmware, ports, or long-term reliability. |
-| `Constrained` | Reproducible CPU, memory, storage, priority, and network constraints applied to a disposable process, VM, or bounded test destination. | A constraint is a test class, not a supported minimum-spec claim. |
-| `Physical` | An approved physical lab device used for safe network removal, ordinary UAC decline, operator interruption, full power-off/power-on, and observable hardware behavior after prerequisites are satisfied. | Requires a human operator, an approved reference device, and explicit cleanup. Destructive fault injection is prohibited. |
+| Deterministic fixture/adapter | Typed provider, storage, clock, journal, package, update, report, and manual-workflow outcomes. | Proves only represented input/state. |
+| Hosted disposable environment | VM, Windows Sandbox, container, isolated workspace, copied synthetic store, or virtual disk for termination/interruption/recovery. | Does not prove physical power, firmware, battery, ports, or another machine. |
+| Safe same-machine constraint | Injected capacity, throttled adapter, bounded low priority/concurrency, no-GPU, slow destination, or deterministic network interruption. | Does not simulate a particular untested device. |
+| Physical active-machine observation | Later explicit UAC, operator interruption, or full off/on procedure when named by an owning task/gate. | Requires checkpoint, human attribution where applicable, abort rule, and restoration; proves that run only. |
 
-Every run must use a synthetic job and non-sensitive fixtures. Repository evidence uses opaque device references such as `LAB-DEVICE-001`; it must not contain names, contacts, serials or serial fragments, service or asset tags, hardware UUIDs, hostnames, usernames or SIDs, MAC/IP/SSID values, tenant/account data, product or recovery keys, personal paths, screenshots, raw logs, dumps, archives, or exact workshop locations.
+Use only synthetic jobs and non-sensitive fixtures. Evidence excludes names, contacts, serials/fragments, asset tags, hardware UUIDs, device/host names, usernames/SIDs, MAC/IP/SSID values, credentials, account/tenant data, product/recovery keys, personal paths, screenshots, raw logs, dumps, archives, and donor/recipient content.
 
-The following are prohibited:
+Never fill the host system volume; destructively stress storage/battery; cut physical power during unsafe mutation; alter firmware, Secure Boot, TPM, activation, ownership/management, or Windows eligibility; disable provenance, hash/signature, approval, verification, security/privacy, accessibility, or recovery; add an arbitrary execution surface; or use a sibling/private interface.
 
-- filling a physical system volume, writing unknown removable media, destructive storage or battery stress, or deliberately draining or damaging a battery;
-- abrupt physical power removal during firmware, Windows Update, storage mutation, migration, or another action where the approved test cannot prove a recoverable boundary;
-- changing firmware, Secure Boot, TPM ownership/readiness, activation, MDM, Autopilot-style, anti-theft, ownership, or Windows eligibility state to manufacture coverage;
-- disabling provenance, hash, signature, approval, verification, security, privacy, accessibility, or recovery controls;
-- introducing arbitrary shell commands, executable paths, registry paths, URLs, or unrestricted file operations into product inputs;
-- using a sibling product, sibling repository, private interface, or shared portfolio service.
+## 4. Prerequisites for any later run
 
-## 4. Run prerequisites
+Before injection, record:
 
-Before any injection, the operator records:
+1. scenario ID, owning task, selected tier, exact independently invokable command/procedure, build/source revision, and reference-profile revision;
+2. fixture/workload ID, version, bounded size, SHA-256, expected result, provenance, and privacy review;
+3. direct/hosted environment, `SMC-*` profile/settings, Windows/tool versions, and opaque project-created run ID;
+4. initial job/action state, durable checkpoint, exact injection point, expected terminal/review state, and actual-state re-observation;
+5. storage/time/retry/output/process bounds, accessibility expectations, abort rule, recovery method, cleanup, and residue inspection.
 
-1. procedure revision, scenario ID, exact ThirdLife build/version and source revision;
-2. synthetic fixture ID and SHA-256 digest;
-3. hardware environment, execution context, constraint profile, evidence source, opaque device/VM reference, supported Windows 11 x64 build, and architecture;
-4. the scenario's owning implementation task and whether the required control is implemented;
-5. the initial job/action state and the exact durable checkpoint at which injection is allowed;
-6. recovery image, snapshot, copied synthetic store, or other approved restoration method;
-7. bounded storage, time, retry, output, and process limits;
-8. a stop condition that prevents the injection from crossing an unreviewed mutation boundary;
-9. required accessibility observations and a keyboard-reachable recovery path; and
-10. the planned integrity, residue, privacy, and cleanup inspection.
+If a prerequisite is absent, leave the scenario `Not run` or `Not available`; do not improvise a broader/destructive mechanism.
 
-If a prerequisite is absent, record `Not available` or `Not run`; do not improvise a more destructive mechanism. A pending firmware or update mutation, donor data, unclear ownership state, or absent recovery method prevents the run.
+## 5. Canonical scenario and invocation register
 
-## 5. Scenario catalogue
+Every command cell is deliberately non-executable. The earliest owning task replaces it with a checked-in single-scenario command or bounded human procedure. A runner that can invoke only the whole matrix does not satisfy D-062.
 
-All catalogue rows are plans. Their initial result is `Not run` and initial evidence class is `Not available`.
+| ID | Consolidated fault/checkpoint | Expected invariant and recovery | Must not happen | Default tier and explicit earliest trigger | Individually invokable command/procedure | TL-0008 state |
+|---|---|---|---|---|---|---|
+| `FI-001` | Network/provider unavailable before operation, including timeout, exception, malformed/access-denied evidence. | Offline-capable work remains usable; no mutation; required evidence stays unavailable; unrelated observations remain; bounded retry/next action is shown. | Missing/malformed data becomes pass, raw provider output persists, or core local data becomes unavailable. | Targeted at provider work beginning `TL-0105`, network action `TL-0405`, or update scan `TL-0504`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-002` | Network interruption, slowness, filtering, or timeout during metadata/package transfer. | Partial untrusted bytes are bounded/removed or quarantined; progress/cancel/uncertainty remain accessible; checkpoint is retry-safe; retry revalidates identity/trust. | Partial execution, infinite retry/wait, stale approval, hidden source fallback, UI deadlock, or unbounded cache. | Extended at transfer risk `TL-0405`/`TL-0408` or failure gate `TL-0510`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-003` | Insufficient capacity/resource before mutation or bounded destination/resource exhaustion after preflight. | Preflight preserves rollback headroom; mid-operation failure leaves truthful review/failed state; output/store remains atomic or recoverable; cleanup is bounded. | Host system volume is filled, source data corrupts, work appears complete/verified, or security/accessibility is disabled for resources. | Targeted at storage preflight `TL-0503`; Extended for mid-write/resource risk at `TL-0510`/`TL-0606`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-004` | UI/manual workflow terminates or pauses before dispatch, after durable intent, or between manual-test steps. | Pre-dispatch state is unchanged; post-intent ambiguity is reconciled; completed manual results persist; incomplete work remains `Not run`/`Not available`; reopening offers safe recovery. | Unattributable dispatch, false verified/pass, blind repeat, wrong-job resume, or loss/rewrite of independent results. | Targeted at journal `TL-0308`, manual workflow `TL-0114`, or UI/broker integration `TL-0313`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-005` | Broker/backend terminates before mutation, during mutation, or immediately after an ambiguous attempt. | Correlated attempt remains attributable; no permanent elevated process; actual state is re-observed before retry; ambiguity blocks readiness. | Dispatch/backend exit becomes applied/verified, duplicate mutation, automatic unsafe retry, history rewrite, or privileged residue. | Targeted before mutation at `TL-0311`/`TL-0312`; Extended for ambiguous mutation at `TL-0408`/`TL-0409`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-006` | Operator declines UAC before broker authorization. | No privileged mutation or approval; job remains valid/truthful; retry/stop is clear and keyboard reachable; broker exits. | Applied/approved state is minted, UI loses context, inaccessible recovery, or elevated process remains. | Targeted at broker/UI approval `TL-0313`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-007` | Catalogue/package identity, source, publisher, version, content digest, or trust metadata changes after preview/approval. | Approval is invalidated; a new resolution/preview is required; no stale request executes. | Source substitution, downgrade, hash bypass, or unchanged approval after material change. | Targeted at approval/digest `TL-0307` or catalogue resolution `TL-0403`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-008` | Package/update/backend reports success while expected product/version is absent or update service does not converge. | Record at most applied/pending/review; independent verification fails; finite pass/restart state and recovery guidance remain; readiness stays blocked. | Backend success becomes verified/ready, infinite update loop, settings scraping, firmware injection, or raw output leakage. | Targeted at verification `TL-0406`; Full at update sequence `TL-0504`/`TL-0505` when task contract triggers. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-009` | Installed application launch immediately fails, hangs, or resolves the wrong executable/version. | Launch verification fails with stable bounded reason; state is not verified; safe cleanup/retry/manual guidance is shown. | Presence alone becomes functional pass, arbitrary executable/path is launched, infinite wait, or failure is hidden. | Targeted at application verification `TL-0406`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-010` | Synthetic job/database/report or migration is corrupt, interrupted, older, or newer than supported; export final replace can fail. | Transaction rolls back or open/export blocks safely; original/source job remains intact; backup/recovery is explicit; no corrupt final artifact/history rewrite. | Silent data loss, partial migration, raw fallback, unintended overwrite, invented evidence, or personal destination path in logs. | Targeted at persistence `TL-0102`; Full at migration/lifecycle `TL-0704`; export subcase targeted at `TL-0604`/`TL-0606`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-011` | Clock moves, request/session expires, or resume token is stale, copied, replayed, or bound to another job/device/action/session. | Invalid authority is rejected; no action executes; timestamps/history remain immutable; operator starts a newly approved attributable path. | Replay, cross-job/device resume, silent expiry extension, or evidence timestamp rewrite. | Targeted at IPC/session `TL-0310`/`TL-0312` and resume `TL-0309`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
+| `FI-012` | Expected/unexpected restart, safe interruption, or full powered-off cold boot resumes with failed/unavailable/changed post-boot verification. | Durable checkpoint binds correct job; fresh actual-state observation precedes retry/continue; failed/unknown checks and update convergence remain visible; readiness is blocked. | Warm/app restart or synthetic result counts as cold boot, old evidence is reused, unrelated job resumes, unsafe physical power cut, or false terminal success. | Targeted/full for resume at `TL-0309`/`TL-0505`; Extended physical cold boot at `TL-0509`; broader gate `TL-0510` only as triggered. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
 
-| ID | Planned fault and checkpoint | Permitted environment | Expected invariant and recovery | Must not happen | Earliest owning task | Initial result | Initial evidence class |
-|---|---|---|---|---|---|---|---|
-| `FINJ-001` | Provider timeout, exception, malformed value, or unavailable result before normalized evidence commit. | Synthetic; Disposable VM | Record bounded sanitized failure or not-available evidence; unrelated observations remain independent; safe rerun is offered. | Missing or malformed data becomes pass; raw provider output is persisted. | `TL-0105`, `TL-0112` | `Not run` | `Not available` |
-| `FINJ-002` | Operator declines UAC before broker authorization. | Disposable VM; Approved physical lab device | No privileged mutation; durable state remains truthful; UI explains retry or stop without a mouse. | Approval or applied state is minted; a privileged process remains. | `TL-0313` | `Not run` | `Not available` |
-| `FINJ-003` | Network is absent before a network-dependent action starts. | Synthetic; Disposable VM; Approved physical lab device | Offline-capable work remains usable; network action fails or defers before unsafe mutation with clear recovery. | Core data becomes unavailable; absence is reported as success. | `TL-0405`, `TL-0504` | `Not run` | `Not available` |
-| `FINJ-004` | Network is removed during bounded metadata or package transfer. | Disposable VM; Approved physical lab device | Partial untrusted output is quarantined or removed; checkpoint remains retry-safe; later retry revalidates identity and trust. | Partial bytes execute; stale approval remains valid after material change. | `TL-0405`, `TL-0408` | `Not run` | `Not available` |
-| `FINJ-005` | Slow, intermittent, high-latency, filtered, or captive network. | Constrained environment; Approved physical lab device | Progress, timeout, cancellation, uncertainty, and recovery remain visible and bounded. | Infinite retry, UI deadlock, hidden fallback source, or unbounded cache growth. | `TL-0405`, `TL-0510` | `Not run` | `Not available` |
-| `FINJ-006` | Required disk headroom is insufficient at preflight. | Synthetic; Disposable VM; Constrained environment | Execution is blocked before download or mutation; estimates and uncertainty remain visible. | Modification begins or unknown estimates are treated as zero. | `TL-0503` | `Not run` | `Not available` |
-| `FINJ-007` | A bounded disposable destination becomes full after preflight. | Disposable VM; Constrained environment | Atomic/partial output rules hold; journal records failure or review-required state; recovery and cleanup are explicit. | Physical system drive is filled; completed/verified state is recorded; existing data is corrupted. | `TL-0503`, `TL-0606` | `Not run` | `Not available` |
-| `FINJ-008` | UI exits before action dispatch. | Synthetic; Disposable VM | No started checkpoint or privileged mutation exists; reopening shows the unchanged approved plan. | A queued action executes without attributable dispatch. | `TL-0308`, `TL-0313` | `Not run` | `Not available` |
-| `FINJ-009` | UI exits after the durable started/dispatch-intent checkpoint. | Synthetic; Disposable VM | Correlated broker result or later reconciliation controls state; reopening exposes ambiguity and recovery. | UI disappearance marks verified or causes blind repeat. | `TL-0308`, `TL-0313` | `Not run` | `Not available` |
-| `FINJ-010` | Broker exits before backend mutation. | Synthetic; Disposable VM | Attempt is failed or requires review after reconciliation; broker leaves no permanent elevated process. | Applied/verified is inferred from dispatch; automatic unsafe retry. | `TL-0311`, `TL-0312` | `Not run` | `Not available` |
-| `FINJ-011` | Broker exits during or immediately after an ambiguous mutation attempt. | Synthetic; Disposable VM | Started attempt remains attributable; actual state is re-observed before any retry; ambiguity blocks ready state. | Duplicate mutation, history rewrite, or backend exit code treated as verification. | `TL-0312`, `TL-0408`, `TL-0409` | `Not run` | `Not available` |
-| `FINJ-012` | Package/update/backend is unavailable, hangs, or exceeds its timeout. | Synthetic; Disposable VM | Timeout and cancellation are bounded; failure classification and safe retry policy are explicit. | Permanent elevated process, infinite wait, raw backend output, or success state. | `TL-0405`, `TL-0407` | `Not run` | `Not available` |
-| `FINJ-013` | Backend reports success while the expected package, version, or launch result is absent. | Synthetic; Disposable VM | Record at most applied; independent verification fails; readiness remains blocked. | Backend success becomes verified or ready. | `TL-0406` | `Not run` | `Not available` |
-| `FINJ-014` | Catalogue/package metadata or approved content digest changes between preview and execution. | Synthetic; Disposable VM | Approval is invalidated and a new preview is required; no stale request executes. | Source substitution, downgrade, or unchanged approval survives a material change. | `TL-0307`, `TL-0403` | `Not run` | `Not available` |
-| `FINJ-015` | Cancellation occurs before dispatch, during a cancellable phase, or during a declared non-cancellable phase. | Synthetic; Disposable VM | Phase-specific behavior is explained; terminal or review-required state is exactly once; recovery remains keyboard reachable. | Cancellation is reported before it takes effect; state or partial output is lost. | `TL-0405`, `TL-0505` | `Not run` | `Not available` |
-| `FINJ-016` | An approved action reaches an expected restart checkpoint and the application resumes later. | Synthetic; Disposable VM | Device/job-bound checkpoint is durable; resume revalidates actual state and continues within finite bounds. | Pre-restart evidence is reused as fresh verification; unrelated job resumes. | `TL-0309`, `TL-0505` | `Not run` | `Not available` |
-| `FINJ-017` | Unexpected reboot or process/power interruption at a reviewed safe checkpoint. | Disposable VM only until separately approved | Reopen shows a started or review-required attempt; reconciliation precedes retry; store and journal remain intact. | Physical power cut during mutation; blind retry; false terminal success. | `TL-0309`, `TL-0510` | `Not run` | `Not available` |
-| `FINJ-018` | Resume token is stale, copied, expired, or bound to another device, job, action, or session. | Synthetic; Disposable VM | Token is rejected; no action executes; operator starts a newly approved path. | Cross-job/device resume or replay. | `TL-0309`, `TL-0509` | `Not run` | `Not available` |
-| `FINJ-019` | Fresh post-boot observation finds a new blocker or changed system state. | Synthetic; Disposable VM; Approved physical lab device | Verification fails or requires review; ready state is blocked and prior history remains visible. | Checkpoint existence alone satisfies acceptance. | `TL-0507`, `TL-0509` | `Not run` | `Not available` |
-| `FINJ-020` | Report/support export is cancelled, destination becomes unavailable/full, or final replace fails. | Synthetic; Disposable VM; Constrained environment | No corrupt final artifact; bounded partial output is removed or explicitly recoverable; source job remains intact. | Raw fallback, unintended overwrite, personal destination path in ordinary logs, or false export success. | `TL-0604`, `TL-0606` | `Not run` | `Not available` |
-| `FINJ-021` | Transaction, copied synthetic database, or migration is interrupted or corrupt. | Synthetic; Disposable VM | Transaction rolls back or safe recovery blocks open; original is preserved; no history is rewritten. | Unsafe partial migration, silent data loss, or invented passed record. | `TL-0102`, `TL-0704` | `Not run` | `Not available` |
-| `FINJ-022` | Clock moves or request/session expiry is reached. | Synthetic; Disposable VM | Expired or invalid temporal authority is rejected; a new attributable session is required. | Replay succeeds or evidence timestamps are silently rewritten. | `TL-0310`, `TL-0312` | `Not run` | `Not available` |
-| `FINJ-023` | Memory or another bounded resource is exhausted. | Synthetic; Disposable VM; Constrained environment | Work stops recoverably, safe cancellation remains, and no job/journal/report corruption occurs. | Unhandled resource failure, UI deadlock, or accessibility/security check is disabled. | `TL-0503`, `TL-0510` | `Not run` | `Not available` |
-| `FINJ-024` | Manual-test workflow closes, pauses, or loses a known test peripheral between steps. | Synthetic; Approved physical lab device | Completed results remain attributable; incomplete test is `Not run` or `Not available`; resume does not invent a pass. | Device presence becomes functional pass; unrelated results are erased. | `TL-0114` | `Not run` | `Not available` |
-| `FINJ-025` | Windows Update service is unavailable or the finite scan/install/restart sequence does not converge. | Synthetic; Disposable VM | Explicit service/offline result, pending-restart state, bounded pass count, and recovery guidance are retained. | Settings screen scraping, firmware update injection, infinite loop, or current claim. | `TL-0504`, `TL-0505` | `Not run` | `Not available` |
-| `FINJ-026` | Full powered-off cold boot resumes, but post-boot independent verification fails or is unavailable. | Approved physical lab device; synthetic negative-state supplement that cannot satisfy D-033 | Cold-boot checkpoint remains unsatisfied; exact failed/unavailable checks are visible; readiness is blocked. | Warm process restart, synthetic-only result, or ambiguous hybrid shutdown counts as cold boot; old evidence passes. | `TL-0509`, `TL-0510` | `Not run` | `Not available` |
+## 6. Tier rules and reruns
 
-## 6. Interruption and cold-boot contract
+- **Quick:** document/schema/static checks, ID uniqueness/order, links, and prohibited-claim wording. No injection at revised `TL-0008`.
+- **Targeted:** changed subsystem plus the smallest deterministic fault case; required when a provider, persistence, privilege/IPC, package/update, network/filesystem, report, migration, accessibility, or recovery boundary changes.
+- **Full:** applicable complete layers only at milestone/pilot/stable gates, major refactor/migration/dependency changes, or explicit task trigger.
+- **Extended:** only the independently invokable interruption, resource, hostile-input, cold-boot, or endurance scenario whose named risk/task/gate triggers it.
 
-Every interruption scenario records the last durable checkpoint, the interruption point, the expected state after reopening, the first permitted recovery action, the required actual-state re-observation, and cleanup. Independent results already committed remain visible; an independent failure must not erase them. Essential failure, unknown blocking evidence, or an ambiguous mutation prevents a ready disposition.
+On failure, rerun the single `FI-*` command first, then the related targeted set. Rerun full/extended scope only when the trigger remains applicable or a shared cause is suspected.
 
-A cold boot means a reviewed operating-system shutdown to an observable powered-off state followed by physical power-on. A process restart, application reopen, ordinary warm restart, or shutdown whose Fast Startup/hybrid status cannot be distinguished does not satisfy `FINJ-026`. The run records the boot/session correlation and reruns restart-sensitive verification. If the full power transition or correlation cannot be established, record `Not available` or `Fail`, never `Pass`.
+## 7. Interruption and cold-boot contract
 
-## 7. Result record
+Every interruption record includes last durable checkpoint, injection point, expected reopen state, first permitted recovery action, actual-state re-observation, and cleanup. Independent committed results remain visible; essential failure, unknown blocking evidence, or ambiguous mutation prevents ready disposition.
 
-Each executed scenario creates a durable result with these fields:
+A cold boot is a reviewed operating-system shutdown to observable powered-off state followed by physical power-on of the active Codex machine. Process/application restart, ordinary warm restart, hosted restart, or ambiguous hybrid shutdown does not satisfy physical cold-boot evidence. The run records boot/session correlation and restart-sensitive rechecks. If the transition/correlation is unavailable, record `Not available` or `Fail`, never `Pass`. It is not run at `TL-0008`; earliest trigger is `TL-0509`.
 
-| Field | Requirement |
-|---|---|
-| Identity | Result schema version, procedure revision, run ID, scenario ID, and owning task. |
-| Build | ThirdLife version, 40-hex source revision, configuration, Windows edition/build, and x64 architecture. |
-| Environment | Hardware environment, execution context, constraint profile, evidence source, opaque device/VM reference, and relevant matrix requirement IDs. |
-| Fixture | Synthetic fixture ID, version, SHA-256 digest, and privacy review state. |
-| Actor/time | Provider or human operator role, start/end timestamps with offset, and reviewer. |
-| Checkpoint | Initial state, last durable checkpoint, injection point, correlation identifiers, and expected terminal/review state. |
-| Bounds | Timeout, retry, collection, output, temporary-storage, and process-lifetime bounds. |
-| Outcome | Exact `test_result`, exact `evidence_class`, stable result codes, and bounded observations. |
-| Integrity | Job, journal, database, output, cache/temp, privileged-process, and unintended-mutation inspection. |
-| Recovery | Recovery attempted, re-observation, retry decision, cleanup result, remaining residue, and next safe action. |
-| Evidence | Repository-relative or approved durable artifact references and SHA-256 digests; no unrestricted local path. |
-| Limitations | Unavailable evidence, environment limitations, defect/blocker IDs, and rerun requirement. |
+## 8. Result record and current state
 
-The empty result register is intentional:
+Every later result records identity/build/tier/command, active reference profile and hosted/constraint settings, fixture hash/provenance, actor/time, checkpoint/injection point, bounds, exact result/evidence class, integrity inspection, recovery/cleanup/residue, artifacts, defects, focused rerun, and limitation. Artifacts are bounded, sanitized, repository-relative or durable references—never raw logs or unrestricted local paths.
 
-| Scenario range | Test result | Evidence class | Human reviewer | Evidence reference |
-|---|---|---|---|---|
-| `FINJ-001`–`FINJ-026` | `Not run` | `Not available` | Pending | Pending |
+| Scenario range | Result | Evidence class | Human reviewer | Artifact | Broad matrix |
+|---|---|---|---|---|---|
+| `FI-001`–`FI-012` | `Not run` | `Not available` | None | None | Not triggered by `TL-0008` |
 
-## 8. Review, defects, and future gates
-
-- Any false verified/ready state, corruption, unsafe privileged residue, security/privacy boundary loss, inaccessible recovery, or unbounded resource growth is a blocking failure.
-- A fixed failure receives a new run ID linked to the prior result; prior evidence is not overwritten.
-- VM, constrained, automated, physical, and human evidence remain distinguishable.
-- `TL-0510` owns the full-profile failure-injection execution. This draft does not pre-approve its mechanisms or results.
-- Procedure approval confirms only that this plan and an actual reference-device pool were reviewed. It is not a release authorization or a claim that any scenario passed.
-
-Human execution of these future failure scenarios remains pending. Completion of the TL-0008 reference-device walkthrough does not approve or pass them. Codex must not mark a physical or human-assisted scenario `Pass`, supply a human reviewer, or claim long-term reliability.
+Approval of this register confirms only that scenarios, safe environments, invariants, tier triggers, invocation placeholders, evidence, and cleanup contracts are defined. It is not evidence that a scenario passed, a human completion requirement, release authorization, or a hardware/reliability claim.

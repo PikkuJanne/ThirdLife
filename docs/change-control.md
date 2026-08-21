@@ -15,10 +15,13 @@ When documents differ, apply them in this exact order:
 4. `SECURITY.md`
 5. `ACCESSIBILITY.md`
 6. `LOW_SPEC.md`
-7. `AGENTS.md`
-8. `TASKS.yaml`
-9. `CODEX_START_PROMPT.md`
-10. `README.md`
+7. `DEVELOPMENT_WORKFLOW.md`
+8. `TESTING.md`
+9. `AGENTS.md`
+10. `TASKS.yaml`
+11. `STATUS.md`
+12. `CODEX_START_PROMPT.md`
+13. `README.md`
 
 `RELEASE_INTERFACE.md` contains verified black-box release facts; it does not outrank the list or authorize new behavior. `FUTURE_ASSEMBLY_NOTES.md` is a non-binding deferred backlog and creates no B1 requirement.
 
@@ -26,9 +29,9 @@ When documents differ, apply them in this exact order:
 
 ### Task execution change
 
-For the one selected task, Codex may update only its `status`, `evidence`, and `blocked_reason` fields in `TASKS.yaml`. State must follow the declared transition graph. Evidence must identify the command or review, result, environment, date, and durable artifact, commit, run, or file reference.
+For the one selected task, Codex may update only its `status`, `evidence`, and `blocked_reason` fields in `TASKS.yaml`. State must follow the declared transition graph. Evidence must identify the command or review, test tier, result, environment or same-machine constraint, date, duration, and durable artifact, commit, run, or file reference.
 
-Task execution authority does not permit changing IDs, dependencies, milestone, priority, size, executor, environment, decision references, objective, deliverables, acceptance criteria, verification, or human-evidence requirements.
+Task execution authority does not permit changing IDs, dependencies, milestone, priority, size, executor, environment, decision references, objective, deliverables, acceptance criteria, verification, expected test tier, broader-tier triggers, or human-evidence requirements. A user-approved synchronized bundle amendment may change those contract fields while preserving mutable execution history.
 
 ### Contract-preserving implementation change
 
@@ -62,8 +65,8 @@ If an idea has value only with a sibling product, do not open an active B1 task,
 4. Change task dependencies or acceptance contracts only within the named approved amendment. Validate the complete DAG and milestone-gate closure.
 5. Increment the bundle version consistently and update `CHANGELOG.md` when D-045 applies.
 6. Regenerate checked-in generated artifacts from their source, refresh `BUNDLE_MANIFEST.sha256`, and inspect all diffs.
-7. Run the task-specific checks and the full Windows command `eng/verify.ps1`. Do not disable warnings, analyzers, security, accessibility, low-spec, provenance, signature/hash, or test gates.
-8. Record environment-limited and human-only evidence honestly. A required approval or physical/manual result cannot be inferred from automated output.
+7. Run the selected task's quick or targeted checks and any full or extended tier whose documented trigger applies. Use `eng/verify.ps1 -Tier Quick` for the quick documentation/schema/static tier; reserve the full tier for its named triggers. Do not disable warnings, analyzers, security, accessibility, modest-hardware, provenance, signature/hash, or test gates.
+8. Record environment-limited and human-only evidence honestly. A required approval or manual result cannot be inferred from automated output. All runtime evidence comes from the active Codex machine; fixtures and constraints are not cross-hardware certification.
 9. Publish the reviewed change and its evidence without secrets, personal data, machine-specific paths, or sibling private information.
 
 ## Contradiction and stop rule
@@ -75,7 +78,7 @@ Never bypass or weaken sanitization, supported-Windows, ownership, package trust
 ## Evidence and claim discipline
 
 - A code or document change is not evidence that its behavior works.
-- Automated, Windows, physical-device, accessibility, security/privacy, licence, partner, and release evidence remain distinct.
+- Automated, active-machine Windows, deterministic fixture, same-machine constraint, accessibility, security/privacy, licence, partner, and release evidence remain distinct.
 - Unknown, unavailable, untested, or unsupported behavior stays explicit.
 - Historical evidence remains tied to the source revision, dependency lock, policy/catalogue/profile version, environment, and artifact it actually tested.
 - `RELEASE_INTERFACE.md` receives only implemented and verified facts. Use **TBD**, **not yet verified**, or **not supported** instead of speculative promises.
@@ -89,5 +92,5 @@ Never bypass or weaken sanitization, supported-Windows, ownership, package trust
 - No sibling dependency, private-data access, shared integration infrastructure, or early B4 work was introduced.
 - Security/privacy, accessibility, low-spec, data/migration, and release-interface impacts are stated.
 - Negative, failure, interruption, recovery, and adversarial checks appropriate to the change are present.
-- The bundle validator, task checks, full repository verifier, manifest, and secret/machine-path scans pass.
+- The bundle validator, selected task tier, any triggered broader tier, manifest, and secret/machine-path scans pass.
 - Evidence and release claims match what was actually run and reviewed.

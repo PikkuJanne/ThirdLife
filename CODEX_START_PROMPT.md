@@ -1,152 +1,156 @@
 # ThirdLife Setup Core — Codex Start and Reusable Prompts
 
-**Bundle version:** 0.2.0  
-**Current project:** Team B / B1 — ThirdLife Setup Core  
-**Standalone release gate:** `TL-0710`  
-**Future suite project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
+**Bundle version:** 0.3.0  
+**Portfolio baseline:** ThirdLife Software Portfolio v2.1
 
-Use these prompts from the repository root. The prompts do not override `DECISIONS.md`, `ROADMAP.md`, `PROJECT_BOUNDARY.md`, or `AGENTS.md`.
+## 1. Prompt selection
 
-## 1. First session — establish the repository
+Use exactly one prompt per session:
+
+- **Existing repository currently at TL-0008:** use `CODEX_TL0008_TRANSITION_PROMPT.md` first.
+- **Fresh repository with no implementation:** use the first-session prompt below and start from the first dependency-ready task, normally `TL-0001`.
+- **Normal later session:** use the reusable task prompt and select from live `STATUS.md`/`TASKS.yaml`.
+- **Gate/release/security/accessibility/resource work:** use the specialized prompt for that purpose.
+
+Do not paste the obsolete TL-0008 physical-device walkthrough into Codex. It is superseded.
+
+## 2. First session in a fresh repository
 
 ```text
-You are starting development of ThirdLife Setup Core, the Team B/B1 standalone project in the ThirdLife portfolio.
+You are starting work in the ThirdLife Setup Core repository, Team B/B1.
 
-Read, in order:
-1. DECISIONS.md
-2. ROADMAP.md
-3. PROJECT_BOUNDARY.md
-4. SECURITY.md
-5. ACCESSIBILITY.md
-6. LOW_SPEC.md
-7. AGENTS.md
-8. TASKS.yaml
-9. README.md
+Before implementation:
+1. Read DEVELOPMENT_WORKFLOW.md.
+2. Verify remote, branch, worktree, HEAD, upstream, and divergence using the documented Git sequence.
+3. Read STATUS.md, DECISIONS.md, ROADMAP.md, PROJECT_BOUNDARY.md, SECURITY.md, ACCESSIBILITY.md, LOW_SPEC.md, TESTING.md, AGENTS.md, and TASKS.yaml.
+4. Run python tools/validate_bundle.py.
+5. Parse TASKS.yaml and select exactly one dependency-ready task. In a truly fresh repository this should normally be TL-0001; do not assume that if live status says otherwise.
 
-Then run the roadmap-bundle validator. Do not inspect or depend on any sibling portfolio repository. This project is developed in a project vacuum; future portfolio adapters belong to Team B/B4 and may consume only frozen releases and public release documentation.
+Binding constraints:
+- The active Codex machine is the only physical machine used for implementation, tests, benchmarks, clean environments, walkthroughs, and release evidence.
+- Do not require or seek a lab, lower-performance computer, second PC, volunteer device pool, cloud runner matrix, or missing equipment class.
+- GitHub is the continuity source of truth. Commit and push coherent checkpoints; update STATUS.md; do not report completion until the remote contains the reported commit.
+- Follow the task’s expected_test_tier, full_test_triggers, and extended_test_triggers. Quick/targeted tests guide iteration; full/extended tests run only when triggered.
+- Reduce every reproducible defect to the smallest practical deterministic regression. Slow scenarios must be independently invokable and checkpointed.
+- Preserve the standalone project vacuum. Do not inspect or depend on sibling repositories or create B4 integration behavior.
+- Preserve the unelevated UI, ephemeral allowlisted broker, declarative non-executable profiles, evidence/policy separation, independent verification, truthful journal states, local-first data ownership, privacy-safe outputs, accessibility, and modest-hardware design.
+- Release wording may describe design intent and active-machine observations only; it may not imply cross-hardware certification.
 
-Select only TL-0001, verify its dependency state, set only that task to in_progress, and implement its complete contract. Keep the project namespaces ThirdLife.* and scaffold only the standalone Core architecture described by the roadmap. Do not create sibling-specific catalogue entries, shared SDKs/schemas, plugin frameworks, cross-repository dependencies, a permanent privileged service, arbitrary script execution, or speculative integration APIs.
+Implement only the selected task with the smallest coherent diff. Update only status/evidence/blocked_reason unless the task explicitly authorizes a synchronized roadmap/schema change.
 
-Run every verification available for TL-0001. Update only its status/evidence/blocked_reason fields in TASKS.yaml. Mark done only if the full task contract is proven; otherwise use review or blocked with the exact missing evidence or unblock condition.
-
-End with the AGENTS.md completion report: user outcome, files changed, verification, project-boundary/data/release-interface impact, security/privacy impact, accessibility/low-spec impact, outstanding evidence, and the next dependency-ready task. Stop after TL-0001.
+At completion, run the required test scope, update STATUS.md, commit and push, verify upstream and clean-tree state, and report using the AGENTS.md template. Stop after one task.
 ```
 
-## 2. Normal dependency-ready task session
+## 3. Reusable single-task prompt
 
 ```text
-Read DECISIONS.md, ROADMAP.md, PROJECT_BOUNDARY.md, SECURITY.md, ACCESSIBILITY.md, LOW_SPEC.md, AGENTS.md, and TASKS.yaml.
+Work on exactly one ThirdLife Setup Core task.
 
-Select exactly one dependency-ready task using AGENTS.md unless I name a task. Confirm its objective, dependencies, decision references, acceptance criteria, verification, executor, environment, and human evidence before editing. Do not inspect or rely on sibling repositories and do not turn a cross-project idea into B1 implementation; record such an idea only in FUTURE_ASSEMBLY_NOTES.md.
+Start by reading DEVELOPMENT_WORKFLOW.md and verifying remote/branch/status/HEAD/upstream/divergence. Read STATUS.md and the binding documents in AGENTS.md order. Parse the selected TASKS.yaml entry, including dependencies, decision_refs, deliverables, acceptance_criteria, verification, expected_test_tier, full_test_triggers, extended_test_triggers, prior evidence, and required human evidence.
 
-Implement the task with the smallest coherent diff. Preserve the standalone Core boundary, local-first behavior, unelevated UI/ephemeral broker model, declarative non-executable profiles, evidence/policy separation, independent verification, truthful journal states, privacy-safe outputs, accessibility, and low-spec behavior. Add negative, failure, interruption, recovery, and adversarial tests appropriate to the change.
+If the task is not dependency-ready, stop and report the dependency chain. Do not implement around it.
 
-Run the task verification and relevant repository checks. Update only the selected task’s status/evidence/blocked_reason. A hybrid or human task cannot be completed without its declared human evidence. End with the AGENTS.md completion report and stop.
+Implement the smallest coherent diff that satisfies the complete task contract. Preserve the Team B/B1 project vacuum, local-first behavior, unelevated UI/ephemeral broker model, declarative non-executable profiles, evidence/policy separation, independent verification, truthful journal states, privacy-safe outputs, accessibility, and resource-conscious design.
+
+All runtime verification runs on the active Codex machine. Clean clones/worktrees, VMs, Windows Sandbox, containers, virtual disks, and constraints are allowed only on that physical machine. Do not request a second device or remote runner.
+
+Run the task’s expected tier. Run full/extended scope only when a named trigger applies. On failure, isolate the smallest deterministic regression, run it first, then the related targeted set. State every tier not run and why.
+
+Update STATUS.md and only the selected task’s status/evidence/blocked_reason fields. Commit and push. Verify the remote contains the reported commit and the working tree is clean or explicitly documented. End with the AGENTS.md completion report and stop.
 ```
 
-## 3. Execute a specifically named task
+## 4. Focused defect prompt
 
 ```text
-Work only on task <TL-XXXX>.
+Investigate the named ThirdLife defect without starting unrelated roadmap work.
 
-Read the binding files in AGENTS.md order, then verify every dependency is done. If any dependency is not done, do not implement around it; report the dependency chain and stop. Otherwise set only <TL-XXXX> to in_progress and implement all deliverables and acceptance criteria.
+Verify Git/STATUS first. Reproduce the defect with the smallest deterministic fixture or scenario on the active Codex machine. Stop any broad suite once enough evidence exists to isolate the cause. Add or update a focused regression, run it first, then run the related targeted set. Run full or extended scope only if the task trigger or shared-cause evidence requires it.
 
-Keep work inside ThirdLife Setup Core and its project-local graph. No sibling repository, active branch, private database, app-specific adapter, shared SDK/schema, or cross-project acceptance criterion is allowed. Use FUTURE_ASSEMBLY_NOTES.md only for a concise deferred idea that does not affect completion.
+Do not blind-rerun a flaky test and call it passed. If deterministic reproduction is not yet practical, record the technical reason, risk, owner, bounded follow-up task, and temporary containment.
 
-Run the declared verification and relevant full checks. Update only <TL-XXXX> execution-state fields. Use done, review, or blocked truthfully and provide the AGENTS.md completion report. Stop after this task.
+Preserve security/privacy, data, accessibility, resource, and project-boundary invariants. Update evidence/STATUS, commit/push, verify upstream, and report exact commands, durations, environment/constraints, fixture hash, result, and broader tiers not run.
 ```
 
-## 4. Review an implementation without broadening scope
+## 5. Milestone gate prompt
 
 ```text
-Review task <TL-XXXX> against its complete TASKS.yaml contract and cited decisions. Read the diff, affected tests, schemas, migrations, documentation, SECURITY.md, ACCESSIBILITY.md, LOW_SPEC.md, and PROJECT_BOUNDARY.md.
+Prepare the named milestone gate; do not approve a human gate.
 
-Check at minimum:
-- every acceptance criterion and verification step;
-- dependency direction and project-vacuum compliance;
-- no sibling-specific behavior or private-data access;
-- input/path/schema bounds and failure behavior;
-- privilege, IPC, package/update trust, and arbitrary-execution surfaces;
-- evidence versus inference versus human confirmation;
-- persistence, migration, journal, resume, retry, and independent verification;
-- log/report/support-bundle privacy;
-- keyboard/screen-reader/scaling/plain-language behavior;
-- low-memory/low-space/no-network/no-GPU and cancellation/recovery impact;
-- whether RELEASE_INTERFACE.md contains verified facts rather than guesses.
+Verify Git continuity and read STATUS.md, ROADMAP.md, DECISIONS.md, TASKS.yaml, TESTING.md, and AGENTS.md. Build an evidence index mapping every milestone exit criterion and every transitive predecessor acceptance criterion to a durable artifact.
 
-Report findings by severity with file and line references. Do not make unrelated edits. If authorized to fix findings, keep them inside <TL-XXXX>, rerun verification, and update only its execution-state fields.
+Verify graph closure and prior-gate dependency. Run python tools/validate_bundle.py. Run the full tier on the active Codex machine and only those extended scenarios whose task/gate triggers apply. Include clean-clone evidence, branch/commit/push state, active reference-machine profile, constraint settings, workload hashes, durations, skipped scenarios, defect reruns, and claim limits.
+
+Identify missing, stale, contradictory, environment-limited, or human-only evidence. A VM/constraint/fixture does not become hardware certification. Do not mark executor: human gates done or fabricate approvals.
+
+Update the gate record and STATUS.md, commit/push the evidence package, and report pass/review/blocked with exact outstanding evidence.
 ```
 
-## 5. Milestone gate preparation
+## 6. Security and privacy review prompt
 
 ```text
-Prepare gate task <TL-XXXX> without fabricating evidence.
+Review the named ThirdLife task/release against SECURITY.md, the threat model, data boundary, privilege model, package/update provenance, logging/support-bundle rules, and project-vacuum constraints.
 
-Read the milestone in ROADMAP.md and all transitive predecessor tasks in TASKS.yaml. Build an evidence index mapping every exit criterion, task acceptance criterion, automated check, required Windows/physical/accessibility/security/privacy/licence/partner review, and unresolved limitation to a durable artifact.
+Use deterministic adversarial fixtures and the active Codex machine only. Cover applicable unknown actions, malformed/oversized input, path traversal/junctions, arbitrary-command attempts, IPC caller/replay/expiry, metadata/source substitution, hash/signature mismatch, secrets in logs/arguments/reports/support bundles, access denial, interruption, and uninstall/data preservation.
 
-Verify that the gate transitively covers every task in its milestone and depends on the prior gate. Run the bundle validator and all available release checks. Identify evidence that is missing, stale, contradictory, environment-limited, or human-only.
+Run targeted checks first. Run full/extended security scope only when triggered. Reduce each defect to a focused regression. Do not weaken trust checks, permissions, redaction, or failure-closed behavior for test convenience.
 
-For a hybrid gate, leave review or blocked until required human evidence exists. For TL-0611 or TL-0710, Codex may prepare the package/checklist/index but may never authorize the pilot or stable release. Report the exact owner and unblock condition for every missing item.
+Report evidence, residual risk, unsupported/unrun cases, claim limits, and release blockers. Update STATUS/task evidence, commit/push, and verify upstream.
 ```
 
-## 6. Security and privilege-boundary review
+## 7. Accessibility review prompt
 
 ```text
-Perform a focused security review of <task/component> under SECURITY.md, DECISIONS.md, PROJECT_BOUNDARY.md, and the threat model.
+Review the named workflow against ACCESSIBILITY.md and TESTING.md on the active Codex machine.
 
-Trace untrusted input, identities, paths, package metadata, profiles/policies, IPC messages, privileges, network destinations, persistence, logs, reports, support exports, update inputs, rollback, and cleanup. Attempt or design tests for unknown actions, replay/expiry, another-user IPC, oversized messages, path traversal/junctions, arbitrary executable/argument/URL/registry injection, source substitution, hash/signature mismatch, catalogue downgrade, stale approval, process termination, UAC denial, and secret-bearing fixtures.
+Verify keyboard-only completion, visible focus, logical order, names/roles/states/relationships, status/progress/error announcements, Narrator and approved NVDA use, 200% scaling, reduced resolution, high contrast, color independence, plain language, cancellation, pause/resume, and error recovery.
 
-Confirm the UI remains unelevated, the broker is ephemeral/allowlisted, profiles are non-executable, package trust cannot be bypassed, and future suite integration has not created sibling data access. Report exploitable findings, missing tests, residual risk, and safe remediation. Do not describe the device as secure or certified.
+Use automated/component checks at quick/targeted scope and perform human review only when the task requires it. Record exact build, machine profile, assistive technology/version, procedure, limitation, and result. Do not generalize one environment into universal assistive-technology or hardware support.
+
+Update evidence/STATUS, commit/push, verify upstream, and leave hybrid tasks at review until the named human evidence exists.
 ```
 
-## 7. Accessibility and low-spec review
+## 8. Modest-hardware/resource review prompt
 
 ```text
-Review <task/flow> against ACCESSIBILITY.md and LOW_SPEC.md.
+Review the named ThirdLife change against LOW_SPEC.md and TESTING.md.
 
-Check keyboard-only completion, visible/logical focus, programmatic names/roles/states, status/progress announcements, 200% scaling, high contrast, reduced resolution, no color-only meaning, plain-language errors, cancellation, recovery, and recipient-choice boundaries. Identify which checks require Narrator, NVDA, or a human reviewer.
+All measurements run on the active reference machine. Record source commit, profile revision, tier, exact command, clean environment, constraint profile, workload/fixture hash, elapsed/CPU time, peak memory, temporary/cache/database/output growth, cancellation/checkpoint/resume, cleanup, and result.
 
-Measure or define evidence for startup, idle memory, inventory duration, peak memory, temporary storage, database growth, report generation, resume time, CPU-only behavior, conservative concurrency, low-space preflight, no-network/slow-network behavior, and interrupted operations. Do not invent minimum-hardware claims. Return defects, evidence gaps, and exact remediation tasks within the active project boundary.
+Use only risk-relevant same-machine profiles such as no-GPU, conservative concurrency, low-priority, low-free-space, offline, interrupted-network, provider-unavailable, slow-destination, or representative large workload. These are regression-finding tools, not simulations/certifications of a specific low-end device.
+
+Reject unbounded growth, corruption, lost state, missing safe cancellation, mandatory GPU/high concurrency, or release wording that exceeds evidence. Run the smallest scenario first and broader scope only when triggered.
+
+Update evidence/STATUS, commit/push, verify upstream, and state the claim boundary explicitly.
 ```
 
-## 8. Blocked-task recovery
+## 9. Recovery/interruption prompt
 
 ```text
-Investigate blocked task <TL-XXXX> only.
+Exercise the named interruption or recovery scenario on the active Codex machine using the safest deterministic injection or disposable hosted environment.
 
-Read its dependencies, decisions, blocked_reason, code/diff, and evidence. Reproduce or validate the blocker where safe. Classify it as a project-local defect, missing input/environment, third-party limitation, decision contradiction, security/privacy/accessibility issue, release-interface uncertainty, or required human evidence.
+Record the precondition/checkpoint, injected event, journal/database state, user-visible message, resume/retry/recovery action, verification result, cleanup, and defect/limitation. Never disrupt the host network/storage/boot state without an explicit task, checkpoint, recovery plan, and required human approval.
 
-Fix it only when the fix is inside the selected task and frozen constraints. Never bypass sanitization, supported Windows, ownership controls, package trust, broker validation, verification, finalization, project-vacuum rules, or human approval. Otherwise update blocked_reason with the exact cause, evidence, owner, safe options, and unblock condition. Do not start another task.
+A backend return or application restart is not success. Verify the intended result independently and prove partial work is not presented as final. Reduce failures to focused deterministic regressions and rerun only the affected scenario/targeted set unless a broader trigger applies.
 ```
 
-## 9. Record a future assembly idea without implementing it
+## 10. Release-interface completion prompt
 
 ```text
-A possible cross-project or suite idea was discovered while working on <TL-XXXX>.
+Complete only fields in RELEASE_INTERFACE.md supported by the exact frozen build and evidence.
 
-First determine whether the capability independently benefits ThirdLife Setup Core users. If yes, keep only the project-local behavior and document the independent rationale in the active task/decision process. If the value exists only when a sibling application is present, do not implement it and do not add a task dependency.
+Include identity, artifact/hash/signature/source tag+commit, install/update/repair/remove, launch, data locations, inputs/outputs, offline/network behavior, privilege/security, support bundle, samples, known limitations, source continuity, and validation evidence.
 
-Add one concise entry to FUTURE_ASSEMBLY_NOTES.md containing: idea, target user journey, likely frozen product release, permitted shallow action, data/privilege considerations, manual fallback, and why it is deferred to Team B/B4. Mark uncertainty explicitly. Continue or complete <TL-XXXX> without making the note an acceptance criterion.
+For resource behavior, record the active reference-machine profile, actual observations, same-machine constraint methods, workload hashes, low-resource modes, skipped scenarios, and explicit absence of cross-hardware certification. Do not invent minimum specifications, silent options, rollback, APIs, or hardware support.
+
+Mark unsupported/TBD with a reason. The interface is human-readable black-box documentation, not a shared runtime schema or permission to expose private state.
 ```
 
-## 10. Complete the release interface from verified behavior
+## 11. Core 1.0 stable-release prompt
 
 ```text
-Work on TL-0706 and RELEASE_INTERFACE.md only after its dependencies are done.
+Prove ThirdLife Setup Core 1.0 is independently installable, runnable, updateable/repairable, exportable/recoverable, and removable without a sibling application, mandatory account, project-controlled server, or permanent privileged service.
 
-For each release-interface field, derive the value from frozen candidate artifacts, verified installer/application behavior, documentation, tests, and samples. Record exact identity, versions, hashes, install/update/repair/uninstall behavior, privilege/restart/rollback limits, data locations, inputs/outputs, launch behavior, offline/network behavior, resource evidence, security boundaries, support-bundle contents/exclusions, samples, limitations, and maintenance/reporting route.
+Verify recipient-controlled accessibility/basic operating-system backup boundaries, data preservation, support sanitization, offline behavior, security/privacy/accessibility evidence, same-machine modest-hardware evidence and claim limits, known limitations, exact artifacts/hashes/SBOM/licences, clean-clone result, test manifest, and completed RELEASE_INTERFACE.md.
 
-Use “not supported” or “not yet verified” with a reason rather than inventing a capability. Do not add a speculative API, shared schema, sibling-specific command, or private-data access to make the sheet look complete. Run black-box tests using only documented behavior and preserve sample hashes/evidence.
-```
-
-## 11. Core 1.0 release and portfolio-boundary handoff
-
-```text
-Prepare TL-0709 or TL-0710 as assigned.
-
-Prove that ThirdLife Setup Core 1.0 installs, runs, updates/repairs, exports/recovers, and uninstalls without a sibling application, mandatory account, project-controlled server, or permanent privileged service. Verify recipient-controlled accessibility/basic operating-system backup boundaries, data preservation, support sanitization, offline behavior, low-spec evidence, security/privacy/accessibility evidence, known limitations, exact release artifacts, hashes, SBOM/licences, and completed RELEASE_INTERFACE.md.
-
-Search the source, package, tests, profiles, documentation, and task graph for sibling-specific entries, shared portfolio infrastructure, cross-project dependencies, active-branch assumptions, and private data access. Record any future idea only in FUTURE_ASSEMBLY_NOTES.md.
-
-Codex may assemble the evidence index and identify gaps. It cannot mark TL-0710 done or announce the stable release. The human gate must confirm that Team B/B1 is complete, the next project is Scam Explainer, and no B4 integration work has been authorized.
+Run full scope and only the explicitly triggered extended scenarios on the active Codex machine. Ensure focused defect regressions and targeted reruns are present. Human approvals remain human; do not mark TL-0710 done.
 ```

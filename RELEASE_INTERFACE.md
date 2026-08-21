@@ -1,12 +1,12 @@
 # ThirdLife Setup Core — Minimal Release Interface Sheet
 
 **Status:** Draft placeholder; not a published compatibility contract  
-**Bundle version:** 0.2.0  
+**Bundle version:** 0.3.0  
 **Pilot draft task:** `TL-0610`  
 **Stable completion task:** `TL-0706`  
 **Stable-release gate:** `TL-0710`
 
-This sheet is completed for a frozen preview or stable release. It documents ordinary standalone behavior for later black-box deployment. It is not a shared application API, plugin contract, or permission to build a sibling adapter before B4.
+This sheet is completed for a frozen preview or stable release. It documents ordinary standalone behavior for later black-box deployment. It is **not a shared application API**, plugin contract, or permission to build a sibling adapter before B4.
 
 At `TL-0610`, verified pilot behavior is populated and the sheet remains clearly marked preview/incomplete. At `TL-0706`, it is completed for the frozen Core 1.0 candidate. Fields that remain unknown during implementation stay **TBD**. Unsupported behavior is recorded as **Not supported** with a reason; it is not invented to make future integration appear easier.
 
@@ -33,7 +33,9 @@ At `TL-0610`, verified pilot behavior is populated and the sheet remains clearly
 | Signature/verification method | TBD; development artifacts must be clearly labelled when unsigned |
 | Source/offline-media location | TBD |
 | Package size | TBD from release artifact |
-| Source revision/dependency lock | TBD at freeze |
+| Immutable GitHub release tag | TBD at freeze |
+| Source commit | TBD at freeze |
+| Dependency-lock revision | TBD at freeze |
 | SBOM/third-party notices | TBD at freeze |
 
 ## 3. Install, update, repair, and remove
@@ -117,9 +119,20 @@ Network-dependent categories are shown explicitly:
 
 The B1 release does not promise a portfolio offline package cache or suite deployment medium; those belong to B4.
 
-## 9. Resource behavior
+## 9. Resource behavior and hardware-evidence limits
 
-At `TL-0706`, record measured practical CPU/RAM/storage evidence, startup and peak-memory results, temporary-space needs, no-GPU behavior, low-resource controls, and large-download warnings. Unsupported claims remain explicit. See `LOW_SPEC.md`.
+At `TL-0706`, record:
+
+- active reference-machine profile: Windows edition/build, CPU, installed memory, storage type/free space, GPU status, and relevant toolchain versions;
+- measured startup work, elapsed time, CPU time, peak memory, temporary storage, cache growth, output size, and any long-running-operation checkpoints;
+- workload/fixture identifiers and cryptographic hashes;
+- conservative concurrency defaults, configurable limits, CPU/no-GPU fallback, cancellation, pause/resume, and low-resource mode;
+- disk-space preflight and rollback reserve behavior;
+- same-machine constraints actually used, such as no-GPU, reduced concurrency, low priority, bounded low-space volume, offline/interrupted network, or slow destination;
+- test tier, command/scenario, duration, result, and skipped cases with rationale;
+- observed limitations and unsupported environments.
+
+The active Codex machine is the only physical validation hardware. Same-machine VMs, containers, worktrees, process constraints, and deterministic fixtures are engineering evidence, not a cross-hardware certification. The release may state that the product is **designed for modest supported hardware** and report the observations above. It must not claim manufacturer coverage, broad modest-hardware validation, or minimum specifications that were not actually tested. See `LOW_SPEC.md` and `TESTING.md`.
 
 ## 10. Privilege and security
 
@@ -162,30 +175,60 @@ At freeze, provide non-sensitive samples and hashes for:
 
 Samples must not create a dependency on another portfolio repository.
 
-## 13. Known limitations
+## 13. Source continuity
+
+Complete for preview and stable releases:
+
+| Field | Value |
+|---|---|
+| GitHub repository/access route | TBD |
+| Default and release branch policy | TBD; governed by `DEVELOPMENT_WORKFLOW.md` |
+| Immutable release tag and commit | TBD at freeze |
+| Dependency-lock revision | TBD at freeze |
+| Clean-clone setup command | TBD after implementation exists |
+| External-asset restoration | TBD; use verified manifests/checksums where required |
+| Quick-tier command from clean clone | TBD |
+| Last verified clean-clone result | TBD; active Codex machine only |
+
+No required release state may exist only in a local worktree, IDE setting, chat transcript, or unpushed file.
+
+## 14. Validation evidence
+
+At preview/stable freeze, record:
+
+- quick, targeted, full, and extended tiers run;
+- exact commands or named manual scenarios, duration, result, source commit, and relevant fixture/workload hash;
+- active reference-machine profile and same-machine constraints;
+- skipped tiers/scenarios and rationale;
+- known flaky or quarantined tests, their owner, task, reason, and removal condition;
+- accessibility, security/privacy, offline, update, repair, rollback/non-rollback, uninstall, migration, recovery, and data-preservation evidence;
+- explicit statement that no external hardware matrix, second physical computer, or cross-hardware certification is implied.
+
+## 15. Known limitations
 
 The release sheet must state at least:
 
 - Windows versions/builds and architectures not supported;
 - unavailable or provider-dependent hardware evidence;
+- hardware classes and configurations not observed on the active Codex machine;
 - package/update/backend limitations;
 - rollback or migration constraints;
-- accessibility limitations;
-- low-spec configurations not physically tested;
+- accessibility limitations and assistive technologies not exercised;
+- same-machine constrained scenarios not run or inconclusive;
 - backup/accessibility onboarding limitations;
 - unsupported sibling versions and the fact that no B4 adapters are included;
-- absence of security, sanitization, reliability, or fraud guarantees.
+- absence of security, sanitization, reliability, hardware-certification, or fraud guarantees.
 
-## 14. Future B4 consumption
+## 16. Future B4 consumption
 
 After `TL-0710`, B4 may use this frozen sheet, installer, hashes, samples, and public documentation to create a separate ThirdLife-owned catalogue entry or adapter. B4 must not infer undocumented database access or require changes to the frozen Core release.
 
-## 15. Release contact and approval
+## 17. Release contact and approval
 
 | Field | Value |
 |---|---|
 | Issue/support route | TBD before preview |
 | Security route | TBD before preview; see `SECURITY.md` |
 | Release owner | TBD |
-| Interface revision | Draft 0.2.0 |
+| Interface revision | Draft 0.3.0 |
 | Approved stable version | Not yet approved |
