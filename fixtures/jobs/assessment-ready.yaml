@@ -1,0 +1,354 @@
+schema_version: thirdlife.job-fixture.v1
+fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+synthetic_data: true
+classification: PUBLIC_REFERENCE
+expected:
+  sanitization_gate: allow_assessment
+  policy_disposition: ready_to_prepare
+  limitation_code: none
+job:
+  job_id: SYNTHETIC-JOB-READY-001
+  lifecycle_state: assessment_complete
+  device_class: laptop
+  created_at_utc: "2030-01-01T08:00:00Z"
+profile:
+  id: job-seeker
+  version: 0.1.0-candidate.1
+  active_capability_ids:
+    - web_browsing
+    - document_editing
+    - pdf_reading
+    - video_calling
+sanitization_evidence:
+  evidence_id: SYNTHETIC-SANITIZATION-READY-001
+  classification: WORKSHOP_RESTRICTED
+  provider_id: SYNTHETIC-EXTERNAL-SANITIZATION-PROVIDER
+  collected_at_utc: "2030-01-01T08:01:00Z"
+  provenance:
+    kind: synthetic_fixture
+    fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+  evidence_state: observed
+  sanitization_state: verified
+  method_code: synthetic_external_sanitization
+  operator_id: SYNTHETIC-OPERATOR-001
+  occurred_at_utc: "2030-01-01T07:30:00Z"
+  media_fixture_id: SYNTHETIC-MEDIA-001
+  verification_state: verified
+  policy_version: community-laptop-policy@0.1.0-candidate.1
+observations:
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-001
+    evidence_key: operating_system.release
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-OS-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:00Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: enum
+      data: windows_11
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-002
+    evidence_key: operating_system.support_state
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-OS-LIFECYCLE-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:01Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: inferred
+    value:
+      type: enum
+      data: supported
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-003
+    evidence_key: system.architecture
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-SYSTEM-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:02Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: enum
+      data: x64
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-004
+    evidence_key: processor.windows_11_eligibility
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-ELIGIBILITY-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:03Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: inferred
+    value:
+      type: enum
+      data: eligible
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-005
+    evidence_key: memory.installed_bytes
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-SYSTEM-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:04Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: integer
+      data: 17179869184
+    unit: bytes
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-006
+    evidence_key: storage.system.capacity_bytes
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-STORAGE-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:05Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: integer
+      data: 274877906944
+    unit: bytes
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-007
+    evidence_key: storage.system.free_bytes
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-STORAGE-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:06Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: integer
+      data: 137438953472
+    unit: bytes
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-008
+    evidence_key: storage.system.health_state
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-STORAGE-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:07Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: enum
+      data: healthy
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-009
+    evidence_key: battery.present
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-BATTERY-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:08Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: boolean
+      data: true
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-010
+    evidence_key: battery.swelling_inspection
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-HUMAN-TEST-PROVIDER
+    collected_at_utc: "2030-01-01T08:03:00Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: human_confirmed
+    value:
+      type: enum
+      data: no_swelling_observed
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-011
+    evidence_key: battery.full_charge_ratio_percent
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-BATTERY-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:09Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: inferred
+    value:
+      type: integer
+      data: 82
+    unit: percent
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-012
+    evidence_key: firmware.mode
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-FIRMWARE-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:10Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: enum
+      data: uefi
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-013
+    evidence_key: secure_boot.capable
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-FIRMWARE-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:11Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: boolean
+      data: true
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-014
+    evidence_key: secure_boot.enabled
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-FIRMWARE-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:12Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: boolean
+      data: true
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-015
+    evidence_key: tpm.present
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-FIRMWARE-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:13Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: boolean
+      data: true
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-016
+    evidence_key: tpm.version
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-FIRMWARE-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:14Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: string
+      data: "2.0"
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-017
+    evidence_key: tpm.ready
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-FIRMWARE-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:15Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: boolean
+      data: true
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-018
+    evidence_key: ownership.lock_state
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-OWNERSHIP-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:16Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: enum
+      data: clear
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-019
+    evidence_key: activation.state
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-ACTIVATION-PROVIDER
+    collected_at_utc: "2030-01-01T08:02:17Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: observed
+    value:
+      type: enum
+      data: activated
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-020
+    evidence_key: function.display
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-HUMAN-TEST-PROVIDER
+    collected_at_utc: "2030-01-01T08:03:01Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: human_confirmed
+    value:
+      type: enum
+      data: passed
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-021
+    evidence_key: function.keyboard
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-HUMAN-TEST-PROVIDER
+    collected_at_utc: "2030-01-01T08:03:02Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: human_confirmed
+    value:
+      type: enum
+      data: passed
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-022
+    evidence_key: function.pointing
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-HUMAN-TEST-PROVIDER
+    collected_at_utc: "2030-01-01T08:03:03Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: human_confirmed
+    value:
+      type: enum
+      data: passed
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-023
+    evidence_key: function.network
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-HUMAN-TEST-PROVIDER
+    collected_at_utc: "2030-01-01T08:03:04Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: human_confirmed
+    value:
+      type: enum
+      data: passed
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-024
+    evidence_key: function.audio_output
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-HUMAN-TEST-PROVIDER
+    collected_at_utc: "2030-01-01T08:03:05Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: human_confirmed
+    value:
+      type: enum
+      data: passed
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-025
+    evidence_key: function.camera
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-HUMAN-TEST-PROVIDER
+    collected_at_utc: "2030-01-01T08:03:06Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: human_confirmed
+    value:
+      type: enum
+      data: passed
+  - evidence_id: SYNTHETIC-EVIDENCE-READY-026
+    evidence_key: function.microphone
+    classification: WORKSHOP_RESTRICTED
+    provider_id: SYNTHETIC-HUMAN-TEST-PROVIDER
+    collected_at_utc: "2030-01-01T08:03:07Z"
+    provenance:
+      kind: synthetic_fixture
+      fixture_id: SYNTHETIC-JOB-FIXTURE-READY-001
+    evidence_state: human_confirmed
+    value:
+      type: enum
+      data: passed

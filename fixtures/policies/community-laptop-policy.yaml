@@ -1,0 +1,327 @@
+schema_version: thirdlife.policy.v1
+policy_id: community-laptop-policy
+version: 0.1.0-candidate.1
+status: candidate
+synthetic_data: true
+classification: PUBLIC_REFERENCE
+claim_scope: pilot_candidate_not_universal_hardware_requirement
+effective:
+  status: candidate_not_effective
+  effective_from_utc: null
+  effective_until_utc: null
+target:
+  operating_system: windows_11
+  support_state: supported
+  architecture: x64
+  device_class: laptop
+rules:
+  - id: POL-SAN-001
+    requirement_type: blocking
+    severity: critical
+    evidence_key: sanitization.state
+    condition:
+      type: one_of
+      values:
+        - verified
+        - replacement_storage
+        - no_donor_storage
+    decision:
+      blocks_ready: true
+      unmet_disposition: human_review_required
+      unavailable_disposition: human_review_required
+  - id: POL-OS-001
+    requirement_type: blocking
+    severity: critical
+    evidence_key: operating_system.release
+    condition:
+      type: equals
+      value: windows_11
+    decision:
+      blocks_ready: true
+      unmet_disposition: alternative_operating_system_candidate
+      unavailable_disposition: human_review_required
+  - id: POL-OS-002
+    requirement_type: blocking
+    severity: critical
+    evidence_key: operating_system.support_state
+    condition:
+      type: equals
+      value: supported
+    decision:
+      blocks_ready: true
+      unmet_disposition: alternative_operating_system_candidate
+      unavailable_disposition: human_review_required
+  - id: POL-ARCH-001
+    requirement_type: blocking
+    severity: critical
+    evidence_key: system.architecture
+    condition:
+      type: equals
+      value: x64
+    decision:
+      blocks_ready: true
+      unmet_disposition: alternative_operating_system_candidate
+      unavailable_disposition: human_review_required
+  - id: POL-CPU-001
+    requirement_type: blocking
+    severity: critical
+    evidence_key: processor.windows_11_eligibility
+    condition:
+      type: equals
+      value: eligible
+    decision:
+      blocks_ready: true
+      unmet_disposition: alternative_operating_system_candidate
+      unavailable_disposition: human_review_required
+  - id: POL-MEM-001
+    requirement_type: repairable
+    severity: required
+    evidence_key: memory.installed_bytes
+    condition:
+      type: minimum_integer
+      value: 8589934592
+      unit: bytes
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-STORAGE-001
+    requirement_type: repairable
+    severity: required
+    evidence_key: storage.system.capacity_bytes
+    condition:
+      type: minimum_integer
+      value: 137438953472
+      unit: bytes
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-STORAGE-002
+    requirement_type: repairable
+    severity: required
+    evidence_key: storage.system.free_bytes
+    condition:
+      type: minimum_integer
+      value: 34359738368
+      unit: bytes
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-STORAGE-003
+    requirement_type: repairable
+    severity: required
+    evidence_key: storage.system.health_state
+    condition:
+      type: equals
+      value: healthy
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-BATTERY-001
+    requirement_type: repairable
+    severity: required
+    evidence_key: battery.present
+    condition:
+      type: equals
+      value: true
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-BATTERY-002
+    requirement_type: human_confirmed
+    severity: critical
+    evidence_key: battery.swelling_inspection
+    condition:
+      type: equals
+      value: no_swelling_observed
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-BATTERY-003
+    requirement_type: advisory
+    severity: advisory
+    evidence_key: battery.full_charge_ratio_percent
+    condition:
+      type: minimum_integer
+      value: 60
+      unit: percent
+    decision:
+      blocks_ready: false
+      unmet_disposition: null
+      unavailable_disposition: null
+  - id: POL-FIRMWARE-001
+    requirement_type: blocking
+    severity: critical
+    evidence_key: firmware.mode
+    condition:
+      type: equals
+      value: uefi
+    decision:
+      blocks_ready: true
+      unmet_disposition: alternative_operating_system_candidate
+      unavailable_disposition: human_review_required
+  - id: POL-SECUREBOOT-001
+    requirement_type: blocking
+    severity: critical
+    evidence_key: secure_boot.capable
+    condition:
+      type: equals
+      value: true
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-SECUREBOOT-002
+    requirement_type: repairable
+    severity: required
+    evidence_key: secure_boot.enabled
+    condition:
+      type: equals
+      value: true
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-TPM-001
+    requirement_type: blocking
+    severity: critical
+    evidence_key: tpm.present
+    condition:
+      type: equals
+      value: true
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-TPM-002
+    requirement_type: blocking
+    severity: critical
+    evidence_key: tpm.version
+    condition:
+      type: equals
+      value: "2.0"
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-TPM-003
+    requirement_type: repairable
+    severity: required
+    evidence_key: tpm.ready
+    condition:
+      type: equals
+      value: true
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-OWNERSHIP-001
+    requirement_type: blocking
+    severity: critical
+    evidence_key: ownership.lock_state
+    condition:
+      type: equals
+      value: clear
+    decision:
+      blocks_ready: true
+      unmet_disposition: do_not_deploy
+      unavailable_disposition: human_review_required
+  - id: POL-ACTIVATION-001
+    requirement_type: blocking
+    severity: required
+    evidence_key: activation.state
+    condition:
+      type: equals
+      value: activated
+    decision:
+      blocks_ready: true
+      unmet_disposition: human_review_required
+      unavailable_disposition: human_review_required
+  - id: POL-FUNCTION-001
+    requirement_type: human_confirmed
+    severity: required
+    evidence_key: function.display
+    condition:
+      type: equals
+      value: passed
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-FUNCTION-002
+    requirement_type: human_confirmed
+    severity: required
+    evidence_key: function.keyboard
+    condition:
+      type: equals
+      value: passed
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-FUNCTION-003
+    requirement_type: human_confirmed
+    severity: required
+    evidence_key: function.pointing
+    condition:
+      type: equals
+      value: passed
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-FUNCTION-004
+    requirement_type: human_confirmed
+    severity: required
+    evidence_key: function.network
+    condition:
+      type: equals
+      value: passed
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-FUNCTION-005
+    requirement_type: profile_dependent
+    severity: required
+    evidence_key: function.audio_output
+    active_for_capability_ids:
+      - video_calling
+    condition:
+      type: equals
+      value: passed
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-FUNCTION-006
+    requirement_type: profile_dependent
+    severity: required
+    evidence_key: function.camera
+    active_for_capability_ids:
+      - video_calling
+    condition:
+      type: equals
+      value: passed
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required
+  - id: POL-FUNCTION-007
+    requirement_type: profile_dependent
+    severity: required
+    evidence_key: function.microphone
+    active_for_capability_ids:
+      - video_calling
+    condition:
+      type: equals
+      value: passed
+    decision:
+      blocks_ready: true
+      unmet_disposition: repair_and_retest
+      unavailable_disposition: human_review_required

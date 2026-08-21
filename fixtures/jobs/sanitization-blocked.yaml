@@ -1,0 +1,37 @@
+schema_version: thirdlife.job-fixture.v1
+fixture_id: SYNTHETIC-JOB-FIXTURE-SANITIZATION-BLOCKED-001
+synthetic_data: true
+classification: PUBLIC_REFERENCE
+expected:
+  sanitization_gate: blocked
+  policy_evaluation: not_run
+  limitation_code: sanitization_unknown
+job:
+  job_id: SYNTHETIC-JOB-SANITIZATION-BLOCKED-001
+  lifecycle_state: intake
+  device_class: laptop
+  created_at_utc: "2030-01-02T08:00:00Z"
+profile:
+  id: basic
+  version: 0.1.0-candidate.1
+  active_capability_ids:
+    - web_browsing
+    - document_editing
+    - pdf_reading
+sanitization_evidence:
+  evidence_id: SYNTHETIC-SANITIZATION-BLOCKED-001
+  classification: WORKSHOP_RESTRICTED
+  provider_id: SYNTHETIC-INTAKE-PROVIDER
+  collected_at_utc: "2030-01-02T08:01:00Z"
+  provenance:
+    kind: synthetic_fixture
+    fixture_id: SYNTHETIC-JOB-FIXTURE-SANITIZATION-BLOCKED-001
+  evidence_state: not_available
+  sanitization_state: unknown
+  method_code: not_available
+  operator_id: null
+  occurred_at_utc: null
+  media_fixture_id: null
+  verification_state: not_available
+  policy_version: community-laptop-policy@0.1.0-candidate.1
+observations: []

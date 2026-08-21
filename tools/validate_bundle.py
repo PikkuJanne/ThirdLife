@@ -52,6 +52,14 @@ REQUIRED_FILES = (
     "docs/privacy/logging-standard.md",
     "docs/privacy/privacy-model.md",
     "docs/privacy/redaction-test-cases.yaml",
+    "fixtures/README.md",
+    "fixtures/catalog/catalog.yaml",
+    "fixtures/jobs/assessment-ready.yaml",
+    "fixtures/jobs/partial-observations.yaml",
+    "fixtures/jobs/sanitization-blocked.yaml",
+    "fixtures/policies/community-laptop-policy.yaml",
+    "fixtures/profiles/basic.yaml",
+    "fixtures/profiles/job-seeker.yaml",
     "docs/security/abuse-cases.md",
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
@@ -65,6 +73,7 @@ REQUIRED_FILES = (
     "docs/testing/same-machine-constraints.md",
     "tools/merge_task_contracts.py",
     "tools/requirements.txt",
+    "tools/tests/test_pilot_fixtures.py",
     "tools/tests/test_validate_bundle.py",
 )
 BUNDLE_MANIFEST_FILE = "BUNDLE_MANIFEST.sha256"
@@ -324,6 +333,101 @@ PRIVACY_FIXTURE_MAX_NODES = 8_192
 PRIVACY_FIXTURE_MAX_DEPTH = 32
 PRIVACY_FIXTURE_MAX_SCALAR_CHARS = 16_384
 PRIVACY_FIXTURE_MAX_AGGREGATE_SCALAR_CHARS = 128 * 1024
+PILOT_FIXTURE_FILES = (
+    "fixtures/catalog/catalog.yaml",
+    "fixtures/jobs/assessment-ready.yaml",
+    "fixtures/jobs/partial-observations.yaml",
+    "fixtures/jobs/sanitization-blocked.yaml",
+    "fixtures/policies/community-laptop-policy.yaml",
+    "fixtures/profiles/basic.yaml",
+    "fixtures/profiles/job-seeker.yaml",
+)
+PILOT_FIXTURE_README = "fixtures/README.md"
+PILOT_FIXTURE_SCHEMA_VERSIONS = {
+    "catalog": "thirdlife.catalog.v1",
+    "job": "thirdlife.job-fixture.v1",
+    "policy": "thirdlife.policy.v1",
+    "profile": "thirdlife.profile.v1",
+}
+PILOT_FIXTURE_CLASSIFICATION = "PUBLIC_REFERENCE"
+PILOT_FIXTURE_MAX_OBSERVATIONS = 64
+PILOT_FIXTURE_MAX_POLICY_RULES = 64
+PILOT_FIXTURE_MAX_CATALOG_APPLICATIONS = 32
+PILOT_FIXTURE_MAX_PROFILE_ITEMS = 32
+PILOT_FIXTURE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
+PILOT_SYNTHETIC_JOB_ID_RE = re.compile(r"^SYNTHETIC-JOB-[A-Z0-9-]+$")
+PILOT_SYNTHETIC_OPERATOR_ID_RE = re.compile(r"^SYNTHETIC-OPERATOR-[0-9]{3}$")
+PILOT_SYNTHETIC_MEDIA_ID_RE = re.compile(
+    r"^SYNTHETIC-(?:MEDIA|REPLACEMENT-STORAGE)-[0-9]{3}$"
+)
+PILOT_CATALOG_APPLICATIONS = (
+    (
+        "web_browsing",
+        "generic.synthetic.web-browser",
+        "generic.synthetic.package.web-browser",
+    ),
+    (
+        "document_editing",
+        "generic.synthetic.document-editor",
+        "generic.synthetic.package.document-editor",
+    ),
+    (
+        "pdf_reading",
+        "generic.synthetic.pdf-reader",
+        "generic.synthetic.package.pdf-reader",
+    ),
+    (
+        "video_calling",
+        "generic.synthetic.video-calling",
+        "generic.synthetic.package.video-calling",
+    ),
+)
+PILOT_CATALOG_CAPABILITIES = tuple(
+    capability for capability, _application, _package in PILOT_CATALOG_APPLICATIONS
+)
+PILOT_RECIPIENT_CHOICES = (
+    "browser_preference",
+    "accessibility_preferences",
+    "cloud_account_sign_in",
+    "backup_onboarding",
+)
+PILOT_PROHIBITED_NORMALIZED_KEYS = {
+    "arguments",
+    "args",
+    "assettag",
+    "command",
+    "credential",
+    "credentials",
+    "dataurl",
+    "donorname",
+    "email",
+    "emailaddress",
+    "executable",
+    "executablepath",
+    "hostname",
+    "installerarguments",
+    "installerargs",
+    "messagedetails",
+    "operatorname",
+    "password",
+    "passphrase",
+    "personalpath",
+    "privatekey",
+    "rawmessage",
+    "rawoutput",
+    "recipientname",
+    "recoverykey",
+    "registrypath",
+    "script",
+    "serial",
+    "serialnumber",
+    "servicetag",
+    "ssid",
+    "token",
+    "uri",
+    "url",
+    "username",
+}
 PRIVACY_PENDING_STATUS = "Draft contract complete; named privacy-owner approval pending"
 PRIVACY_APPROVED_STATUS = "Approved initial privacy contract"
 PRIVACY_APPROVAL_PATHS = (
@@ -1899,6 +2003,1225 @@ def is_explicitly_synthetic_sensitive_value(
     if SECURITY_MACHINE_PATH_RE.search(canonical) or re.search(r"(?i)https?://", canonical):
         return False
     return True
+
+
+def pilot_fixture_set_digest(root: Path = ROOT) -> str:
+    """Hash the exact, path-sorted TL-0007 YAML fixture set."""
+
+    digest = hashlib.sha256()
+    for relative in PILOT_FIXTURE_FILES:
+        data = (root / relative).read_bytes()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(data).hexdigest().encode("ascii"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def _pilot_mapping(
+    value: Any, owner: str, validation: Validation
+) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        validation.error(f"{owner}: must be a mapping")
+        return {}
+    return value
+
+
+def _pilot_sequence(
+    value: Any,
+    owner: str,
+    validation: Validation,
+    *,
+    maximum: int,
+    allow_empty: bool = False,
+) -> list[Any]:
+    if not isinstance(value, list):
+        validation.error(f"{owner}: must be a list")
+        return []
+    if not value and not allow_empty:
+        validation.error(f"{owner}: must not be empty")
+    if len(value) > maximum:
+        validation.error(f"{owner}: exceeds the {maximum}-item limit")
+        return value[:maximum]
+    return value
+
+
+def _pilot_fields(
+    value: dict[str, Any],
+    owner: str,
+    required: set[str],
+    validation: Validation,
+    *,
+    optional: set[str] | None = None,
+) -> None:
+    allowed = required | (optional or set())
+    reject_unknown_mapping_fields(owner, value, allowed, validation)
+    missing = sorted(required - set(value))
+    if missing:
+        validation.error(f"{owner}: missing required fields {missing}")
+
+
+def _pilot_token(
+    value: Any,
+    owner: str,
+    validation: Validation,
+    *,
+    pattern: re.Pattern[str] = PILOT_FIXTURE_ID_RE,
+) -> str:
+    if not isinstance(value, str) or not value.strip():
+        validation.error(f"{owner}: must be a non-empty string")
+        return ""
+    if value != value.strip() or len(value) > 512 or pattern.fullmatch(value) is None:
+        validation.error(f"{owner}: must be a bounded stable token")
+    return value
+
+
+def _pilot_unique(values: list[str], owner: str, validation: Validation) -> None:
+    if len(values) != len(set(values)):
+        validation.error(f"{owner}: values must be unique")
+    if len(values) != len({value.casefold() for value in values}):
+        validation.error(f"{owner}: values must not collide by case")
+
+
+def _pilot_capability_selection_valid(
+    declared: tuple[str, ...],
+    essential: tuple[str, ...],
+    active: tuple[str, ...],
+) -> bool:
+    """Keep required capabilities active while permitting declared optionals."""
+
+    declared_set = set(declared)
+    active_set = set(active)
+    return set(essential).issubset(active_set) and active_set.issubset(declared_set)
+
+
+def _pilot_candidate_condition_matches(
+    condition: dict[str, Any],
+    evidence: dict[str, Any],
+) -> bool:
+    """Evaluate only the three bounded condition forms used by TL-0007."""
+
+    data = evidence.get("data")
+    condition_type = condition.get("type")
+    if condition_type == "equals":
+        expected = condition.get("value")
+        return type(data) is type(expected) and data == expected
+    if condition_type == "one_of":
+        values = condition.get("values")
+        return isinstance(values, list) and any(
+            type(data) is type(expected) and data == expected
+            for expected in values
+        )
+    if condition_type == "minimum_integer":
+        minimum = condition.get("value")
+        return (
+            isinstance(data, int)
+            and not isinstance(data, bool)
+            and isinstance(minimum, int)
+            and not isinstance(minimum, bool)
+            and data >= minimum
+            and evidence.get("unit") == condition.get("unit")
+        )
+    return False
+
+
+def _pilot_safe_path_text(path: tuple[str | int, ...]) -> str:
+    """Render only known-safe field-shaped path components in diagnostics."""
+
+    rendered = ""
+    for component in path:
+        if isinstance(component, int):
+            rendered += f"[{component}]"
+            continue
+        canonical = canonical_testing_scan_text(component)
+        normalized = re.sub(r"[^a-z0-9]", "", canonical.casefold())
+        unsafe = (
+            canonical != component
+            or re.fullmatch(r"[a-z][a-z0-9_]{0,63}", component) is None
+            or normalized in PILOT_PROHIBITED_NORMALIZED_KEYS
+            or privacy_high_risk_secret_match(canonical) is not None
+            or testing_sensitive_match(canonical) is not None
+            or SECURITY_MACHINE_PATH_RE.search(canonical) is not None
+        )
+        safe_component = "<redacted-key>" if unsafe else component
+        rendered += ("." if rendered else "") + safe_component
+    return rendered
+
+
+def _pilot_timestamp(value: Any, owner: str, validation: Validation) -> None:
+    if not isinstance(value, str) or not value.endswith("Z"):
+        validation.error(f"{owner}: must be a UTC timestamp ending in Z")
+        return
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        parsed = None
+    if (
+        parsed is None
+        or parsed.tzinfo is None
+        or parsed.utcoffset() is None
+        or parsed.utcoffset().total_seconds() != 0
+    ):
+        validation.error(f"{owner}: must be an offset-aware UTC timestamp")
+
+
+def _pilot_scan_fixture(
+    relative: str,
+    text: str,
+    document: dict[str, Any],
+    validation: Validation,
+) -> None:
+    """Reject sensitive/executable content without reflecting it in diagnostics."""
+
+    canonical_text = canonical_testing_scan_text(text)
+    secret = privacy_high_risk_secret_match(canonical_text)
+    if secret is not None:
+        validation.error(f"{relative}: contains prohibited {secret}")
+    sensitive = testing_sensitive_match(canonical_text)
+    if sensitive is not None:
+        validation.error(f"{relative}: contains prohibited {sensitive}")
+    if SECURITY_MACHINE_PATH_RE.search(canonical_text):
+        validation.error(f"{relative}: contains a prohibited machine-specific path")
+
+    try:
+        scalars = privacy_yaml_scalar_paths(document)
+    except ValueError as exc:
+        validation.error(f"{relative}: unsafe fixture graph: {exc}")
+        return
+    for path, value in scalars:
+        owner = f"{relative}: {_pilot_safe_path_text(path)}"
+        normalized_keys = {
+            re.sub(
+                r"[^a-z0-9]",
+                "",
+                canonical_testing_scan_text(component).casefold(),
+            )
+            for component in path
+            if isinstance(component, str)
+        }
+        if normalized_keys & PILOT_PROHIBITED_NORMALIZED_KEYS:
+            validation.error(f"{owner}: uses a prohibited data or execution field")
+        if not isinstance(value, str):
+            continue
+        canonical = canonical_testing_scan_text(value)
+        folded = canonical.casefold()
+        if any(ord(character) < 32 or ord(character) == 127 for character in canonical):
+            validation.error(f"{owner}: contains a control character")
+        if canonical.lstrip().startswith(("=", "+", "@")):
+            validation.error(f"{owner}: starts with a spreadsheet-formula prefix")
+        if re.search(r"(?i)(?:https?|ftp|file|mailto|data|javascript):|://", canonical):
+            validation.error(f"{owner}: contains a prohibited URL or URI scheme")
+        if re.search(r"(?:^|[\\/])\.\.(?:[\\/]|$)", canonical):
+            validation.error(f"{owner}: contains a path-traversal segment")
+        if re.search(
+            r"(?i)(?:^|[\\/])(?:src|tests?|bin|obj|\.git)(?:[\\/]|$)|"
+            r"\.(?:sln|csproj|dll|exe|cmd|bat|ps1|vbs|msi|msix)(?:\s|$)",
+            canonical,
+        ):
+            validation.error(f"{owner}: contains a prohibited development artifact")
+        if re.search(
+            r"(?i)(?:^|\s)(?:powershell(?:\.exe)?|pwsh(?:\.exe)?|cmd(?:\.exe)?|"
+            r"wscript(?:\.exe)?|cscript(?:\.exe)?|mshta(?:\.exe)?|"
+            r"rundll32(?:\.exe)?)(?:\s|$)|^#!",
+            canonical,
+        ):
+            validation.error(f"{owner}: contains prohibited command content")
+        if re.search(r"<\s*/?\s*[A-Za-z][^>]*>", canonical):
+            validation.error(f"{owner}: contains prohibited markup")
+        if privacy_high_risk_secret_match(canonical) is not None:
+            validation.error(f"{owner}: contains a prohibited secret shape")
+        if testing_sensitive_match(canonical) is not None:
+            validation.error(f"{owner}: contains a prohibited personal or device identifier")
+        if SECURITY_MACHINE_PATH_RE.search(canonical):
+            validation.error(f"{owner}: contains a prohibited machine-specific path")
+
+
+def validate_pilot_fixtures(
+    validation: Validation,
+    task_by_id: dict[str, dict[str, Any]],
+    root: Path = ROOT,
+) -> str:
+    """Validate the bounded TL-0007 candidate contract, not later final schemas."""
+
+    fixture_root = root / "fixtures"
+    expected_paths = set(PILOT_FIXTURE_FILES)
+    allowed_paths = expected_paths | {PILOT_FIXTURE_README}
+    actual_paths: set[str] = set()
+    if fixture_root.is_dir():
+        try:
+            paths = sorted(path for path in fixture_root.rglob("*") if path.is_file())
+        except OSError:
+            paths = []
+            validation.error("fixtures: cannot enumerate fixture inventory")
+        for path in paths:
+            relative = path.relative_to(root).as_posix()
+            actual_paths.add(relative)
+            try:
+                path.resolve(strict=True).relative_to(root.resolve(strict=True))
+            except (OSError, RuntimeError, ValueError):
+                validation.error(f"{relative}: resolves outside the repository")
+            if path.is_symlink():
+                validation.error(f"{relative}: fixture files must not be symbolic links")
+    else:
+        validation.error("fixtures: required pilot fixture directory is missing")
+    missing = sorted(expected_paths - actual_paths)
+    unexpected = sorted(actual_paths - allowed_paths)
+    if missing:
+        validation.error(f"fixtures: missing required pilot fixtures {missing}")
+    if unexpected:
+        validation.error(f"fixtures: contains unexpected pilot fixture files {unexpected}")
+
+    documents: dict[str, dict[str, Any]] = {}
+    for relative in PILOT_FIXTURE_FILES:
+        path = root / relative
+        if not path.is_file():
+            continue
+        document = load_unique_key_yaml(path, validation)
+        if not document:
+            continue
+        documents[relative] = document
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            validation.error(f"{relative}: cannot read fixture text as UTF-8")
+        else:
+            _pilot_scan_fixture(relative, text, document, validation)
+    try:
+        digest = pilot_fixture_set_digest(root)
+    except OSError:
+        digest = ""
+        validation.error("fixtures: cannot compute the exact fixture-set digest")
+
+    catalog_path = "fixtures/catalog/catalog.yaml"
+    catalog = _pilot_mapping(documents.get(catalog_path), catalog_path, validation)
+    _pilot_fields(
+        catalog,
+        catalog_path,
+        {
+            "schema_version", "catalog_id", "version", "status",
+            "synthetic_data", "classification", "applications",
+        },
+        validation,
+    )
+    if (
+        catalog.get("schema_version") != PILOT_FIXTURE_SCHEMA_VERSIONS["catalog"]
+        or catalog.get("status") != "candidate"
+        or catalog.get("synthetic_data") is not True
+        or catalog.get("classification") != PILOT_FIXTURE_CLASSIFICATION
+    ):
+        validation.error(f"{catalog_path}: invalid candidate catalog metadata")
+    catalog_id = _pilot_token(catalog.get("catalog_id"), f"{catalog_path}.catalog_id", validation)
+    catalog_version = _pilot_token(catalog.get("version"), f"{catalog_path}.version", validation)
+    applications = _pilot_sequence(
+        catalog.get("applications"),
+        f"{catalog_path}: applications",
+        validation,
+        maximum=PILOT_FIXTURE_MAX_CATALOG_APPLICATIONS,
+    )
+    application_ids: list[str] = []
+    capability_ids: list[str] = []
+    catalog_applications: list[tuple[str, str, str]] = []
+    application_by_capability: dict[str, str] = {}
+    for index, raw in enumerate(applications):
+        owner = f"{catalog_path}: applications[{index}]"
+        app = _pilot_mapping(raw, owner, validation)
+        _pilot_fields(
+            app,
+            owner,
+            {
+                "id", "version", "capability_id", "entry_status",
+                "production_eligible", "package", "review", "behavior",
+                "verification",
+            },
+            validation,
+        )
+        app_id = _pilot_token(app.get("id"), f"{owner}.id", validation)
+        app_version = _pilot_token(app.get("version"), f"{owner}.version", validation)
+        capability = _pilot_token(
+            app.get("capability_id"), f"{owner}.capability_id", validation
+        )
+        application_ids.append(app_id)
+        capability_ids.append(capability)
+        application_by_capability[capability] = app_id
+        if (
+            not app_id.startswith("generic.synthetic.")
+            or app_version != "0.0.0-fixture.1"
+            or app.get("entry_status") != "synthetic_placeholder"
+            or app.get("production_eligible") is not False
+        ):
+            validation.error(f"{owner}: catalog placeholder must remain non-production")
+
+        package = _pilot_mapping(app.get("package"), f"{owner}.package", validation)
+        _pilot_fields(
+            package,
+            f"{owner}.package",
+            {
+                "source_id", "package_id", "exact_version", "scope",
+                "architectures", "minimum_os", "external_artifact",
+            },
+            validation,
+        )
+        if (
+            package.get("source_id") != "synthetic-fixture-source"
+            or not str(package.get("package_id", "")).startswith(
+                "generic.synthetic.package."
+            )
+            or package.get("exact_version") != app_version
+            or package.get("scope") != "machine"
+            or package.get("architectures") != ["x64"]
+            or package.get("minimum_os") != "windows_11"
+            or package.get("external_artifact") is not False
+        ):
+            validation.error(f"{owner}.package: placeholder package contract is invalid")
+        catalog_applications.append(
+            (capability, app_id, str(package.get("package_id", "")))
+        )
+
+        review = _pilot_mapping(app.get("review"), f"{owner}.review", validation)
+        _pilot_fields(
+            review,
+            f"{owner}.review",
+            {
+                "publisher", "declared_license", "license_review_status",
+                "privacy_review_status", "license_reviewed_at_utc",
+                "privacy_reviewed_at_utc", "redistribution_status",
+            },
+            validation,
+        )
+        if (
+            review.get("publisher") != "synthetic-fixture-publisher"
+            or review.get("declared_license") != "NOASSERTION"
+            or review.get("license_review_status") != "pending"
+            or review.get("privacy_review_status") != "pending"
+            or review.get("license_reviewed_at_utc") is not None
+            or review.get("privacy_reviewed_at_utc") is not None
+            or review.get("redistribution_status") != "withheld"
+        ):
+            validation.error(f"{owner}.review: placeholder review must remain pending/withheld")
+
+        behavior = _pilot_mapping(app.get("behavior"), f"{owner}.behavior", validation)
+        _pilot_fields(
+            behavior,
+            f"{owner}.behavior",
+            {
+                "reboot", "background_service", "auto_update", "network_use",
+                "download_bytes", "installed_bytes",
+            },
+            validation,
+        )
+        if behavior != {
+            "reboot": "unknown",
+            "background_service": "unknown",
+            "auto_update": "unknown",
+            "network_use": "not_applicable",
+            "download_bytes": None,
+            "installed_bytes": None,
+        }:
+            validation.error(f"{owner}.behavior: absent artifact behavior must remain unknown")
+
+        verification = _pilot_mapping(
+            app.get("verification"), f"{owner}.verification", validation
+        )
+        _pilot_fields(
+            verification,
+            f"{owner}.verification",
+            {
+                "status", "type", "expected_source_id",
+                "expected_package_id", "expected_version",
+            },
+            validation,
+        )
+        if verification != {
+            "status": "placeholder_unimplemented",
+            "type": "exact_package_identity",
+            "expected_source_id": package.get("source_id"),
+            "expected_package_id": package.get("package_id"),
+            "expected_version": package.get("exact_version"),
+        }:
+            validation.error(f"{owner}.verification: must match the exact placeholder")
+    _pilot_unique(application_ids, f"{catalog_path}: application IDs", validation)
+    _pilot_unique(capability_ids, f"{catalog_path}: capability IDs", validation)
+    if tuple(capability_ids) != PILOT_CATALOG_CAPABILITIES:
+        validation.error(f"{catalog_path}: applications must contain the exact ordered generic capability set")
+    if tuple(catalog_applications) != PILOT_CATALOG_APPLICATIONS:
+        validation.error(
+            f"{catalog_path}: applications must match the exact approved synthetic catalog tuples"
+        )
+
+    policy_path = "fixtures/policies/community-laptop-policy.yaml"
+    policy = _pilot_mapping(documents.get(policy_path), policy_path, validation)
+    _pilot_fields(
+        policy,
+        policy_path,
+        {
+            "schema_version", "policy_id", "version", "status", "synthetic_data",
+            "classification", "claim_scope", "effective", "target", "rules",
+        },
+        validation,
+    )
+    if (
+        policy.get("schema_version") != PILOT_FIXTURE_SCHEMA_VERSIONS["policy"]
+        or policy.get("status") != "candidate"
+        or policy.get("synthetic_data") is not True
+        or policy.get("classification") != PILOT_FIXTURE_CLASSIFICATION
+        or policy.get("claim_scope")
+        != "pilot_candidate_not_universal_hardware_requirement"
+        or policy.get("effective")
+        != {
+            "status": "candidate_not_effective",
+            "effective_from_utc": None,
+            "effective_until_utc": None,
+        }
+        or policy.get("target")
+        != {
+            "operating_system": "windows_11",
+            "support_state": "supported",
+            "architecture": "x64",
+            "device_class": "laptop",
+        }
+    ):
+        validation.error(f"{policy_path}: invalid Windows 11 x64 candidate policy metadata")
+    policy_id = _pilot_token(policy.get("policy_id"), f"{policy_path}.policy_id", validation)
+    policy_version = _pilot_token(policy.get("version"), f"{policy_path}.version", validation)
+    rules = _pilot_sequence(
+        policy.get("rules"),
+        f"{policy_path}: rules",
+        validation,
+        maximum=PILOT_FIXTURE_MAX_POLICY_RULES,
+    )
+    rule_ids: list[str] = []
+    policy_evidence: list[str] = []
+    policy_capabilities: set[str] = set()
+    candidate_rules: list[dict[str, Any]] = []
+    failure_dispositions = {
+        "repair_and_retest", "human_review_required",
+        "alternative_operating_system_candidate", "do_not_deploy",
+    }
+    for index, raw in enumerate(rules):
+        owner = f"{policy_path}: rules[{index}]"
+        rule = _pilot_mapping(raw, owner, validation)
+        _pilot_fields(
+            rule,
+            owner,
+            {
+                "id", "requirement_type", "severity", "evidence_key",
+                "condition", "decision",
+            },
+            validation,
+            optional={"active_for_capability_ids"},
+        )
+        rule_ids.append(_pilot_token(rule.get("id"), f"{owner}.id", validation))
+        policy_evidence.append(
+            _pilot_token(rule.get("evidence_key"), f"{owner}.evidence_key", validation)
+        )
+        requirement = rule.get("requirement_type")
+        active_capabilities_for_rule: tuple[str, ...] = ()
+        severities_by_requirement = {
+            "blocking": {"critical", "required"},
+            "repairable": {"required"},
+            "advisory": {"advisory"},
+            "profile_dependent": {"required"},
+            "human_confirmed": {"critical", "required"},
+        }
+        if rule.get("severity") not in severities_by_requirement.get(
+            requirement, set()
+        ):
+            validation.error(f"{owner}: invalid requirement semantics")
+        active = rule.get("active_for_capability_ids")
+        if requirement == "profile_dependent":
+            values = _pilot_sequence(
+                active,
+                f"{owner}.active_for_capability_ids",
+                validation,
+                maximum=PILOT_FIXTURE_MAX_PROFILE_ITEMS,
+            )
+            if any(value not in PILOT_CATALOG_CAPABILITIES for value in values):
+                validation.error(f"{owner}: references an unknown capability")
+            policy_capabilities.update(value for value in values if isinstance(value, str))
+            active_capabilities_for_rule = tuple(
+                value for value in values if isinstance(value, str)
+            )
+        elif "active_for_capability_ids" in rule:
+            validation.error(f"{owner}: capability activation is profile-dependent only")
+
+        condition = _pilot_mapping(rule.get("condition"), f"{owner}.condition", validation)
+        condition_type = condition.get("type")
+        condition_fields = {
+            "equals": {"type", "value"},
+            "one_of": {"type", "values"},
+            "minimum_integer": {"type", "value", "unit"},
+        }
+        if condition_type not in condition_fields:
+            validation.error(f"{owner}.condition: has an unapproved value")
+        else:
+            _pilot_fields(
+                condition,
+                f"{owner}.condition",
+                condition_fields[condition_type],
+                validation,
+            )
+            if condition_type == "equals":
+                equals_value = condition.get("value")
+                if isinstance(equals_value, str):
+                    _pilot_token(
+                        equals_value,
+                        f"{owner}.condition.value",
+                        validation,
+                    )
+                elif isinstance(equals_value, bool):
+                    pass
+                elif (
+                    not isinstance(equals_value, int)
+                    or isinstance(equals_value, bool)
+                    or not -(2**63) <= equals_value <= 2**63 - 1
+                ):
+                    validation.error(
+                        f"{owner}.condition.value: equals requires a bounded "
+                        "non-null primitive"
+                    )
+            if condition_type == "one_of":
+                values = _pilot_sequence(
+                    condition.get("values"),
+                    f"{owner}.condition.values",
+                    validation,
+                    maximum=16,
+                )
+                if any(not isinstance(value, str) for value in values):
+                    validation.error(f"{owner}.condition.values: must contain strings")
+                _pilot_unique(
+                    [value for value in values if isinstance(value, str)],
+                    f"{owner}.condition.values",
+                    validation,
+                )
+            if condition_type == "minimum_integer" and (
+                not isinstance(condition.get("value"), int)
+                or isinstance(condition.get("value"), bool)
+                or condition.get("value", -1) < 0
+                or condition.get("unit") not in {"bytes", "percent"}
+            ):
+                validation.error(f"{owner}.condition: invalid bounded integer threshold")
+
+        decision = _pilot_mapping(rule.get("decision"), f"{owner}.decision", validation)
+        _pilot_fields(
+            decision,
+            f"{owner}.decision",
+            {"blocks_ready", "unmet_disposition", "unavailable_disposition"},
+            validation,
+        )
+        if requirement == "advisory":
+            valid_decision = decision == {
+                "blocks_ready": False,
+                "unmet_disposition": None,
+                "unavailable_disposition": None,
+            }
+        else:
+            valid_decision = (
+                decision.get("blocks_ready") is True
+                and decision.get("unmet_disposition") in failure_dispositions
+                and decision.get("unavailable_disposition") in failure_dispositions
+            )
+        if not valid_decision:
+            validation.error(f"{owner}.decision: invalid explicit disposition semantics")
+        candidate_rules.append(
+            {
+                "evidence_key": policy_evidence[-1],
+                "requirement_type": requirement,
+                "active_capabilities": set(active_capabilities_for_rule),
+                "condition": condition,
+                "decision": decision,
+            }
+        )
+    _pilot_unique(rule_ids, f"{policy_path}: rule IDs", validation)
+    _pilot_unique(policy_evidence, f"{policy_path}: evidence keys", validation)
+
+    profiles: list[dict[str, Any]] = []
+    for profile_path in (
+        "fixtures/profiles/basic.yaml",
+        "fixtures/profiles/job-seeker.yaml",
+    ):
+        profile = _pilot_mapping(documents.get(profile_path), profile_path, validation)
+        _pilot_fields(
+            profile,
+            profile_path,
+            {
+                "schema_version", "profile_id", "version", "status",
+                "synthetic_data", "classification", "policy", "catalog",
+                "workshop", "recipient",
+            },
+            validation,
+        )
+        profile_id = _pilot_token(
+            profile.get("profile_id"), f"{profile_path}.profile_id", validation
+        )
+        profile_version = _pilot_token(
+            profile.get("version"), f"{profile_path}.version", validation
+        )
+        if (
+            profile.get("schema_version") != PILOT_FIXTURE_SCHEMA_VERSIONS["profile"]
+            or profile_version != "0.1.0-candidate.1"
+            or profile.get("status") != "candidate"
+            or profile.get("synthetic_data") is not True
+            or profile.get("classification") != PILOT_FIXTURE_CLASSIFICATION
+            or profile.get("policy")
+            != {"id": policy_id, "version": policy_version}
+            or profile.get("catalog")
+            != {"id": catalog_id, "version": catalog_version}
+        ):
+            validation.error(f"{profile_path}: invalid candidate profile references")
+
+        workshop = _pilot_mapping(
+            profile.get("workshop"), f"{profile_path}.workshop", validation
+        )
+        _pilot_fields(
+            workshop, f"{profile_path}.workshop", {"capabilities"}, validation
+        )
+        capabilities = _pilot_sequence(
+            workshop.get("capabilities"),
+            f"{profile_path}.workshop.capabilities",
+            validation,
+            maximum=PILOT_FIXTURE_MAX_PROFILE_ITEMS,
+        )
+        profile_capabilities: list[str] = []
+        intents: dict[str, str] = {}
+        for index, raw in enumerate(capabilities):
+            owner = f"{profile_path}.workshop.capabilities[{index}]"
+            capability = _pilot_mapping(raw, owner, validation)
+            _pilot_fields(
+                capability,
+                owner,
+                {"capability_id", "intent", "reason_code"},
+                validation,
+            )
+            capability_id = _pilot_token(
+                capability.get("capability_id"), f"{owner}.capability_id", validation
+            )
+            profile_capabilities.append(capability_id)
+            intents[capability_id] = str(capability.get("intent", ""))
+            _pilot_token(capability.get("reason_code"), f"{owner}.reason_code", validation)
+            if capability.get("intent") not in {"essential", "optional"}:
+                validation.error(f"{owner}.intent: has an unapproved value")
+        _pilot_unique(
+            profile_capabilities,
+            f"{profile_path}.workshop.capabilities",
+            validation,
+        )
+        if (
+            tuple(profile_capabilities) != PILOT_CATALOG_CAPABILITIES
+            or any(
+                capability not in application_by_capability
+                for capability in profile_capabilities
+            )
+        ):
+            validation.error(f"{profile_path}: capabilities do not resolve exactly")
+        expected_intents = {
+            capability: (
+                "optional"
+                if profile_id == "basic" and capability == "video_calling"
+                else "essential"
+            )
+            for capability in PILOT_CATALOG_CAPABILITIES
+        }
+        if intents != expected_intents:
+            validation.error(f"{profile_path}: capability intent is invalid")
+
+        recipient = _pilot_mapping(
+            profile.get("recipient"), f"{profile_path}.recipient", validation
+        )
+        _pilot_fields(recipient, f"{profile_path}.recipient", {"choices"}, validation)
+        choices = _pilot_sequence(
+            recipient.get("choices"),
+            f"{profile_path}.recipient.choices",
+            validation,
+            maximum=PILOT_FIXTURE_MAX_PROFILE_ITEMS,
+        )
+        choice_ids: list[str] = []
+        choice_types: list[str] = []
+        for index, raw in enumerate(choices):
+            owner = f"{profile_path}.recipient.choices[{index}]"
+            choice = _pilot_mapping(raw, owner, validation)
+            _pilot_fields(
+                choice,
+                owner,
+                {
+                    "choice_id", "choice_type", "state",
+                    "requires_recipient_presence", "workshop_action",
+                },
+                validation,
+            )
+            choice_ids.append(
+                _pilot_token(choice.get("choice_id"), f"{owner}.choice_id", validation)
+            )
+            choice_types.append(str(choice.get("choice_type", "")))
+            if (
+                choice.get("state") != "deferred"
+                or choice.get("requires_recipient_presence") is not True
+                or choice.get("workshop_action") is not False
+            ):
+                validation.error(f"{owner}: recipient choice must remain deferred")
+        _pilot_unique(choice_ids, f"{profile_path}: choice IDs", validation)
+        _pilot_unique(choice_types, f"{profile_path}: choice types", validation)
+        if tuple(choice_types) != PILOT_RECIPIENT_CHOICES:
+            validation.error(f"{profile_path}: recipient choices are incomplete")
+        profiles.append(
+            {
+                "id": profile_id,
+                "version": profile_version,
+                "capabilities": tuple(profile_capabilities),
+                "essential_capabilities": tuple(
+                    capability
+                    for capability in profile_capabilities
+                    if intents.get(capability) == "essential"
+                ),
+            }
+        )
+    if [profile["id"] for profile in profiles] != ["basic", "job-seeker"]:
+        validation.error("fixtures/profiles: Basic and Job Seeker profiles are required")
+    if not policy_capabilities.issubset(set(PILOT_CATALOG_CAPABILITIES)):
+        validation.error(f"{policy_path}: active capability references do not resolve")
+    profiles_by_reference = {
+        (profile["id"], profile["version"]): profile for profile in profiles
+    }
+    if len(profiles_by_reference) != len(profiles):
+        validation.error("fixtures/profiles: profile references must be unique")
+
+    job_contracts = {
+        "fixtures/jobs/assessment-ready.yaml": {
+            "expected": {
+                "sanitization_gate": "allow_assessment",
+                "policy_disposition": "ready_to_prepare",
+                "limitation_code": "none",
+            },
+            "sanitization": {
+                "sanitization_state": "verified",
+                "evidence_state": "observed",
+                "verification_state": "verified",
+                "method_code": "synthetic_external_sanitization",
+                "attributed": True,
+            },
+            "profile": (
+                "job-seeker",
+                "0.1.0-candidate.1",
+                PILOT_CATALOG_CAPABILITIES,
+            ),
+        },
+        "fixtures/jobs/sanitization-blocked.yaml": {
+            "expected": {
+                "sanitization_gate": "blocked",
+                "policy_evaluation": "not_run",
+                "limitation_code": "sanitization_unknown",
+            },
+            "sanitization": {
+                "sanitization_state": "unknown",
+                "evidence_state": "not_available",
+                "verification_state": "not_available",
+                "method_code": "not_available",
+                "attributed": False,
+            },
+            "profile": (
+                "basic",
+                "0.1.0-candidate.1",
+                PILOT_CATALOG_CAPABILITIES[:3],
+            ),
+        },
+        "fixtures/jobs/partial-observations.yaml": {
+            "expected": {
+                "sanitization_gate": "allow_assessment",
+                "policy_disposition": "human_review_required",
+                "limitation_code": "required_evidence_not_available",
+            },
+            "sanitization": {
+                "sanitization_state": "replacement_storage",
+                "evidence_state": "observed",
+                "verification_state": "verified",
+                "method_code": "synthetic_storage_replacement",
+                "attributed": True,
+            },
+            "profile": (
+                "job-seeker",
+                "0.1.0-candidate.1",
+                PILOT_CATALOG_CAPABILITIES,
+            ),
+        },
+    }
+    job_evidence: dict[str, set[str]] = {}
+    job_evidence_values: dict[str, dict[str, dict[str, Any]]] = {}
+    job_active_capabilities: dict[str, tuple[str, ...]] = {}
+    fixture_ids: list[str] = []
+    for job_path, contract in job_contracts.items():
+        job_document = _pilot_mapping(
+            documents.get(job_path), job_path, validation
+        )
+        _pilot_fields(
+            job_document,
+            job_path,
+            {
+                "schema_version", "fixture_id", "synthetic_data",
+                "classification", "expected", "job",
+                "profile", "sanitization_evidence", "observations",
+            },
+            validation,
+        )
+        fixture_id = _pilot_token(
+            job_document.get("fixture_id"), f"{job_path}.fixture_id", validation
+        )
+        fixture_ids.append(fixture_id)
+        if (
+            job_document.get("schema_version")
+            != PILOT_FIXTURE_SCHEMA_VERSIONS["job"]
+            or job_document.get("synthetic_data") is not True
+            or job_document.get("classification") != PILOT_FIXTURE_CLASSIFICATION
+            or job_document.get("expected") != contract["expected"]
+        ):
+            validation.error(f"{job_path}: invalid governed scenario metadata")
+
+        job = _pilot_mapping(job_document.get("job"), f"{job_path}.job", validation)
+        _pilot_fields(
+            job,
+            f"{job_path}.job",
+            {"job_id", "lifecycle_state", "device_class", "created_at_utc"},
+            validation,
+        )
+        if (
+            PILOT_SYNTHETIC_JOB_ID_RE.fullmatch(str(job.get("job_id", ""))) is None
+            or job.get("lifecycle_state")
+            not in {"intake", "assessment_complete", "assessment_blocked"}
+            or job.get("device_class") != "laptop"
+        ):
+            validation.error(f"{job_path}.job: invalid synthetic job metadata")
+        _pilot_timestamp(
+            job.get("created_at_utc"), f"{job_path}.job.created_at_utc", validation
+        )
+
+        profile = _pilot_mapping(
+            job_document.get("profile"), f"{job_path}.profile", validation
+        )
+        _pilot_fields(
+            profile,
+            f"{job_path}.profile",
+            {"id", "version", "active_capability_ids"},
+            validation,
+        )
+        profile_id = _pilot_token(
+            profile.get("id"), f"{job_path}.profile.id", validation
+        )
+        profile_version = _pilot_token(
+            profile.get("version"), f"{job_path}.profile.version", validation
+        )
+        active_capability_ids = _pilot_sequence(
+            profile.get("active_capability_ids"),
+            f"{job_path}.profile.active_capability_ids",
+            validation,
+            maximum=PILOT_FIXTURE_MAX_PROFILE_ITEMS,
+        )
+        active_capabilities = tuple(
+            _pilot_token(
+                capability,
+                f"{job_path}.profile.active_capability_ids[{index}]",
+                validation,
+            )
+            for index, capability in enumerate(active_capability_ids)
+        )
+        _pilot_unique(
+            list(active_capabilities),
+            f"{job_path}.profile.active_capability_ids",
+            validation,
+        )
+        expected_profile_id, expected_profile_version, expected_active = contract[
+            "profile"
+        ]
+        resolved_profile = profiles_by_reference.get((profile_id, profile_version))
+        if (
+            profile_id != expected_profile_id
+            or profile_version != expected_profile_version
+            or active_capabilities != expected_active
+            or resolved_profile is None
+            or not _pilot_capability_selection_valid(
+                () if resolved_profile is None else resolved_profile["capabilities"],
+                ()
+                if resolved_profile is None
+                else resolved_profile["essential_capabilities"],
+                active_capabilities,
+            )
+        ):
+            validation.error(f"{job_path}.profile: invalid candidate profile binding")
+        job_active_capabilities[job_path] = active_capabilities
+
+        sanitization = _pilot_mapping(
+            job_document.get("sanitization_evidence"),
+            f"{job_path}.sanitization_evidence",
+            validation,
+        )
+        _pilot_fields(
+            sanitization,
+            f"{job_path}.sanitization_evidence",
+            {
+                "evidence_id", "classification", "provider_id",
+                "collected_at_utc", "provenance", "evidence_state",
+                "sanitization_state", "method_code", "operator_id",
+                "occurred_at_utc", "media_fixture_id", "verification_state",
+                "policy_version",
+            },
+            validation,
+        )
+        provenance = sanitization.get("provenance")
+        sanitization_contract = contract["sanitization"]
+        if (
+            sanitization.get("classification") != "WORKSHOP_RESTRICTED"
+            or provenance
+            != {"kind": "synthetic_fixture", "fixture_id": fixture_id}
+            or sanitization.get("policy_version")
+            != f"{policy_id}@{policy_version}"
+        ):
+            validation.error(f"{job_path}.sanitization_evidence: invalid D-007 evidence")
+        if any(
+            sanitization.get(field) != sanitization_contract[field]
+            for field in (
+                "sanitization_state",
+                "evidence_state",
+                "verification_state",
+                "method_code",
+            )
+        ):
+            validation.error(
+                f"{job_path}.sanitization_evidence: invalid exact D-007 scenario tuple"
+            )
+        for field in ("evidence_id", "provider_id", "method_code"):
+            _pilot_token(
+                sanitization.get(field),
+                f"{job_path}.sanitization_evidence.{field}",
+                validation,
+            )
+        _pilot_timestamp(
+            sanitization.get("collected_at_utc"),
+            f"{job_path}.sanitization_evidence.collected_at_utc",
+            validation,
+        )
+        if sanitization_contract["attributed"]:
+            if (
+                PILOT_SYNTHETIC_OPERATOR_ID_RE.fullmatch(
+                    str(sanitization.get("operator_id", ""))
+                )
+                is None
+                or PILOT_SYNTHETIC_MEDIA_ID_RE.fullmatch(
+                    str(sanitization.get("media_fixture_id", ""))
+                )
+                is None
+            ):
+                validation.error(f"{job_path}.sanitization_evidence: invalid synthetic attribution")
+            _pilot_timestamp(
+                sanitization.get("occurred_at_utc"),
+                f"{job_path}.sanitization_evidence.occurred_at_utc",
+                validation,
+            )
+        elif any(
+            sanitization.get(field) is not None
+            for field in ("operator_id", "occurred_at_utc", "media_fixture_id")
+        ):
+            validation.error(f"{job_path}.sanitization_evidence: unavailable attribution must be null")
+
+        observations = _pilot_sequence(
+            job_document.get("observations"),
+            f"{job_path}.observations",
+            validation,
+            maximum=PILOT_FIXTURE_MAX_OBSERVATIONS,
+            allow_empty=sanitization_contract["sanitization_state"] == "unknown",
+        )
+        observation_ids: list[str] = []
+        evidence_keys: list[str] = []
+        evidence_values: dict[str, dict[str, Any]] = {
+            "sanitization.state": {
+                "state": sanitization.get("evidence_state"),
+                "data": sanitization.get("sanitization_state"),
+                "unit": None,
+            }
+        }
+        for index, raw in enumerate(observations):
+            owner = f"{job_path}.observations[{index}]"
+            observation = _pilot_mapping(raw, owner, validation)
+            _pilot_fields(
+                observation,
+                owner,
+                {
+                    "evidence_id", "evidence_key", "classification",
+                    "provider_id", "collected_at_utc", "provenance",
+                    "evidence_state", "value",
+                },
+                validation,
+                optional={"unit", "limitation_code"},
+            )
+            observation_ids.append(
+                _pilot_token(
+                    observation.get("evidence_id"),
+                    f"{owner}.evidence_id",
+                    validation,
+                )
+            )
+            evidence_key = _pilot_token(
+                observation.get("evidence_key"),
+                f"{owner}.evidence_key",
+                validation,
+            )
+            evidence_keys.append(evidence_key)
+            _pilot_token(
+                observation.get("provider_id"),
+                f"{owner}.provider_id",
+                validation,
+            )
+            evidence_state = observation.get("evidence_state")
+            if (
+                observation.get("classification") != "WORKSHOP_RESTRICTED"
+                or observation.get("provenance")
+                != {"kind": "synthetic_fixture", "fixture_id": fixture_id}
+                or observation.get("evidence_state")
+                not in {
+                    "observed", "inferred", "human_confirmed",
+                    "not_available", "not_applicable",
+                }
+            ):
+                validation.error(f"{owner}: invalid evidence metadata")
+            _pilot_timestamp(
+                observation.get("collected_at_utc"),
+                f"{owner}.collected_at_utc",
+                validation,
+            )
+            value = _pilot_mapping(observation.get("value"), f"{owner}.value", validation)
+            _pilot_fields(value, f"{owner}.value", {"type", "data"}, validation)
+            value_type = value.get("type")
+            if value_type not in {"enum", "string", "integer", "boolean"}:
+                validation.error(f"{owner}.value.type: has an unapproved value")
+            data = value.get("data")
+            evidence_values[evidence_key] = {
+                "state": evidence_state,
+                "data": data,
+                "unit": observation.get("unit"),
+            }
+            limitation_code = observation.get("limitation_code")
+            if evidence_state in {"not_available", "not_applicable"}:
+                if data is not None:
+                    validation.error(f"{owner}.value: unavailable evidence must carry explicit null")
+                _pilot_token(
+                    limitation_code,
+                    f"{owner}.limitation_code",
+                    validation,
+                )
+            elif data is None:
+                validation.error(f"{owner}.value: available evidence must carry typed data")
+            elif "limitation_code" in observation:
+                validation.error(f"{owner}.limitation_code: available evidence must not carry a limitation")
+            elif (
+                (value_type == "boolean" and not isinstance(data, bool))
+                or (
+                    value_type == "integer"
+                    and (not isinstance(data, int) or isinstance(data, bool))
+                )
+                or (value_type in {"enum", "string"} and not isinstance(data, str))
+            ):
+                validation.error(f"{owner}.value: data does not match its declared type")
+        _pilot_unique(observation_ids, f"{job_path}: evidence IDs", validation)
+        _pilot_unique(evidence_keys, f"{job_path}: evidence keys", validation)
+        job_evidence[job_path] = set(evidence_keys)
+        job_evidence_values[job_path] = evidence_values
+    _pilot_unique(fixture_ids, "fixtures/jobs: fixture IDs", validation)
+
+    policy_key_set = set(policy_evidence)
+    if (
+        job_evidence.get("fixtures/jobs/assessment-ready.yaml", set())
+        | {"sanitization.state"}
+    ) != policy_key_set:
+        validation.error("fixtures/jobs/assessment-ready.yaml: evidence keys must exactly cover the candidate policy")
+    partial_evidence = (
+        job_evidence.get("fixtures/jobs/partial-observations.yaml", set())
+        | {"sanitization.state"}
+    )
+    if partial_evidence != policy_key_set | {"function.touch"}:
+        validation.error(
+            "fixtures/jobs/partial-observations.yaml: evidence keys must cover "
+            "the candidate policy plus only function.touch"
+        )
+    partial_path = "fixtures/jobs/partial-observations.yaml"
+    expected_partial_disposition = job_contracts[partial_path]["expected"][
+        "policy_disposition"
+    ]
+
+    def active_rule(rule: dict[str, Any], job_path: str) -> bool:
+        return rule["requirement_type"] != "profile_dependent" or bool(
+            rule["active_capabilities"]
+            & set(job_active_capabilities.get(job_path, ()))
+        )
+
+    def failure_disposition(
+        rule: dict[str, Any], job_path: str
+    ) -> str | None:
+        evidence = job_evidence_values.get(job_path, {}).get(rule["evidence_key"])
+        decision = rule["decision"]
+        if evidence is None or evidence.get("state") in {
+            "not_available",
+            "not_applicable",
+        }:
+            return decision.get("unavailable_disposition")
+        if not _pilot_candidate_condition_matches(rule["condition"], evidence):
+            return decision.get("unmet_disposition")
+        return None
+
+    ready_path = "fixtures/jobs/assessment-ready.yaml"
+    ready_failures = [
+        failure_disposition(rule, ready_path)
+        for rule in candidate_rules
+        if rule["requirement_type"] != "advisory"
+        and active_rule(rule, ready_path)
+        and failure_disposition(rule, ready_path) is not None
+    ]
+    if ready_failures:
+        validation.error(
+            f"{ready_path}: ready claim does not satisfy every active required condition"
+        )
+
+    partial_failures = [
+        (rule, failure_disposition(rule, partial_path))
+        for rule in candidate_rules
+        if rule["requirement_type"] != "advisory"
+        and active_rule(rule, partial_path)
+        and failure_disposition(rule, partial_path) is not None
+    ]
+    if (
+        not partial_failures
+        or {disposition for _rule, disposition in partial_failures}
+        != {expected_partial_disposition}
+        or not any(
+            rule["requirement_type"] == "profile_dependent"
+            and disposition == expected_partial_disposition
+            for rule, disposition in partial_failures
+        )
+    ):
+        validation.error(
+            f"{partial_path}: expected profile-dependent disposition is not reproducible"
+        )
+
+    task = task_by_id.get("TL-0007", {})
+    if task.get("status") == "done":
+        evidence = task.get("evidence")
+        approved = isinstance(evidence, list) and any(
+            isinstance(item, dict)
+            and str(item.get("result", "")).casefold() == "passed"
+            and digest
+            and digest in str(item.get("reference", "")).casefold()
+            and re.search(
+                r"(?is)pilot owner.{0,100}approv(?:e|ed|al).{0,160}"
+                r"candidate policy.{0,160}capability set|"
+                r"approv(?:e|ed|al).{0,100}candidate policy.{0,160}"
+                r"capability set.{0,160}pilot owner",
+                str(item.get("summary", "")),
+            )
+            is not None
+            and bool(str(item.get("environment", "")).strip())
+            for item in evidence
+        )
+        if not approved:
+            validation.error(
+                "TL-0007 done evidence must bind named pilot-owner approval "
+                "of the candidate policy and capability set to the current fixture digest"
+            )
+    return digest
 
 
 def privacy_approval_state(value: str) -> str:
@@ -3989,6 +5312,7 @@ def validate() -> int:
     validate_governance_documents(validation)
     validate_security_documents(validation, task_by_id, decision_set)
     validate_privacy_documents(validation, task_by_id, decision_set)
+    validate_pilot_fixtures(validation, task_by_id)
     validate_testing_documents(validation, task_by_id, decision_set)
     validate_v030_document_markers(validation)
 

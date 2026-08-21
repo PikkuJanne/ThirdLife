@@ -245,6 +245,8 @@ class _CatalogIdentity:
     component_id: str
     version: str
     evidence_path: str
+    integrity_algorithm: str
+    integrity_value: str
 
     @property
     def identity(self) -> tuple[str, str]:
@@ -821,7 +823,10 @@ def _discover_dotnet_sdk(validation: _Validation) -> list[_DiscoveredComponent]:
 
 
 def _parse_catalog_identities(
-    path: Path, text: str, validation: _Validation
+    path: Path,
+    text: str,
+    integrity_value: str,
+    validation: _Validation,
 ) -> list[_CatalogIdentity]:
     """Extract application identities safely before the TL-0301 catalog schema."""
 
@@ -896,6 +901,8 @@ def _parse_catalog_identities(
                     component_id=component_id,
                     version=version,
                     evidence_path=label,
+                    integrity_algorithm="sha256",
+                    integrity_value=integrity_value,
                 )
             )
         current = None
@@ -963,13 +970,25 @@ def _catalog_inputs(validation: _Validation) -> tuple[_CatalogIdentity, ...]:
         if not path.is_file():
             continue
         label = validation.relative(path)
-        text = validation.read_text(path)
-        if text is None:
-            continue
         if path.suffix.casefold() not in {".yaml", ".yml"}:
             validation.error(f"{label}: catalog bootstrap inputs must be YAML files")
             continue
-        identities.extend(_parse_catalog_identities(path, text, validation))
+        data = validation.read_bytes(path)
+        if data is None:
+            continue
+        try:
+            text = data.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            validation.error(f"{label}: input must be UTF-8")
+            continue
+        identities.extend(
+            _parse_catalog_identities(
+                path,
+                text,
+                hashlib.sha256(data).hexdigest(),
+                validation,
+            )
+        )
 
     seen: dict[tuple[str, str], _CatalogIdentity] = {}
     folded_ids: dict[tuple[str, str], tuple[str, str]] = {}
@@ -1662,6 +1681,21 @@ def _compare_inventory(
             "license matrix has a stale/undiscovered catalog application "
             f"{identity[0]}@{identity[1]}"
         )
+    for identity in sorted(set(catalog_by_identity) & set(catalog_matrix_by_identity)):
+        catalog_identity = catalog_by_identity[identity]
+        matrix_component = catalog_matrix_by_identity[identity]
+        if matrix_component.integrity_algorithm != catalog_identity.integrity_algorithm:
+            validation.error(
+                "license matrix catalog application "
+                f"{identity[0]}@{identity[1]} integrity_algorithm must equal sha256 "
+                f"for {catalog_identity.evidence_path}"
+            )
+        elif matrix_component.integrity_value != catalog_identity.integrity_value:
+            validation.error(
+                "license matrix catalog application "
+                f"{identity[0]}@{identity[1]} sha256 does not match exact source "
+                f"fixture bytes at {catalog_identity.evidence_path}"
+            )
 
     enriched: list[SupplyChainComponent] = []
     for component in matrix:

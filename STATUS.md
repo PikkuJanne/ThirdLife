@@ -1,134 +1,115 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-21  
-**Snapshot preparation time:** 2026-08-21T18:30:41+02:00  
+**Snapshot preparation time:** 2026-08-21T20:34:58+02:00  
 **Bundle baseline:** 0.3.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M0 — Foundation and product contract  
-**Current task:** `TL-0006` — Create dependency, license, and SBOM controls  
-**Task state:** `done`
+**Current task:** `TL-0007` — Create synthetic pilot fixtures and reference inputs  
+**Task state:** `review`
 
 ## Current state
 
-`TL-0006` is complete. Its focused checks, locked restore, point-in-time vulnerability queries, deterministic working-tree inspection, and exact-commit clean-checkout SBOM proof pass. Janne Vuorela, Principal Software Architect & Sole Project Owner, approved the complete licence and redistribution proposal contract without conditions on 2026-08-21, bound to reviewed commit `11711bcab68c5c23fea4705a49ca7ff2d021d485` and matrix SHA-256 `f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73`.
+The automatable part of `TL-0007` is complete. Seven deterministic, non-personal YAML inputs now cover an assessment-ready job, an unknown-sanitization blocker, a partial-observation case, a candidate community-laptop policy, Basic and Job Seeker profiles, and four synthetic catalogue placeholders. The exact fixture-set SHA-256 is `1df6bbed058da9397555e747e6d3f4e4443934d261366a54145f2003e5fc8743`.
 
-The approval accepts the contract exactly as written. It preserves the `xunit.abstractions` evidence limitation and withheld toolchain redistribution; it is not blanket redistribution permission, legal advice, a final product-licence decision, or release authorization.
+The task remains `review` because its required named pilot-owner approval has not yet been recorded. The catalogue additions also changed the governed licence matrix, so the prior `TL-0006` approval remains historical evidence for its old digest and a fresh current-matrix review is required by the fail-closed repository control.
 
-A defensive Full-tier run passed every step through the zero-warning Release build, but Windows Smart App Control blocked two unsigned DLL loads in the final test phase; the same two project tests are blocked from the untouched TL-0005 baseline. This environmental limitation is recorded without weakening or bypassing the policy.
+The historical `TL-0008` draft-1 procedure at source commit `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, procedure SHA-256 `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`, remains superseded. No physical hardware walkthrough was performed for that transition.
 
-The current inventory contains 20 external components: 14 NuGet test-only packages and 6 build-only components (3 GitHub Actions, PyYAML, .NET SDK, and CPython). There are zero runtime dependencies and zero catalogue applications. Project-to-project references are not external packages.
+## Candidate pilot contract
+
+The policy is explicitly `candidate_not_effective`, applies only to supported Windows 11 x64 laptops, and makes no universal or cross-hardware claim. Its proposed thresholds are:
+
+- at least 8 GiB installed memory;
+- at least 128 GiB system-storage capacity;
+- at least 32 GiB free system storage;
+- a 60% battery full-charge ratio as an advisory, not a ready-state blocker.
+
+Blocking or repairable evidence covers the external sanitization gate, OS support, architecture and processor eligibility, storage health, battery presence and swelling inspection, UEFI, Secure Boot, TPM 2.0 readiness, ownership controls, activation, and human-confirmed display, keyboard, pointing, and network function. Audio output, camera, and microphone are profile-dependent for video calling. Missing required evidence remains unknown and yields human review; it never becomes an implicit pass.
+
+The initial generic capability set is `web_browsing`, `document_editing`, `pdf_reading`, and `video_calling`. Basic treats the first three as essential and video calling as optional; Job Seeker treats all four as essential. Browser preference, accessibility preferences, cloud sign-in, and backup onboarding remain deferred recipient choices with no workshop action.
+
+The catalogue identities are:
+
+- `generic.synthetic.web-browser`;
+- `generic.synthetic.document-editor`;
+- `generic.synthetic.pdf-reader`;
+- `generic.synthetic.video-calling`.
+
+All four use version `0.0.0-fixture.1`, are `production_eligible: false`, have no external artifact, and retain pending licence/privacy review plus withheld redistribution. They do not name, fetch, install, execute, or depend on any real or sibling application.
 
 ## Git state
 
 | Field | Verified value |
 |---|---|
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
-| Branch | `codex/tl-0006-dependency-license-sbom-controls` |
-| Implementation baseline | `b5c435c92e55f1d326963fc4aea9d4dd50525d37` — completed TL-0005 checkpoint |
+| Branch | `codex/tl-0007-synthetic-pilot-fixtures` |
+| Baseline | `6843d354bd93c351ad5817a4136379dd1e9dccc6` — completed and published TL-0006 checkpoint |
 | History handling | Continued from the fetched baseline; no reset, rebase, force push, or history rewrite |
-| Implementation checkpoint | `46de0c8597f462ad083284797e6f1fa09d52d47b` — clean-checkout SBOM source revision |
-| Reviewed contract checkpoint | `11711bcab68c5c23fea4705a49ca7ff2d021d485` — exact matrix reviewed by the named owner |
-| Approval checkpoint | The commit containing this file; resolve with `git rev-parse HEAD` after commit |
-| Upstream | `origin/codex/tl-0006-dependency-license-sbom-controls`; approval-session baseline was equal at `11711bcab68c5c23fea4705a49ca7ff2d021d485` |
+| Review checkpoint | The commit containing the exact fixture and matrix bytes; resolve with `git rev-parse HEAD` after commit |
+| Publication | Push and fetched remote-equality verification are required before requesting digest-bound approval |
 
-The configured SSH remote rejected unattended public-key authentication on this machine in the preceding task. Approval-checkpoint publication uses GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
+The configured SSH remote rejects unattended public-key authentication on this machine. Publication uses GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
 
-## Supply-chain outcome
+## Supply-chain state
 
-The implementation now provides:
+The governed inventory is now 24 components: the unchanged 20 external build/test components plus four project-created synthetic catalogue placeholders. The catalogue file SHA-256 is `7f80078a24d9fa890738d344d3c705549c45d17d7712ce1f8d543d4ce47f8901`; each placeholder matrix row is bound to those exact bytes and the supply-chain validator recomputes that hash.
 
-- centrally pinned direct NuGet versions and exact resolved lock closures;
-- an exact, sorted 20-row dependency/licence matrix with accountable owner, upstream publisher, version, source, purpose, declared licence, provenance, integrity mechanism, distribution plan, limitations, and separate installation/redistribution proposals;
-- hash-required, wheel-only installation of the sole Python build dependency;
-- full-commit GitHub Action pins and exact .NET/Python toolchain pins;
-- NuGet audit policy with direct and transitive review and no suppression path;
-- a standard-library validator and deterministic CycloneDX 1.6 generator;
-- exact one-to-one reconciliation for future catalogue identities without defining executable catalogue behavior before `TL-0301`;
-- exact-HEAD source provenance that rejects fabricated, stale, dirty, or incomplete governed input claims;
-- fail-closed human approval binding to a real reviewed commit and exact matrix SHA-256.
-
-The licence matrix SHA-256 is `f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73`. Its global review state is `Approved`; row text remains explicitly proposed so the exact human decision and the underlying evidence are not conflated.
-
-## Material limitations
-
-- `xunit.abstractions` 2.0.3 publishes a legacy mutable licence URL. The approved contract preserves that evidence limitation and withholds redistribution until stronger immutable evidence is recorded and reviewed or the dependency is changed.
-- The .NET SDK and CPython are build toolchains, not release payloads. Redistribution remains withheld pending exact installer provenance, hashes/signatures, applicable licences, and notices.
-- NuGet `contentHash` values are restore-integrity metadata, not independently computed `.nupkg` hashes or publisher-signature proof.
-- The PyYAML SHA-256 admits only `pyyaml-6.0.3-cp314-cp314-win_amd64.whl`; no sdist, other wheel, platform, or architecture is admitted.
-- Vulnerability observations are point-in-time and source-dependent; zero returned records are not a guarantee of safety or advisory completeness.
-- The Full tier is not green on the active machine because the enforced Smart App Control policy blocks two unsigned test DLL loads. The policy was not disabled or bypassed. `TL-0006` changed dependency governance, validation, and evidence but did not change any component identity, version, source, or restored dependency graph, so the dependency-change Full trigger did not apply and the task declares no other Full-tier trigger. Full verification must still be repeated in an approved executable/signing environment before a release gate.
+The candidate matrix SHA-256 is `32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193`, and its global review state is `Pending`. The new rows use `NOASSERTION`, are non-installable and `not-shipped`, admit no package artifact or binary, and separately withhold installation and redistribution rights. The existing mutable evidence limitation for `xunit.abstractions` and the withheld .NET SDK/CPython redistribution rights remain unchanged.
 
 ## Verification evidence
 
 | Scope | Result | Duration |
 |---|---|---:|
-| Pre-change governed Quick baseline | Passed; 80 tests plus bundle/repository validation | 63.168 s test |
-| Pre-approval focused supply-chain regressions | 20/20 passed | 43.408 s test |
-| Locked NuGet restore | Passed for all 26 projects with the exact graph | 9.877 s |
-| NuGet direct/transitive advisory query | Exit 0; 26 projects/frameworks; 0 vulnerable top-level and 0 vulnerable transitive records | 6.700 s |
-| Exact PyYAML/PyPI release check | Identity, wheel, yanked state, SHA-256, and schema matched; 0 non-withdrawn records | 0.372 s |
-| Two pre-approval working-tree SBOM generations and structural inspection | Byte-identical; 20 unique components, 21 dependency records, complete reference closure | 3.6 s including validation/generation summary |
-| Exact-commit clean-checkout SBOM proof | Passed twice from detached checkpoint `46de0c8`; exact `HEAD` provenance, deterministic bytes, complete reference closure, clean ignored-output behavior | 19.019 s wall including worktree creation and cleanup |
-| Defensive governed Full tier | 100 tests, validators, locked restore, format, and zero-warning Release build passed; final .NET tests failed on two Smart App Control blocks | 80.007 s Python tests; 21.35 s build; about 146 s wall |
-| Isolated current and detached TL-0005 baseline diagnosis | Both affected project tests exited 1 under the same Smart App Control block; policy was preserved | 18.757 s baseline comparison plus isolated rerun |
-| Named licence/rights review | Janne Vuorela approved the exact reviewed commit and matrix without conditions while preserving all recorded limitations and withheld rights | Explicit approval at 2026-08-21T16:30:41Z |
-| Post-approval targeted regression | The live approved review state and exact Git/matrix binding passed all 20 focused supply-chain tests | 43.440 s |
-| Post-approval working-tree SBOM inspection | Two outputs were byte-identical CycloneDX 1.6 documents with approved review metadata, 20 components, 21 dependency records, and complete reference closure | SHA-256 `dda4cb9363deecd8abfe24e3da819dfdda5436ff0c6a69e210e17262a6b9fbcb`; 104278 bytes |
+| Pre-change governed Quick baseline | Passed 100 Python tests plus live bundle/repository validation at baseline `6843d35` | 85.476 s tests |
+| Focused pilot-fixture regressions | 19/19 passed | 22.131 s |
+| Existing bundle-validator regressions | 80/80 passed after final fixture-validator hardening | 40.907 s |
+| Focused supply-chain regressions | 21/21 passed for exact catalogue hashing, 24 governed components, and pending review state | 46.717 s |
+| Python compilation and live validators | Compilation, bundle validation, and supply-chain validation passed; 91 tasks, 8 milestones, 66 decisions, valid DAG | 4.371 s combined command |
+| Canonical safety scans | Live fixtures passed secret, personal/device identifier, path, URL, command, development-artifact, markup, bounded-YAML, exact generic allowlist, and cross-reference checks | Included above |
+| Governed Quick review checkpoint | All 120 Python tests and bundle validation passed; repository validation then stopped at exactly the three pending current-matrix human-review controls | 105.215 s tests |
 
-The exact-tree Quick gate is run after this status record and the bundle manifest are finalized. Its result, the final metadata commit, push, and fetched remote-equality check are recorded in the session completion report without changing the verified tree afterward.
+The live supply-chain result is dependency-input SHA-256 `a2dd0bbac1fac2757b4c9de284d320bad4488be81f90baa755289a09f578d08f`, matrix SHA-256 `32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193`, and review `pending`.
 
-Current approved working-tree evidence and preserved clean-checkout checkpoint evidence:
-
-- dependency-input SHA-256: `f42a8ab7e4b2e47aaeb28225411a491db284072982cb6a7e540f61010d30a2f4`;
-- approved dependency contract SHA-256: `c5c7d45e3aa6d96b4fa577579d5eeba40aaceedfdd29951b12fa1e61aca0ea89`;
-- approved deterministic working-tree SBOM SHA-256: `dda4cb9363deecd8abfe24e3da819dfdda5436ff0c6a69e210e17262a6b9fbcb`, 104278 bytes;
-- deterministic source-bound clean-checkout SBOM SHA-256: `b7044cf40d344933a051e9ccdeb7e385654a712f76aab61f5fa9011bc4810c36`, 104399 bytes;
-- clean-checkout dependency-input SHA-256: `6c95b753c9d1fe72bae2f55ce10d1d19dc2271c9e81e953a202c0db457211728`;
-- NuGet raw response SHA-256: `52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316`;
-- PyPI raw response SHA-256: `c3f35597bc2f08cc990c2a5fe57bef6687b3a3d7c61d8b0ba4cc067777eb1def`.
-
-The working-tree SBOM intentionally omitted source revision. The clean-checkout SBOM embeds and verifies source revision `46de0c8597f462ad083284797e6f1fa09d52d47b`; the disposable checkout was clean before generation and remained clean afterward except for ignored SBOM artifacts, then was removed.
-
-## Preserved project provenance
-
-`TL-0005` remains complete with Janne Vuorela's privacy-owner approval bound to commit `118240955b01ea4a0b941b00d357ea165b035981`. The historical `TL-0008` draft-1 physical-device procedure at source commit `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, archived procedure SHA-256 `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`, remains superseded and must not be executed; no physical hardware walkthrough was performed for the v0.3.0 transition.
+The task declares a targeted tier and no Full/extended trigger. The inherited release-gate limitation remains: Windows Smart App Control on the active machine blocks two unsigned Release test DLL loads, and it was not disabled or bypassed.
 
 ## Boundary and risk impact
 
-- **Project vacuum / sibling integration:** No sibling repository, component, profile, catalogue entry, adapter, data source, or release dependency was introduced.
-- **Data / migration:** No application data, database, migration, personal data, retention, telemetry, or cleanup behavior changed. Ignored `artifacts/sbom/` and `artifacts/audit/` files are local developer/release evidence only.
-- **Release interface:** `RELEASE_INTERFACE.md` maps the implemented dependency digest, matrix review, SBOM, provenance, and audit evidence to later release fields without filling release-specific values or inventing an interface.
-- **Security / privacy:** Exact pins, bounded inputs, safe URL/path checks, cache exclusion, truthful hash semantics, approval binding, and source-revision verification reduce substitution and false-evidence risk. Network access occurs only in explicit developer audit commands, not in the Core application or offline generator.
-- **Accessibility / low-spec:** No UI, keyboard, focus, screen-reader, scaling, high-contrast, background activity, service, GPU use, or runtime resource cost was added. Generation is foreground, bounded, single-process work over checked-in text inputs.
+- **Project vacuum / sibling integration:** No sibling repository was browsed and no sibling identifier, artifact, profile, adapter, data source, service, or dependency was introduced.
+- **Data / migration:** Only deterministic `PUBLIC_REFERENCE` fixture data was added. There is no application data, database, migration, telemetry, retention, deletion, or personal-data change.
+- **Release interface:** No release-interface field was populated. Synthetic placeholders are not production catalogue admission or release evidence.
+- **Security / privacy:** Strict bounded YAML, unique-key parsing, normalized privacy scans, explicit unavailable/null evidence, no arbitrary command/path/URL fields, non-production package placeholders, and digest-bound approvals fail closed.
+- **Accessibility / low-spec:** No UI, focus, keyboard, screen-reader, scaling, high-contrast, GPU, service, background activity, cache, or runtime resource cost was added. Accessibility remains an explicit recipient-controlled profile choice.
 
 ## Changed paths
 
-- `.gitattributes`
-- `.github/workflows/verify.yml`
-- `.gitignore`
-- `Directory.Build.props`
-- `README.md`
-- `RELEASE_INTERFACE.md`
-- `SECURITY.md`
-- `TASKS.yaml`
-- `eng/generate-sbom.ps1`
-- `eng/verify.ps1`
-- `tools/requirements.txt`
-- `tools/supply_chain.py`
-- `tools/tests/test_supply_chain.py`
+- `fixtures/README.md`
+- `fixtures/jobs/*.yaml`
+- `fixtures/policies/community-laptop-policy.yaml`
+- `fixtures/profiles/basic.yaml`
+- `fixtures/profiles/job-seeker.yaml`
+- `fixtures/catalog/catalog.yaml`
 - `tools/validate_bundle.py`
-- `tools/validate_repository.py`
+- `tools/tests/test_pilot_fixtures.py`
+- `tools/supply_chain.py`
 - `docs/supply-chain/dependencies.md`
 - `docs/supply-chain/license-matrix.csv`
+- `tools/tests/test_supply_chain.py`
+- `tools/validate_repository.py`
+- `README.md`
+- `TASKS.yaml`
 - `STATUS.md`
 - `BUNDLE_MANIFEST.sha256` after final regeneration
 
-The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` was present before TL-0006 and remains untouched and unstaged.
+The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` was present before TL-0007 and remains untouched and unstaged.
 
 ## Outstanding
 
-1. Repeat the Full tier in an approved environment that can execute the unsigned test assemblies, or after later governed signing/lifecycle work provides the approved execution path; do not weaken Smart App Control. This is a release-gate limitation, not missing TL-0006 human evidence.
+1. A named pilot owner must approve the exact candidate policy values and initial four-capability set, bound to the review commit and fixture-set SHA-256.
+2. A named licence/rights reviewer must approve the exact changed matrix commit and SHA-256 while preserving all recorded limitations, `NOASSERTION`, no-artifact/not-shipped states, and separately withheld rights. This is approval of the governance contract as written, not blanket redistribution permission.
+3. Because the repository validator requires completed `TL-0006` evidence to bind the current matrix digest, recording the renewed matrix approval requires explicit authorization to append that evidence to `TL-0006`; its prior evidence must remain intact.
+4. Repeat the Full tier in an approved environment that can execute the unsigned assemblies, or after later governed signing/lifecycle work provides an approved path, before a release gate.
 
 ## Next dependency-ready task
 
-`TL-0007` — Create synthetic pilot fixtures and reference inputs.
+After `TL-0007` is approved and completed: `TL-0009` — Record initial architecture decisions and project boundaries.

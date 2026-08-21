@@ -1,6 +1,6 @@
 # Dependency, licence, provenance, and SBOM controls
 
-This document is the governed supply-chain contract introduced by `TL-0006`. It covers every external component used to build, validate, test, or distribute ThirdLife Setup Core and every future catalogue application. It does not approve a component or grant legal advice. Dated audit checkpoints below are point-in-time technical evidence only. The licence and rights statements in `license-matrix.csv` are proposals. The global review table at the end of this document is the sole pending/approved state, so row text remains stable when a review is bound to a matrix digest.
+This document is the governed supply-chain contract introduced by `TL-0006`. It covers every external component used to build, validate, test, or distribute ThirdLife Setup Core and every catalogue application identity, including project-created synthetic placeholders. It does not approve a component or grant legal advice. Dated audit checkpoints below are point-in-time technical evidence only. The licence and rights statements in `license-matrix.csv` are proposals. The global review table at the end of this document is the sole current pending/approved state, so row text remains stable when a review is bound to a matrix digest.
 
 ## Current scope
 
@@ -11,13 +11,14 @@ The checked-in matrix has exactly these current counts:
 | Runtime dependencies | 0 | None |
 | Build-only dependencies and toolchains | 6 | Three GitHub actions are `remote-ci-only`; PyYAML and both toolchains are `not-shipped` |
 | Test-only NuGet dependencies | 14 | `not-shipped` |
-| Catalogue application dependencies | 0 | None |
+| Catalogue application identities | 4 | Project-created synthetic `production_eligible: false` placeholders; non-installable, no artifact or binary, and `not-shipped` |
+| **Total governed supply-chain components** | **24** | 20 external build/test components plus 4 synthetic catalogue placeholders |
 
-The 14 NuGet rows are the complete non-project package closure discovered in the test-project `packages.lock.json` files. Project-to-project references are part of this repository, not third-party components, and are not matrix rows. There are currently no external packages in a production project.
+The 14 NuGet rows are the complete non-project package closure discovered in the test-project `packages.lock.json` files. Project-to-project references are part of this repository, not third-party components, and are not matrix rows. There are currently no external packages in a production project. The four catalogue rows correspond exactly to the project-created identities in `fixtures/catalog/catalog.yaml`; they are synthetic fixture metadata, not external applications, packages, installers, artifacts, or binaries. Each is marked `production_eligible: false` in the fixture, carries `NOASSERTION`, and withholds installation and redistribution rights separately.
 
-An exact count of zero is still governed inventory. A future runtime dependency or catalogue application requires a complete matrix row, reviewed source and integrity evidence, and the update workflow below before admission. A catalogue row must identify the exact application identity, source, publisher, version, installation rights, redistribution rights, installer provenance, and distribution plan. Absence from the matrix is a fail-closed condition, not an implicit approval.
+An exact runtime count of zero is still governed inventory. A future runtime dependency or external or production catalogue application requires a complete matrix row, reviewed source and integrity evidence, and the update workflow below before admission. A catalogue row must identify the exact application identity, source or clearly declared synthetic origin, publisher, version, installation rights, redistribution rights, provenance, and distribution plan. The presence of a synthetic placeholder identity is not production admission or package approval. Absence from the matrix is a fail-closed condition, not implicit approval.
 
-The accountable ThirdLife role in every current row is `Principal Software Architect`. `owner` names that project role; `upstream_publisher` separately names the external author or publisher. The owner is not presented as the upstream publisher.
+The accountable ThirdLife role in every current row is `Principal Software Architect`. `owner` names that project role; `upstream_publisher` separately names the external author/publisher or the explicit project-created synthetic origin. The owner is not presented as an external upstream publisher.
 
 ## Governed inputs
 
@@ -32,6 +33,7 @@ The accountable ThirdLife role in every current row is `Principal Software Archi
 | `eng/verify.ps1` | Governed repository verification entry point that invokes the validator regressions |
 | `global.json` | Exact .NET SDK version with roll-forward disabled |
 | `eng/verify.ps1`, `.github/workflows/verify.yml` | Exact Python version and full-commit GitHub action pins |
+| `fixtures/catalog/catalog.yaml` | Exact current synthetic catalogue identities and their shared fixture-file SHA-256; no executable package behavior |
 | `docs/supply-chain/license-matrix.csv` | Ownership, purpose, scope, upstream evidence, proposed rights, distribution plan, integrity, provenance, and limitations |
 
 [NuGet's lock-file guidance](https://learn.microsoft.com/nuget/consume-packages/package-references-in-project-files#locking-dependencies), [locked restore documentation](https://learn.microsoft.com/dotnet/core/tools/dotnet-restore), [pip's repeatable-install guidance](https://pip.pypa.io/en/stable/topics/secure-installs/), and [GitHub's guidance to pin actions to a full commit SHA](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-third-party-actions) are the upstream control references.
@@ -48,8 +50,8 @@ The CSV headers and their order are contractual so generation and review remain 
 | `relationship` | `direct`, `transitive`, `ci`, or `toolchain` |
 | `scope` | `runtime`, `build-only`, `test-only`, or `catalog-application` |
 | `owner` | Accountable ThirdLife role |
-| `upstream_publisher` | External author, project, foundation, or publisher |
-| `source` | Exact primary download or immutable source location where available |
+| `upstream_publisher` | External author, project, foundation, publisher, or explicit project-created synthetic origin |
+| `source` | Exact primary download or immutable source location where available; a clearly labelled non-routable sentinel only when a synthetic no-artifact row must satisfy the HTTPS field contract |
 | `purpose` | Narrow project need served by the component |
 | `declared_license` | Upstream's declaration; this is evidence, not ThirdLife approval |
 | `license_evidence` | Primary upstream licence evidence, immutable when available |
@@ -71,6 +73,7 @@ Rows are sorted case-insensitively by `(component_type, component_id)`. Every fi
 - A GitHub action's integrity value is the full 40-character Git commit SHA used by the workflow. Its human-readable release tag is descriptive; the SHA is the execution pin.
 - `.NET SDK` and `CPython` use the governed `version-pin` mechanism, referencing `global.json#sdk.version` and `.github/workflows/verify.yml#python-version` respectively. A version pin is not a binary digest: no exact Windows x64 installer hash is currently governed. They are not release payloads; any proposal to redistribute either toolchain must stop until exact binary provenance, hash/signature evidence, applicable licences, and complete third-party notices are recorded and reviewed.
 - `xunit.abstractions` 2.0.3 exposes a legacy `licenseUrl` to a mutable `master` branch rather than a licence expression or immutable licence artifact. Its Apache-2.0 conclusion and both rights statements remain proposals with an explicit immutable-evidence gap.
+- The four `catalog-application` rows use `sha256` over the exact bytes of `fixtures/catalog/catalog.yaml`; all four therefore carry the same file digest, `7f80078a24d9fa890738d344d3c705549c45d17d7712ce1f8d543d4ce47f8901`. This proves only which project-created fixture bytes declared the identities. It is not an installer or application-artifact hash. Because matrix `source` and `license_evidence` fields require HTTPS, these no-artifact rows use deliberately non-routable `example.invalid` sentinels and `NOASSERTION`; neither is upstream evidence or a licence conclusion. Installation and redistribution remain separately withheld.
 
 ## Deterministic offline SBOM
 
@@ -101,7 +104,7 @@ $second = (Get-FileHash .\artifacts\sbom\thirdlife-setup-core.cdx.json -Algorith
 if ($first -cne $second) { throw "SBOM output was not deterministic." }
 ```
 
-Generation fails closed when a discovered NuGet, PyPI, GitHub action, toolchain, or future catalogue component is absent or inconsistent in the matrix; when a required field is empty; when ordering or identity is ambiguous; or when a governed pin conflicts with the source manifests. Before the later `TL-0301` catalogue schema exists, the validator extracts only bounded top-level application `id` and `version` values from `fixtures/catalog/*.yaml`, rejects ambiguous YAML features, and requires those identities to match matrix rows one-to-one. That bootstrap check does not define executable catalogue behavior or replace the future schema. The generated document contains a dependency-input digest, licence-matrix SHA-256, source revision when supplied, and component provenance/integrity references. It is inventory evidence, not a completed legal or vulnerability review.
+Generation fails closed when a discovered NuGet, PyPI, GitHub action, toolchain, or catalogue component is absent or inconsistent in the matrix; when a required field is empty; when ordering or identity is ambiguous; or when a governed pin conflicts with the source manifests. Before the later `TL-0301` catalogue schema exists, the validator extracts only bounded top-level application `id` and `version` values from `fixtures/catalog/*.yaml`, rejects ambiguous YAML features, and requires those identities to match matrix rows one-to-one. That bootstrap check does not define executable catalogue behavior, make a placeholder installable, or replace the future schema and package review. The generated document contains a dependency-input digest, licence-matrix SHA-256, source revision when supplied, and component provenance/integrity references. It is inventory evidence, not a completed legal or vulnerability review.
 
 ## Dependency update workflow
 
@@ -195,7 +198,7 @@ Environment: Windows, .NET SDK 10.0.400, and CPython 3.14.7. The NuGet result is
 
 | Release-interface evidence | TL-0006 source |
 |---|---|
-| Product licence | Dependency/licence matrix review is completed and bound below; the final product licence remains TBD at release freeze |
+| Product licence | The earlier 20-component matrix review remains historical evidence; the current 24-component candidate matrix is pending review after adding four synthetic placeholders, and the final product licence remains TBD at release freeze |
 | Dependency-lock revision | Frozen source commit plus dependency-input digest emitted in the SBOM |
 | SBOM/third-party notices | Generated CycloneDX file, its SHA-256, matrix digest, review record, and later release-specific notices |
 | Source commit | Exact checked-out `HEAD` supplied as `-SourceRevision`, with every governed input verified against that commit |
@@ -206,26 +209,26 @@ This task does not produce a release artifact hash, signature, installer, third-
 
 ## Boundary, data, accessibility, and resource impact
 
-- **Project vacuum:** all inventory is project-local or public generic tooling. There is no sibling repository, package, profile, catalogue entry, adapter, data access, release edge, or shared service.
-- **Data and migration:** no application data, personal data, schema, database, migration, telemetry, or retention behavior changes. Generated SBOM/audit files are local release evidence under `artifacts/`; they are not application runtime data.
+- **Project vacuum:** all inventory is project-local or public generic tooling. The four catalogue identities are generic project-created synthetic placeholders; there is no sibling repository, sibling package/profile/catalogue entry, sibling adapter or data access, cross-project release edge, or shared service.
+- **Data and migration:** no application data, personal data, database, migration, telemetry, or retention behavior changes. The catalogue file is deterministic public-reference fixture data, and generated SBOM/audit files are local release evidence under `artifacts/`; neither is application runtime data.
 - **Network and privilege:** offline SBOM generation is local, foreground, and unelevated. The explicit vulnerability procedures are developer/release operations that require network access; the Core application does not gain background network activity or privilege.
 - **Accessibility:** no UI, interaction, focus, keyboard, screen-reader, scaling, high-contrast, or user-visible error path is added.
 - **Modest hardware:** generation scans a finite set of checked-in text files, uses conservative single-process work, and writes one bounded JSON artifact. It adds no GPU requirement, resident service, background index, cache, or runtime memory/storage cost. Results apply only to the active reference machine and deterministic repository inputs; they make no cross-hardware claim.
 
 ## Human licence and rights review
 
-The global review is approved. The approval accepts the matrix proposals exactly as written for their recorded scopes and distribution plans; it does not convert a withheld right into an allowed right or authorize blanket redistribution.
+The global review is pending because `TL-0007` added four project-created synthetic catalogue rows and thereby materially changed the matrix. The earlier approval remains historical evidence for its exact 20-component digest only; it does not approve the current 24-component matrix or any placeholder. Pending review does not convert a withheld right into an allowed right or authorize installation, redistribution, production use, or release.
 
 | Field | Value |
 |---|---|
-| Review status | Approved |
-| Reviewer | Janne Vuorela |
-| Role | Principal Software Architect & Sole Project Owner |
-| Review date | 2026-08-21 |
-| Result | Approved without conditions |
-| Reviewed commit | 11711bcab68c5c23fea4705a49ca7ff2d021d485 |
-| Matrix SHA-256 | f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73 |
+| Review status | Pending |
+| Reviewer | Not recorded |
+| Role | Not recorded |
+| Review date | Not recorded |
+| Result | Not recorded |
+| Reviewed commit | Not recorded |
+| Matrix SHA-256 | Not recorded |
 
-Janne Vuorela supplied the explicit approval in the Codex task at `2026-08-21T16:30:41Z`. “Approved without conditions” means that the governed contract is accepted without an additional unrecorded condition; the limitations and withheld rights already written into the matrix remain binding. In particular, the mutable licence-evidence limitation for `xunit.abstractions` remains recorded, and redistribution of `.NET SDK` or `CPython` remains withheld pending exact installer provenance, hashes/signatures, applicable licences, and notices. This approval is governance evidence for the current dependency plan, not legal advice, a final product-licence decision, or release authorization.
+The current unreviewed candidate matrix SHA-256 is `32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193`; this computed value is inventory evidence, not a completed review record. A named reviewer must inspect the exact commit and this exact matrix before the table can change from pending. The review must preserve the mutable licence-evidence limitation for `xunit.abstractions`, withheld redistribution of `.NET SDK` and `CPython` pending exact installer provenance, hashes/signatures, applicable licences, and notices, and the four placeholders' `NOASSERTION`, non-installable, no-artifact, `not-shipped`, and separately withheld-rights state. Any later approval is governance evidence for the recorded dependency plan only, not legal advice, a final product-licence decision, or release authorization.
 
 A material version, source, publisher, licence, integrity, purpose, scope, relationship, distribution-plan, or matrix change invalidates this review and requires a new named approval bound to the changed commit and digest.

@@ -830,7 +830,7 @@ tasks:
   workstream: test-data
   kind: test
   priority: P0
-  status: backlog
+  status: review
   size: M
   executor: hybrid
   environment: any
@@ -868,7 +868,75 @@ tasks:
   verification:
   - Run secret/prohibited-pattern scans.
   - Ensure later schema tasks can consume the fixtures without hand edits.
-  evidence: []
+  evidence:
+  - summary: The governed Quick tier passed on the clean TL-0006 baseline before any TL-0007 fixture or validator change.
+    task: TL-0007
+    command_or_review: .\eng\verify.ps1 -Tier Quick
+    tier: quick baseline
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; repository at TL-0006 approval checkpoint
+    date: '2026-08-21'
+    duration: 100 Python tests in 85.476 s; live bundle and repository validators also passed
+    reference: baseline commit 6843d354bd93c351ad5817a4136379dd1e9dccc6
+    limitation: Pre-change evidence only; it does not verify the TL-0007 fixture bytes
+  - summary: Focused fixture and bundle-validator regressions passed the exact inventory, bounded YAML, cross-reference,
+      sanitization-gate, evidence-availability, candidate-policy, profile-separation, non-production catalogue, privacy,
+      secret, executable-content, project-vacuum, and digest-binding cases.
+    task: TL-0007
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_pilot_fixtures;
+      .venv\Scripts\python.exe -m unittest tools.tests.test_validate_bundle
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; working tree
+    date: '2026-08-21'
+    duration: 19 tests in 22.131 s; 80 tests in 40.907 s
+    reference: fixture-set sha256:1df6bbed058da9397555e747e6d3f4e4443934d261366a54145f2003e5fc8743;
+      catalog file sha256:7f80078a24d9fa890738d344d3c705549c45d17d7712ce1f8d543d4ce47f8901
+    limitation: Candidate contract only; final job, policy, profile, and catalogue schemas remain owned by later roadmap tasks
+  - summary: The focused supply-chain suite and live validator accepted exactly four synthetic catalogue placeholders while
+      preserving no-artifact, non-installable, not-shipped, NOASSERTION, and separately withheld installation and
+      redistribution states.
+    task: TL-0007
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_supply_chain;
+      .venv\Scripts\python.exe tools\supply_chain.py
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; offline working-tree validation
+    date: '2026-08-21'
+    duration: 21 tests in 46.717 s; direct validation completed in the 4.371 s combined live-check command
+    reference: 24 governed components; dependency-input sha256:a2dd0bbac1fac2757b4c9de284d320bad4488be81f90baa755289a09f578d08f;
+      candidate matrix sha256:32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193;
+      review pending
+    limitation: The prior TL-0006 approval remains historical evidence for its old digest; the changed matrix requires a new
+      named review and grants no package, installation, redistribution, production, or release right
+  - summary: Python compilation and the live bundle validator passed; every fixture passed canonicalized secret,
+      personal/device identifier, path, URL, command, development-artifact, and markup scans plus exact generic
+      application/capability/package allowlists and cross-reference checks.
+    task: TL-0007
+    command_or_review: .venv\Scripts\python.exe -m py_compile tools\validate_bundle.py tools\validate_repository.py
+      tools\supply_chain.py tools\tests\test_pilot_fixtures.py tools\tests\test_supply_chain.py;
+      .venv\Scripts\python.exe tools\validate_bundle.py
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; working tree
+    date: '2026-08-21'
+    duration: Completed with the live supply-chain check in 4.371 s
+    reference: 91 tasks; 8 milestones; 66 frozen decisions; valid DAG; fixture-set
+      sha256:1df6bbed058da9397555e747e6d3f4e4443934d261366a54145f2003e5fc8743
+    limitation: jsonschema was not installed; the checked-in custom structural validator was used as designed
+  - summary: The governed Quick review checkpoint passed all 120 Python regressions and the live bundle validator, then
+      stopped fail closed at exactly the three current-matrix human-review controls.
+    task: TL-0007
+    command_or_review: .\eng\verify.ps1 -Tier Quick
+    tier: quick review checkpoint
+    result: failed at the expected pending human licence/rights review gate after all preceding checks passed
+    environment: Windows 11 x64; Python 3.14.7; working tree with regenerated bundle manifest
+    date: '2026-08-21'
+    duration: 120 Python tests in 105.215 s; bundle and repository validation followed
+    reference: candidate matrix sha256:32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193;
+      repository errors require current review Approved, TL-0006 done consistency, and named evidence for this exact digest
+    limitation: This checkpoint cannot become green until the named matrix review is supplied and authorized evidence is
+      recorded; no approval, right, exception, or security-policy bypass was inferred
   human_evidence_required:
   - A pilot owner approves candidate policy values and the initial capability set.
   expected_test_tier: targeted

@@ -833,7 +833,7 @@ def validate() -> int:
     print(
         "OK: repository controls valid; "
         f"{len(project_paths)} projects, {len(project_paths)} lock files, "
-        f"{len(supply_chain_result.inventory)} governed external components, "
+        f"{len(supply_chain_result.inventory)} governed supply-chain components, "
         f"licence review {supply_chain_result.approval_state}; "
         "central packages and optional Windows workflow configuration verified"
     )

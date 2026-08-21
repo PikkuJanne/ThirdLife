@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
 import shutil
@@ -167,6 +168,7 @@ def add_catalog_matrix_row(
     rows: list[dict[str, str]],
     component_id: str,
     version: str,
+    catalog_path: Path,
 ) -> None:
     row = deepcopy(rows[0])
     row.update(
@@ -175,21 +177,19 @@ def add_catalog_matrix_row(
         version=version,
         relationship="direct",
         scope="catalog-application",
-        upstream_publisher="Synthetic fixture publisher",
+        upstream_publisher="ThirdLife synthetic fixture",
         source=f"https://example.invalid/catalog/{component_id}/{version}",
         purpose="Exercise exact catalogue supply-chain identity matching",
-        declared_license="MIT",
-        license_evidence="https://example.invalid/catalog/LICENSE",
-        proposed_license_conclusion="Proposed MIT",
-        proposed_installation_rights="Proposed allowed for synthetic fixture use",
-        proposed_redistribution_rights="Proposed allowed under MIT notice terms",
+        declared_license="NOASSERTION",
+        license_evidence="https://example.invalid/catalog/NOASSERTION",
+        proposed_license_conclusion="Proposed pending for the synthetic fixture",
+        proposed_installation_rights="Proposed withheld for the non-installable fixture",
+        proposed_redistribution_rights="Proposed withheld for the no-artifact fixture",
         distribution_plan="not-shipped",
         integrity_algorithm="sha256",
-        integrity_value="1" * 64,
-        provenance_reference=(
-            f"https://example.invalid/catalog/{component_id}/{version}/provenance"
-        ),
-        limitations="Synthetic catalogue identity used only by bounded tests.",
+        integrity_value=hashlib.sha256(catalog_path.read_bytes()).hexdigest(),
+        provenance_reference=f"fixtures/catalog/{catalog_path.name}",
+        limitations="Synthetic non-installable catalogue identity used only by bounded tests.",
     )
     rows.append(row)
     rows.sort(
@@ -241,11 +241,12 @@ class CurrentInventoryTests(SupplyChainTestCase):
         result = supply_chain.validate_supply_chain(REPOSITORY_ROOT)
 
         self.assertTrue(result.ok, "\n".join(result.errors))
-        self.assertEqual(len(result.inventory), 20)
+        self.assertEqual(len(result.inventory), 24)
         self.assertEqual(
             Counter(component.component_type for component in result.inventory),
             Counter(
                 {
+                    "catalog-application": 4,
                     "github-action": 3,
                     "nuget": 14,
                     "pypi": 1,
@@ -255,13 +256,19 @@ class CurrentInventoryTests(SupplyChainTestCase):
         )
         self.assertEqual(
             Counter(component.scope for component in result.inventory),
-            Counter({"build-only": 6, "test-only": 14}),
+            Counter(
+                {
+                    "build-only": 6,
+                    "catalog-application": 4,
+                    "test-only": 14,
+                }
+            ),
         )
         self.assertEqual(
             Counter(component.relationship for component in result.inventory),
-            Counter({"ci": 3, "direct": 5, "toolchain": 2, "transitive": 10}),
+            Counter({"ci": 3, "direct": 9, "toolchain": 2, "transitive": 10}),
         )
-        self.assertEqual(result.approval_state.casefold(), "approved")
+        self.assertEqual(result.approval_state.casefold(), "pending")
         self.assertRegex(result.lock_digest, r"\A[0-9a-f]{64}\Z")
         self.assertRegex(result.matrix_digest, r"\A[0-9a-f]{64}\Z")
         self.assertTrue(result.dependency_graph)
@@ -274,6 +281,48 @@ class CurrentInventoryTests(SupplyChainTestCase):
             (component.component_type, component.component_id): component
             for component in result.inventory
         }
+        catalog_ids = {
+            "generic.synthetic.document-editor",
+            "generic.synthetic.pdf-reader",
+            "generic.synthetic.video-calling",
+            "generic.synthetic.web-browser",
+        }
+        catalog_digest = hashlib.sha256(
+            (REPOSITORY_ROOT / "fixtures" / "catalog" / "catalog.yaml").read_bytes()
+        ).hexdigest()
+        self.assertEqual(
+            catalog_digest,
+            "7f80078a24d9fa890738d344d3c705549c45d17d7712ce1f8d543d4ce47f8901",
+        )
+        self.assertEqual(
+            {
+                component.component_id
+                for component in result.inventory
+                if component.component_type == "catalog-application"
+            },
+            catalog_ids,
+        )
+        for component_id in catalog_ids:
+            component = by_identity[("catalog-application", component_id)]
+            self.assertEqual(component.version, "0.0.0-fixture.1")
+            self.assertEqual(component.declared_license, "NOASSERTION")
+            self.assertEqual(component.distribution_plan, "not-shipped")
+            self.assertEqual(component.integrity_algorithm, "sha256")
+            self.assertEqual(component.integrity_value, catalog_digest)
+            self.assertTrue(
+                component.proposed_installation_rights.startswith(
+                    "Proposed withheld"
+                )
+            )
+            self.assertTrue(
+                component.proposed_redistribution_rights.startswith(
+                    "Proposed withheld"
+                )
+            )
+            self.assertEqual(
+                component.evidence_paths,
+                ("fixtures/catalog/catalog.yaml",),
+            )
         self.assertEqual(
             by_identity[("toolchain", ".NET SDK")].integrity_algorithm,
             "version-pin",
@@ -875,7 +924,7 @@ class ManifestAndApprovalTests(SupplyChainTestCase):
     def test_catalog_file_without_catalog_matrix_row_is_rejected(self) -> None:
         with repository_copy() as root:
             catalog_path = root / "fixtures" / "catalog" / "synthetic.yaml"
-            catalog_path.parent.mkdir(parents=True)
+            catalog_path.parent.mkdir(parents=True, exist_ok=True)
             catalog_path.write_text(
                 "applications:\n"
                 "  - id: generic.synthetic.editor\n"
@@ -892,7 +941,7 @@ class ManifestAndApprovalTests(SupplyChainTestCase):
 
         with self.subTest(case="mismatched row"), repository_copy() as root:
             catalog_path = root / "fixtures" / "catalog" / "synthetic.yaml"
-            catalog_path.parent.mkdir(parents=True)
+            catalog_path.parent.mkdir(parents=True, exist_ok=True)
             catalog_path.write_text(
                 "applications:\n"
                 f"  - id: {fixture_id}\n"
@@ -901,14 +950,19 @@ class ManifestAndApprovalTests(SupplyChainTestCase):
                 newline="\n",
             )
             rows = read_matrix(root)
-            add_catalog_matrix_row(rows, "generic.different.editor", fixture_version)
+            add_catalog_matrix_row(
+                rows,
+                "generic.different.editor",
+                fixture_version,
+                catalog_path,
+            )
             write_matrix(root, rows)
 
             self.assert_invalid(root, "catalog", "missing", "stale")
 
         with self.subTest(case="exact row"), repository_copy() as root:
             catalog_path = root / "fixtures" / "catalog" / "synthetic.yaml"
-            catalog_path.parent.mkdir(parents=True)
+            catalog_path.parent.mkdir(parents=True, exist_ok=True)
             catalog_path.write_text(
                 "applications:\n"
                 f"  - id: {fixture_id}\n"
@@ -917,7 +971,7 @@ class ManifestAndApprovalTests(SupplyChainTestCase):
                 newline="\n",
             )
             rows = read_matrix(root)
-            add_catalog_matrix_row(rows, fixture_id, fixture_version)
+            add_catalog_matrix_row(rows, fixture_id, fixture_version, catalog_path)
             write_matrix(root, rows)
 
             result = supply_chain.validate_supply_chain(root)
@@ -926,6 +980,7 @@ class ManifestAndApprovalTests(SupplyChainTestCase):
                 item
                 for item in result.inventory
                 if item.component_type == "catalog-application"
+                and item.component_id == fixture_id
             )
             self.assertEqual(component.component_id, fixture_id)
             self.assertEqual(component.version, fixture_version)
@@ -933,6 +988,45 @@ class ManifestAndApprovalTests(SupplyChainTestCase):
                 component.evidence_paths,
                 ("fixtures/catalog/synthetic.yaml",),
             )
+
+    def test_catalog_matrix_requires_exact_source_file_sha256(self) -> None:
+        fixture_id = "generic.synthetic.hash-check"
+        fixture_version = "1.0.0"
+        mutations = (
+            (
+                "integrity_algorithm",
+                "version-pin",
+                ("catalog application", "integrity_algorithm", "sha256"),
+            ),
+            (
+                "integrity_value",
+                "0" * 64,
+                ("catalog application", "sha256", "does not match", "source fixture bytes"),
+            ),
+        )
+        for field, value, expected_terms in mutations:
+            with self.subTest(field=field), repository_copy() as root:
+                catalog_path = root / "fixtures" / "catalog" / "hash-check.yaml"
+                catalog_path.parent.mkdir(parents=True, exist_ok=True)
+                catalog_path.write_text(
+                    "applications:\n"
+                    f"  - id: {fixture_id}\n"
+                    f"    version: {fixture_version}\n",
+                    encoding="utf-8",
+                    newline="\n",
+                )
+                rows = read_matrix(root)
+                add_catalog_matrix_row(rows, fixture_id, fixture_version, catalog_path)
+                row = next(
+                    item
+                    for item in rows
+                    if item["component_type"] == "catalog-application"
+                    and item["component_id"] == fixture_id
+                )
+                row[field] = value
+                write_matrix(root, rows)
+
+                self.assert_invalid(root, *expected_terms)
 
     def test_malformed_and_false_approval_metadata_are_rejected(self) -> None:
         with self.subTest(case="missing review row"), repository_copy() as root:

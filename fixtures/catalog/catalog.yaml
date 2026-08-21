@@ -1,0 +1,147 @@
+schema_version: thirdlife.catalog.v1
+catalog_id: community-laptop-candidate
+version: 0.1.0-candidate.1
+status: candidate
+synthetic_data: true
+classification: PUBLIC_REFERENCE
+applications:
+  - id: generic.synthetic.web-browser
+    version: 0.0.0-fixture.1
+    capability_id: web_browsing
+    entry_status: synthetic_placeholder
+    production_eligible: false
+    package:
+      source_id: synthetic-fixture-source
+      package_id: generic.synthetic.package.web-browser
+      exact_version: 0.0.0-fixture.1
+      scope: machine
+      architectures:
+        - x64
+      minimum_os: windows_11
+      external_artifact: false
+    review:
+      publisher: synthetic-fixture-publisher
+      declared_license: NOASSERTION
+      license_review_status: pending
+      privacy_review_status: pending
+      license_reviewed_at_utc: null
+      privacy_reviewed_at_utc: null
+      redistribution_status: withheld
+    behavior:
+      reboot: unknown
+      background_service: unknown
+      auto_update: unknown
+      network_use: not_applicable
+      download_bytes: null
+      installed_bytes: null
+    verification:
+      status: placeholder_unimplemented
+      type: exact_package_identity
+      expected_source_id: synthetic-fixture-source
+      expected_package_id: generic.synthetic.package.web-browser
+      expected_version: 0.0.0-fixture.1
+  - id: generic.synthetic.document-editor
+    version: 0.0.0-fixture.1
+    capability_id: document_editing
+    entry_status: synthetic_placeholder
+    production_eligible: false
+    package:
+      source_id: synthetic-fixture-source
+      package_id: generic.synthetic.package.document-editor
+      exact_version: 0.0.0-fixture.1
+      scope: machine
+      architectures:
+        - x64
+      minimum_os: windows_11
+      external_artifact: false
+    review:
+      publisher: synthetic-fixture-publisher
+      declared_license: NOASSERTION
+      license_review_status: pending
+      privacy_review_status: pending
+      license_reviewed_at_utc: null
+      privacy_reviewed_at_utc: null
+      redistribution_status: withheld
+    behavior:
+      reboot: unknown
+      background_service: unknown
+      auto_update: unknown
+      network_use: not_applicable
+      download_bytes: null
+      installed_bytes: null
+    verification:
+      status: placeholder_unimplemented
+      type: exact_package_identity
+      expected_source_id: synthetic-fixture-source
+      expected_package_id: generic.synthetic.package.document-editor
+      expected_version: 0.0.0-fixture.1
+  - id: generic.synthetic.pdf-reader
+    version: 0.0.0-fixture.1
+    capability_id: pdf_reading
+    entry_status: synthetic_placeholder
+    production_eligible: false
+    package:
+      source_id: synthetic-fixture-source
+      package_id: generic.synthetic.package.pdf-reader
+      exact_version: 0.0.0-fixture.1
+      scope: machine
+      architectures:
+        - x64
+      minimum_os: windows_11
+      external_artifact: false
+    review:
+      publisher: synthetic-fixture-publisher
+      declared_license: NOASSERTION
+      license_review_status: pending
+      privacy_review_status: pending
+      license_reviewed_at_utc: null
+      privacy_reviewed_at_utc: null
+      redistribution_status: withheld
+    behavior:
+      reboot: unknown
+      background_service: unknown
+      auto_update: unknown
+      network_use: not_applicable
+      download_bytes: null
+      installed_bytes: null
+    verification:
+      status: placeholder_unimplemented
+      type: exact_package_identity
+      expected_source_id: synthetic-fixture-source
+      expected_package_id: generic.synthetic.package.pdf-reader
+      expected_version: 0.0.0-fixture.1
+  - id: generic.synthetic.video-calling
+    version: 0.0.0-fixture.1
+    capability_id: video_calling
+    entry_status: synthetic_placeholder
+    production_eligible: false
+    package:
+      source_id: synthetic-fixture-source
+      package_id: generic.synthetic.package.video-calling
+      exact_version: 0.0.0-fixture.1
+      scope: machine
+      architectures:
+        - x64
+      minimum_os: windows_11
+      external_artifact: false
+    review:
+      publisher: synthetic-fixture-publisher
+      declared_license: NOASSERTION
+      license_review_status: pending
+      privacy_review_status: pending
+      license_reviewed_at_utc: null
+      privacy_reviewed_at_utc: null
+      redistribution_status: withheld
+    behavior:
+      reboot: unknown
+      background_service: unknown
+      auto_update: unknown
+      network_use: not_applicable
+      download_bytes: null
+      installed_bytes: null
+    verification:
+      status: placeholder_unimplemented
+      type: exact_package_identity
+      expected_source_id: synthetic-fixture-source
+      expected_package_id: generic.synthetic.package.video-calling
+      expected_version: 0.0.0-fixture.1

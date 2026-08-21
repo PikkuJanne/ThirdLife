@@ -50,6 +50,7 @@ See `CHANGELOG.md` for the file-level change record.
 | [`docs/privacy/redaction-test-cases.yaml`](docs/privacy/redaction-test-cases.yaml) | Wholly synthetic exact redaction/omission/support projections and truthful privacy-review metadata. |
 | [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) | Dependency classes, provenance and integrity rules, SBOM/audit procedure, release-evidence mapping, and human-review state. |
 | [`docs/supply-chain/license-matrix.csv`](docs/supply-chain/license-matrix.csv) | Exact dependency owner, version, source, purpose, declared licence, proposed rights, integrity, provenance, and limitation records. |
+| [`fixtures/README.md`](fixtures/README.md) | Non-personal pilot job, candidate policy, profile, and synthetic catalogue fixture contract. |
 | [`docs/testing/reference-machine-profile.md`](docs/testing/reference-machine-profile.md) | Sanitized active-machine and toolchain facts for reproducible evidence. |
 | [`docs/testing/capability-risk-matrix.md`](docs/testing/capability-risk-matrix.md) | Hardware/provider variants mapped to deterministic coverage or explicit limitations; not device inventory. |
 | [`docs/testing/same-machine-constraints.md`](docs/testing/same-machine-constraints.md) | Safe, reversible, independently invokable constraint profiles and claim limits. |
@@ -244,7 +245,7 @@ Generate the dependency SBOM without a restore, network request, package cache, 
 .\eng\generate-sbom.ps1
 ```
 
-The default output is the ignored `artifacts/sbom/thirdlife-setup-core.cdx.json`. Supply `-ProductVersion` and the lowercase `git rev-parse HEAD` value as `-SourceRevision` when preparing release evidence; the generator rejects any revision or governed input bytes that do not match that checkout. The generator validates the exact matrix against every lock file, the hash-pinned Python requirement, the pinned CI actions, the toolchain pins, and any future catalogue identities before it writes a canonical CycloneDX 1.6 document. See [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) for the separate licence/rights review and time-sensitive vulnerability-audit procedure.
+The default output is the ignored `artifacts/sbom/thirdlife-setup-core.cdx.json`. Supply `-ProductVersion` and the lowercase `git rev-parse HEAD` value as `-SourceRevision` when preparing release evidence; the generator rejects any revision or governed input bytes that do not match that checkout. The generator validates the exact matrix against every lock file, the hash-pinned Python requirement, the pinned CI actions, the toolchain pins, and all current or future catalogue identities before it writes a canonical CycloneDX 1.6 document. See [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) for the separate licence/rights review and time-sensitive vulnerability-audit procedure.
 
 When an intentional package-version change is approved, update `Directory.Packages.props`, run `dotnet restore ThirdLife.sln --configfile NuGet.Config --force-evaluate`, inspect every lock-file change, and rerun the triggered full verifier. Environment-specific checks must be reported truthfully. Do not disable security, accessibility, modest-hardware, provenance, analyzer, or failing-test gates.
 
