@@ -651,7 +651,7 @@ tasks:
   workstream: supply-chain
   kind: build
   priority: P0
-  status: backlog
+  status: in_progress
   size: M
   executor: hybrid
   environment: any
@@ -686,7 +686,87 @@ tasks:
   - Restore with locked versions.
   - Generate and inspect an SBOM.
   - Run the chosen vulnerability audit and record limitations.
-  evidence: []
+  evidence:
+  - summary: Deterministic discovery and matrix reconciliation identified the complete current external-component inventory as
+      20 components comprising 14 NuGet test-only packages and 6 build-only components, with zero runtime or catalogue applications;
+      every row records ownership, version, source, purpose, declared licence, and separate installation and redistribution
+      proposals.
+    task: TL-0006
+    command_or_review: .venv\Scripts\python.exe tools\supply_chain.py --root .; structured acceptance review of the governed
+      dependency contract and matrix
+    tier: targeted
+    result: passed; automatable inventory contract complete and the named human licence/rights review remains pending
+    environment: Windows 11 x64; Python 3.14.7; repository working tree
+    date: '2026-08-21'
+    duration: Validator completed during the bounded implementation review; not separately timed
+    reference: dependency-input sha256:f42a8ab7e4b2e47aaeb28225411a491db284072982cb6a7e540f61010d30a2f4;
+      matrix sha256:f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73; contract
+      sha256:725d6de01db6a94d7009ee956fc2675e2bbfb1bf45c301e8e4ae340f97657fb8
+    limitation: All licence and rights conclusions remain proposals; xunit.abstractions has mutable upstream licence evidence,
+      and toolchain redistribution remains withheld pending exact installer provenance, hashes, licences, and notices
+  - summary: Focused adversarial supply-chain regressions passed inventory, deterministic-output, ignored-cache, bounded input,
+      locked/hash-pinned manifest, catalogue identity, false-approval, exact-commit approval, and source-revision truth cases.
+    task: TL-0006
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_supply_chain
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7
+    date: '2026-08-21'
+    duration: 43.408 s test
+    reference: 20/20 passed
+    limitation: Synthetic repository-copy and temporary-Git tests validate build-time governance only; no release or legal approval is claimed
+  - summary: The exact NuGet graph restored in locked mode, the configured NuGet advisory query returned no vulnerable direct
+      or transitive records across 26 projects/frameworks, and the admitted PyYAML wheel identity, yanked state, SHA-256, and
+      current PyPI vulnerability records matched the governed expectation.
+    task: TL-0006
+    command_or_review: dotnet restore ThirdLife.sln --configfile NuGet.Config --locked-mode --force --no-http-cache; dotnet
+      package list --project ThirdLife.sln --vulnerable --include-transitive --configfile NuGet.Config --format json
+      --output-version 1 --no-restore; bounded exact-release PyPI JSON check
+    tier: full supply-chain verification
+    result: passed; NuGet exit 0 with 0 vulnerable top-level and 0 vulnerable transitive records; PyPI reported 0
+      non-withdrawn records for the exact admitted wheel
+    environment: Windows 11 x64; .NET SDK 10.0.400; Python 3.14.7; nuget.org sole configured restore/audit source; official
+      PyPI JSON endpoint
+    date: '2026-08-21'
+    duration: Locked restore 9.877 s; NuGet query 6.700 s; PyPI query 0.372 s
+    reference: NuGet raw-response sha256:52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316;
+      PyPI raw-response sha256:c3f35597bc2f08cc990c2a5fe57bef6687b3a3d7c61d8b0ba4cc067777eb1def;
+      docs/supply-chain/dependencies.md implementation checkpoint
+    limitation: Point-in-time, network/source-dependent advisory observations only; zero returned records do not prove that
+      unpublished, delayed, incomplete, or incorrectly mapped vulnerabilities are absent
+  - summary: Two offline working-tree SBOM generations were byte-deterministic and structural inspection confirmed CycloneDX
+      1.6, 20 unique components, 21 dependency records, complete reference closure, pending review state, no volatile
+      timestamp/serial or machine path, one real PyYAML artifact hash, and no false NuGet artifact-hash claim.
+    task: TL-0006
+    command_or_review: .\eng\generate-sbom.ps1 twice with distinct output paths; PowerShell JSON/reference/hash inspection
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; offline working-tree generation
+    date: '2026-08-21'
+    duration: 3.6 s wall including validation, two generations, and bounded inspection
+    reference: SBOM sha256:78f54c595d27287cf29377772ef0f41cbc2e823e472ca3df60d9ed3c91c438c4;
+      104277 bytes; dependency-input sha256:f42a8ab7e4b2e47aaeb28225411a491db284072982cb6a7e540f61010d30a2f4;
+      matrix sha256:f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73
+    limitation: Source revision was intentionally omitted for this dirty working-tree check; clean-checkout and exact-HEAD-bound
+      generation remain to be evidenced before the automatable task work is complete
+  - summary: The defensive Full tier passed 100 validator regressions, both live validators, locked restore, formatting, and a
+      zero-warning Release build, then Windows Smart App Control blocked two unsigned Release DLL loads in the final test phase;
+      the same two project tests are also blocked from the untouched TL-0005 baseline checkout.
+    task: TL-0006
+    command_or_review: .\eng\verify.ps1 -Tier Full; isolated failing-project reruns; detached baseline comparison at
+      b5c435c92e55f1d326963fc4aea9d4dd50525d37; Windows Code Integrity event review
+    tier: full
+    result: failed at the Release test phase because Windows Application Control blocked ThirdLife.Persistence.Tests.dll and
+      ThirdLife.Verification.dll with 0x800711C7; all preceding Full-tier checks passed
+    environment: Active Windows 11 x64 Codex machine; .NET SDK 10.0.400; Smart App Control enforced
+    date: '2026-08-21'
+    duration: 100 Python tests 80.007 s; Release build 21.35 s; about 146 s Full-tier wall; 18.757 s baseline diagnosis
+    reference: Code Integrity events 3077 and 3033; isolated current project exits 1/1; detached TL-0005 baseline project
+      exits 1/1; baseline commit b5c435c92e55f1d326963fc4aea9d4dd50525d37
+    limitation: The Full tier is not green on this machine. Smart App Control was not disabled or bypassed. TL-0006 has no
+      declared Full-tier trigger, and its expected targeted supply-chain checks pass, but release-gate Full verification must
+      be repeated in an approved environment that can execute the unsigned test assemblies or after the project's governed
+      signing/lifecycle work provides an approved path
   human_evidence_required:
   - A human reviews licenses and redistribution claims before a release gate.
   expected_test_tier: targeted

@@ -1,141 +1,123 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-21  
-**Snapshot preparation time:** 2026-08-21T16:30:34+02:00  
+**Snapshot preparation time:** 2026-08-21T17:49:52+02:00  
 **Bundle baseline:** 0.3.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M0 — Foundation and product contract  
-**Current task:** `TL-0005` — Define the privacy and logging model  
-**Task state:** `done`
+**Current task:** `TL-0006` — Create dependency, license, and SBOM controls  
+**Task state:** `in_progress`
 
 ## Current state
 
-`TL-0005` is complete. The repository contains a governed privacy model, logging standard, and machine-validated synthetic redaction fixture set defining classifications, approved retention guidance, audience-separated outputs, prohibited diagnostic content, the exact sanitized-support allowlist, raw-input handling, and telemetry-off behavior before logging code is built.
+The automatable TL-0006 implementation is present and its focused checks, locked restore, working-tree SBOM inspection, and point-in-time vulnerability queries pass. The remaining task-specific automation is exact-commit clean-checkout SBOM proof. A defensive Full-tier run passed every step through the zero-warning Release build, but Windows Smart App Control blocked two unsigned DLL loads in the final test phase; the same two project tests are blocked from the untouched TL-0005 baseline. After the clean-checkout proof, the task moves to `review`; it cannot become `done` until a named human reviews the licence and redistribution proposals against the exact matrix digest and reviewed commit.
 
-Janne Vuorela, Privacy Owner — Principal Software Architect & Sole Project Owner, gave unconditional full-scope approval on 2026-08-21 for the exact contract at commit `118240955b01ea4a0b941b00d357ea165b035981`. The approval covers classifications, default retention guidance, redaction/omission actions, and the support-export allowlist. It does not claim runtime redaction, logging, deletion, export, or telemetry controls already exist.
-
-The commit containing this file is the TL-0005 checkpoint. Because a commit cannot embed its own hash, resolve that identity with `git rev-parse HEAD`; the session completion report records the resolved hash and the post-push equality check.
+The current inventory contains 20 external components: 14 NuGet test-only packages and 6 build-only components (3 GitHub Actions, PyYAML, .NET SDK, and CPython). There are zero runtime dependencies and zero catalogue applications. Project-to-project references are not external packages.
 
 ## Git state
 
 | Field | Verified value |
 |---|---|
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
-| Branch | `codex/tl-0005-privacy-logging-model` |
-| Original implementation baseline | `c77966ba90a31b99e790a2d1097b598c1f127961` |
-| Approval-session baseline and reviewed contract | `118240955b01ea4a0b941b00d357ea165b035981` |
+| Branch | `codex/tl-0006-dependency-license-sbom-controls` |
+| Implementation baseline | `b5c435c92e55f1d326963fc4aea9d4dd50525d37` — completed TL-0005 checkpoint |
 | History handling | Continued from the fetched baseline; no reset, rebase, force push, or history rewrite |
-| Checkpoint | The commit containing this file; resolve with `git rev-parse HEAD` |
-| Upstream | `origin/codex/tl-0005-privacy-logging-model` |
-| Final push invariant | Before handoff, current HEAD must equal the fetched upstream; the completion report records the resolved hash |
+| Checkpoint | Not yet created; implementation verification is in progress |
+| Upstream | Not yet configured for this new task branch |
 
-The configured SSH remote rejected unattended public-key authentication on this machine. Fetch and checkpoint publication use GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
+The configured SSH remote rejected unattended public-key authentication on this machine in the preceding task. Publication will use GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
 
-## Preserved testing-transition provenance
+## Supply-chain outcome
 
-The historical `TL-0008` draft-1 physical-device procedure remains **superseded** and must not be executed. Its source commit was `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, and its archived procedure SHA-256 is `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`. No physical hardware walkthrough was performed for the v0.3.0 transition; the active testing contract remains the same-machine, tiered contract in `TESTING.md`.
+The implementation now provides:
 
-## Privacy outcome
+- centrally pinned direct NuGet versions and exact resolved lock closures;
+- an exact, sorted 20-row dependency/licence matrix with accountable owner, upstream publisher, version, source, purpose, declared licence, provenance, integrity mechanism, distribution plan, limitations, and separate installation/redistribution proposals;
+- hash-required, wheel-only installation of the sole Python build dependency;
+- full-commit GitHub Action pins and exact .NET/Python toolchain pins;
+- NuGet audit policy with direct and transitive review and no suppression path;
+- a standard-library validator and deterministic CycloneDX 1.6 generator;
+- exact one-to-one reconciliation for future catalogue identities without defining executable catalogue behavior before `TL-0301`;
+- exact-HEAD source provenance that rejects fabricated, stale, dirty, or incomplete governed input claims;
+- fail-closed human approval binding to a real reviewed commit and exact matrix SHA-256.
 
-The contracts establish these fail-closed invariants:
+The licence matrix SHA-256 is `f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73`. Its global review state is `Pending`; every row-level conclusion remains explicitly proposed.
 
-- recipient identity is unnecessary for ordinary workshop jobs;
-- a full serial number is restricted to the technical workshop record and omitted from recipient and support outputs;
-- sibling workspaces, private databases, personal content, assessment evidence, and backup or recovery keys are outside ThirdLife-owned data;
-- raw command or provider output is untrusted sensitive input, is not persisted, and may produce only a bounded typed projection;
-- support exports use an exact allowlist, are preview-bound, and require explicit operator approval;
-- telemetry and background upload remain off by default;
-- workshop record, recipient guide, and sanitized support bundle remain distinct output contracts.
+## Material limitations
 
-The privacy model defines eight classifications: public reference, operational safe, workshop restricted, recipient guide, support sanitized, raw untrusted sensitive, secret or personal content excluded, and sibling private excluded.
-
-## Approved default retention guidance
-
-These are approved design defaults, not implemented cleanup behavior:
-
-| Data | Proposed default |
-|---|---|
-| Active job records and typed history | Active job plus 180 days |
-| Sanitized application logs | 14 days with a size cap |
-| Raw provider or command output | Process lifetime only; zero persistent retention |
-| Temporary and staging data | Remove on success; reap abandoned data within 24 hours |
-| Exported support bundle | Operator-controlled file; guide recommends removal within 30 days |
-| Unreferenced superseded profile, policy, and catalogue snapshots | 90 days after supersession unless a retained job still references them |
-| Migration and recovery backup | Successful verification plus 7 days |
-| Package cache | 30 days unless an active job or rollback still references it |
-| Secrets, personal content, sibling-private data, and telemetry payloads | Zero owned retention |
-
-## Governed artifacts
-
-| Artifact | Recorded SHA-256 |
-|---|---|
-| `docs/privacy/privacy-model.md` | `923a7f1d0a6b3c5b3614da5d0474dafdb08f182a1e3cc591fbf8b6b9638d8e62` |
-| `docs/privacy/logging-standard.md` | `76cac1284cf83a1913590c715bdf8d3e38ac03c2b6081754aa3a9aae899c6e07` |
-| `docs/privacy/redaction-test-cases.yaml` | `26fca97a6e0ef5e350b041ba586638975a675e4fc16585bcca33a98b70cbb530` |
-
-The fixture contains 56 contiguous, wholly synthetic cases. It covers recipient identifiers, full serial handling, secrets and recovery material, personal and sibling-private data, raw output, URLs and paths, exact digest binding, ordinary allowlisted metadata, unknown fields, and telemetry suppression.
+- `xunit.abstractions` 2.0.3 publishes a legacy mutable licence URL. Its Apache-2.0 conclusion remains a proposal, and redistribution is withheld unless the human review accepts adequate immutable evidence or the dependency is changed.
+- The .NET SDK and CPython are build toolchains, not release payloads. Redistribution remains withheld pending exact installer provenance, hashes/signatures, applicable licences, and notices.
+- NuGet `contentHash` values are restore-integrity metadata, not independently computed `.nupkg` hashes or publisher-signature proof.
+- The PyYAML SHA-256 admits only `pyyaml-6.0.3-cp314-cp314-win_amd64.whl`; no sdist, other wheel, platform, or architecture is admitted.
+- Vulnerability observations are point-in-time and source-dependent; zero returned records are not a guarantee of safety or advisory completeness.
+- The Full tier is not green on the active machine because the enforced Smart App Control policy blocks two unsigned test DLL loads. The policy was not disabled or bypassed. `TL-0006` has no declared Full-tier trigger, but Full verification must be repeated in an approved executable/signing environment before a release gate.
 
 ## Verification evidence
 
 | Scope | Result | Duration |
 |---|---|---:|
-| Pre-change validator tests | 54/54 passed | 13.140 s test / 14.073 s wall |
-| Pre-change live bundle validator | Passed: 91 tasks, 8 milestones, 66 decisions, valid DAG | 1.330 s wall |
-| Implementation privacy-focused regression tests | 25/25 passed | 29.177 s test / 29.945 s wall |
-| Implementation complete validator regression suite | 79/79 passed | 42.366 s test / 43.207 s wall |
-| Implementation live bundle validator before handoff metadata | Passed: 91 tasks, 8 milestones, 66 decisions, valid DAG | 1.328 s wall |
-| Initial governed Quick tier | Passed | 25.536 s wall |
-| Post-approval privacy regression tests | 26/26 passed | 44.868 s test / 45.582 s wall |
-| Post-approval complete validator regression suite | 80/80 passed | 57.684 s test / 58.481 s wall |
-| Post-approval governed Quick tier | Passed, including 80 validator tests | 53.339 s test / 57.064 s wall |
+| Pre-change governed Quick baseline | Passed; 80 tests plus bundle/repository validation | 63.168 s test |
+| Final focused supply-chain regressions so far | 20/20 passed | 43.408 s test |
+| Locked NuGet restore | Passed for all 26 projects with the exact graph | 9.877 s |
+| NuGet direct/transitive advisory query | Exit 0; 26 projects/frameworks; 0 vulnerable top-level and 0 vulnerable transitive records | 6.700 s |
+| Exact PyYAML/PyPI release check | Identity, wheel, yanked state, SHA-256, and schema matched; 0 non-withdrawn records | 0.372 s |
+| Two working-tree SBOM generations and structural inspection | Byte-identical; 20 unique components, 21 dependency records, complete reference closure | 3.6 s including validation/generation summary |
+| Defensive governed Full tier | 100 tests, validators, locked restore, format, and zero-warning Release build passed; final .NET tests failed on two Smart App Control blocks | 80.007 s Python tests; 21.35 s build; about 146 s wall |
+| Isolated current and detached TL-0005 baseline diagnosis | Both affected project tests exited 1 under the same Smart App Control block; policy was preserved | 18.757 s baseline comparison plus isolated rerun |
 
-The exact-tree Quick tier is run after this status record and the bundle manifest are finalized. Its result is recorded in the session completion report without changing the verified tree afterward. Full and extended tiers have no `TL-0005` triggers and are not required for this documentation/schema task.
+Current working-tree evidence:
 
-The validator now fails closed on privacy-contract drift, including:
+- dependency-input SHA-256: `f42a8ab7e4b2e47aaeb28225411a491db284072982cb6a7e540f61010d30a2f4`;
+- dependency contract SHA-256: `725d6de01db6a94d7009ee956fc2675e2bbfb1bf45c301e8e4ae340f97657fb8`;
+- deterministic working-tree SBOM SHA-256: `78f54c595d27287cf29377772ef0f41cbc2e823e472ca3df60d9ed3c91c438c4`, 104277 bytes;
+- NuGet raw response SHA-256: `52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316`;
+- PyPI raw response SHA-256: `c3f35597bc2f08cc990c2a5fe57bef6687b3a3d7c61d8b0ba4cc067777eb1def`.
 
-- exact Markdown retention and support-field tables;
-- exact fixture schema, case IDs, actions, persistence, and support outcomes;
-- secret-like test input before any synthetic-data exemption;
-- aliases, anchors, merge keys, duplicate or non-string mapping keys, unsafe scalar types, and bounded hostile YAML;
-- false approval wording, placeholder reviewers, incomplete scope, and approval references that do not bind the current governed blobs to a real Git commit.
+The source revision was intentionally omitted from the working-tree SBOM. Exact-commit source binding is tested adversarially but will be exercised from a clean checkpoint checkout before the automatable work is declared complete.
 
-The optional `jsonschema` package is unavailable in the active environment, so the repository's custom structural checks ran. That is an informational warning, not a skipped governed check.
+## Preserved project provenance
+
+`TL-0005` remains complete with Janne Vuorela's privacy-owner approval bound to commit `118240955b01ea4a0b941b00d357ea165b035981`. The historical `TL-0008` draft-1 physical-device procedure at source commit `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, archived procedure SHA-256 `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`, remains superseded and must not be executed; no physical hardware walkthrough was performed for the v0.3.0 transition.
 
 ## Boundary and risk impact
 
-- **Project vacuum / sibling integration:** No sibling repository was browsed or coupled. Sibling-private data is explicitly excluded and adversarially tested.
-- **Data / migration:** No runtime data, database, or migration was added. The task defines future retention and deletion contracts only.
-- **Release interface:** No public runtime interface was added or guessed. `RELEASE_INTERFACE.md` is unchanged.
-- **Security / privacy:** The task reduces design ambiguity, records exact-commit human privacy approval, and adds fail-closed semantic validation. Later runtime implementation and verification remain required.
-- **Accessibility / low-spec:** No UI, background work, runtime storage, network activity, or resource-consuming service was added. Later user-visible export and cleanup work must preserve plain language, keyboard access, bounded work, cancellation, and recovery.
-- **Security baseline provenance:** `docs/security/threat-model.md`, `docs/security/data-flow.md`, and `docs/security/abuse-cases.md` contain traceability/status annotations only. They do not claim a new security review or change the previously approved threat set, residual risks, or sign-off.
+- **Project vacuum / sibling integration:** No sibling repository, component, profile, catalogue entry, adapter, data source, or release dependency was introduced.
+- **Data / migration:** No application data, database, migration, personal data, retention, telemetry, or cleanup behavior changed. Ignored `artifacts/sbom/` and `artifacts/audit/` files are local developer/release evidence only.
+- **Release interface:** `RELEASE_INTERFACE.md` maps the implemented dependency digest, matrix review, SBOM, provenance, and audit evidence to later release fields without filling release-specific values or inventing an interface.
+- **Security / privacy:** Exact pins, bounded inputs, safe URL/path checks, cache exclusion, truthful hash semantics, approval binding, and source-revision verification reduce substitution and false-evidence risk. Network access occurs only in explicit developer audit commands, not in the Core application or offline generator.
+- **Accessibility / low-spec:** No UI, keyboard, focus, screen-reader, scaling, high-contrast, background activity, service, GPU use, or runtime resource cost was added. Generation is foreground, bounded, single-process work over checked-in text inputs.
 
 ## Changed paths
 
-- `docs/privacy/privacy-model.md`
-- `docs/privacy/logging-standard.md`
-- `docs/privacy/redaction-test-cases.yaml`
-- `tools/validate_bundle.py`
-- `tools/tests/test_validate_bundle.py`
+- `.gitattributes`
+- `.github/workflows/verify.yml`
+- `.gitignore`
+- `Directory.Build.props`
 - `README.md`
+- `RELEASE_INTERFACE.md`
 - `SECURITY.md`
-- `docs/product-contract.md`
-- `docs/glossary.md`
-- `docs/security/threat-model.md`
-- `docs/security/data-flow.md`
-- `docs/security/abuse-cases.md`
 - `TASKS.yaml`
+- `eng/generate-sbom.ps1`
+- `eng/verify.ps1`
+- `tools/requirements.txt`
+- `tools/supply_chain.py`
+- `tools/tests/test_supply_chain.py`
+- `tools/validate_bundle.py`
+- `tools/validate_repository.py`
+- `docs/supply-chain/dependencies.md`
+- `docs/supply-chain/license-matrix.csv`
 - `STATUS.md`
-- `BUNDLE_MANIFEST.sha256`
+- `BUNDLE_MANIFEST.sha256` after final regeneration
 
-The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` was present before this task and remains untouched and unstaged.
+The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` was present before TL-0006 and remains untouched and unstaged.
 
-## Approval evidence and remaining implementation boundary
+## Outstanding
 
-The `TL-0005` human-evidence requirement is satisfied. The approval record identifies the named reviewer and privacy-owner role, date, complete scope, unconditional result, and exact reviewed commit.
-
-No human evidence remains outstanding for `TL-0005`. Runtime logging, redaction, retention cleanup, and support-export implementation and verification remain owned by their later roadmap tasks; contract approval is not evidence that those controls already run.
+1. Regenerate the governed bundle manifest, run the governed Quick gate, and create a scoped implementation checkpoint.
+2. Generate and inspect a source-bound SBOM from a clean checkout of that exact commit, record the evidence, move `TL-0006` to `review`, and rerun the exact-tree Quick gate.
+3. Obtain a named human licence/redistribution review bound to the exact reviewed commit and matrix SHA-256 before `done` or any release gate.
+4. Repeat the Full tier in an approved environment that can execute the unsigned test assemblies, or after later governed signing/lifecycle work provides the approved execution path; do not weaken Smart App Control.
 
 ## Next dependency-ready task
 
-`TL-0006` — Create dependency, license, and SBOM controls.
+`TL-0007` — Create synthetic pilot fixtures and reference inputs. Do not start it while TL-0006 remains the selected active task.

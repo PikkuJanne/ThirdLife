@@ -18,6 +18,8 @@ coverage/
 coverage.*
 *.coverage
 *.coveragexml
+/artifacts/sbom/
+/artifacts/audit/
 
 # Local logs and operating-system files
 *.log

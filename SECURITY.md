@@ -96,6 +96,8 @@ Tests must cover cross-user connection, replay, stale request, oversized input, 
 
 B1 uses generic essentials and synthetic packages. Sibling products enter only through a future B4 compatibility cut against frozen artifacts.
 
+The subordinate [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) and [`docs/supply-chain/license-matrix.csv`](docs/supply-chain/license-matrix.csv) define the current dependency classes, exact provenance/integrity records, deterministic SBOM procedure, vulnerability-review limitations, and proposed installation/redistribution claims. Those claims remain pending until the named human review recorded there binds an exact matrix digest; package metadata alone is not legal approval.
+
 ## 9. Data, secrets, and logging
 
 Never place the following in command arguments, ordinary logs, crash reports, support bundles, task evidence, or telemetry:

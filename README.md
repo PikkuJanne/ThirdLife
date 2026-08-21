@@ -48,6 +48,8 @@ See `CHANGELOG.md` for the file-level change record.
 | [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md) | Privacy classes, Core data map, audience separation, approved default retention guidance, exclusions, and exact-commit owner-approval record. |
 | [`docs/privacy/logging-standard.md`](docs/privacy/logging-standard.md) | Typed logging envelope, prohibited fields, raw-input rules, exact support allowlist, preview-bound export, and verification contract. |
 | [`docs/privacy/redaction-test-cases.yaml`](docs/privacy/redaction-test-cases.yaml) | Wholly synthetic exact redaction/omission/support projections and truthful privacy-review metadata. |
+| [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) | Dependency classes, provenance and integrity rules, SBOM/audit procedure, release-evidence mapping, and human-review state. |
+| [`docs/supply-chain/license-matrix.csv`](docs/supply-chain/license-matrix.csv) | Exact dependency owner, version, source, purpose, declared licence, proposed rights, integrity, provenance, and limitation records. |
 | [`docs/testing/reference-machine-profile.md`](docs/testing/reference-machine-profile.md) | Sanitized active-machine and toolchain facts for reproducible evidence. |
 | [`docs/testing/capability-risk-matrix.md`](docs/testing/capability-risk-matrix.md) | Hardware/provider variants mapped to deterministic coverage or explicit limitations; not device inventory. |
 | [`docs/testing/same-machine-constraints.md`](docs/testing/same-machine-constraints.md) | Safe, reversible, independently invokable constraint profiles and claim limits. |
@@ -63,8 +65,10 @@ See `CHANGELOG.md` for the file-level change record.
 | `CHANGELOG.md` | Bundle version and migration history. |
 | `TASKS.schema.json` | JSON Schema for the task graph, single-machine metadata, and test-tier fields. |
 | `tools/validate_bundle.py` | Structural/semantic validator for files, schema, decisions, DAG, gates, authority, naming, and portfolio-boundary markers. |
+| `tools/supply_chain.py` | Standard-library dependency-contract validator and deterministic CycloneDX 1.6 generator. |
 | `tools/merge_task_contracts.py` | Reviewed merger that updates canonical contracts while preserving live task execution history. |
-| `tools/requirements.txt` | Pinned validator dependencies. |
+| `tools/requirements.txt` | Source-, binary-, version-, and hash-pinned validator dependencies. |
+| `eng/generate-sbom.ps1` | Clean-checkout SBOM entry point; writes only the requested generated artifact. |
 | `BUNDLE_MANIFEST.sha256` | SHA-256 manifest generated after validation; excludes itself. |
 
 ## Implementation scaffold
@@ -110,7 +114,7 @@ Install the exact .NET SDK and Python versions named under **Repository verifica
 
 ```powershell
 py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --no-deps --requirement tools\requirements.txt
+.\.venv\Scripts\python.exe -m pip --isolated install --no-deps --requirement tools\requirements.txt
 ```
 
 Run the quick documentation/schema/static tier during governed documentation work:
@@ -221,7 +225,7 @@ The verification toolchain is pinned to .NET SDK `10.0.400` by `global.json`, Py
 
 ```powershell
 py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --no-deps --requirement tools\requirements.txt
+.\.venv\Scripts\python.exe -m pip --isolated install --no-deps --requirement tools\requirements.txt
 ```
 
 For documentation/schema/static work, run the quick tier from the repository root:
@@ -233,6 +237,14 @@ For documentation/schema/static work, run the quick tier from the repository roo
 For a named full-tier trigger, run `.\eng\verify.ps1 -Tier Full` (the default when `-Tier` is omitted). The scripts resolve repository paths relative to themselves, so an absolute script path also works from another directory. Git Bash on Windows forwards the same arguments through `./eng/verify.sh`. Runtime evidence comes from the active Windows Codex machine; optional remote checks are non-authoritative.
 
 The quick tier runs governance-validator regressions, bundle/schema checks, the manifest, repository boundaries, exact toolchain/package policy, and static continuity controls. The full tier then performs locked restore, formatting verification, a warnings-as-errors Release build, and all Release tests. Restore uses only `NuGet.Config` and `--locked-mode`; it does not rewrite the dependency graph.
+
+Generate the dependency SBOM without a restore, network request, package cache, or external SBOM tool:
+
+```powershell
+.\eng\generate-sbom.ps1
+```
+
+The default output is the ignored `artifacts/sbom/thirdlife-setup-core.cdx.json`. Supply `-ProductVersion` and the lowercase `git rev-parse HEAD` value as `-SourceRevision` when preparing release evidence; the generator rejects any revision or governed input bytes that do not match that checkout. The generator validates the exact matrix against every lock file, the hash-pinned Python requirement, the pinned CI actions, the toolchain pins, and any future catalogue identities before it writes a canonical CycloneDX 1.6 document. See [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) for the separate licence/rights review and time-sensitive vulnerability-audit procedure.
 
 When an intentional package-version change is approved, update `Directory.Packages.props`, run `dotnet restore ThirdLife.sln --configfile NuGet.Config --force-evaluate`, inspect every lock-file change, and rerun the triggered full verifier. Environment-specific checks must be reported truthfully. Do not disable security, accessibility, modest-hardware, provenance, analyzer, or failing-test gates.
 

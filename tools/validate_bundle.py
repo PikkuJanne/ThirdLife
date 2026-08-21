@@ -55,6 +55,8 @@ REQUIRED_FILES = (
     "docs/security/abuse-cases.md",
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
+    "docs/supply-chain/dependencies.md",
+    "docs/supply-chain/license-matrix.csv",
     "docs/testing/accessibility-matrix.md",
     "docs/testing/capability-risk-matrix.md",
     "docs/testing/failure-injection.md",

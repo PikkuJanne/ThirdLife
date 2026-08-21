@@ -14,6 +14,7 @@ from typing import Any
 
 import yaml
 
+import supply_chain
 from validate_bundle import REQUIRED_FILES
 
 
@@ -278,9 +279,29 @@ def validate_central_packages(
     if build_props is None or package_props is None:
         return
 
-    if property_text(build_props, "RestorePackagesWithLockFile") != "true":
+    expected_build_properties = {
+        "RestorePackagesWithLockFile": "true",
+        "NuGetAudit": "true",
+        "NuGetAuditMode": "all",
+        "NuGetAuditLevel": "low",
+    }
+    for name, expected in expected_build_properties.items():
+        if property_text(build_props, name) != expected:
+            validation.error(
+                f"Directory.Build.props: {name} must equal {expected}"
+            )
+    for element in build_props.iter():
+        local_name = element.tag.rsplit("}", 1)[-1]
+        value = (element.text or "").upper()
+        if local_name in {"NoWarn", "WarningsNotAsErrors"} and re.search(
+            r"\bNU190[0-5]\b", value
+        ):
+            validation.error(
+                f"Directory.Build.props: {local_name} cannot suppress NuGet audit warnings"
+            )
+    if build_props.findall(".//NuGetAuditSuppress"):
         validation.error(
-            "Directory.Build.props: RestorePackagesWithLockFile must equal true"
+            "Directory.Build.props: NuGetAuditSuppress entries require a governed security decision"
         )
     expected_central_properties = {
         "ManagePackageVersionsCentrally": "true",
@@ -329,6 +350,24 @@ def validate_central_packages(
         root = load_xml(project_path, validation)
         if root is None:
             continue
+        for property_name in ("NuGetAudit", "NuGetAuditMode", "NuGetAuditLevel"):
+            if root.find(f".//{property_name}") is not None:
+                validation.error(
+                    f"{relative(project_path)}: {property_name} cannot override repository audit policy"
+                )
+        if root.findall(".//NuGetAuditSuppress"):
+            validation.error(
+                f"{relative(project_path)}: NuGetAuditSuppress requires a governed security decision"
+            )
+        for element in root.iter():
+            local_name = element.tag.rsplit("}", 1)[-1]
+            value = (element.text or "").upper()
+            if local_name in {"NoWarn", "WarningsNotAsErrors"} and re.search(
+                r"\bNU190[0-5]\b", value
+            ):
+                validation.error(
+                    f"{relative(project_path)}: {local_name} cannot suppress NuGet audit warnings"
+                )
         references: list[str] = []
         for reference in root.findall(".//PackageReference"):
             package_id = reference.get("Include")
@@ -530,7 +569,7 @@ def validate_workflow(validation: Validation) -> None:
                     {
                         "name": "Install validator dependency",
                         "run": (
-                            "python -m pip install --no-deps "
+                            "python -m pip --isolated install --no-deps "
                             "--requirement tools/requirements.txt"
                         ),
                     },
@@ -665,7 +704,7 @@ def validate_workflow(validation: Validation) -> None:
             ".github/workflows/verify.yml: job command shell must be pwsh"
         )
     if (
-        "python -m pip install --no-deps --requirement tools/requirements.txt"
+        "python -m pip --isolated install --no-deps --requirement tools/requirements.txt"
         not in runs
     ):
         validation.error(
@@ -683,6 +722,73 @@ def validate_workflow(validation: Validation) -> None:
         )
 
 
+def validate_supply_chain_contract(
+    validation: Validation,
+) -> supply_chain.SupplyChainResult:
+    result = supply_chain.validate_supply_chain(ROOT)
+    for error in result.errors:
+        validation.error(f"supply-chain: {error}")
+
+    try:
+        task_document = yaml.safe_load(
+            (ROOT / "TASKS.yaml").read_text(encoding="utf-8")
+        )
+    except (OSError, yaml.YAMLError) as exc:
+        validation.error(f"TASKS.yaml: cannot inspect TL-0006 approval state: {exc}")
+        return result
+    tasks = task_document.get("tasks") if isinstance(task_document, dict) else None
+    task = next(
+        (
+            item
+            for item in tasks or []
+            if isinstance(item, dict) and item.get("id") == "TL-0006"
+        ),
+        None,
+    )
+    if not isinstance(task, dict):
+        validation.error("TASKS.yaml: TL-0006 is required for supply-chain governance")
+        return result
+
+    evidence = task.get("evidence")
+    evidence_claims_approval = isinstance(evidence, list) and any(
+        isinstance(item, dict)
+        and str(item.get("result", "")).casefold() == "passed"
+        and re.search(
+            r"(?i)(?:licen[cs]e|redistribution|rights).{0,80}(?:review|owner).{0,40}approved|"
+            r"(?:review|owner).{0,80}approved.{0,40}(?:licen[cs]e|redistribution|rights)",
+            str(item.get("summary", "")),
+        )
+        is not None
+        for item in evidence
+    )
+    if result.approval_state != "approved" and evidence_claims_approval:
+        validation.error(
+            "TL-0006 evidence cannot claim licence/rights approval while the governed review is Pending"
+        )
+    if task.get("status") == "done":
+        if result.approval_state != "approved":
+            validation.error(
+                "TL-0006 cannot be done while the human licence and rights review is Pending"
+            )
+        approval_evidence = isinstance(evidence, list) and any(
+            isinstance(item, dict)
+            and str(item.get("result", "")).casefold() == "passed"
+            and result.matrix_digest in str(item.get("reference", "")).casefold()
+            and re.search(
+                r"(?i)(?:licen[cs]e|redistribution|rights).{0,80}approved|"
+                r"approved.{0,80}(?:licen[cs]e|redistribution|rights)",
+                str(item.get("summary", "")),
+            )
+            is not None
+            for item in evidence
+        )
+        if not approval_evidence:
+            validation.error(
+                "TL-0006 done evidence must bind named human licence/rights approval to the current matrix digest"
+            )
+    return result
+
+
 def validate_no_machine_paths(validation: Validation) -> None:
     paths = [
         ROOT / "Directory.Build.props",
@@ -691,6 +797,10 @@ def validate_no_machine_paths(validation: Validation) -> None:
         ROOT / "global.json",
         ROOT / "eng" / "verify.ps1",
         ROOT / "eng" / "verify.sh",
+        ROOT / "eng" / "generate-sbom.ps1",
+        ROOT / "tools" / "requirements.txt",
+        ROOT / "docs" / "supply-chain" / "dependencies.md",
+        ROOT / "docs" / "supply-chain" / "license-matrix.csv",
         ROOT / ".github" / "workflows" / "verify.yml",
     ]
     paths.extend((ROOT / "src").rglob("packages.lock.json"))
@@ -712,6 +822,7 @@ def validate() -> int:
     validate_central_packages(project_paths, validation)
     validate_tool_and_source_configuration(validation)
     validate_workflow(validation)
+    supply_chain_result = validate_supply_chain_contract(validation)
     validate_no_machine_paths(validation)
 
     if validation.errors:
@@ -722,6 +833,8 @@ def validate() -> int:
     print(
         "OK: repository controls valid; "
         f"{len(project_paths)} projects, {len(project_paths)} lock files, "
+        f"{len(supply_chain_result.inventory)} governed external components, "
+        f"licence review {supply_chain_result.approval_state}; "
         "central packages and optional Windows workflow configuration verified"
     )
     return 0

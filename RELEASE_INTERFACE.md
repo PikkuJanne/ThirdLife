@@ -38,6 +38,8 @@ At `TL-0610`, verified pilot behavior is populated and the sheet remains clearly
 | Dependency-lock revision | TBD at freeze |
 | SBOM/third-party notices | TBD at freeze |
 
+`TL-0006` provides the governed sources for these still-unfrozen fields: the dependency-input digest and licence-matrix digest emitted by `eng/generate-sbom.ps1`, the generated SBOM SHA-256, the exact source revision supplied to that command, and the human licence/rights review bound to the matrix digest. These controls do not substitute development values for the release-frozen artifact, dependency lock, third-party notices, or approval.
+
 ## 3. Install, update, repair, and remove
 
 Document at `TL-0706`:
