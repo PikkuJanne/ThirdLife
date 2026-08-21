@@ -16,18 +16,20 @@ The commit containing this file is the TL-0008 checkpoint. Because a commit cann
 
 | Field | Verified value |
 |---|---|
-| Snapshot time before checkpoint commit | `2026-08-21T14:12:31+02:00` |
+| Snapshot time after implementation push | `2026-08-21T14:21:06+02:00` |
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` over SSH |
 | Branch | `codex/tl-0008-device-test-procedure` |
 | HEAD at session start | `4fa3ea050fd5e9985fde9cc8218281698d371cc8` |
 | HEAD before checkpoint commit | `4fa3ea050fd5e9985fde9cc8218281698d371cc8` |
-| TL-0008 checkpoint HEAD | The commit containing this file; resolve with `git rev-parse HEAD` |
+| Verified implementation checkpoint | `0ded6a1778a6e747071a7f7dfea578c7f82b00ed` |
+| Final handoff-record HEAD | The commit containing this file; resolve with `git rev-parse HEAD` |
 | Upstream | `origin/codex/tl-0008-device-test-procedure` |
 | Upstream commit at session start | `4fa3ea050fd5e9985fde9cc8218281698d371cc8` |
 | Initial divergence | `0` ahead, `0` behind after authenticated fetch |
 | Historical source relation | Current at session start; no reset or history rewrite performed |
-| Pre-checkpoint upstream comparison | `4fa3ea050fd5e9985fde9cc8218281698d371cc8`; `0` ahead, `0` behind |
-| Checkpoint push invariant | Before final handoff, current HEAD must equal the fetched upstream; the resolved hash and comparison belong in the completion report |
+| Verified upstream and GitHub branch | `0ded6a1778a6e747071a7f7dfea578c7f82b00ed` |
+| Verified implementation divergence | `0` ahead, `0` behind after authenticated push and fetch |
+| Final handoff push invariant | Before reporting completion, current HEAD must again equal the fetched upstream; the completion report records that resolved hash |
 
 The configured SSH remote rejected unattended public-key authentication on this machine. Synchronization used GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential. The checkpoint is pushed through the same bounded bridge and compared with the fetched upstream before handoff.
 
@@ -66,7 +68,7 @@ The supplied 0.3.0 contracts contained the same 91 task IDs as the live reposito
 | Focused validator regression | `.venv\Scripts\python.exe tools\tests\test_validate_bundle.py` | 14.686 s | Passed, 54/54 |
 | Live governed validator | Activate `.venv`, then `python tools/validate_bundle.py` | 1.178 s | Passed: 91 tasks, 8 milestones, 66 decisions, valid DAG; optional `jsonschema` unavailable, custom structural checks used |
 | Integration quick | `powershell.exe -File eng/verify.ps1 -Tier Quick` | 16.572 s | Passed: validator regression, governance, manifest, repository boundary, locked-package, and optional workflow checks |
-| Final pre-commit quick | Same command after final task/evidence/status/manifest state | Recorded in the completion report | Required before commit; no application/runtime, full, or extended tier is included |
+| Final implementation quick | `powershell.exe -File eng/verify.ps1 -Tier Quick` after final task/evidence/status/manifest state | 15.310 s | Passed; no application/runtime, full, or extended tier included |
 | Targeted | Not triggered | 0 s | Documentation, schema, governance, and validator migration did not change application/runtime behavior |
 | Full | Not triggered | 0 s | Revised `TL-0008` contract declares no full-tier trigger |
 | Extended/stress | Explicitly not triggered | 0 s | Scenarios are defined for later invoking tasks; none is run at revised `TL-0008` |
