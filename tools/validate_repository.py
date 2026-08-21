@@ -500,7 +500,10 @@ def validate_workflow(validation: Validation) -> None:
                             "actions/checkout@"
                             + EXPECTED_ACTIONS["actions/checkout"]
                         ),
-                        "with": {"persist-credentials": "false"},
+                        "with": {
+                            "persist-credentials": "false",
+                            "fetch-depth": "0",
+                        },
                     },
                     {
                         "name": "Set up .NET",
@@ -618,10 +621,11 @@ def validate_workflow(validation: Validation) -> None:
         None,
     )
     if not isinstance(checkout, dict) or checkout.get("with") != {
-        "persist-credentials": "false"
+        "persist-credentials": "false",
+        "fetch-depth": "0",
     }:
         validation.error(
-            ".github/workflows/verify.yml: checkout must disable persisted credentials"
+            ".github/workflows/verify.yml: checkout must disable persisted credentials and fetch full history"
         )
     setup_dotnet = next(
         (
@@ -718,7 +722,7 @@ def validate() -> int:
     print(
         "OK: repository controls valid; "
         f"{len(project_paths)} projects, {len(project_paths)} lock files, "
-        "central packages and pinned Windows CI verified"
+        "central packages and optional Windows workflow configuration verified"
     )
     return 0
 

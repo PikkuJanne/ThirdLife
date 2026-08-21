@@ -1,6 +1,6 @@
 schema_version: 1
-bundle_version: 0.2.0
-generated_on: '2026-08-14'
+bundle_version: 0.3.0
+generated_on: '2026-08-15'
 project:
   name: ThirdLife
   component: ThirdLife Setup Core
@@ -18,6 +18,25 @@ project:
   - WPF
   - SQLite
   repository_root: .
+  validation_hardware: active Codex machine only
+  hardware_lab_required: false
+  external_runtime_matrix_required: false
+portfolio:
+  roadmap_version: '2.1'
+  development_posture: standalone project vacuum
+  integration_posture: late binding against frozen stable releases
+  active_cross_project_dependencies_allowed: false
+  sibling_specific_work_authorized: false
+  next_team_project_after_stable: Scam Explainer
+  continuity_source: GitHub
+  validation_hardware: active Codex machine only
+  hardware_lab_required: false
+  remote_runtime_testing_required: false
+  test_tiers:
+  - quick
+  - targeted
+  - full
+  - extended
 authority:
   precedence:
   - DECISIONS.md
@@ -26,8 +45,11 @@ authority:
   - SECURITY.md
   - ACCESSIBILITY.md
   - LOW_SPEC.md
+  - DEVELOPMENT_WORKFLOW.md
+  - TESTING.md
   - AGENTS.md
   - TASKS.yaml
+  - STATUS.md
   - CODEX_START_PROMPT.md
   - README.md
   change_rule: Frozen decisions, project boundaries, portfolio posture, and milestone scope require explicit human approval.
@@ -67,7 +89,8 @@ workflow:
   - evidence
   - blocked_reason
   ready_rule: A task is dependency-ready when every depends_on task is done. It is Codex-ready when dependency-ready, status
-    is ready or backlog, executor is codex or hybrid, and any required human input is already available.
+    is ready or backlog, executor is codex or hybrid, required human input is already available, and the task can be verified
+    on the active Codex machine or by deterministic fixtures without requiring another physical machine.
   selection_rule: Select the lowest milestone, then lowest numeric task ID, among Codex-ready P0 tasks unless the user names
     a task.
   single_task_default: true
@@ -75,42 +98,52 @@ workflow:
     but must leave status at review or blocked until every human_evidence_required item is attached.'
 definition_of_ready:
 - All dependencies are done.
-- Relevant frozen decisions and project-boundary rules have been read.
-- Deliverables and acceptance criteria are testable.
-- Required Windows, hardware, package, policy, or human inputs are available, or the task is explicitly limited to a portable
-  portion.
+- Relevant frozen decisions, STATUS.md, TESTING.md, DEVELOPMENT_WORKFLOW.md, and project-boundary rules have been read.
+- Deliverables and acceptance criteria are testable on the active Codex machine or with deterministic synthetic/captured fixtures.
+- Required Windows, package, policy, or human inputs are available; no task may require a second physical computer, hardware
+  lab, external runner matrix, or lower-performance test device.
+- The expected test tier and any full/extended triggers are explicit.
 - No unresolved blocker or contradictory authority exists.
 - The task has no live dependency on a sibling repository, database, service, branch, build, or unfinished feature.
 definition_of_done:
 - Every listed deliverable is present or the task record explains an approved replacement.
 - Every acceptance criterion is satisfied by linked evidence.
-- Automated verification passes at the required scope.
-- Required Windows/manual/human evidence is attached.
-- Security, privacy, accessibility, low-spec, migration, release-interface, and documentation impacts are addressed where
-  applicable.
+- The selected quick/targeted/full/extended verification scope passes on the active Codex machine, and broader tiers are run
+  only when a documented trigger applies.
+- Each reproducible defect is reduced to the smallest practical deterministic regression case; slow scenarios are independently
+  invokable and checkpointed.
+- Required Windows/manual/human evidence is attached without implying a multi-hardware certification.
+- Security, privacy, accessibility, modest-hardware design, migration, release-interface, and documentation impacts are addressed
+  where applicable.
 - The implementation remains independently useful without sibling applications and does not introduce a cross-project dependency.
-- TASKS.yaml status/evidence is updated without rewriting frozen history.
+- TASKS.yaml status/evidence is updated without rewriting frozen history; STATUS.md, branch, commit, push, and clean-tree
+  state support continuation from GitHub.
 milestones:
 - id: M0
   name: Foundation and product contract
-  objective: Create the governed repository, frozen standalone and portfolio boundaries, security/privacy/accessibility/low-spec
-    baselines, pilot inputs, and verification infrastructure required before feature code expands.
+  objective: Create the governed repository, frozen standalone and portfolio boundaries, security/privacy/accessibility/modest-hardware
+    baselines, pilot inputs, GitHub continuity, and a tiered same-machine verification system before feature code expands.
   gate_task: TL-0010
   exit_criteria:
-  - The repository builds from a clean checkout on the supported Windows environment.
-  - Product, non-goals, threat, privacy, accessibility, low-spec, dependency/license, test-device, and ADR inputs have named
-    owners.
+  - The repository builds from a clean checkout on the supported Windows environment on the active Codex machine.
+  - Product, non-goals, threat, privacy, accessibility, modest-hardware design, dependency/licence, reference-machine profile,
+    test-tier, and ADR inputs have named owners.
+  - No lab, physical-device pool, lower-performance test machine, external runtime matrix, or missing equipment is a project
+    dependency or release blocker.
   - The Team B/B1 project-vacuum boundary and future B4 late-binding posture are explicit and validated.
-  - The roadmap bundle and repository rules are internally consistent and validated.
+  - The roadmap bundle, GitHub workflow, task graph, and repository rules are internally consistent and validated.
 - id: M1
   name: Audit-only vertical slice
-  objective: Create a durable local job, enforce sanitization evidence, run a read-only assessment, collect human tests, and
-    produce a privacy-safe workshop report.
+  objective: Create a durable local job, enforce sanitization evidence, run a read-only assessment, capture guided human-test
+    states, and produce a privacy-safe workshop report using deterministic fixtures and the active Codex machine.
   gate_task: TL-0116
   exit_criteria:
   - The normal flow makes no system changes and runs unelevated.
-  - Missing evidence remains unknown and normalized observations are deterministic.
-  - A representative volunteer completes the flow with accessible UI and privacy-safe persistence/logging.
+  - Missing evidence remains unknown and normalized observations are deterministic across synthetic/captured fixtures and
+    the active machine.
+  - A representative operator completes the available workflow on the active Codex machine; unavailable hardware capabilities
+    are handled truthfully and exercised through deterministic states.
+  - No claim of broad hardware coverage or certification is made.
 - id: M2
   name: Explainable disposition engine
   objective: Evaluate versioned organization policy against immutable evidence and produce explainable dispositions, confirmations,
@@ -141,12 +174,14 @@ milestones:
 - id: M5
   name: Full machine profile
   objective: Apply the reviewed pilot profile across Windows Update, multiple packages, security checks, restart phases, cold-boot
-    verification, and the supported test matrix.
+    verification on the active Codex machine, and risk-relevant same-machine constrained scenarios.
   gate_task: TL-0511
   exit_criteria:
-  - The job-seeker machine profile converges on the approved Windows/device matrix.
+  - The job-seeker machine profile converges on supported clean Windows environments hosted on the active Codex machine.
   - Essential failures and resource or ownership blockers prevent ready status.
-  - Final cold-boot verification records exact versions and unresolved limitations.
+  - Same-machine offline, low-space, no-GPU, reduced-concurrency, interruption, and failure scenarios preserve state and recovery.
+  - Final cold-boot verification on the active Codex machine records exact versions and unresolved limitations.
+  - Evidence describes the reference machine and constraints and does not imply a cross-hardware certification.
 - id: M6
   name: Handover and controlled pilot
   objective: Block handover until finalization, reports, diagnostic privacy, accessibility, security/privacy review, packaging,
@@ -169,10 +204,11 @@ milestones:
     a ThirdLife account, or a permanent privileged service.
   - Recipient accessibility and basic operating-system backup choices remain recipient-controlled, reversible where applicable,
     and do not leak recovery material.
-  - Offline core behavior, low-spec evidence, security/privacy, accessibility, update, repair, uninstall, migration, and data-preservation
-    evidence pass the stable-release matrix.
+  - Offline core behavior, same-machine modest-hardware evidence, security/privacy, accessibility, update, repair, uninstall,
+    migration, and data-preservation evidence pass the stable-release matrix.
   - Exact artifacts, hashes, source revision, SBOM, licence evidence, known limitations, sanitized samples, and RELEASE_INTERFACE.md
     are frozen.
+  - Release wording distinguishes design intent and active-machine observations from unperformed cross-hardware certification.
   - Team B/B1 is complete and the next project is Scam Explainer; no B4 sibling adapter work is authorized by this gate.
 tasks:
 - id: TL-0001
@@ -193,6 +229,10 @@ tasks:
   - D-046
   - D-048
   - D-050
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Create a clean .NET 10 solution for the ThirdLife Setup Core B1 project whose production namespaces remain ThirdLife.*,
     whose project boundaries match the frozen architecture, and which contains no speculative suite/adapter project.
   deliverables:
@@ -222,7 +262,8 @@ tasks:
     result: passed
     environment: Windows 11 x64; .NET SDK 10.0.400
     date: '2026-08-14'
-    reference: Directory.Build.props evaluated Nullable=enable and TreatWarningsAsErrors=true; WPF scan found ThirdLife.UI only
+    reference: Directory.Build.props evaluated Nullable=enable and TreatWarningsAsErrors=true; WPF scan found ThirdLife.UI
+      only
   - summary: Release restore and build completed without warnings or errors.
     result: passed
     environment: Windows 11 x64; .NET SDK 10.0.400
@@ -233,8 +274,11 @@ tasks:
     environment: Windows 11 x64; .NET SDK 10.0.400
     date: '2026-08-14'
     reference: dotnet test ThirdLife.sln -c Release --no-build --no-restore (14 passed); graph audit (15 edges, 0 cycles)
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0002
-  title: Add deterministic verification and Windows CI
+  title: Add deterministic local verification and GitHub continuity checks
   milestone: M0
   workstream: foundation
   kind: build
@@ -252,23 +296,31 @@ tasks:
   - D-045
   - D-046
   - D-048
-  objective: Provide one repeatable command for restore, formatting, build, tests, dependency checks, and an authoritative
-    Windows CI job.
+  - D-058
+  - D-059
+  - D-061
+  - D-062
+  - D-063
+  objective: Provide repeatable local commands for restore, formatting, build, tests, dependency checks, bundle validation,
+    and clean-clone continuation on the active Codex machine.
   deliverables:
   - eng/verify.ps1
   - eng/verify.sh
-  - .github/workflows/verify.yml or equivalent CI
   - central package/lock configuration
+  - documented same-machine clean-clone verification path
   acceptance_criteria:
-  - A clean checkout can run the documented verification command.
-  - The authoritative build-and-test job runs on Windows.
-  - Formatting and compiler warnings fail verification.
-  - CI artifacts contain no secrets or machine-specific paths.
-  - The verification command validates the required portfolio-boundary documents and machine-readable portfolio metadata.
+  - A clean checkout can run the documented verification command on the active Codex machine.
+  - Formatting, compiler warnings, and failed tests fail verification.
+  - Verification records contain no secrets, personal data, or machine-specific absolute paths.
+  - The command validates required portfolio-boundary documents, STATUS.md, TESTING.md, DEVELOPMENT_WORKFLOW.md, and machine-readable
+    metadata.
+  - GitHub Actions, cloud runners, and external hardware matrices are not required for task completion or release evidence;
+    any optional remote static check is non-authoritative.
+  - A same-machine clean clone can restore locked dependencies and run the quick tier from repository instructions.
   verification:
-  - Run the local verification scripts where supported.
-  - Validate the CI definition.
-  - Confirm a deliberate warning fails verification.
+  - Run the local verification scripts on the active Codex machine.
+  - Create a clean clone or separate clean worktree on the same physical machine and run the quick tier.
+  - Confirm a deliberate warning or test failure fails verification, then restore the clean state.
   evidence:
   - summary: PowerShell and Git Bash entry points completed the full deterministic repository gate.
     result: passed
@@ -279,12 +331,15 @@ tasks:
     result: passed
     environment: Windows 11 x64; .NET SDK 10.0.400
     date: '2026-08-14'
-    reference: Temporary EOL defect produced ENDOFLINE and exit 2; temporary #warning produced CS1030 and exit 1; probes removed; final verification passed
+    reference: Temporary EOL defect produced ENDOFLINE and exit 2; temporary
   - summary: Authoritative Windows clean-checkout CI passed without publishing artifacts.
     result: passed
     environment: GitHub Actions windows-2025; commit 9ac9e9ed4b9b4b01828644199311aa1ae4054172
     date: '2026-08-14'
     reference: https://github.com/PikkuJanne/ThirdLife/actions/runs/31805725622; job 94784055142; artifact count 0
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0003
   title: Establish product, portfolio-boundary, and documentation governance
   milestone: M0
@@ -314,6 +369,10 @@ tasks:
   - D-054
   - D-056
   - D-057
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Make the ThirdLife Setup Core purpose, Team B/B1 boundary, project-vacuum rule, future B4 role, vocabulary, non-goals,
     specialized quality baselines, release-interface obligation, and change process visible inside the repository.
   deliverables:
@@ -344,17 +403,23 @@ tasks:
     result: passed
     environment: Windows 11 x64; documentation and boundary review
     date: '2026-08-14'
-    reference: docs/product-contract.md; docs/non-goals.md; docs/glossary.md; docs/change-control.md; six root baseline/boundary deliverables
+    reference: docs/product-contract.md; docs/non-goals.md; docs/glossary.md; docs/change-control.md; six root baseline/boundary
+      deliverables
   - summary: Governance semantics and rejection behavior passed the committed regression suite and reversible negative probes.
     result: passed
     environment: Windows 11 x64; Python 3.14.7; PyYAML 6.0.3
     date: '2026-08-14'
-    reference: tools/tests/test_validate_bundle.py (16 passed); tools/validate_bundle.py; missing glossary term, reordered authority, affirmative optimizer, and legacy-alias probes each failed as required
+    reference: tools/tests/test_validate_bundle.py (16 passed); tools/validate_bundle.py; missing glossary term, reordered
+      authority, affirmative optimizer, and legacy-alias probes each failed as required
   - summary: Staged tracked-text scope review and the complete deterministic repository gate passed.
     result: passed
     environment: Windows 11 x64; .NET SDK 10.0.400; Python 3.14.7
     date: '2026-08-14'
-    reference: legacy-name git grep returned zero; optimizer-family hits were exclusion, validator, or negative-test contexts only; eng/verify.ps1 passed 16 governance tests, locked restore, formatting, Release build, and 14 .NET tests
+    reference: legacy-name git grep returned zero; optimizer-family hits were exclusion, validator, or negative-test contexts
+      only; eng/verify.ps1 passed 16 governance tests, locked restore, formatting, Release build, and 14 .NET tests
+  expected_test_tier: quick
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0004
   title: Write the v0.1 threat model
   milestone: M0
@@ -384,6 +449,10 @@ tasks:
   - D-051
   - D-053
   - D-055
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Define assets, actors, trust boundaries, abuse cases, mitigations, and residual risks for inventory, catalog,
     package, broker, journal, report, and update flows.
   deliverables:
@@ -401,17 +470,23 @@ tasks:
   - Perform a structured threat review.
   - Map each broker/package threat to at least one task.
   evidence:
-  - summary: Structured threat review covered assets, actors, ten distinct trust boundaries, inventory/catalog/package/broker/journal/report/update/release-supply flows, fourteen threats, nineteen abuse cases, and eight proposed residual risks; high-risk and broker/package/release entries map to binding decisions and real tasks.
+  - summary: Structured threat review covered assets, actors, ten distinct trust boundaries, inventory/catalog/package/broker/journal/report/update/release-supply
+      flows, fourteen threats, nineteen abuse cases, and eight proposed residual risks; high-risk and broker/package/release
+      entries map to binding decisions and real tasks.
     result: passed; technical draft complete and owner approval pending
     environment: Repository semantic review on Windows 11 x64
     date: '2026-08-14'
-    reference: docs/security/threat-model.md THR-001..THR-014 and RR-001..RR-008; docs/security/data-flow.md F-01..F-19; docs/security/abuse-cases.md AC-001..AC-019
-  - summary: Security governance regression tests and bundle semantic validation passed, including collapsed-boundary, orphan-link, risk-floor, approval-state, task-status, broker/package mapping, machine-path, and sanitization/B4 negative probes.
+    reference: docs/security/threat-model.md THR-001..THR-014 and RR-001..RR-008; docs/security/data-flow.md F-01..F-19; docs/security/abuse-cases.md
+      AC-001..AC-019
+  - summary: Security governance regression tests and bundle semantic validation passed, including collapsed-boundary, orphan-link,
+      risk-floor, approval-state, task-status, broker/package mapping, machine-path, and sanitization/B4 negative probes.
     result: passed
     environment: Windows 11 x64; Python 3.14.7; PyYAML 6.0.3
     date: '2026-08-14'
-    reference: tools/tests/test_validate_bundle.py (32 passed); tools/validate_bundle.py reported 91 tasks, 8 milestones, 57 decisions, DAG valid
-  - summary: Scoped hygiene and boundary review found no secret, credential, personal identifier, machine-specific path, direct sibling dependency, runtime sanitization/ownership bypass, firmware-flashing path, or B1 adapter design.
+    reference: tools/tests/test_validate_bundle.py (32 passed); tools/validate_bundle.py reported 91 tasks, 8 milestones,
+      57 decisions, DAG valid
+  - summary: Scoped hygiene and boundary review found no secret, credential, personal identifier, machine-specific path, direct
+      sibling dependency, runtime sanitization/ownership bypass, firmware-flashing path, or B1 adapter design.
     result: passed
     environment: Windows 11 x64; tracked/untracked text review
     date: '2026-08-14'
@@ -420,14 +495,24 @@ tasks:
     result: passed
     environment: Windows 11 x64; .NET SDK 10.0.400; Python 3.14.7; PyYAML 6.0.3
     date: '2026-08-14'
-    reference: eng/verify.ps1 passed 32 governance tests, bundle/repository validators, locked restore, formatting, Release build with 0 warnings/errors, and 14 .NET tests
-  - summary: Named security owner approved the exact initial model and the Mitigate treatment recorded for RR-001 through RR-008; the approval does not authorize a release or claim planned controls are implemented.
+    reference: eng/verify.ps1 passed 32 governance tests, bundle/repository validators, locked restore, formatting, Release
+      build with 0 warnings/errors, and 14 .NET tests
+  - summary: Named security owner approved the exact initial model and the Mitigate treatment recorded for RR-001 through
+      RR-008; the approval does not authorize a release or claim planned controls are implemented.
     result: passed
     environment: Human security-owner review by PikkuJanne
     date: '2026-08-14'
-    reference: reviewed commit 917b5ebd5f5e4cf273a087a05dd381da54324235; docs/security/threat-model.md approval metadata and RR-001..RR-008 owner decisions
+    reference: reviewed commit 917b5ebd5f5e4cf273a087a05dd381da54324235; docs/security/threat-model.md approval metadata and
+      RR-001..RR-008 owner decisions
   human_evidence_required:
   - A named security owner approves the initial threat model and residual-risk list.
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers:
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0005
   title: Define the privacy and logging model
   milestone: M0
@@ -448,6 +533,10 @@ tasks:
   - D-036
   - D-037
   - D-053
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Specify data classification, retention, redaction, support-export review, and prohibited fields before logging
     code is built.
   deliverables:
@@ -468,6 +557,9 @@ tasks:
   evidence: []
   human_evidence_required:
   - A named privacy owner approves classifications and default retention guidance.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0006
   title: Create dependency, license, and SBOM controls
   milestone: M0
@@ -489,6 +581,10 @@ tasks:
   - D-052
   - D-055
   - D-056
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Establish central dependency pinning, license recording, vulnerability review, and release SBOM generation.
   deliverables:
   - Directory.Packages.props or equivalent
@@ -508,6 +604,9 @@ tasks:
   evidence: []
   human_evidence_required:
   - A human reviews licenses and redistribution claims before a release gate.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0007
   title: Create synthetic pilot fixtures and reference inputs
   milestone: M0
@@ -530,6 +629,10 @@ tasks:
   - D-022
   - D-048
   - D-055
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Provide non-personal fixtures for jobs, sanitization evidence, observations, a candidate laptop policy, generic
     Basic and Job Seeker profiles, and synthetic or public generic package entries without any sibling-product dependency.
   deliverables:
@@ -551,15 +654,18 @@ tasks:
   evidence: []
   human_evidence_required:
   - A pilot owner approves candidate policy values and the initial capability set.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0008
-  title: Define the physical-device matrix and workshop test procedure
+  title: Define the same-machine validation system and manual-test specification
   milestone: M0
   workstream: quality
   kind: docs
   priority: P0
-  status: backlog
+  status: done
   size: M
-  executor: hybrid
+  executor: codex
   environment: windows
   depends_on:
   - TL-0003
@@ -572,26 +678,89 @@ tasks:
   - D-039
   - D-047
   - D-057
-  objective: Turn the hardware matrix and human-assisted checks into a repeatable lab and operator procedure.
+  - D-058
+  - D-059
+  - D-060
+  - D-061
+  - D-062
+  - D-063
+  - D-064
+  - D-065
+  - D-066
+  objective: Replace the obsolete hardware-lab gate with a tiered, risk-based test plan, active-reference-machine profile,
+    same-machine constraint procedures, and a specification for guided manual hardware-test states.
   deliverables:
-  - docs/testing/device-matrix.md
+  - TESTING.md
+  - DEVELOPMENT_WORKFLOW.md
+  - STATUS.md
+  - docs/testing/reference-machine-profile.md
+  - docs/testing/capability-risk-matrix.md
+  - docs/testing/same-machine-constraints.md
   - docs/testing/manual-hardware-tests.md
   - docs/testing/failure-injection.md
   - docs/testing/accessibility-matrix.md
-  - LOW_SPEC.md benchmark procedure and provisional resource-record template
+  - LOW_SPEC.md benchmark and claim-boundary procedure
+  - docs/history/TL-0008-draft-1-superseded.md or an equivalent preserved supersession record
   acceptance_criteria:
-  - The matrix covers form factors, HDD/SATA SSD/NVMe, battery states, TPM/Secure Boot states, unsupported CPU, 4/8 GB RAM,
-    networks, and partial failures.
-  - Manual tests define pass, fail, not available, and human-confirmed evidence.
-  - Cold boot and interrupted-workflow scenarios are included.
-  - The procedure states that automation cannot prove long-term reliability.
-  - 4 GB/8 GB and constrained-environment runs are treated as test classes, not unsupported minimum-spec claims without evidence.
+  - The active Codex machine is the only physical development, test, benchmark, clean-environment, and release-evidence machine.
+  - No lab, second PC, volunteer device pool, lower-performance machine, external runtime runner, or missing hardware class
+    is required or treated as a blocker.
+  - Quick, targeted, full, and extended tiers define triggers, default budgets, fail-fast behavior, evidence fields, and independently
+    invokable slow scenarios.
+  - The reference-machine profile records only development-relevant system/toolchain facts and contains no serial, asset tag,
+    username, device name, SSID, IP address, credential, recovery key, personal path, screenshot, or raw log.
+  - The capability/risk matrix maps hardware and failure variants to deterministic fixtures, captured provider samples, safe
+    same-machine constraints, available host observation, or explicit unverified limitation; it is not a physical device inventory.
+  - Manual hardware tests retain pass, fail, not available, not run, and human-confirmed semantics as a product workflow specification,
+    but no MHT-001–MHT-021 physical walkthrough is required at TL-0008.
+  - Cold boot, accessibility, failure-injection, and extended matrices are specified now but run only at their explicit later
+    task or gate triggers.
+  - Modest-hardware readiness is enforced through streaming/chunking, conservative configurable concurrency, CPU fallback,
+    bounded cache/temp use, cancellation/checkpointing, and same-machine measurements.
+  - The superseded procedure is preserved with procedure revision, source commit, digest, reason, and a clear DO NOT EXECUTE
+    banner.
+  - Release and documentation wording cannot claim broad hardware certification or minimum specifications that have not been
+    observed.
   verification:
-  - Walk through the procedure on a representative device.
-  - Record missing equipment as an explicit pilot blocker.
-  evidence: []
-  human_evidence_required:
-  - A human records the actual device pool and confirms at least one reference device is available.
+  - Run python tools/validate_bundle.py and the repository quick documentation/schema tier.
+  - Validate that every slow or constraint scenario is individually addressable and has a later trigger.
+  - Search binding files and TASKS.yaml for active requirements for lab machines, physical-device matrices, lower-performance
+    machines, or authoritative remote runtime CI.
+  - Confirm the TL-0008 draft 1 procedure and MHT-001–MHT-021 walkthrough are marked superseded and are not listed as current
+    completion evidence.
+  evidence:
+  - summary: TL-0008 testing documents, stable coverage IDs, evidence semantics, cold-boot and interruption contracts, and
+      low-spec benchmark template passed the complete governance regression suite; physical-device and human walkthrough evidence
+      remain Pending.
+    result: passed
+    environment: Windows 11 x64, Python 3.14.7
+    date: '2026-08-14'
+    reference: tools/tests/test_validate_bundle.py; docs/testing; LOW_SPEC.md
+  - summary: Full governed repository verification passed with locked restore, formatting, zero-warning Release build, and
+      all 14 .NET tests; this is automated evidence only and does not satisfy the physical-device walkthrough.
+    result: passed
+    environment: Windows 11 x64, .NET SDK 10.0.400, Python 3.14.7
+    date: '2026-08-14'
+    reference: eng/verify.ps1 on codex/tl-0008-device-test-procedure
+  - summary: Bundle 0.3.0 contracts were merged across all 91 exact task IDs while preserving every prior status, evidence,
+      and blocked_reason value; only the authorized TL-0008 lifecycle advanced. Both former draft files were reproduced
+      exactly from the named source commit in the DO NOT EXECUTE archive, and the normalized historical procedure digest
+      was independently reproduced.
+    result: passed
+    environment: Windows 11 Pro 10.0.26200 x64, active Codex machine, Python 3.14.7
+    date: '2026-08-21'
+    reference: tools/merge_task_contracts.py; docs/history/TL-0008-draft-1-superseded.md; STATUS.md
+  - summary: Revised same-machine testing contracts passed 54 validator regression tests, live bundle validation, repository
+      manifest/boundary validation, the quick documentation/schema/static tier, obsolete hardware-obligation search, and
+      sanitized-profile review. MHT, accessibility, failure-injection, resource, cold-boot, full, and extended matrices
+      were not run because revised TL-0008 does not trigger them.
+    result: passed
+    environment: Windows 11 Pro 10.0.26200 x64, .NET SDK 10.0.400, Python 3.14.7, PowerShell 7.6.4
+    date: '2026-08-21'
+    reference: eng/verify.ps1 -Tier Quick (16.572 s); python tools/validate_bundle.py (1.178 s); tools/tests/test_validate_bundle.py
+  expected_test_tier: quick
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0009
   title: Record initial architecture decisions and project boundaries
   milestone: M0
@@ -624,6 +793,10 @@ tasks:
   - D-052
   - D-053
   - D-055
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Create ADRs for the stack, persistence, evidence/policy separation, package adapter seam, privilege boundary,
     report privacy classes, standalone/late-binding boundary, and minimal release-interface envelope.
   deliverables:
@@ -647,6 +820,9 @@ tasks:
   - Run link/reference checks.
   - Review project references against the documented direction.
   evidence: []
+  expected_test_tier: quick
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0010
   title: Validate the M0 foundation gate
   milestone: M0
@@ -679,17 +855,27 @@ tasks:
   - D-054
   - D-056
   - D-057
-  objective: Demonstrate that the repository, standalone product contract, portfolio boundary, security/privacy/accessibility/low-spec
-    models, fixtures, lab plan, release-interface draft, and governance are ready for implementation.
+  - D-058
+  - D-059
+  - D-060
+  - D-061
+  - D-062
+  - D-063
+  - D-064
+  - D-066
+  objective: Demonstrate that the repository, standalone product contract, portfolio boundary, security/privacy/accessibility/modest-hardware
+    models, fixtures, GitHub continuity, same-machine test system, release-interface draft, and governance are ready for implementation.
   deliverables:
   - artifacts/gates/M0-foundation.md
   acceptance_criteria:
   - All predecessor tasks are done with evidence.
-  - The clean-checkout verification command is documented and passes on Windows.
-  - Threat, privacy, accessibility, low-spec, dependency, and licence reviews have named owners.
-  - The pilot policy/profile inputs and physical test plan are approved.
+  - The clean-checkout quick-tier command is documented and passes on the active Codex machine.
+  - Threat, privacy, accessibility, modest-hardware, dependency, and licence reviews have named owners.
+  - The reference-machine profile, test tiers, same-machine constraint procedures, and manual-test specification are approved;
+    no physical device pool or missing equipment approval is required.
   - PROJECT_BOUNDARY.md states Team B/B1 and prohibits live sibling dependencies and B4 work.
   - RELEASE_INTERFACE.md remains an honest draft rather than a speculative API.
+  - STATUS.md identifies branch/commit/test state and the next action without relying on chat history.
   - No unresolved contradiction exists among binding bundle files.
   verification:
   - Run tools/validate_bundle.py.
@@ -699,6 +885,12 @@ tasks:
   human_evidence_required:
   - Project owner signs the M0 gate record.
   - Security, privacy, and license owners acknowledge their M0 artifacts.
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0101
   title: Implement core job and evidence domain models
   milestone: M1
@@ -735,6 +927,9 @@ tasks:
   - Unit-test invariants and serialization round trips.
   - Property-test invalid state combinations where practical.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0102
   title: Implement the SQLite job store and migrations
   milestone: M1
@@ -769,6 +964,11 @@ tasks:
   - Kill around transaction boundaries.
   - Test path traversal and junction defenses.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0103
   title: Implement job lifecycle and sanitization gate services
   milestone: M1
@@ -802,6 +1002,9 @@ tasks:
   - Unit-test all sanitization state transitions.
   - Integration-test restart during job creation and gate recording.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0104
   title: Implement structured logging and redaction
   milestone: M1
@@ -836,6 +1039,9 @@ tasks:
   - Fuzz mixed separators, casing, Unicode, and nested structures.
   - Inspect a representative log bundle.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0105
   title: Define inventory provider contracts and evidence normalization
   milestone: M1
@@ -867,6 +1073,9 @@ tasks:
   - Run provider contract tests.
   - Static-review providers for write APIs or generic shell strings.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0106
   title: Implement device identity, CPU, memory, and architecture inventory
   milestone: M1
@@ -875,7 +1084,7 @@ tasks:
   priority: P0
   status: backlog
   size: M
-  executor: hybrid
+  executor: codex
   environment: windows
   depends_on:
   - TL-0105
@@ -883,6 +1092,12 @@ tasks:
   - D-005
   - D-014
   - D-015
+  - D-059
+  - D-060
+  - D-061
+  - D-062
+  - D-065
+  - D-066
   objective: Collect manufacturer, model, serial handling, device type, processor, architecture, and installed memory as read-only
     evidence.
   deliverables:
@@ -892,14 +1107,18 @@ tasks:
   - Workshop records may retain full serial while ordinary logs expose only an approved suffix or no serial.
   - CPU, architecture, and memory include provider and timestamp.
   - Missing fields remain not available.
-  - The provider runs without elevation on representative Windows 11 devices.
+  - The provider runs without elevation on supported Windows 11 and is testable through deterministic captured/synthetic provider
+    data.
   - Values use invariant units and serialization.
+  - Observed active-machine behavior is recorded separately from synthetic coverage and does not imply manufacturer coverage.
   verification:
-  - Test captured synthetic provider data.
-  - Run on at least two physical manufacturers or record the coverage gap.
+  - Test captured and synthetic provider data for multiple manufacturers, processor/architecture/memory variants, missing
+    values, access denial, and malformed results.
+  - Run a bounded smoke test on the active Codex machine and record its sanitized reference-machine profile.
   evidence: []
-  human_evidence_required:
-  - Physical-device runs for at least two representative systems are attached before the M1 gate.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0107
   title: Implement OS lifecycle and activation inventory
   milestone: M1
@@ -934,6 +1153,9 @@ tasks:
   - Run on supported Windows 11 and Windows 10 or a synthetic equivalent.
   - Verify no write/activation APIs are invoked.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0108
   title: Implement storage inventory and reliability evidence
   milestone: M1
@@ -942,7 +1164,7 @@ tasks:
   priority: P0
   status: backlog
   size: L
-  executor: hybrid
+  executor: codex
   environment: windows
   depends_on:
   - TL-0105
@@ -950,6 +1172,12 @@ tasks:
   - D-015
   - D-016
   - D-018
+  - D-059
+  - D-060
+  - D-061
+  - D-062
+  - D-065
+  - D-066
   objective: Collect capacity, free space, media type, health, wear, temperature, errors, and operating-time evidence when
     providers expose it.
   deliverables:
@@ -962,11 +1190,12 @@ tasks:
   - Multiple disks and the system volume are modeled separately.
   - The provider performs no repair, optimization, SMART reset, or write test.
   verification:
-  - Test HDD, SATA SSD, NVMe, missing counters, and provider errors.
-  - Run on physical media types or record coverage gaps.
+  - Test deterministic HDD, SATA SSD, NVMe, multiple-disk, missing-counter, access-denied, malformed, and provider-error fixtures.
+  - Run a read-only smoke test against storage exposed by the active Codex machine; record unavailable fields truthfully.
   evidence: []
-  human_evidence_required:
-  - Physical storage-provider results are reviewed before the M1 gate.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0109
   title: Implement battery report generation and parsing
   milestone: M1
@@ -975,7 +1204,7 @@ tasks:
   priority: P0
   status: backlog
   size: L
-  executor: hybrid
+  executor: codex
   environment: windows
   depends_on:
   - TL-0105
@@ -984,6 +1213,11 @@ tasks:
   - D-015
   - D-016
   - D-037
+  - D-059
+  - D-061
+  - D-062
+  - D-065
+  - D-066
   objective: Generate a temporary structured battery report where supported, parse design/full-charge capacity and cycles,
     and remove known temporary artifacts.
   deliverables:
@@ -997,12 +1231,14 @@ tasks:
   - Temporary report filenames use internal IDs and are cleaned up.
   - The UI states that swelling requires human inspection.
   verification:
-  - Test representative and malformed XML.
-  - Run on battery/no-battery systems.
-  - Verify cleanup after success, failure, and cancellation.
+  - Test representative battery, no-battery, missing-field, malformed, access-denied, and cleanup fixtures.
+  - Run the provider on the active Codex machine; a host with no exposed battery records Not available and does not block
+    completion.
+  - Verify cleanup after success, failure, timeout, and cancellation.
   evidence: []
-  human_evidence_required:
-  - A human confirms physical swelling is represented only by the manual test.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0110
   title: Implement UEFI, Secure Boot, and TPM inventory
   milestone: M1
@@ -1011,7 +1247,7 @@ tasks:
   priority: P0
   status: backlog
   size: L
-  executor: hybrid
+  executor: codex
   environment: windows
   depends_on:
   - TL-0105
@@ -1019,6 +1255,11 @@ tasks:
   - D-005
   - D-009
   - D-015
+  - D-059
+  - D-061
+  - D-062
+  - D-065
+  - D-066
   objective: Collect firmware mode, Secure Boot capability/state, TPM presence/version/readiness, and ownership-lock indicators
     where observable.
   deliverables:
@@ -1031,11 +1272,13 @@ tasks:
   - TPM details retain raw provider values in expert evidence.
   - Tests cover enabled, disabled, unavailable, and synthetic locked states.
   verification:
-  - Run captured-data tests.
-  - Run on enabled and misconfigured-capable devices or record the gap.
+  - Run captured/synthetic enabled, disabled, unavailable, access-denied, malformed, and ownership-lock indicator tests.
+  - Run a read-only smoke test on the active Codex machine and preserve its actual observed state without changing firmware,
+    TPM, or Secure Boot.
   evidence: []
-  human_evidence_required:
-  - Physical evidence covers at least one enabled and one disabled/misconfigured case before the pilot.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0111
   title: Implement network and key-device enumeration
   milestone: M1
@@ -1068,6 +1311,9 @@ tasks:
   - Test synthetic device trees with missing/error devices.
   - Run on representative webcam/touch variants.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0112
   title: Implement the read-only assessment orchestrator
   milestone: M1
@@ -1107,6 +1353,9 @@ tasks:
   - Test cancellation, timeout, provider exception, process interruption, and rerun.
   - Verify deterministic normalization for identical fixtures.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0113
   title: Build the accessible six-stage WPF shell
   milestone: M1
@@ -1145,6 +1394,9 @@ tasks:
   evidence: []
   human_evidence_required:
   - A human records keyboard-only and screen-reader smoke-test results.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0114
   title: Implement manual hardware-test capture
   milestone: M1
@@ -1163,8 +1415,14 @@ tasks:
   - D-015
   - D-016
   - D-039
-  objective: Provide guided, resumable human tests for keyboard, pointer, display, audio, microphone, camera, network, charging,
-    sleep/wake, and representative ports.
+  - D-059
+  - D-061
+  - D-062
+  - D-064
+  - D-065
+  - D-066
+  objective: Provide guided, resumable human-test capture for keyboard, pointer, display, audio, microphone, camera, network,
+    charging, sleep/wake, and representative ports without requiring a hardware lab.
   deliverables:
   - src/ThirdLife.UI/Features/ManualTests
   - src/ThirdLife.Core/ManualTests
@@ -1172,16 +1430,26 @@ tasks:
   acceptance_criteria:
   - Each test records pass, fail, not tested, or not available plus operator, timestamp, notes, and evidence class.
   - Detected presence does not automatically pass a functional test.
-  - The workflow can pause and resume.
-  - No test starts destructive stress or writes unknown removable media.
+  - The workflow can pause and resume without rewriting completed evidence.
+  - No test starts destructive stress, changes firmware/security ownership controls, or writes unknown removable media.
   - Instructions are usable without a mouse and not color-dependent.
+  - All state transitions and capability-absent/equipment-unavailable paths are deterministically testable without possessing
+    each hardware class.
+  - A bounded host-machine walkthrough may exercise only capabilities actually available on the active Codex machine and cannot
+    be represented as broad hardware validation.
   verification:
-  - Unit-test state transitions.
-  - Walk through the test set on a physical laptop.
-  - Verify an essential failure remains a blocker candidate.
+  - Unit/property-test all state transitions, resume, evidence preservation, prohibited-result promotion, and unavailable-reason
+    validation.
+  - Run keyboard/accessibility smoke checks and a bounded operator walkthrough on the active Codex machine for available capabilities;
+    use deterministic fixtures for absent capabilities.
+  - Verify an essential failure remains a blocker candidate and Not available never becomes Pass.
   evidence: []
   human_evidence_required:
-  - A volunteer-style operator completes the procedure on a reference laptop.
+  - A representative operator completes the guided workflow on the active Codex machine for available capabilities and reviews
+    the simulated unavailable/failure paths; the record explicitly limits the evidence to that machine and workflow usability.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0115
   title: Generate the audit-only workshop report
   milestone: M1
@@ -1201,6 +1469,10 @@ tasks:
   - D-015
   - D-036
   - D-037
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Render a deterministic workshop report that separates observations, unavailable evidence, and human-confirmed
     tests without machine changes.
   deliverables:
@@ -1218,6 +1490,9 @@ tasks:
   - Scan outputs for prohibited data.
   - Compare a report with its job record.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0116
   title: Validate the M1 audit-only gate
   milestone: M1
@@ -1238,6 +1513,11 @@ tasks:
   - D-015
   - D-039
   - D-045
+  - D-059
+  - D-061
+  - D-062
+  - D-065
+  - D-066
   objective: Prove a volunteer can create a durable job, record sanitization, run a read-only assessment, complete human tests,
     and produce a privacy-safe report.
   deliverables:
@@ -1251,13 +1531,21 @@ tasks:
   - Normal logs exclude prohibited personal data.
   - Keyboard-only and screen-reader smoke tests are recorded.
   verification:
-  - Run the complete audit flow on the reference device.
-  - Run automated tests and bundle validation.
-  - Inspect logs, DB, temp, and report.
+  - Run the complete audit flow on the active Codex machine or a clean Windows environment hosted on it, using deterministic
+    fixtures for unavailable hardware variants.
+  - Run the documented quick/targeted checks and bundle validation.
+  - Inspect logs, database, temporary paths, and report for prohibited data and unsupported claims.
   evidence: []
   human_evidence_required:
   - Project owner approves the M1 gate record.
-  - A representative volunteer completes the audit flow.
+  - A representative operator completes the audit flow on the active Codex machine and acknowledges the limits of single-machine
+    evidence.
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0201
   title: Implement the versioned policy schema and validator
   milestone: M2
@@ -1292,6 +1580,9 @@ tasks:
   - Validate normal and adversarial policies.
   - Fuzz depth, size, duplicate IDs, and path-like strings.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0202
   title: Implement deterministic policy evaluation
   milestone: M2
@@ -1322,6 +1613,9 @@ tasks:
   - Table-test all rule categories and missing-data behavior.
   - Property-test determinism and order independence.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0203
   title: Implement disposition and explanation generation
   milestone: M2
@@ -1353,6 +1647,9 @@ tasks:
   - Golden-test explanation text.
   - Verify no aggregate numeric score is produced or serialized.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0204
   title: Implement human confirmations and governed exceptions
   milestone: M2
@@ -1385,6 +1682,9 @@ tasks:
   - Test authorization/prohibition cases.
   - Test historical replay after policy changes.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0205
   title: Implement policy versioning and historical replay
   milestone: M2
@@ -1416,6 +1716,9 @@ tasks:
   verification:
   - Test upgrades, downgrades, hash mismatch, and historical replay.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0206
   title: Implement device class, repair, and retest workflow
   milestone: M2
@@ -1448,6 +1751,9 @@ tasks:
   - Test weak-battery mobile versus stationary outcomes.
   - Test storage replacement followed by retest.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0207
   title: Upgrade reports and UI to separate facts from decisions
   milestone: M2
@@ -1484,6 +1790,9 @@ tasks:
   - Golden-test five dispositions and exception states.
   - Keyboard-test explanation expansion and focus.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0208
   title: Validate the M2 explainable-disposition gate
   milestone: M2
@@ -1505,6 +1814,10 @@ tasks:
   - D-018
   - D-019
   - D-045
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Prove every decision is reproducible, policy-backed, exception-aware, and historically stable.
   deliverables:
   - artifacts/gates/M2-disposition.md
@@ -1520,6 +1833,12 @@ tasks:
   evidence: []
   human_evidence_required:
   - Pilot policy owner approves disposition wording and exception governance.
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0301
   title: Implement the application catalog schema
   milestone: M3
@@ -1559,6 +1878,9 @@ tasks:
   verification:
   - Validate normal, stale, oversized, malicious, duplicate, and downgrade fixtures.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0302
   title: Implement workshop and recipient profile schemas
   milestone: M3
@@ -1598,6 +1920,9 @@ tasks:
   - Validate Basic and Job Seeker fixtures.
   - Test scripts, URLs, traversal, size, and duplicate capabilities.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0303
   title: Implement the compiled action registry and contracts
   milestone: M3
@@ -1633,6 +1958,9 @@ tasks:
   - Unit-test allowlists and adversarial deserialization.
   - Static-scan DTOs for unbounded execution strings.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0304
   title: Implement deterministic plan resolution
   milestone: M3
@@ -1673,6 +2001,9 @@ tasks:
   - Golden-test synthetic plans.
   - Property-test order stability and duplicate elimination.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0305
   title: Implement impact and preapproval estimates
   milestone: M3
@@ -1690,6 +2021,10 @@ tasks:
   - D-020
   - D-025
   - D-032
+  - D-060
+  - D-061
+  - D-062
+  - D-066
   objective: Calculate declared download, disk, privilege, restart, rollback, network, and verification impact before approval.
   deliverables:
   - src/ThirdLife.Actions/Planning/ImpactEstimator.cs
@@ -1703,6 +2038,9 @@ tasks:
   verification:
   - Test known, partial, conflicting, and unknown estimates.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0306
   title: Build the plan-review and approval UI
   milestone: M3
@@ -1742,6 +2080,9 @@ tasks:
   - UI-test approve, decline, deselect, and details.
   - Verify no broker starts before approval.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0307
   title: Detect material plan changes and require reapproval
   milestone: M3
@@ -1772,6 +2113,9 @@ tasks:
   - Mutation-test each material field.
   - Golden-test diff text.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0308
   title: Implement the durable action journal
   milestone: M3
@@ -1807,6 +2151,9 @@ tasks:
   - Failure-inject transaction boundaries.
   - Verify plan/approval hashes.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0309
   title: Implement reboot checkpoints and resume tokens
   milestone: M3
@@ -1837,6 +2184,11 @@ tasks:
   verification:
   - Test tamper, expiry, replay, duplicate start, and abandoned resume.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers:
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0310
   title: Define the versioned broker protocol
   milestone: M3
@@ -1872,6 +2224,11 @@ tasks:
   - Fuzz deserialization, depth, length, version, and unknown actions.
   - Review against the threat model.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0311
   title: Implement the ephemeral broker and authenticated IPC
   milestone: M3
@@ -1908,6 +2265,11 @@ tasks:
   evidence: []
   human_evidence_required:
   - A security reviewer inspects token, ACL, nonce, and process-lifetime evidence.
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0312
   title: Add focused broker security tests
   milestone: M3
@@ -1943,6 +2305,13 @@ tasks:
   evidence: []
   human_evidence_required:
   - A security reviewer signs the broker test record.
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers:
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0313
   title: Connect approval, journal, UAC, broker, and result flow
   milestone: M3
@@ -1976,6 +2345,11 @@ tasks:
   verification:
   - Test approve, decline, cancel, UI kill, broker kill, and reopen.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0314
   title: Validate the M3 safe-planning gate
   milestone: M3
@@ -2003,6 +2377,10 @@ tasks:
   - D-048
   - D-050
   - D-055
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Prove profiles cannot execute code, complete plans precede changes, approval binds resolved content, and the
     broker fails closed.
   deliverables:
@@ -2019,6 +2397,12 @@ tasks:
   evidence: []
   human_evidence_required:
   - Security owner approves the privilege-boundary gate.
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0401
   title: Spike structured WinGet integration paths
   milestone: M4
@@ -2055,6 +2439,11 @@ tasks:
   evidence: []
   human_evidence_required:
   - A maintainer reviews the spike evidence and approves ADR-004 before production adapter work begins.
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0402
   title: Implement the production package-manager adapter
   milestone: M4
@@ -2088,6 +2477,11 @@ tasks:
   - Run package unit tests on any platform.
   - Run tagged adapter integration tests on Windows.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0403
   title: Enforce package resolution and trust policy
   milestone: M4
@@ -2127,6 +2521,11 @@ tasks:
   - Run source-substitution, publisher-change, hash-mismatch, downgrade, and architecture-mismatch tests.
   - Verify reapproval is required when resolved package data changes.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0404
   title: Implement one approved machine-wide package action
   milestone: M4
@@ -2163,6 +2562,11 @@ tasks:
   - Install the pilot package on a clean Windows test image.
   - Exercise denied UAC, malformed request, stale approval, and already-installed paths.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0405
   title: Handle progress, cancellation, timeout, and network loss
   milestone: M4
@@ -2196,6 +2600,9 @@ tasks:
   - Inject cancellation, timeout, network loss, and UI termination during package operations.
   - Confirm the journal and UI distinguish failed, cancelled/review-required, and verified outcomes.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0406
   title: Verify package installation and application launch
   milestone: M4
@@ -2227,6 +2634,11 @@ tasks:
   - Test success, backend-success/package-absent, wrong-version, immediate-crash, and probe-timeout cases.
   - Confirm exit code zero alone never yields verified state.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0407
   title: Classify package failures and emit sanitized diagnostics
   milestone: M4
@@ -2263,6 +2675,13 @@ tasks:
   - Feed representative sensitive and malformed backend messages through diagnostics.
   - Run log/export redaction tests and inspect generated artifacts.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers:
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0408
   title: Resume a package action safely after reboot or process loss
   milestone: M4
@@ -2297,6 +2716,13 @@ tasks:
   - Terminate the UI and broker at documented action boundaries and restart Windows.
   - Verify reconciliation for absent, installed, wrong-version, restart-required, and ambiguous package states.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers:
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0409
   title: Make package execution idempotent and safely retryable
   milestone: M4
@@ -2329,6 +2755,11 @@ tasks:
   - Run the same completed plan twice.
   - Retry after network loss, restart, backend failure, and catalog change.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0410
   title: Complete the first write-capable end-to-end slice
   milestone: M4
@@ -2354,11 +2785,16 @@ tasks:
   - D-048
   - D-050
   - D-055
+  - D-059
+  - D-061
+  - D-062
+  - D-063
+  - D-066
   objective: Demonstrate job creation through sanitized intake, assessment, disposition, profile selection, package plan,
     approval, elevation, verification, reboot recovery, and reports.
   deliverables:
   - Windows end-to-end test harness
-  - reference-device/package test record
+  - active-machine/clean-environment package test record
   - artifacts/e2e/M4-first-write-slice.md
   acceptance_criteria:
   - The flow starts from a verified sanitization state and a policy-eligible Windows 11 x64 device.
@@ -2368,11 +2804,17 @@ tasks:
   - Workshop and recipient draft reports distinguish observations, decisions, actions, and verification.
   - A failure at any stage cannot produce a ready/handed-over result.
   verification:
-  - Run the slice on a clean supported Windows image and the physical reference device.
-  - Repeat with UAC declined, network pulled, and installer-success/package-absent injections.
+  - Run the slice on a clean supported Windows environment hosted on the active Codex machine.
+  - Repeat with UAC declined, deterministic network interruption, and installer-success/package-absent injections.
+  - Run a bounded host-machine operator walkthrough only when the selected package and rollback/cleanup are safe and approved.
   evidence: []
   human_evidence_required:
-  - A human operator completes the flow on the reference device and records usability and hardware observations.
+  - A human operator completes the flow on the active Codex machine or its clean hosted environment and records usability,
+    cleanup, and evidence limitations.
+  expected_test_tier: extended
+  full_test_triggers: []
+  extended_test_triggers:
+  - Run only the independently invokable scenarios whose named risk is changed or whose gate explicitly requires them.
 - id: TL-0411
   title: Validate the M4 package-installation gate
   milestone: M4
@@ -2393,6 +2835,10 @@ tasks:
   - D-032
   - D-033
   - D-045
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Prove the first write-capable slice is trusted, journaled, independently verified, recoverable, idempotent, and
     privacy-safe.
   deliverables:
@@ -2411,6 +2857,12 @@ tasks:
   human_evidence_required:
   - Security owner approves package and broker evidence.
   - Product owner approves the first write-capable slice.
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0501
   title: Execute dependency-aware multi-action plans
   milestone: M5
@@ -2444,6 +2896,9 @@ tasks:
   verification:
   - Run ordered, branching, failed-dependency, cyclic-plan, interruption, and resume test cases.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0502
   title: Implement essential and optional action semantics
   milestone: M5
@@ -2478,6 +2933,9 @@ tasks:
   verification:
   - Test optional skip, optional failure, essential skip, essential failure, and governed exception scenarios.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0503
   title: Preflight disk, power, and resource requirements
   milestone: M5
@@ -2495,6 +2953,10 @@ tasks:
   - D-015
   - D-025
   - D-032
+  - D-060
+  - D-061
+  - D-062
+  - D-066
   objective: Block or defer unsafe plans before changes begin when disk space, architecture, power, or other declared prerequisites
     are insufficient.
   deliverables:
@@ -2511,6 +2973,9 @@ tasks:
   verification:
   - Test boundary values, changing free space, low battery/no AC, incompatible architecture, and unknown estimates.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0504
   title: Implement a structured Windows Update workflow
   milestone: M5
@@ -2548,6 +3013,11 @@ tasks:
   evidence: []
   human_evidence_required:
   - A maintainer records integration evidence against the supported Windows 11 releases.
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0505
   title: Coordinate maintenance phases and restart checkpoints
   milestone: M5
@@ -2566,6 +3036,10 @@ tasks:
   - D-032
   - D-033
   - D-034
+  - D-060
+  - D-061
+  - D-062
+  - D-066
   objective: Run OS maintenance, required restarts, packages, checks, final restart, and verification as explicit resumable
     phases.
   deliverables:
@@ -2582,6 +3056,9 @@ tasks:
   verification:
   - Run zero-, one-, and multi-restart paths plus unexpected shutdown at each boundary.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0506
   title: Implement the v0.1 security baseline providers
   milestone: M5
@@ -2602,6 +3079,10 @@ tasks:
   - D-015
   - D-035
   - D-038
+  - D-059
+  - D-061
+  - D-062
+  - D-066
   objective: Collect and evaluate the defined Windows security and ownership baseline without claiming universal device security.
   deliverables:
   - firewall state provider
@@ -2619,11 +3100,20 @@ tasks:
   - Unknown provider data cannot pass a required baseline.
   - The UI/report says what was checked and avoids a blanket 'secure' claim.
   verification:
-  - Test healthy, disabled, unavailable, conflicting-provider, managed-device, pending-restart, and unknown states.
-  - Review provider results on the physical device matrix.
+  - Test healthy, disabled, unavailable, conflicting-provider, managed-device, pending-restart, and unknown deterministic
+    fixtures.
+  - Run read-only provider smoke checks on the active Codex machine and document residual blind spots without changing security
+    or ownership controls.
   evidence: []
   human_evidence_required:
   - Security owner reviews the provider coverage, wording, and residual blind spots.
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers:
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0507
   title: Verify the complete machine profile
   milestone: M5
@@ -2642,6 +3132,10 @@ tasks:
   - D-032
   - D-033
   - D-036
+  - D-060
+  - D-061
+  - D-062
+  - D-066
   objective: Run a separate final verification pass over updates, packages, hardware evidence, security baseline, profile
     capabilities, disk space, and restart state.
   deliverables:
@@ -2660,6 +3154,9 @@ tasks:
   - Mutate system state between execution and final verification and confirm the change is detected.
   - Test missing capability, stale evidence, pending restart, package downgrade/removal, and low-space cases.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0508
   title: Finalize the pilot catalog, policy, and profiles
   milestone: M5
@@ -2713,6 +3210,9 @@ tasks:
   human_evidence_required:
   - Product/pilot owner approves policy thresholds and application choices.
   - License/privacy reviewers approve each included catalog entry.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0509
   title: Require final cold-boot verification
   milestone: M5
@@ -2727,6 +3227,9 @@ tasks:
   - TL-0507
   decision_refs:
   - D-033
+  - D-059
+  - D-061
+  - D-066
   objective: Make a cold boot followed by fresh verification a required acceptance checkpoint for the full machine profile.
   deliverables:
   - cold-boot checkpoint
@@ -2740,11 +3243,18 @@ tasks:
   - Failure to resume or any new blocker prevents ready status.
   - The operator can see exactly which verification was completed after boot.
   verification:
-  - Perform a real cold boot on the reference device.
-  - Test stale checkpoint, copied resume token, changed device/job, and post-boot failure.
+  - At the explicit M5 trigger, perform a real supported shutdown and cold boot of the active Codex machine or a cold start
+    of a clean VM only when the checkpoint contract requires that environment; record which was used.
+  - Test stale checkpoint, copied resume token, changed device/job, ambiguous shutdown, and post-boot failure.
   evidence: []
   human_evidence_required:
-  - A human confirms a physical cold boot and records representative hardware behavior after restart.
+  - A human confirms the required cold-boot sequence on the active Codex machine when host-level boot evidence is required
+    and records only sanitized continuity observations.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers:
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0510
   title: Run the full-profile and failure-injection matrix
   milestone: M5
@@ -2771,28 +3281,50 @@ tasks:
   - D-048
   - D-050
   - D-055
-  objective: Prove the job-seeker machine profile converges safely across the supported VM and physical-device matrix and
-    common interruption modes.
+  - D-059
+  - D-060
+  - D-061
+  - D-062
+  - D-063
+  - D-065
+  - D-066
+  objective: Prove the job-seeker machine profile converges safely in clean Windows environments and risk-relevant constrained/failure
+    scenarios hosted on the active Codex machine.
   deliverables:
   - automated M5 end-to-end suite
   - failure-injection harness/results
-  - physical-device matrix results
+  - same-machine constraint and reference-profile results
   - performance and accessibility results
   - artifacts/e2e/M5-full-profile.md
   acceptance_criteria:
-  - The reference profile completes on supported Windows 11 test images and the approved physical reference device.
+  - The reference profile completes on supported clean Windows 11 environments hosted on the active Codex machine.
   - Optional failures do not corrupt essential work; essential failures block ready status.
   - Low space is detected before installation and multi-restart update paths recover.
-  - Network pull, UI kill, broker kill, disk fill, changed metadata, wrong clock, broken source, success-without-install,
-    and launch-crash cases are covered.
-  - Startup, inventory, resume, memory, UI responsiveness, and database growth are measured on low-spec hardware.
-  - Keyboard-only, screen-reader, 200% scaling, high contrast, and low-resolution paths are recorded.
+  - Network interruption, UI kill, broker kill, constrained disk, changed metadata, wrong clock, broken source, success-without-install,
+    and launch-crash cases are independently invokable and covered.
+  - Startup, inventory, resume, peak memory, CPU time, elapsed time, temporary storage, UI responsiveness, cache/database
+    growth, and output size are measured against hashed workloads on the active reference machine.
+  - No-GPU, conservative concurrency, low-priority/single-worker, offline, low-free-space, and slow-destination modes preserve
+    correctness, cancellation, and recovery.
+  - Keyboard-only, screen-reader, 200% scaling, high contrast, and reduced-resolution paths are recorded on the active machine
+    or its clean hosted environment.
+  - Results state that constraints are regression-finding tools, not evidence that every modest device was tested.
   verification:
-  - Run the published VM, physical, failure, accessibility, and performance procedures.
-  - Store versioned, reviewable results without personal data.
+  - Run the published full tier followed only by risk-triggered, individually invokable extended scenarios on the active Codex
+    machine.
+  - Store commands, durations, reference-machine profile, constraint settings, workload hashes, results, cleanup, and rerun
+    evidence without personal data.
+  - Rerun failed scenarios and their targeted regression set rather than the entire matrix unless a shared cause is suspected.
   evidence: []
   human_evidence_required:
-  - Human testers complete the physical-device and accessibility portions and record unresolved defects.
+  - Accessibility and operator reviewers complete their assigned flows on the active Codex machine and record unresolved defects
+    and evidence limitations.
+  expected_test_tier: extended
+  full_test_triggers: []
+  extended_test_triggers:
+  - Run only the independently invokable scenarios whose named risk is changed or whose gate explicitly requires them.
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0511
   title: Validate the M5 full-machine-profile gate
   milestone: M5
@@ -2818,22 +3350,34 @@ tasks:
   - D-048
   - D-050
   - D-055
+  - D-059
+  - D-060
+  - D-061
+  - D-062
+  - D-066
   objective: Prove ThirdLife can apply and verify the pilot machine profile across update, package, security, restart, and
     failure scenarios.
   deliverables:
   - artifacts/gates/M5-full-machine-profile.md
   acceptance_criteria:
-  - The job-seeker machine profile succeeds on the approved test matrix.
+  - The job-seeker machine profile succeeds in the approved same-machine clean-environment and constraint scenarios.
   - Essential/optional semantics and free-space protection behave as specified.
   - Windows Update and package work survive required restart cycles.
   - The security baseline is evidence-based and ownership blockers fail closed.
-  - Final cold-boot verification records exact versions and unresolved warnings.
-  - Failure, accessibility, privacy, and performance results have no unresolved release blocker.
+  - Final cold-boot verification on the active Codex machine records exact versions and unresolved warnings.
+  - Failure, accessibility, privacy, and resource-regression results have no unresolved release blocker.
+  - The gate record limits hardware claims to the active reference machine and documented constraints.
   verification:
   - Run clean-checkout verification, the M5 matrix, bundle validation, and gate review.
   evidence: []
   human_evidence_required:
   - Product, security, accessibility, and pilot test owners approve the M5 gate record.
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0601
   title: Implement finalization rules and checklist state
   milestone: M6
@@ -2867,6 +3411,9 @@ tasks:
   verification:
   - Test passed, failed, unknown, human-confirmed, not-applicable, reopened-job, and changed-system-state cases.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0602
   title: Detect bounded workshop artifacts
   milestone: M6
@@ -2903,6 +3450,9 @@ tasks:
   - Seed known artifacts and sensitive decoys, run detection, and inspect all stored/exported evidence.
   - Run path traversal, junction/symlink, access-denied, and oversized-directory tests.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0603
   title: Support assisted and sealed handover models
   milestone: M6
@@ -2938,6 +3488,9 @@ tasks:
   - Run both handover modes and inspect records for recipient-secret leakage.
   - Test switching modes after partial completion.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0604
   title: Generate the technical workshop record
   milestone: M6
@@ -2975,6 +3528,9 @@ tasks:
   - Compare golden reports for representative ready, repair, review, alternative-OS, and do-not-deploy jobs.
   - Run HTML/markup injection and long-text tests.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0605
   title: Generate the plain-language recipient guide
   milestone: M6
@@ -2994,6 +3550,10 @@ tasks:
   - D-036
   - D-039
   - D-040
+  - D-060
+  - D-061
+  - D-062
+  - D-066
   objective: Create an accessible handover guide explaining installed capabilities, updates, file/backup next steps, accessibility,
     support, charger/device notes, and limitations.
   deliverables:
@@ -3014,6 +3574,9 @@ tasks:
   evidence: []
   human_evidence_required:
   - A representative nontechnical reviewer approves plain-language clarity.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0606
   title: Build a previewable sanitized diagnostic bundle
   milestone: M6
@@ -3053,6 +3616,9 @@ tasks:
   - Run seeded-PII, path attack, symlink/junction, huge-input, cancelled-export, and hostile-destination tests.
   - Manually inspect a representative bundle.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0607
   title: Enforce final sign-off and the blocking handover gate
   milestone: M6
@@ -3094,6 +3660,9 @@ tasks:
     mutation.
   - Verify only the complete eligible path succeeds.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0608
   title: Complete the v0.1 accessibility audit
   milestone: M6
@@ -3111,6 +3680,10 @@ tasks:
   decision_refs:
   - D-003
   - D-039
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Audit the complete operator and handover flow for keyboard, screen-reader, scaling, contrast, focus, announcements,
     cancellation, and error recovery.
   deliverables:
@@ -3131,6 +3704,10 @@ tasks:
   evidence: []
   human_evidence_required:
   - A human accessibility reviewer signs the completed audit and residual finding list.
+  expected_test_tier: extended
+  full_test_triggers: []
+  extended_test_triggers:
+  - Run only the independently invokable scenarios whose named risk is changed or whose gate explicitly requires them.
 - id: TL-0609
   title: Complete the v0.1 security and privacy release review
   milestone: M6
@@ -3157,6 +3734,10 @@ tasks:
   - D-035
   - D-037
   - D-043
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Review the complete privileged, package, persistence, path, logging, export, and release surfaces against the
     threat and privacy models.
   deliverables:
@@ -3179,6 +3760,13 @@ tasks:
   evidence: []
   human_evidence_required:
   - Named security and privacy owners sign the review and residual-risk register.
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers:
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0610
   title: Package the controlled pilot and operating runbook
   milestone: M6
@@ -3204,6 +3792,10 @@ tasks:
   - D-046
   - D-047
   - D-056
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Produce a reproducible signed-or-clearly-development pilot build, deployment/rollback instructions, operator
     procedure, support process, and evidence collection plan.
   deliverables:
@@ -3235,6 +3827,12 @@ tasks:
   human_evidence_required:
   - Pilot partner/operator rehearses the runbook and acknowledges known limitations.
   - Release owner approves the manifest and rollback procedure.
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0611
   title: Validate the M6 and v0.1 controlled-pilot gate
   milestone: M6
@@ -3258,6 +3856,13 @@ tasks:
   - D-047
   - D-056
   - D-057
+  - D-058
+  - D-059
+  - D-060
+  - D-061
+  - D-062
+  - D-063
+  - D-066
   objective: Authorize a controlled partner pilot only after all technical gates, audits, reports, runbooks, and named human
     approvals are complete.
   deliverables:
@@ -3270,8 +3875,10 @@ tasks:
   - Workshop, recipient, and diagnostic outputs meet their data-boundary rules.
   - The support bundle is previewable before export.
   - Security/privacy and accessibility audits have no unresolved release blocker.
-  - The pilot build and runbook reproduce on the approved Windows/device matrix.
-  - Known limitations state exactly what ThirdLife did and did not verify.
+  - The pilot build and runbook reproduce from a clean clone and supported clean Windows environment on the active Codex machine.
+  - The test manifest identifies quick, targeted, full, and extended commands, durations, skipped tiers, constraints, and
+    limitations.
+  - Known limitations state exactly what ThirdLife did and did not verify and make no cross-hardware certification claim.
   - Named owners approve scope, security, privacy, accessibility, licensing, and pilot operations.
   - The gate record states that Core 1.0 accessibility/backup completion, stable lifecycle evidence, release-interface freeze,
     and portfolio handoff remain pending in M7.
@@ -3289,6 +3896,12 @@ tasks:
   - Codex may prepare this gate record and evidence index, but it must never mark TL-0611 done or claim pilot authorization
     without the named human approvals.
   - Passing TL-0611 authorizes only the controlled pilot. It does not authorize Team B to leave B1 or begin B4 suite integration.
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0701
   title: Implement recipient-controlled accessibility setup
   milestone: M7
@@ -3306,6 +3919,10 @@ tasks:
   - D-039
   - D-047
   - D-057
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Guide a present recipient through supported accessibility choices with preview, explicit scope, journaling, verification,
     and reversal while sealed handover leaves personal choices pending.
   deliverables:
@@ -3329,6 +3946,9 @@ tasks:
   human_evidence_required:
   - Accessibility reviewer validates the recipient-setting workflow and reversal limitations.
   - A representative recipient or proxy completes the choice/preview/apply/verify or sealed-handover path.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0702
   title: Implement basic operating-system backup onboarding and restore verification
   milestone: M7
@@ -3348,6 +3968,10 @@ tasks:
   - D-047
   - D-053
   - D-057
+  - D-059
+  - D-061
+  - D-062
+  - D-066
   objective: Provide a recipient-present, basic operating-system backup onboarding workflow using supported mechanisms, destination
     checks, a harmless restore test, and clear recovery ownership without building a backup engine.
   deliverables:
@@ -3367,13 +3991,21 @@ tasks:
   - Recovery material never enters ordinary logs, reports, support bundles, ThirdLife metadata, or future suite metadata.
   - Backup Circle is not invoked, configured, or treated as a dependency.
   verification:
-  - Run supported, unavailable, insufficient-space, credential-denied, interrupted, failed-backup, failed-restore, successful-restore,
-    and sealed-handover tests.
-  - Perform human restore drills on approved physical devices/destinations.
+  - Run deterministic supported, unavailable, insufficient-space, credential-denied, interrupted, failed-backup, failed-restore,
+    successful-restore, and sealed-handover tests.
+  - Perform a recipient/proxy restore workflow on the active Codex machine using a safe organization-controlled test destination,
+    disposable virtual disk, or isolated local test destination; no second computer is required.
   evidence: []
   human_evidence_required:
   - A recipient/proxy completes a supported backup and harmless restore test or records a truthful unsupported/pending outcome.
   - Security/privacy owner confirms recovery-material isolation.
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers:
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0703
   title: Finalize standalone data ownership, profile export, and uninstall semantics
   milestone: M7
@@ -3411,6 +4043,11 @@ tasks:
   - Run path/data-map tests and compare installer/uninstaller behavior with the documentation.
   - Search the release package for undocumented persistent locations and sibling data access.
   evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0704
   title: Harden install, update, repair, uninstall, and data preservation
   milestone: M7
@@ -3433,6 +4070,10 @@ tasks:
   - D-052
   - D-053
   - D-056
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Prove the standalone application lifecycle on clean and upgraded Windows installations without a mandatory account,
     sibling app, permanent privileged service, or unintended data loss.
   deliverables:
@@ -3456,6 +4097,12 @@ tasks:
   evidence: []
   human_evidence_required:
   - Release owner reviews the installer lifecycle and data-preservation behavior on the supported Windows matrix.
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0705
   title: Finalize stable security, accessibility, low-spec, and support documentation
   milestone: M7
@@ -3477,6 +4124,11 @@ tasks:
   - D-052
   - D-056
   - D-057
+  - D-059
+  - D-060
+  - D-061
+  - D-062
+  - D-066
   objective: Replace placeholders in SECURITY.md, ACCESSIBILITY.md, LOW_SPEC.md, support guidance, and known limitations with
     evidence from the complete Core 1.0 behavior.
   deliverables:
@@ -3487,17 +4139,27 @@ tasks:
   - docs/known-limitations.md
   - documentation evidence index
   acceptance_criteria:
-  - Every claim is linked to automated, Windows, physical, accessibility, or human evidence and distinguishes untested configurations.
+  - Every claim is linked to automated, Windows, same-machine constrained, accessibility, or human evidence and distinguishes
+    unobserved configurations.
   - Security reporting, support, maintenance status, and stop-use guidance are defined.
-  - Practical resource evidence is published without converting limited tests into universal minimum claims.
+  - Practical resource evidence is published with the active reference-machine profile, workload hashes, and constraint settings
+    without converting limited tests into universal minimum claims.
   - Accessibility and backup onboarding limitations are explicit.
-  - Documentation states that no sibling integration or B4 compatibility claim is included.
+  - Documentation states that no sibling integration, B4 compatibility, hardware-lab, or cross-hardware certification claim
+    is included.
   verification:
   - Validate links/evidence references and review every support/limitation claim against test results.
   - Run a documentation accessibility and plain-language review.
   evidence: []
   human_evidence_required:
   - Security/privacy, accessibility, low-spec/release, and support owners approve their final sections and residual limitations.
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers:
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0706
   title: Complete the minimal release interface and black-box samples
   milestone: M7
@@ -3520,6 +4182,10 @@ tasks:
   - D-052
   - D-053
   - D-056
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Publish the human-readable minimal black-box interface for the exact Core 1.0 release without creating a shared
     API or sibling-specific integration contract.
   deliverables:
@@ -3543,6 +4209,11 @@ tasks:
   evidence: []
   human_evidence_required:
   - Portfolio owner reviews the interface sheet for sufficiency without speculative coupling.
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0707
   title: Run the Core 1.0 standalone stable-release matrix
   milestone: M7
@@ -3568,32 +4239,54 @@ tasks:
   - D-052
   - D-056
   - D-057
+  - D-059
+  - D-060
+  - D-061
+  - D-062
+  - D-063
+  - D-066
   objective: Run the complete standalone, offline-core, low-spec, hostile-input, lifecycle, accessibility, backup, failure,
     and data-preservation matrix for the Core 1.0 release candidate.
   deliverables:
   - artifacts/matrices/core-1.0-stable.md
   - clean/upgrade/uninstall results
-  - offline and constrained-resource results
+  - offline and same-machine constrained-resource results
   - accessibility and recipient-onboarding results
   - security/privacy and hostile-input results
-  - physical-device and cold-boot results
-  - defect disposition and rerun evidence
+  - active-machine cold-boot and continuity results
+  - defect disposition and targeted rerun evidence
   acceptance_criteria:
   - The full primary workflow works without a sibling application, account, ThirdLife server, or permanent privileged service.
-  - Inventory, policy, manual tests, evidence review, and reports work offline; network-dependent actions fail recoverably
+  - Inventory, policy, manual-test workflow, evidence review, and reports work offline; network-dependent actions fail recoverably
     and visibly.
-  - Low-resource tests show bounded memory/temp/cache behavior and no corruption or loss of safe cancellation.
+  - Same-machine low-resource scenarios show bounded peak memory, temporary/cache growth, correct output, and safe cancellation/recovery.
   - Recipient accessibility and supported backup/restore or explicit pending/unsupported paths pass their matrices.
-  - Install, upgrade/repair, migration, rollback/non-rollback, uninstall, and data preservation pass.
-  - All critical/high defects are fixed and rerun or block release.
-  - No test uses a sibling development build or private interface.
+  - Install, upgrade/repair, migration, rollback/non-rollback, uninstall, and data preservation pass in clean and upgraded
+    environments hosted on the active Codex machine.
+  - All critical/high defects are fixed and their smallest deterministic cases plus related targeted sets rerun, or they block
+    release.
+  - No test uses a sibling development build, private interface, external hardware matrix, or authoritative remote runtime
+    runner.
+  - Release evidence states the active reference-machine profile, exact constraint methods, skipped scenarios, and limits
+    on hardware claims.
   verification:
-  - Run clean-checkout repository verification and all documented VM/physical/security/privacy/accessibility/low-spec/lifecycle
-    matrices.
-  - Inspect generated reports, databases, logs, uninstall remnants, and support bundles.
+  - Run clean-clone verification and all documented full plus risk-triggered extended security/privacy/accessibility/resource/lifecycle
+    scenarios on the active Codex machine.
+  - Inspect generated reports, databases, logs, uninstall remnants, support bundles, benchmark records, and test manifest.
+  - Confirm each slow scenario is independently invokable and that failures were rerun at scenario/targeted scope before any
+    broad rerun.
   evidence: []
   human_evidence_required:
-  - Physical-device, accessibility, backup-restore, low-spec, and operator runs are signed by their authorized reviewers.
+  - Accessibility, backup-restore, operator, security/privacy, and release reviewers sign their assigned evidence produced
+    on the active Codex machine and acknowledge the absence of cross-hardware certification.
+  expected_test_tier: extended
+  full_test_triggers:
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers:
+  - Run only the independently invokable scenarios whose named risk is changed or whose gate explicitly requires them.
+  - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
+    risk affected by the task.
 - id: TL-0708
   title: Freeze ThirdLife Setup Core 1.0 release artifacts
   milestone: M7
@@ -3613,6 +4306,10 @@ tasks:
   - D-049
   - D-052
   - D-056
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Create the exact independently releasable Core 1.0 compatibility candidate and immutable evidence package that
     a later B4 project may consume as a black box.
   deliverables:
@@ -3635,6 +4332,12 @@ tasks:
   evidence: []
   human_evidence_required:
   - Release/licence owner approves the frozen manifest, SBOM, notices, and distribution rights.
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []
 - id: TL-0709
   title: Review standalone integrity and portfolio-boundary compliance
   milestone: M7
@@ -3659,6 +4362,10 @@ tasks:
   - D-054
   - D-055
   - D-056
+  - D-058
+  - D-059
+  - D-061
+  - D-063
   objective: Prove the frozen release obeys the Team B/B1 boundary, remains standalone, exposes only the minimal release envelope,
     and leaves all sibling adapters and suite work to B4.
   deliverables:
@@ -3681,6 +4388,9 @@ tasks:
   evidence: []
   human_evidence_required:
   - Portfolio owner approves the boundary review and Team B transition recommendation.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
 - id: TL-0710
   title: Validate the M7 and ThirdLife Setup Core 1.0 standalone release gate
   milestone: M7
@@ -3709,6 +4419,13 @@ tasks:
   - D-055
   - D-056
   - D-057
+  - D-058
+  - D-059
+  - D-060
+  - D-061
+  - D-062
+  - D-063
+  - D-066
   objective: Authorize ThirdLife Setup Core 1.0 as the independently releasable Team B/B1 product and freeze its portfolio
     handoff without authorizing B4 suite work.
   deliverables:
@@ -3723,14 +4440,16 @@ tasks:
     project-controlled server.
   - Recipient-controlled accessibility and basic operating-system backup behavior meets D-057 and exposes no unauthorized
     recovery material.
-  - Installer, update, repair, migration, rollback/non-rollback, uninstall, offline core, low-spec, security/privacy, accessibility,
-    and data-preservation evidence pass.
+  - Installer, update, repair, migration, rollback/non-rollback, uninstall, offline core, same-machine modest-hardware, security/privacy,
+    accessibility, and data-preservation evidence pass.
   - Exact artifacts, hashes, source revision, dependency lock, SBOM, licences, notices, known limitations, samples, and RELEASE_INTERFACE.md
     are frozen.
   - The boundary review finds no live cross-project dependency or early shared integration infrastructure.
   - The release handoff is suitable for a future black-box B4 compatibility cut but contains no adapter or suite support claim.
-  - Named owners approve release, security, privacy, accessibility, low-spec, licensing, support, product boundary, and Team
-    B transition.
+  - Release wording limits hardware claims to design intent, the active reference-machine observations, and documented same-machine
+    constraints.
+  - Named owners approve release, security, privacy, accessibility, modest-hardware claim boundaries, licensing, support,
+    product boundary, and Team B transition.
   verification:
   - Run complete clean-checkout and stable-release verification and validate every evidence link/hash.
   - Conduct the documented human stable-release and portfolio-boundary go/no-go review.
@@ -3745,10 +4464,9 @@ tasks:
   - Codex may prepare the gate record and evidence index but must never mark TL-0710 done or claim stable-release approval
     without all named human approvals.
   - Passing this gate does not authorize ThirdLife Deployment and Suite Assembly B4 or any sibling adapter work.
-portfolio:
-  roadmap_version: '2.0'
-  development_posture: standalone project vacuum
-  integration_posture: late binding against frozen stable releases
-  active_cross_project_dependencies_allowed: false
-  sibling_specific_work_authorized: false
-  next_team_project_after_stable: Scam Explainer
+  expected_test_tier: full
+  full_test_triggers:
+  - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
+  - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
+    security boundary.
+  extended_test_triggers: []

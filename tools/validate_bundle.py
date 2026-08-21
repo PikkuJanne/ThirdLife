@@ -7,14 +7,17 @@ Run from any directory:
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import re
 import subprocess
 import sys
+import unicodedata
 from collections import defaultdict, deque
 from datetime import date
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import yaml
 
@@ -26,7 +29,11 @@ REQUIRED_FILES = (
     "TASKS.yaml",
     "AGENTS.md",
     "CODEX_START_PROMPT.md",
+    "CODEX_TL0008_TRANSITION_PROMPT.md",
     "README.md",
+    "STATUS.md",
+    "DEVELOPMENT_WORKFLOW.md",
+    "TESTING.md",
     "TASKS.schema.json",
     "PROJECT_BOUNDARY.md",
     "SECURITY.md",
@@ -34,17 +41,27 @@ REQUIRED_FILES = (
     "LOW_SPEC.md",
     "RELEASE_INTERFACE.md",
     "FUTURE_ASSEMBLY_NOTES.md",
+    "TL-0008_TRANSITION.md",
     "CHANGELOG.md",
     "docs/change-control.md",
     "docs/glossary.md",
     "docs/non-goals.md",
     "docs/product-contract.md",
+    "docs/history/TL-0008-draft-1-superseded.md",
     "docs/security/abuse-cases.md",
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
+    "docs/testing/accessibility-matrix.md",
+    "docs/testing/capability-risk-matrix.md",
+    "docs/testing/failure-injection.md",
+    "docs/testing/manual-hardware-tests.md",
+    "docs/testing/reference-machine-profile.md",
+    "docs/testing/same-machine-constraints.md",
+    "tools/merge_task_contracts.py",
     "tools/requirements.txt",
     "tools/tests/test_validate_bundle.py",
 )
+BUNDLE_MANIFEST_FILE = "BUNDLE_MANIFEST.sha256"
 TASK_ID_RE = re.compile(r"^TL-\d{4}$")
 DECISION_ID_RE = re.compile(r"^D-\d{3}$")
 MILESTONE_ID_RE = re.compile(r"^M\d+$")
@@ -116,8 +133,11 @@ AUTHORITY_ORDER = (
     "SECURITY.md",
     "ACCESSIBILITY.md",
     "LOW_SPEC.md",
+    "DEVELOPMENT_WORKFLOW.md",
+    "TESTING.md",
     "AGENTS.md",
     "TASKS.yaml",
+    "STATUS.md",
     "CODEX_START_PROMPT.md",
     "README.md",
 )
@@ -143,6 +163,18 @@ SECURITY_BOUNDARY_IDS = (
     "TB-RECIPIENT",
     "TB-RELEASE-SUPPLY",
     "TB-FUTURE-B4",
+)
+TESTING_DOCUMENTS = (
+    "TESTING.md",
+    "DEVELOPMENT_WORKFLOW.md",
+    "STATUS.md",
+    "docs/testing/accessibility-matrix.md",
+    "docs/testing/capability-risk-matrix.md",
+    "docs/testing/failure-injection.md",
+    "docs/testing/manual-hardware-tests.md",
+    "docs/testing/reference-machine-profile.md",
+    "docs/testing/same-machine-constraints.md",
+    "docs/history/TL-0008-draft-1-superseded.md",
 )
 SECURITY_MACHINE_PATH_RE = re.compile(
     r"(?i)(?:\b[a-z]:[\\/]|\\\\[^\\/\s]+[\\/][^\\/\s]+|"
@@ -186,7 +218,34 @@ ALLOWED_ENVIRONMENT = {"any", "windows"}
 ALLOWED_SIZE = {"S", "M", "L", "XL"}
 ALLOWED_PRIORITY = {"P0", "P1", "P2", "P3"}
 ALLOWED_KIND = {"build", "code", "data", "docs", "gate", "release", "security", "spike", "test"}
+ALLOWED_TEST_TIER = {"quick", "targeted", "full", "extended"}
 MUTABLE_FIELDS = ["status", "evidence", "blocked_reason"]
+
+V030_BUNDLE_VERSION = "0.3.0"
+V030_GENERATED_ON = "2026-08-15"
+V030_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 67))
+V030_TASK_COUNT = 91
+V030_TL0008_SOURCE_COMMIT = "4fa3ea050fd5e9985fde9cc8218281698d371cc8"
+V030_TL0008_PROCEDURE_DIGEST = (
+    "ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b"
+)
+
+# Exact fragments from the superseded draft that are never valid as live
+# instructions. Historical and explicit rejection text remains permitted.
+OBSOLETE_ACTIVE_PHRASES = (
+    "assign it a sanitized id such as `lab-device-001`",
+    "you only need to complete the physical device pool",
+    "select a safe reference device",
+    "gather approved equipment",
+    "send me the results",
+    "create explicit pilot blockers for missing classes",
+    "record the actual device pool",
+    "approved physical lab device",
+    "required physical reference device",
+    "physical only | required human-confirmed reference",
+    "physical-device matrix results",
+    "review provider results on the physical device matrix",
+)
 
 
 class Validation:
@@ -1162,6 +1221,566 @@ def validate_security_documents(
             validation.error(f"{relative}: contains a machine-specific path")
 
 
+def canonical_testing_scan_text(text: str) -> str:
+    canonical = unicodedata.normalize("NFKC", text)
+    for _ in range(64):
+        decoded = unquote(canonical)
+        if decoded == canonical:
+            break
+        canonical = unicodedata.normalize("NFKC", decoded)
+    return canonical
+
+
+def testing_sensitive_match(text: str) -> str | None:
+    patterns = (
+        ("email address", r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b"),
+        ("IPv4 address", r"(?<![\d.])(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}(?![\d.])"),
+        ("MAC address", r"(?i)\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b"),
+        ("MAC address", r"(?i)\b(?:[0-9a-f]{4}\.){2}[0-9a-f]{4}\b"),
+        ("Windows SID", r"\bS-1-(?:\d+-){1,14}\d+\b"),
+        ("UUID", r"(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b"),
+        ("GitHub token", r"\bgh[pousr]_[A-Za-z0-9]{20,}\b"),
+        ("bearer token", r"(?i)\bbearer\s+[A-Za-z0-9._~+/-]{12,}={0,2}\b"),
+        ("Slack token", r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b"),
+        ("cloud access key", r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
+        ("private-key material", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+        ("recovery-key shaped value", r"\b\d{6}(?:-\d{6}){7}\b"),
+        ("labelled device identifier", r"(?i)\b(?:serial(?:\s+number)?|service[_ -]?tag|hostname|ssid)\s*[:=]\s*[^\s|,;]+"),
+        ("labelled device identifier", r"(?i)\b(?:serial\s+number|service[_ -]?tag)\s+[A-Z0-9-]{6,}\b"),
+        ("labelled device identifier", r"(?i)\basset[_ -]?tag\s*[:=]\s*[^\s|,;]+"),
+    )
+    for label, pattern in patterns:
+        if re.search(pattern, text):
+            return label
+    for token in re.findall(
+        r"(?i)(?<![0-9a-z])\[?[0-9a-f:]{2,}\]?(?![0-9a-z])",
+        text,
+    ):
+        candidate = token.strip("[]")
+        if candidate.count(":") < 2:
+            continue
+        try:
+            if ipaddress.ip_address(candidate).version == 6:
+                return "IPv6 address"
+        except ValueError:
+            continue
+    return None
+
+
+def testing_document_ids(text: str, prefix: str) -> tuple[str, ...]:
+    """Return first-column testing IDs, accepting harmless Markdown styling."""
+
+    return tuple(
+        re.findall(
+            rf"^\|\s*(?:`|\*\*)?({re.escape(prefix)}-[A-Z0-9-]+)(?:`|\*\*)?\s*\|",
+            text,
+            re.MULTILINE,
+        )
+    )
+
+
+def same_machine_constraint_ids(text: str) -> tuple[str, ...]:
+    """Return detailed-profile headings, accepting optional backticks."""
+
+    return tuple(
+        re.findall(r"^##(?:\s+\d+\.)?\s+`?(SMC-[A-Z0-9-]+)`?\s*$", text, re.MULTILINE)
+    )
+
+
+def has_obsolete_active_hardware_obligation(line: str, heading: str = "") -> bool:
+    """Identify a live obligation to obtain external physical test hardware.
+
+    The v0.3.0 documents intentionally discuss the retired lab model in negative,
+    historical, search, and supersession contexts. Those references remain valid;
+    affirmative requirements do not.
+    """
+
+    if any(phrase in line.casefold() for phrase in OBSOLETE_ACTIVE_PHRASES):
+        return True
+    folded = unicodedata.normalize("NFKC", f"{heading} {line}").casefold()
+    folded = re.sub(r"[*_`]+", "", folded)
+
+    hardware = re.search(
+        r"\b(?:hardware[- ]lab|device[- ]pool|lab machines?|lab devices?|"
+        r"second physical (?:computer|machine|pc)|lower[- ]performance (?:computer|machine|device)|"
+        r"external (?:hardware|runtime) matrix|remote runtime (?:runner|matrix)|"
+        r"authoritative remote runtime (?:ci|runner)|physical[- ]device matrix)\b",
+        folded,
+    )
+    if hardware is None:
+        return False
+
+    safe_context = re.search(
+        r"\b(?:obsolete|supersed(?:e|ed|es|ing)|former|historical|retired|"
+        r"earlier|previous|would have|requested|"
+        r"replace(?:d|s|ment)?|reject(?:ed|s|ion)?|prohibit(?:ed|s|ion)?|"
+        r"search(?:ed|es|ing)?|audit(?:ed|s|ing)?|absence|limitation|"
+        r"not required|not authoritative|not (?:itself )?a blocker|does not require|"
+        r"not (?:a|an|the) (?:hardware[- ]lab|device[- ]pool|physical[- ]device matrix)|"
+        r"no [^.\n]{0,120}\b(?:uses?|requires?|depends?)\b|"
+        r"do not (?:require|seek|create|assemble|maintain|use|execute|run)|"
+        r"must not (?:require|seek|create|assemble|maintain|use|execute|run)|"
+        r"no (?:device|hardware|physical|lab|second|external|remote|volunteer)|"
+        r"without (?:requiring|using|a)|cannot (?:require|be required))\b",
+        folded,
+    )
+    if safe_context is not None:
+        return False
+
+    obligation = re.search(
+        r"\b(?:must|required|requires?|shall|need(?:ed)?|mandatory|block(?:er|s|ed|ing)?|"
+        r"obtain|acquire|assemble|build|create|select|assign|gather|provide|complete|execute|run)\b",
+        folded,
+    )
+    return obligation is not None
+
+
+def has_prohibited_hardware_claim(line: str, heading: str = "") -> bool:
+    """Reject affirmative hardware claims that exceed same-machine evidence."""
+
+    folded = unicodedata.normalize("NFKC", f"{heading} {line}").casefold()
+    prohibited = re.search(
+        r"\b(?:certified for (?:low[- ]end|modest) (?:pcs?|hardware)|"
+        r"works on all windows 11 devices|hardware independent|"
+        r"tested across (?:4|8)\s*gb (?:systems?|devices?)|"
+        r"(?:vm|virtual[- ]machine|same[- ]machine|synthetic fixture) evidence proves physical|"
+        r"(?:simulation|process limits?|synthetic fixtures?) (?:reproduces?|certifies?) a (?:specific )?real device|"
+        r"minimum (?:cpu|ram|memory|storage) (?:is|of)|"
+        r"(?:procedure|run|result|thirdlife) (?:certifies|guarantees)\b)",
+        folded,
+    )
+    if prohibited is None:
+        return False
+    return re.search(
+        r"\b(?:not permitted|may not|must not|do not|does not|cannot|never|"
+        r"no document|absence|unverified|not a claim|not certified|without separate evidence)\b",
+        folded,
+    ) is None
+
+
+def validate_task_test_tier(
+    task_id: str,
+    task: dict[str, Any],
+    validation: Validation,
+) -> None:
+    tier = task.get("expected_test_tier")
+    if tier not in ALLOWED_TEST_TIER:
+        validation.error(f"{task_id}: invalid expected_test_tier {tier!r}")
+
+    for field in ("full_test_triggers", "extended_test_triggers"):
+        require_nonempty_string_list(
+            task_id,
+            task,
+            field,
+            validation,
+            allow_empty=True,
+        )
+
+    if tier == "extended" and not task.get("extended_test_triggers"):
+        validation.error(
+            f"{task_id}: extended tier requires at least one extended_test_triggers item"
+        )
+    if (
+        tier == "full"
+        and task.get("kind") in {"gate", "release"}
+        and not task.get("full_test_triggers")
+    ):
+        validation.error(
+            f"{task_id}: full gate/release task requires full_test_triggers"
+        )
+
+
+def validate_tl0008_contract(
+    validation: Validation,
+    task_by_id: dict[str, dict[str, Any]],
+) -> None:
+    task = task_by_id.get("TL-0008")
+    if not isinstance(task, dict):
+        validation.error("TASKS.yaml: missing TL-0008")
+        return
+
+    expected_fields = {
+        "title": "Define the same-machine validation system and manual-test specification",
+        "executor": "codex",
+        "environment": "windows",
+        "expected_test_tier": "quick",
+    }
+    for field, expected in expected_fields.items():
+        if task.get(field) != expected:
+            validation.error(f"TL-0008: {field} must equal {expected!r}")
+
+    if "human_evidence_required" in task:
+        validation.error(
+            "TL-0008: revised contract must not require physical-device or walkthrough evidence"
+        )
+    if task.get("full_test_triggers") != []:
+        validation.error("TL-0008: full_test_triggers must be empty")
+    if task.get("extended_test_triggers") != []:
+        validation.error("TL-0008: extended_test_triggers must be empty")
+
+    required_decisions = {f"D-{index:03d}" for index in range(58, 67)}
+    missing_decisions = sorted(required_decisions - set(task.get("decision_refs", [])))
+    if missing_decisions:
+        validation.error(
+            f"TL-0008: missing v0.3.0 decision references {missing_decisions}"
+        )
+
+    required_deliverables = {
+        "TESTING.md",
+        "DEVELOPMENT_WORKFLOW.md",
+        "STATUS.md",
+        "docs/testing/reference-machine-profile.md",
+        "docs/testing/capability-risk-matrix.md",
+        "docs/testing/same-machine-constraints.md",
+        "docs/testing/manual-hardware-tests.md",
+        "docs/testing/failure-injection.md",
+        "docs/testing/accessibility-matrix.md",
+        "LOW_SPEC.md benchmark and claim-boundary procedure",
+        "docs/history/TL-0008-draft-1-superseded.md or an equivalent preserved supersession record",
+    }
+    deliverables = set(task.get("deliverables", []))
+    missing_deliverables = sorted(required_deliverables - deliverables)
+    if missing_deliverables:
+        validation.error(
+            f"TL-0008: missing revised deliverables {missing_deliverables}"
+        )
+    if "docs/testing/device-matrix.md" in deliverables:
+        validation.error(
+            "TL-0008: obsolete docs/testing/device-matrix.md must not remain a deliverable"
+        )
+
+    task_contract = "\n".join(
+        str(value)
+        for field in ("objective", "acceptance_criteria", "verification")
+        for value in (
+            task.get(field, []) if isinstance(task.get(field), list) else [task.get(field, "")]
+        )
+    ).casefold()
+    for marker in (
+        "active codex machine",
+        "quick, targeted, full, and extended",
+        "mht-001–mht-021",
+        "cannot claim broad hardware certification",
+        "superseded procedure",
+        "reference-machine profile",
+    ):
+        if marker not in task_contract:
+            validation.error(f"TL-0008: revised contract is missing {marker!r}")
+
+
+def validate_no_obsolete_hardware_obligations(
+    validation: Validation,
+    documents: dict[str, str],
+) -> None:
+    for relative, body in documents.items():
+        current_heading = ""
+        for line_number, line in enumerate(body.splitlines(), start=1):
+            if re.match(r"^#{1,6}\s+", line):
+                current_heading = line
+            if has_obsolete_active_hardware_obligation(line, current_heading):
+                validation.error(
+                    f"{relative}:{line_number}: contains an obsolete active hardware-lab obligation"
+                )
+
+
+def validate_v030_document_markers(validation: Validation) -> None:
+    required_markers: dict[str, tuple[str, ...]] = {
+        "ROADMAP.md": (
+            "**Bundle version:** 0.3.0",
+            "ThirdLife Software Portfolio v2.1",
+            "active Codex machine",
+            "quick",
+            "targeted",
+            "full",
+            "extended",
+            "TL-0008",
+        ),
+        "DECISIONS.md": ("D-058", "D-059", "D-064", "D-066"),
+        "PROJECT_BOUNDARY.md": (
+            "Team B / B1",
+            "project vacuum",
+            "active Codex machine",
+            "ThirdLife Deployment and Suite Assembly",
+            "Scam Explainer",
+            "TL-0710",
+        ),
+        "TESTING.md": (
+            "Quick tier",
+            "Targeted tier",
+            "Full tier",
+            "Extended/stress tier",
+            "active Codex machine",
+        ),
+        "DEVELOPMENT_WORKFLOW.md": (
+            "git fetch",
+            "STATUS.md",
+            "clean clone",
+            "active Codex machine",
+        ),
+        "STATUS.md": (
+            "TL-0008",
+            V030_TL0008_SOURCE_COMMIT,
+            V030_TL0008_PROCEDURE_DIGEST,
+            "superseded",
+        ),
+        "LOW_SPEC.md": (
+            "active Codex machine",
+            "reference-machine",
+            "same-machine",
+            "hardware certification",
+        ),
+        "RELEASE_INTERFACE.md": (
+            "Draft placeholder",
+            "TL-0706",
+            "TL-0710",
+            "not a shared application API",
+            "Source continuity",
+            "Validation evidence",
+            "cross-hardware certification",
+        ),
+        "FUTURE_ASSEMBLY_NOTES.md": (
+            "Non-binding deferred backlog",
+            "Nothing in this file is an active B1 requirement",
+            "Team B / B4",
+        ),
+        "TL-0008_TRANSITION.md": (
+            "TL-0008 draft 1",
+            "SUPERSEDED",
+            "MHT-001",
+            "active Codex machine",
+        ),
+        "CODEX_TL0008_TRANSITION_PROMPT.md": (
+            "TL-0008 draft 1",
+            V030_TL0008_SOURCE_COMMIT,
+            V030_TL0008_PROCEDURE_DIGEST,
+            "Do not",
+        ),
+        "docs/history/TL-0008-draft-1-superseded.md": (
+            "SUPERSEDED",
+            "DO NOT EXECUTE",
+            V030_TL0008_SOURCE_COMMIT,
+            V030_TL0008_PROCEDURE_DIGEST,
+        ),
+    }
+    for relative, markers in required_markers.items():
+        require_phrases(relative, markers, validation)
+
+
+def validate_testing_documents(
+    validation: Validation,
+    task_by_id: dict[str, dict[str, Any]],
+    decision_ids: set[str],
+) -> None:
+    """Validate the active v0.3.0 same-machine testing contract.
+
+    The superseded draft required commit-bound physical walkthrough evidence;
+    the current contract deliberately does not.
+    """
+
+    relative_markers: dict[str, tuple[str, ...]] = {
+        "TESTING.md": (
+            "active Codex machine only",
+            "Quick tier",
+            "Targeted tier",
+            "Full tier",
+            "Extended/stress tier",
+            "Every extended scenario must be independently invokable",
+            "do not execute the old `MHT-001`–`MHT-021`",
+            "not hardware certification",
+        ),
+        "DEVELOPMENT_WORKFLOW.md": (
+            "Continuity source of truth",
+            "git fetch --all --prune",
+            "STATUS.md",
+            "clean clone",
+            "active Codex machine only",
+        ),
+        "STATUS.md": (
+            "TL-0008",
+            V030_TL0008_SOURCE_COMMIT,
+            V030_TL0008_PROCEDURE_DIGEST,
+            "No physical hardware walkthrough",
+        ),
+        "LOW_SPEC.md": (
+            "**Bundle version:** 0.3.0",
+            "active Codex machine only",
+            "concurrency explicit, configurable, and conservative",
+            "working CPU path",
+            "same-machine constraint",
+            "absence of cross-hardware certification",
+        ),
+        "docs/testing/reference-machine-profile.md": (
+            "Active Codex Reference-Machine Profile",
+            "reproducible development",
+            "not asset inventory or hardware certification",
+            "Sanitization review",
+        ),
+        "docs/testing/capability-risk-matrix.md": (
+            "Capability and Risk Coverage Matrix",
+            "physical-device inventory",
+            "proves",
+            "does not prove",
+            "blocker",
+        ),
+        "docs/testing/same-machine-constraints.md": (
+            "active Codex machine",
+            "safe setup",
+            "host system volume",
+            "Claim limit",
+        ),
+        "docs/testing/manual-hardware-tests.md": (
+            "TL-0008",
+            "Pass",
+            "Fail",
+            "Not available",
+            "Not run",
+            "Human confirmed",
+            "Observed by provider",
+            "Simulated deterministic test",
+            "MHT-001",
+            "MHT-021",
+        ),
+        "docs/testing/failure-injection.md": (
+            "Failure-injection",
+            "Not run",
+            "independently invokable command",
+            "Cleanup/recovery",
+        ),
+        "docs/testing/accessibility-matrix.md": (
+            "Accessibility",
+            "TL-0008",
+            "active Codex machine",
+        ),
+        "docs/history/TL-0008-draft-1-superseded.md": (
+            "SUPERSEDED — DO NOT EXECUTE",
+            "TL-0008 draft 1",
+            V030_TL0008_SOURCE_COMMIT,
+            V030_TL0008_PROCEDURE_DIGEST,
+        ),
+    }
+    texts = {
+        relative: require_phrases(relative, markers, validation)
+        for relative, markers in relative_markers.items()
+    }
+
+    expected_ids = {
+        "docs/testing/capability-risk-matrix.md": (
+            "CRM",
+            tuple(f"CRM-{index:03d}" for index in range(1, 12)),
+        ),
+        "docs/testing/failure-injection.md": (
+            "FI",
+            tuple(f"FI-{index:03d}" for index in range(1, 13)),
+        ),
+        "docs/testing/accessibility-matrix.md": (
+            "A11Y",
+            tuple(f"A11Y-{index:03d}" for index in range(1, 11)),
+        ),
+    }
+    known_testing_ids: set[str] = {
+        f"MHT-{index:03d}" for index in range(1, 22)
+    }
+    for relative, (prefix, expected) in expected_ids.items():
+        found = testing_document_ids(texts[relative], prefix)
+        known_testing_ids.update(expected)
+        if found != expected:
+            validation.error(
+                f"{relative}: {prefix} IDs must be contiguous and ordered as {list(expected)}"
+            )
+
+    expected_constraints = (
+        "SMC-BASELINE",
+        "SMC-NO-GPU",
+        "SMC-CONSERVATIVE-CONCURRENCY",
+        "SMC-LOW-PRIORITY",
+        "SMC-LOW-FREE-SPACE",
+        "SMC-OFFLINE",
+        "SMC-INTERRUPTED-NETWORK",
+        "SMC-PROVIDER-UNAVAILABLE",
+        "SMC-SLOW-DESTINATION",
+        "SMC-LARGE-WORKLOAD",
+    )
+    found_constraints = same_machine_constraint_ids(
+        texts["docs/testing/same-machine-constraints.md"]
+    )
+    known_testing_ids.update(expected_constraints)
+    if found_constraints != expected_constraints:
+        validation.error(
+            "docs/testing/same-machine-constraints.md: SMC profiles must be complete, unique, and ordered"
+        )
+
+    task_ids = set(task_by_id)
+    for relative, body in texts.items():
+        if relative.startswith("docs/history/"):
+            continue
+        unknown_tasks = sorted(set(re.findall(r"\bTL-\d{4}\b", body)) - task_ids)
+        if unknown_tasks:
+            validation.error(f"{relative}: references unknown task IDs {unknown_tasks}")
+        unknown_decisions = sorted(set(re.findall(r"\bD-\d{3}\b", body)) - decision_ids)
+        if unknown_decisions:
+            validation.error(
+                f"{relative}: references unknown decision IDs {unknown_decisions}"
+            )
+        unknown_testing = sorted(
+            set(
+                re.findall(
+                    r"\b(?:CRM|FI|A11Y|MHT)-\d{3}\b|\bSMC-[A-Z0-9-]+\b",
+                    body,
+                )
+            )
+            - known_testing_ids
+        )
+        if unknown_testing:
+            validation.error(
+                f"{relative}: references unknown testing IDs {unknown_testing}"
+            )
+
+        canonical = canonical_testing_scan_text(body)
+        if "<!--" in canonical or "-->" in canonical:
+            validation.error(
+                f"{relative}: HTML comments are not permitted in governed testing documents"
+            )
+        if SECURITY_MACHINE_PATH_RE.search(canonical):
+            validation.error(f"{relative}: contains a machine-specific path")
+        if re.search(r"(?i)(?://[^/\s]+/[^/\s]+|%[A-Z][A-Z0-9_]*%[\\/])", canonical):
+            validation.error(f"{relative}: contains a machine-specific path")
+        if re.search(r"(?:^|[\\/])\.\.(?:[\\/]|$)", canonical):
+            validation.error(f"{relative}: contains a path-traversal segment")
+        if re.search(r"(?i)%[0-9a-f]{2}", canonical):
+            validation.error(f"{relative}: contains unresolved percent-encoded text")
+        sensitive_label = testing_sensitive_match(canonical)
+        if sensitive_label is not None:
+            validation.error(f"{relative}: contains a prohibited {sensitive_label}")
+
+        current_heading = ""
+        for line_number, line in enumerate(canonical.splitlines(), start=1):
+            if re.match(r"^#{1,6}\s+", line):
+                current_heading = line
+            elif line.casefold().startswith("not permitted"):
+                current_heading = f"{current_heading} {line}"
+            if has_prohibited_hardware_claim(line, current_heading):
+                validation.error(
+                    f"{relative}:{line_number}: contains an unsupported hardware claim"
+                )
+
+    validate_no_obsolete_hardware_obligations(
+        validation,
+        {
+            relative: body
+            for relative, body in texts.items()
+            if not relative.startswith("docs/history/")
+        },
+    )
+
+    obsolete_matrix = ROOT / "docs/testing/device-matrix.md"
+    if obsolete_matrix.exists():
+        validation.error(
+            "docs/testing/device-matrix.md: obsolete active device inventory must be removed; preserve history under docs/history"
+        )
+
+    validate_tl0008_contract(validation, task_by_id)
+
+
 def topological_order(
     task_ids: set[str],
     dependencies: dict[str, list[str]],
@@ -1207,7 +1826,7 @@ def ancestors(task_id: str, dependencies: dict[str, list[str]]) -> set[str]:
 def validate() -> int:
     validation = Validation()
 
-    for relative in REQUIRED_FILES:
+    for relative in (*REQUIRED_FILES, BUNDLE_MANIFEST_FILE):
         path = ROOT / relative
         if not path.is_file():
             validation.error(f"Missing required file: {relative}")
@@ -1234,7 +1853,18 @@ def validate() -> int:
 
     if task_doc.get("schema_version") != 1:
         validation.error("TASKS.yaml: schema_version must equal 1")
+    if task_doc.get("bundle_version") != V030_BUNDLE_VERSION:
+        validation.error(
+            f"TASKS.yaml: bundle_version must equal {V030_BUNDLE_VERSION!r}"
+        )
+    if str(task_doc.get("generated_on")) != V030_GENERATED_ON:
+        validation.error(
+            f"TASKS.yaml: generated_on must equal {V030_GENERATED_ON}"
+        )
     project = task_doc.get("project", {})
+    if not isinstance(project, dict):
+        validation.error("TASKS.yaml: project must be a mapping")
+        project = {}
     if project.get("name") != "ThirdLife":
         validation.error("TASKS.yaml: project.name must equal ThirdLife")
     expected_project = {
@@ -1245,6 +1875,9 @@ def validate() -> int:
         "standalone_release_gate": "TL-0710",
         "future_assembly_project": "ThirdLife Deployment and Suite Assembly",
         "future_assembly_queue_position": "B4",
+        "validation_hardware": "active Codex machine only",
+        "hardware_lab_required": False,
+        "external_runtime_matrix_required": False,
     }
     for field, expected in expected_project.items():
         if project.get(field) != expected:
@@ -1253,13 +1886,21 @@ def validate() -> int:
             )
 
     portfolio = task_doc.get("portfolio", {})
+    if not isinstance(portfolio, dict):
+        validation.error("TASKS.yaml: portfolio must be a mapping")
+        portfolio = {}
     expected_portfolio = {
-        "roadmap_version": "2.0",
+        "roadmap_version": "2.1",
         "development_posture": "standalone project vacuum",
         "integration_posture": "late binding against frozen stable releases",
         "active_cross_project_dependencies_allowed": False,
         "sibling_specific_work_authorized": False,
         "next_team_project_after_stable": "Scam Explainer",
+        "continuity_source": "GitHub",
+        "validation_hardware": "active Codex machine only",
+        "hardware_lab_required": False,
+        "remote_runtime_testing_required": False,
+        "test_tiers": ["quick", "targeted", "full", "extended"],
     }
     for field, expected in expected_portfolio.items():
         if portfolio.get(field) != expected:
@@ -1286,6 +1927,10 @@ def validate() -> int:
     if decision_ids != expected_decision_sequence:
         validation.error(
             "DECISIONS.md: decision headings must be contiguous and ordered from D-001"
+        )
+    if tuple(decision_ids) != V030_DECISION_IDS:
+        validation.error(
+            "DECISIONS.md: v0.3.0 must contain exactly D-001 through D-066"
         )
 
     milestones = task_doc.get("milestones")
@@ -1350,6 +1995,9 @@ def validate() -> int:
         "acceptance_criteria",
         "verification",
         "evidence",
+        "expected_test_tier",
+        "full_test_triggers",
+        "extended_test_triggers",
     }
     allowed_task_fields = required_task_fields | {
         "human_evidence_required",
@@ -1383,6 +2031,7 @@ def validate() -> int:
             require_nonempty_string(task_id, task, field, validation)
         for field in ("deliverables", "acceptance_criteria", "verification"):
             require_nonempty_string_list(task_id, task, field, validation)
+        validate_task_test_tier(task_id, task, validation)
 
         status = task.get("status")
         if status not in ALLOWED_STATUS:
@@ -1441,6 +2090,10 @@ def validate() -> int:
 
     if task_order != sorted(task_order):
         validation.error("TASKS.yaml: tasks must be ordered by task ID")
+    if len(task_by_id) != V030_TASK_COUNT:
+        validation.error(
+            f"TASKS.yaml: v0.3.0 must contain {V030_TASK_COUNT} tasks, found {len(task_by_id)}"
+        )
 
     task_ids = set(task_by_id)
     for task_id, deps in dependency_map.items():
@@ -1505,12 +2158,39 @@ def validate() -> int:
 
     validate_governance_documents(validation)
     validate_security_documents(validation, task_by_id, decision_set)
+    validate_testing_documents(validation, task_by_id, decision_set)
+    validate_v030_document_markers(validation)
+
+    active_hardware_scope_documents = {
+        relative: (ROOT / relative).read_text(encoding="utf-8")
+        for relative in (
+            "ROADMAP.md",
+            "DECISIONS.md",
+            "TASKS.yaml",
+            "AGENTS.md",
+            "CODEX_START_PROMPT.md",
+            "README.md",
+            "STATUS.md",
+            "DEVELOPMENT_WORKFLOW.md",
+            "TESTING.md",
+            "PROJECT_BOUNDARY.md",
+            "SECURITY.md",
+            "ACCESSIBILITY.md",
+            "LOW_SPEC.md",
+            "RELEASE_INTERFACE.md",
+        )
+    }
+    validate_no_obsolete_hardware_obligations(
+        validation,
+        active_hardware_scope_documents,
+    )
     validate_tracked_text_positioning(validation)
 
     boundary_text = (ROOT / "PROJECT_BOUNDARY.md").read_text(encoding="utf-8")
     for required_phrase in (
         "Team B / B1",
         "project vacuum",
+        "active Codex machine",
         "ThirdLife Deployment and Suite Assembly",
         "Scam Explainer",
         "TL-0710",
@@ -1526,6 +2206,9 @@ def validate() -> int:
         "TL-0706",
         "TL-0710",
         "not a shared application API",
+        "Source continuity",
+        "Validation evidence",
+        "cross-hardware certification",
     ):
         if required_phrase not in release_interface_text:
             validation.error(

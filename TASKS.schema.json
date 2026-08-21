@@ -44,7 +44,10 @@
         "future_assembly_queue_position",
         "platform",
         "stack",
-        "repository_root"
+        "repository_root",
+        "validation_hardware",
+        "hardware_lab_required",
+        "external_runtime_matrix_required"
       ],
       "properties": {
         "name": {
@@ -90,6 +93,15 @@
         "repository_root": {
           "type": "string",
           "minLength": 1
+        },
+        "validation_hardware": {
+          "const": "active Codex machine only"
+        },
+        "hardware_lab_required": {
+          "const": false
+        },
+        "external_runtime_matrix_required": {
+          "const": false
         }
       }
     },
@@ -102,11 +114,16 @@
         "integration_posture",
         "active_cross_project_dependencies_allowed",
         "sibling_specific_work_authorized",
-        "next_team_project_after_stable"
+        "next_team_project_after_stable",
+        "continuity_source",
+        "validation_hardware",
+        "hardware_lab_required",
+        "remote_runtime_testing_required",
+        "test_tiers"
       ],
       "properties": {
         "roadmap_version": {
-          "const": "2.0"
+          "const": "2.1"
         },
         "development_posture": {
           "const": "standalone project vacuum"
@@ -122,6 +139,27 @@
         },
         "next_team_project_after_stable": {
           "const": "Scam Explainer"
+        },
+        "continuity_source": {
+          "const": "GitHub"
+        },
+        "validation_hardware": {
+          "const": "active Codex machine only"
+        },
+        "hardware_lab_required": {
+          "const": false
+        },
+        "remote_runtime_testing_required": {
+          "const": false
+        },
+        "test_tiers": {
+          "type": "array",
+          "const": [
+            "quick",
+            "targeted",
+            "full",
+            "extended"
+          ]
         }
       }
     },
@@ -289,7 +327,10 @@
         "deliverables",
         "acceptance_criteria",
         "verification",
-        "evidence"
+        "evidence",
+        "expected_test_tier",
+        "full_test_triggers",
+        "extended_test_triggers"
       ],
       "properties": {
         "id": {
@@ -461,6 +502,28 @@
         "blocked_reason": {
           "type": "string",
           "minLength": 1
+        },
+        "expected_test_tier": {
+          "enum": [
+            "quick",
+            "targeted",
+            "full",
+            "extended"
+          ]
+        },
+        "full_test_triggers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "extended_test_triggers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       },
       "allOf": [

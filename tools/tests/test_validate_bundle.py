@@ -30,6 +30,19 @@ SECURITY_DOCUMENTS = (
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
 )
+TESTING_DOCUMENTS = (
+    "TESTING.md",
+    "DEVELOPMENT_WORKFLOW.md",
+    "STATUS.md",
+    "LOW_SPEC.md",
+    "docs/testing/accessibility-matrix.md",
+    "docs/testing/capability-risk-matrix.md",
+    "docs/testing/failure-injection.md",
+    "docs/testing/manual-hardware-tests.md",
+    "docs/testing/reference-machine-profile.md",
+    "docs/testing/same-machine-constraints.md",
+    "docs/history/TL-0008-draft-1-superseded.md",
+)
 TASK_DOCUMENT = validate_bundle.yaml.safe_load(
     (REPOSITORY_ROOT / "TASKS.yaml").read_text(encoding="utf-8")
 )
@@ -823,6 +836,390 @@ class GovernanceDocumentContractTests(unittest.TestCase):
             self.assertTrue(
                 any("M0 through M6" in error for error in validation.errors)
             )
+
+
+class TestingDocumentContractTests(unittest.TestCase):
+    def copy_testing_documents(self, root: Path) -> None:
+        for relative in TESTING_DOCUMENTS:
+            destination = root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(
+                (REPOSITORY_ROOT / relative).read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+    def validate_documents(
+        self,
+        root: Path,
+        task_by_id: dict[str, dict[str, object]] | None = None,
+    ) -> validate_bundle.Validation:
+        validation = validate_bundle.Validation()
+        with patch.object(validate_bundle, "ROOT", root):
+            validate_bundle.validate_testing_documents(
+                validation,
+                task_by_id or TASK_BY_ID,
+                DECISION_IDS,
+            )
+        return validation
+
+    def replace_once(self, path: Path, old: str, new: str) -> None:
+        body = path.read_text(encoding="utf-8")
+        self.assertEqual(body.count(old), 1, f"expected one occurrence of {old!r}")
+        path.write_text(body.replace(old, new, 1), encoding="utf-8")
+
+    def test_current_testing_documents_satisfy_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            validation = self.validate_documents(root)
+            self.assertEqual(validation.errors, [])
+
+    def test_matrix_ids_must_be_complete_unique_and_ordered(self) -> None:
+        mutations = (
+            ("docs/testing/capability-risk-matrix.md", "| `CRM-006` |", "| `CRM-007` |", "CRM IDs"),
+            ("docs/testing/failure-injection.md", "| `FI-006` |", "| `FI-007` |", "FI IDs"),
+            ("docs/testing/accessibility-matrix.md", "| `A11Y-006` |", "| `A11Y-007` |", "A11Y IDs"),
+        )
+        for relative, old, new, expected in mutations:
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                self.replace_once(root / relative, old, new)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_same_machine_profiles_must_be_complete_unique_and_ordered(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/same-machine-constraints.md"
+            self.replace_once(path, "## 5. `SMC-NO-GPU`", "## 5. `SMC-OFFLINE`")
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("SMC profiles" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_required_same_machine_marker_is_enforced(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/reference-machine-profile.md"
+            self.replace_once(
+                path,
+                "not asset inventory or hardware certification",
+                "general-purpose asset record",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("hardware certification" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_active_hardware_lab_obligation_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "TESTING.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\nA hardware lab is required before TL-0008 can be completed.\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("obsolete active hardware-lab obligation" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_supersession_and_negative_hardware_text_are_allowed(self) -> None:
+        allowed = (
+            "The former hardware lab is superseded.",
+            "A second physical machine is not required.",
+            "Search for active requirements for lab machines.",
+            "Do not assemble a device pool.",
+            "This release has no hardware lab dependency.",
+        )
+        for line in allowed:
+            with self.subTest(line=line):
+                self.assertFalse(
+                    validate_bundle.has_obsolete_active_hardware_obligation(line)
+                )
+
+    def test_exact_superseded_draft_commands_are_rejected_when_active(self) -> None:
+        for phrase in validate_bundle.OBSOLETE_ACTIVE_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertTrue(
+                    validate_bundle.has_obsolete_active_hardware_obligation(phrase)
+                )
+
+    def test_obsolete_device_matrix_file_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            obsolete = root / "docs/testing/device-matrix.md"
+            obsolete.write_text("obsolete live inventory\n", encoding="utf-8")
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("obsolete active device inventory" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_sensitive_or_encoded_reference_machine_data_is_rejected(self) -> None:
+        examples = (
+            "operator@example.invalid",
+            "192.0.2.10",
+            "02:00:5e:10:00:00",
+            "serial number PF3ABC123",
+            "Asset tag: DONOR-123456",
+            "%43%3A%5CUsers%5CDonor%5Csecret.txt",
+            "../../private/secret.txt",
+        )
+        for example in examples:
+            with self.subTest(example=example), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                path = root / "docs/testing/reference-machine-profile.md"
+                path.write_text(
+                    path.read_text(encoding="utf-8") + f"\nEvidence value: {example}\n",
+                    encoding="utf-8",
+                )
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(
+                        "machine-specific path" in error
+                        or "path-traversal" in error
+                        or "prohibited" in error
+                        or "percent-encoded" in error
+                        for error in validation.errors
+                    ),
+                    validation.errors,
+                )
+
+    def test_machine_specific_evidence_path_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/reference-machine-profile.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\nEvidence: C:\\Users\\ExamplePerson\\device.log\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("machine-specific path" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_affirmative_cross_hardware_claim_is_rejected(self) -> None:
+        claims = (
+            "ThirdLife is certified for low-end PCs.",
+            "ThirdLife works on all Windows 11 devices.",
+            "The product is hardware independent.",
+            "VM evidence proves physical compatibility.",
+            "The minimum RAM is 4 GB.",
+        )
+        for claim in claims:
+            with self.subTest(claim=claim), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                path = root / "LOW_SPEC.md"
+                path.write_text(
+                    path.read_text(encoding="utf-8") + f"\n{claim}\n",
+                    encoding="utf-8",
+                )
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any("unsupported hardware claim" in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_explicit_hardware_claim_limits_are_allowed(self) -> None:
+        limits = (
+            "Claims that ThirdLife is certified for low-end PCs are not permitted.",
+            "The project does not claim it works on all Windows 11 devices.",
+            "VM evidence cannot prove physical compatibility.",
+            "A minimum RAM value is not permitted without separate evidence.",
+        )
+        for line in limits:
+            with self.subTest(line=line):
+                self.assertFalse(validate_bundle.has_prohibited_hardware_claim(line))
+
+    def test_unknown_testing_reference_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_testing_documents(root)
+            path = root / "docs/testing/failure-injection.md"
+            path.write_text(
+                path.read_text(encoding="utf-8") + "\nRelated scenario: FI-999.\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any("unknown testing IDs" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_unknown_task_and_decision_references_are_rejected(self) -> None:
+        additions = (
+            ("docs/testing/failure-injection.md", "Follow-up: TL-9999.", "unknown task IDs"),
+            ("TESTING.md", "Binding decision: D-999.", "unknown decision IDs"),
+        )
+        for relative, addition, expected in additions:
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_testing_documents(root)
+                path = root / relative
+                path.write_text(
+                    path.read_text(encoding="utf-8") + f"\n{addition}\n",
+                    encoding="utf-8",
+                )
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_tl0008_rejects_human_physical_evidence_requirement(self) -> None:
+        tasks = {task_id: dict(task) for task_id, task in TASK_BY_ID.items()}
+        task = dict(tasks["TL-0008"])
+        task["human_evidence_required"] = [
+            "Complete a physical device-pool walkthrough."
+        ]
+        tasks["TL-0008"] = task
+        validation = validate_bundle.Validation()
+        validate_bundle.validate_tl0008_contract(validation, tasks)
+        self.assertTrue(
+            any("must not require physical-device" in error for error in validation.errors),
+            validation.errors,
+        )
+
+    def test_tl0008_rejects_obsolete_device_matrix_deliverable(self) -> None:
+        tasks = {task_id: dict(task) for task_id, task in TASK_BY_ID.items()}
+        task = dict(tasks["TL-0008"])
+        task["deliverables"] = [
+            *task["deliverables"],
+            "docs/testing/device-matrix.md",
+        ]
+        tasks["TL-0008"] = task
+        validation = validate_bundle.Validation()
+        validate_bundle.validate_tl0008_contract(validation, tasks)
+        self.assertTrue(
+            any("obsolete docs/testing/device-matrix.md" in error for error in validation.errors),
+            validation.errors,
+        )
+
+    def test_tl0008_done_accepts_nonphysical_evidence(self) -> None:
+        tasks = {task_id: dict(task) for task_id, task in TASK_BY_ID.items()}
+        task = dict(tasks["TL-0008"])
+        task["status"] = "done"
+        task["evidence"] = [
+            *task.get("evidence", []),
+            {
+                "summary": "Same-machine governance and validator quick tier passed.",
+                "result": "passed",
+                "environment": "Active Codex machine; documentation validation",
+                "date": "2026-08-21",
+                "reference": "tools/validate_bundle.py",
+            },
+        ]
+        tasks["TL-0008"] = task
+        validation = validate_bundle.Validation()
+        validate_bundle.validate_tl0008_contract(validation, tasks)
+        self.assertEqual(validation.errors, [])
+
+    def test_expected_test_tier_and_trigger_lists_are_required(self) -> None:
+        invalid_tasks = (
+            {"expected_test_tier": "broad", "full_test_triggers": [], "extended_test_triggers": []},
+            {"expected_test_tier": "quick", "full_test_triggers": "none", "extended_test_triggers": []},
+            {"expected_test_tier": "quick", "full_test_triggers": [], "extended_test_triggers": None},
+        )
+        for task in invalid_tasks:
+            with self.subTest(task=task):
+                validation = validate_bundle.Validation()
+                validate_bundle.validate_task_test_tier("TL-TEST", task, validation)
+                self.assertTrue(validation.errors)
+
+    def test_extended_tier_requires_named_trigger(self) -> None:
+        validation = validate_bundle.Validation()
+        validate_bundle.validate_task_test_tier(
+            "TL-TEST",
+            {
+                "kind": "test",
+                "expected_test_tier": "extended",
+                "full_test_triggers": [],
+                "extended_test_triggers": [],
+            },
+            validation,
+        )
+        self.assertTrue(
+            any("extended tier requires" in error for error in validation.errors),
+            validation.errors,
+        )
+
+    def test_full_gate_or_release_requires_named_trigger(self) -> None:
+        for kind in ("gate", "release"):
+            with self.subTest(kind=kind):
+                validation = validate_bundle.Validation()
+                validate_bundle.validate_task_test_tier(
+                    "TL-TEST",
+                    {
+                        "kind": kind,
+                        "expected_test_tier": "full",
+                        "full_test_triggers": [],
+                        "extended_test_triggers": [],
+                    },
+                    validation,
+                )
+                self.assertTrue(
+                    any("full gate/release" in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_v030_required_files_and_authority_are_frozen(self) -> None:
+        self.assertIn("DEVELOPMENT_WORKFLOW.md", validate_bundle.REQUIRED_FILES)
+        self.assertIn("TESTING.md", validate_bundle.REQUIRED_FILES)
+        self.assertIn("STATUS.md", validate_bundle.REQUIRED_FILES)
+        self.assertIn(
+            "docs/testing/capability-risk-matrix.md",
+            validate_bundle.REQUIRED_FILES,
+        )
+        self.assertNotIn(
+            "docs/testing/device-matrix.md",
+            validate_bundle.REQUIRED_FILES,
+        )
+        self.assertNotIn(
+            "BUNDLE_MANIFEST.sha256",
+            validate_bundle.REQUIRED_FILES,
+        )
+        self.assertEqual(
+            validate_bundle.BUNDLE_MANIFEST_FILE,
+            "BUNDLE_MANIFEST.sha256",
+        )
+        self.assertEqual(
+            validate_bundle.AUTHORITY_ORDER[6:11],
+            (
+                "DEVELOPMENT_WORKFLOW.md",
+                "TESTING.md",
+                "AGENTS.md",
+                "TASKS.yaml",
+                "STATUS.md",
+            ),
+        )
+
+    def test_live_task_metadata_matches_v030_contract(self) -> None:
+        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.3.0")
+        self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-08-15")
+        self.assertEqual(TASK_DOCUMENT["portfolio"]["roadmap_version"], "2.1")
+        self.assertEqual(
+            TASK_DOCUMENT["portfolio"]["test_tiers"],
+            ["quick", "targeted", "full", "extended"],
+        )
+        self.assertEqual(len(TASK_DOCUMENT["tasks"]), 91)
 
 
 if __name__ == "__main__":

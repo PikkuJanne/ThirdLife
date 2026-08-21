@@ -1,5 +1,9 @@
 [CmdletBinding()]
-param()
+param(
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("Quick", "Full")]
+    [string] $Tier = "Full"
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -24,7 +28,7 @@ function Invoke-CheckedCommand {
 }
 
 if ($env:OS -ne "Windows_NT") {
-    throw "ThirdLife's authoritative verification requires Windows. Run eng/verify.sh from Git Bash on Windows or use eng/verify.ps1 directly."
+    throw "ThirdLife's governed local verification runs on the active Windows Codex machine. Run eng/verify.sh from Git Bash on Windows or use eng/verify.ps1 directly."
 }
 
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
@@ -90,6 +94,11 @@ try {
         -Command $pythonCommand `
         -CommandArguments @("tools/validate_repository.py")
 
+    if ($Tier -eq "Quick") {
+        Write-Host "OK: ThirdLife quick documentation/schema/static verification passed."
+        return
+    }
+
     Invoke-CheckedCommand `
         -Label "Restore the locked dependency graph" `
         -Command $dotnetCommand.Source `
@@ -135,7 +144,7 @@ try {
             "--no-restore"
         )
 
-    Write-Host "OK: ThirdLife verification passed."
+    Write-Host "OK: ThirdLife full verification passed."
 }
 finally {
     Pop-Location

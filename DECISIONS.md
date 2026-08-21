@@ -1,12 +1,12 @@
 # ThirdLife Setup Core — Frozen Decision Register
 
-**Bundle version:** 0.2.0  
-**Generated:** 2026-08-14  
+**Bundle version:** 0.3.0  
+**Generated:** 2026-08-15  
 **Status:** Binding for the Team B/B1 ThirdLife Setup Core roadmap
 
 ## Purpose and authority
 
-This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, low-spec, and delivery choices that Codex must treat as constraints rather than suggestions. This 0.2.0 revision was approved before implementation began to align the project with the portfolio's standalone-first, late-binding architecture.
+This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, modest-hardware, testing, continuity, and delivery choices that Codex must treat as constraints rather than suggestions. This 0.3.0 revision adopts the ThirdLife Software Portfolio v2.1 single-machine and risk-based testing baseline before the former TL-0008 hardware-lab procedure is executed.
 
 When implementation pressure conflicts with a decision here, stop, record the conflict, and request an explicit human decision. Do not silently reinterpret a frozen decision.
 
@@ -18,10 +18,13 @@ Authority precedence for this bundle is:
 4. `SECURITY.md`
 5. `ACCESSIBILITY.md`
 6. `LOW_SPEC.md`
-7. `AGENTS.md`
-8. `TASKS.yaml`
-9. `CODEX_START_PROMPT.md`
-10. `README.md`
+7. `DEVELOPMENT_WORKFLOW.md`
+8. `TESTING.md`
+9. `AGENTS.md`
+10. `TASKS.yaml`
+11. `STATUS.md`
+12. `CODEX_START_PROMPT.md`
+13. `README.md`
 
 A decision may be changed only by a human-approved amendment that:
 
@@ -94,6 +97,15 @@ Codex may propose an amendment, but it may not declare one approved.
 | [D-055](#d-055) | Generic Core catalogue and profiles |
 | [D-056](#d-056) | Core 1.0 stable gate and portfolio handoff |
 | [D-057](#d-057) | Core 1.0 accessibility and backup completion boundary |
+| [D-058](#d-058) | Portfolio v2.1 development baseline |
+| [D-059](#d-059) | Active Codex machine is the only physical validation hardware |
+| [D-060](#d-060) | Modest-hardware readiness is engineered, not lab-certified |
+| [D-061](#d-061) | Quick, targeted, full, and extended test tiers |
+| [D-062](#d-062) | Focused deterministic regressions and independently invokable slow scenarios |
+| [D-063](#d-063) | GitHub continuity and no remote-runtime dependency |
+| [D-064](#d-064) | TL-0008 draft 1 and the immediate MHT walkthrough are superseded |
+| [D-065](#d-065) | Manual hardware-test workflow remains, hardware-matrix certification does not |
+| [D-066](#d-066) | Hardware and resource claims are limited to observed evidence |
 
 ## Decisions
 
@@ -423,7 +435,7 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Rationale.** A configuration that only works before restart is not complete.
 
-**Implementation constraint.** Final reports distinguish attempted, applied, and verified outcomes.
+**Implementation constraint.** Final reports distinguish attempted, applied, and verified outcomes. A real host cold boot is performed only at the explicit later task/gate that requires it and only on the active Codex machine; TL-0008 specifies the procedure but does not execute it.
 
 **Revisit trigger.** Only if a stronger reproducible verification model replaces it.
 
@@ -539,7 +551,7 @@ Codex may propose an amendment, but it may not declare one approved.
 
 ### D-045 — Authority and change control
 
-**Decision.** Authority order is DECISIONS.md, ROADMAP.md, PROJECT_BOUNDARY.md, SECURITY.md, ACCESSIBILITY.md, LOW_SPEC.md, AGENTS.md, TASKS.yaml, then prompts and README. Codex may update task execution fields but may not alter frozen decisions, project boundaries, portfolio posture, dependencies, or acceptance criteria without human approval.
+**Decision.** Authority order is DECISIONS.md, ROADMAP.md, PROJECT_BOUNDARY.md, SECURITY.md, ACCESSIBILITY.md, LOW_SPEC.md, DEVELOPMENT_WORKFLOW.md, TESTING.md, AGENTS.md, TASKS.yaml, STATUS.md, then prompts and README. Codex may update task execution fields but may not alter frozen decisions, project boundaries, portfolio posture, dependencies, or acceptance criteria without human approval.
 
 **Rationale.** The bundle must remain synchronized and resistant to safety, scope, and cross-project drift.
 
@@ -653,7 +665,7 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Rationale.** A controlled pilot is not an independently supported stable release.
 
-**Implementation constraint.** The gate requires lifecycle, offline-core, low-spec, accessibility, security/privacy, licence, data-preservation, sample, and release-interface evidence. It sends Team B to Scam Explainer and does not authorize B4.
+**Implementation constraint.** The gate requires lifecycle, offline-core, same-machine modest-hardware, accessibility, security/privacy, licence, data-preservation, sample, and release-interface evidence. It sends Team B to Scam Explainer and does not authorize B4. Release wording must not imply cross-hardware certification.
 
 **Revisit trigger.** Only by a portfolio-owner decision that changes the queue or stable-release standard.
 
@@ -666,3 +678,93 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Recipient-present actions are explicit, reversible where supported, verified, and secret-minimizing. Sealed handover records personal setup as pending.
 
 **Revisit trigger.** Broader onboarding or advanced backup requires a later project or milestone with its own threat/data decisions.
+
+### D-058 — Portfolio v2.1 development baseline
+
+**Decision.** ThirdLife Setup Core adopts the ThirdLife Software Portfolio v2.1 baseline dated 15 August 2026: GitHub-continuous development, efficient single-machine validation, staged risk-based testing, and late-binding suite assembly.
+
+**Rationale.** The portfolio-level document supersedes the earlier assumption that projects require a device lab or repeated broad test execution while preserving the standalone Team B/B1 boundary.
+
+**Implementation constraint.** Bundle metadata, task contracts, Codex prompts, test evidence, and release wording must follow v2.1. A lower-authority repository document cannot reintroduce a lab or external runtime dependency.
+
+**Revisit trigger.** Only through a later human-approved portfolio baseline and synchronized project-bundle amendment.
+
+### D-059 — Active Codex machine is the only physical validation hardware
+
+**Decision.** The active Codex machine is the only physical machine used for implementation, tests, benchmarks, clean environments, manual walkthroughs, cold-boot evidence, and release evidence.
+
+**Rationale.** The project will not maintain a device lab, lower-performance test computer, volunteer hardware pool, second-PC matrix, cloud hardware farm, or parallel external runtime environment.
+
+**Implementation constraint.** A task may use a clean clone, worktree, VM, Windows Sandbox, container, virtual disk, or deterministic fixture only when it runs on the same physical Codex machine. Missing device/equipment classes are not blockers. No task may require another physical machine.
+
+**Revisit trigger.** Broader hardware validation may be added only as a separate explicitly staffed activity with new evidence and claim rules; it is not an implicit release prerequisite.
+
+### D-060 — Modest-hardware readiness is engineered, not lab-certified
+
+**Decision.** ThirdLife is designed for modest supported hardware through streaming/chunking, bounded resource use, conservative configurable concurrency, CPU fallback, preflighted disk space, cancellation/checkpointing, bounded caches, and graceful degradation.
+
+**Rationale.** Resource-conscious architecture prevents obvious regressions even when lower-performance hardware is unavailable.
+
+**Implementation constraint.** Same-machine no-GPU, reduced-concurrency, low-priority, low-space, offline, interrupted-network, slow-destination, and representative-workload scenarios are used only to answer concrete risks. They do not simulate or certify a particular untested device.
+
+**Revisit trigger.** Numerical budgets may be frozen after measurement; the engineering principles and honest-evidence rule remain.
+
+### D-061 — Quick, targeted, full, and extended test tiers
+
+**Decision.** Every task declares an expected test tier and explicit full/extended triggers. Quick checks guide iteration, targeted checks protect the changed subsystem, full checks run at defined gates or major-risk changes, and extended scenarios run only for the named risk or scheduled gate.
+
+**Rationale.** Fast feedback and risk-based escalation find defects more efficiently than repeatedly running an opaque long suite.
+
+**Implementation constraint.** `TESTING.md` governs tier contents, budgets, triggers, fail-fast behavior, evidence, and skipped-tier rationale. Completion reports state every tier run or not run and why.
+
+**Revisit trigger.** Per-tier time budgets may change through `DECISIONS.md`; the staged principle and trigger documentation remain mandatory.
+
+### D-062 — Focused deterministic regressions and independently invokable slow scenarios
+
+**Decision.** Every reproducible defect is reduced to the smallest practical deterministic regression case, and each slow/failure/resource scenario is independently invokable and checkpointed when long-running.
+
+**Rationale.** This prevents broad suites from becoming serial edge-case discovery loops and permits focused reruns after a fix.
+
+**Implementation constraint.** Run the failed case first, then the related targeted set. Rerun the full or extended matrix only when its trigger applies or a shared cause is suspected. Flaky tests are defects, not evidence obtained by blind rerun.
+
+**Revisit trigger.** An exception requires a documented technical reason, owner, bounded follow-up task, risk, and removal condition.
+
+### D-063 — GitHub continuity and no remote-runtime dependency
+
+**Decision.** GitHub is the canonical continuity record. Every meaningful checkpoint is committed and pushed, `STATUS.md` describes the handoff, and milestone/release gates include a clean-clone check on the active Codex machine. GitHub Actions or another remote runtime runner is not required or authoritative.
+
+**Rationale.** Another machine must be able to continue from the pushed repository without turning remote CI or unpushed local state into a hidden dependency.
+
+**Implementation constraint.** Start each session with fetch/status/divergence checks from `DEVELOPMENT_WORKFLOW.md`; end with verified push and clean-tree state. Optional remote static checks may not become release evidence or a hardware matrix.
+
+**Revisit trigger.** Only through a documented continuity architecture change that preserves local reproducibility and the single-machine hardware scope.
+
+### D-064 — TL-0008 draft 1 and the immediate MHT walkthrough are superseded
+
+**Decision.** `TL-0008 draft 1`, source commit `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, digest `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`, and its immediate physical device-pool `MHT-001`–`MHT-021` walkthrough are superseded.
+
+**Rationale.** The old gate conflicts with decisions D-058 through D-063 and would block development on unavailable hardware rather than improve the product architecture.
+
+**Implementation constraint.** Preserve the former procedure as a clearly marked **SUPERSEDED — DO NOT EXECUTE** historical record. Revised TL-0008 creates the test tiers, active reference-machine profile, capability/risk matrix, constraint procedures, and manual-test specification. It does not run the broad physical, accessibility, failure, low-resource, or cold-boot matrices.
+
+**Revisit trigger.** The historical procedure never becomes active again by implication. Any future field validation is separately scoped and cannot silently change release claims.
+
+### D-065 — Manual hardware-test workflow remains, hardware-matrix certification does not
+
+**Decision.** ThirdLife retains guided manual functional tests because software inventory cannot prove keyboard, pointer, display, audio, camera, microphone, charging, sleep/wake, or port behavior. Development verification does not require possession of every capability or hardware class.
+
+**Rationale.** The product workflow is useful even though the project lacks a lab. Deterministic state, evidence, pause/resume, accessibility, unavailable/failure, and report tests can prove the workflow contract.
+
+**Implementation constraint.** Later named tasks may perform bounded operator observation of capabilities available on the active Codex machine. Absent capabilities use deterministic fixtures and explicit limitations. A workflow pass is not device certification or long-term reliability proof.
+
+**Revisit trigger.** Separate real-world validation may add observations but cannot weaken evidence semantics or make missing hardware a hidden development dependency.
+
+### D-066 — Hardware and resource claims are limited to observed evidence
+
+**Decision.** Documentation and release claims distinguish design intent, synthetic/captured fixture coverage, same-machine constraint results, and actual active-machine observations. They do not claim broad modest-hardware certification or untested minimum specifications.
+
+**Rationale.** VMs, process limits, synthetic provider data, and one physical machine are useful engineering evidence but cannot establish universal hardware support.
+
+**Implementation constraint.** `LOW_SPEC.md`, `TESTING.md`, `RELEASE_INTERFACE.md`, release notes, support guidance, and known limitations record the reference-machine profile, constraints, workload hashes, skipped cases, and claim boundaries. Unsupported wording blocks release until narrowed.
+
+**Revisit trigger.** Broader claims require separately collected, reviewable evidence from the named hardware scope and an approved release-interface update.

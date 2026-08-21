@@ -1,6 +1,8 @@
 # ThirdLife Setup Core — Future Assembly Notes
 
 **Status:** Non-binding deferred backlog  
+**Bundle version:** 0.3.0  
+**Portfolio baseline:** 2.1  
 **Current project:** Team B / B1 — ThirdLife Setup Core  
 **Implementation owner for these ideas:** Team B / B4 — ThirdLife Deployment and Suite Assembly
 
