@@ -651,7 +651,7 @@ tasks:
   workstream: supply-chain
   kind: build
   priority: P0
-  status: in_progress
+  status: review
   size: M
   executor: hybrid
   environment: any
@@ -747,8 +747,25 @@ tasks:
     reference: SBOM sha256:78f54c595d27287cf29377772ef0f41cbc2e823e472ca3df60d9ed3c91c438c4;
       104277 bytes; dependency-input sha256:f42a8ab7e4b2e47aaeb28225411a491db284072982cb6a7e540f61010d30a2f4;
       matrix sha256:f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73
-    limitation: Source revision was intentionally omitted for this dirty working-tree check; clean-checkout and exact-HEAD-bound
-      generation remain to be evidenced before the automatable task work is complete
+    limitation: Source revision was intentionally omitted for this dirty working-tree check; the separate clean-checkout
+      evidence binds the exact implementation checkpoint to the generated SBOM
+  - summary: A detached clean checkout of the exact implementation checkpoint generated two byte-identical, source-bound
+      CycloneDX 1.6 SBOMs and structural inspection confirmed 20 unique components, 21 dependency records, complete reference
+      closure, truthful pending-review state, no volatile or machine-specific data, and correct artifact-hash semantics.
+    task: TL-0006
+    command_or_review: git worktree add --detach at the exact checkpoint; .\eng\generate-sbom.ps1 twice with
+      -SourceRevision equal to git rev-parse HEAD; bounded PowerShell JSON/reference/hash inspection; verified worktree cleanup
+    tier: targeted
+    result: passed; clean before generation and clean afterward except ignored generated artifacts
+    environment: Detached clean Windows checkout; Python 3.14.7; offline generator; unelevated same-machine verification
+    date: '2026-08-21'
+    duration: 19.019 s wall including worktree creation, two generations, inspection, and cleanup
+    reference: checkpoint 46de0c8597f462ad083284797e6f1fa09d52d47b; SBOM
+      sha256:b7044cf40d344933a051e9ccdeb7e385654a712f76aab61f5fa9011bc4810c36; 104399 bytes; dependency-input
+      sha256:6c95b753c9d1fe72bae2f55ce10d1d19dc2271c9e81e953a202c0db457211728; matrix
+      sha256:f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73
+    limitation: Development SBOM evidence only; licence/rights review is pending, no release version/artifact/signature/notices
+      are claimed, and the ignored generated files were removed with the disposable worktree
   - summary: The defensive Full tier passed 100 validator regressions, both live validators, locked restore, formatting, and a
       zero-warning Release build, then Windows Smart App Control blocked two unsigned Release DLL loads in the final test phase;
       the same two project tests are also blocked from the untouched TL-0005 baseline checkout.

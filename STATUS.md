@@ -1,16 +1,18 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-21  
-**Snapshot preparation time:** 2026-08-21T17:49:52+02:00  
+**Snapshot preparation time:** 2026-08-21T18:01:52+02:00  
 **Bundle baseline:** 0.3.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M0 — Foundation and product contract  
 **Current task:** `TL-0006` — Create dependency, license, and SBOM controls  
-**Task state:** `in_progress`
+**Task state:** `review`
 
 ## Current state
 
-The automatable TL-0006 implementation is present and its focused checks, locked restore, working-tree SBOM inspection, and point-in-time vulnerability queries pass. The remaining task-specific automation is exact-commit clean-checkout SBOM proof. A defensive Full-tier run passed every step through the zero-warning Release build, but Windows Smart App Control blocked two unsigned DLL loads in the final test phase; the same two project tests are blocked from the untouched TL-0005 baseline. After the clean-checkout proof, the task moves to `review`; it cannot become `done` until a named human reviews the licence and redistribution proposals against the exact matrix digest and reviewed commit.
+The automatable TL-0006 contract is complete. Its focused checks, locked restore, point-in-time vulnerability queries, deterministic working-tree inspection, and exact-commit clean-checkout SBOM proof pass. The task is now in `review`; it cannot become `done` until a named human reviews the licence and redistribution proposals against the exact matrix digest and reviewed commit.
+
+A defensive Full-tier run passed every step through the zero-warning Release build, but Windows Smart App Control blocked two unsigned DLL loads in the final test phase; the same two project tests are blocked from the untouched TL-0005 baseline. This environmental limitation is recorded without weakening or bypassing the policy.
 
 The current inventory contains 20 external components: 14 NuGet test-only packages and 6 build-only components (3 GitHub Actions, PyYAML, .NET SDK, and CPython). There are zero runtime dependencies and zero catalogue applications. Project-to-project references are not external packages.
 
@@ -22,7 +24,8 @@ The current inventory contains 20 external components: 14 NuGet test-only packag
 | Branch | `codex/tl-0006-dependency-license-sbom-controls` |
 | Implementation baseline | `b5c435c92e55f1d326963fc4aea9d4dd50525d37` — completed TL-0005 checkpoint |
 | History handling | Continued from the fetched baseline; no reset, rebase, force push, or history rewrite |
-| Checkpoint | Not yet created; implementation verification is in progress |
+| Implementation checkpoint | `46de0c8597f462ad083284797e6f1fa09d52d47b` — clean-checkout SBOM source revision |
+| Final review metadata checkpoint | The commit containing this file; resolve with `git rev-parse HEAD` after commit |
 | Upstream | Not yet configured for this new task branch |
 
 The configured SSH remote rejected unattended public-key authentication on this machine in the preceding task. Publication will use GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
@@ -62,18 +65,23 @@ The licence matrix SHA-256 is `f88260289c14c8b3d651d6149f560f083232bf131ee539856
 | NuGet direct/transitive advisory query | Exit 0; 26 projects/frameworks; 0 vulnerable top-level and 0 vulnerable transitive records | 6.700 s |
 | Exact PyYAML/PyPI release check | Identity, wheel, yanked state, SHA-256, and schema matched; 0 non-withdrawn records | 0.372 s |
 | Two working-tree SBOM generations and structural inspection | Byte-identical; 20 unique components, 21 dependency records, complete reference closure | 3.6 s including validation/generation summary |
+| Exact-commit clean-checkout SBOM proof | Passed twice from detached checkpoint `46de0c8`; exact `HEAD` provenance, deterministic bytes, complete reference closure, clean ignored-output behavior | 19.019 s wall including worktree creation and cleanup |
 | Defensive governed Full tier | 100 tests, validators, locked restore, format, and zero-warning Release build passed; final .NET tests failed on two Smart App Control blocks | 80.007 s Python tests; 21.35 s build; about 146 s wall |
 | Isolated current and detached TL-0005 baseline diagnosis | Both affected project tests exited 1 under the same Smart App Control block; policy was preserved | 18.757 s baseline comparison plus isolated rerun |
+
+The exact-tree Quick gate is run after this status record and the bundle manifest are finalized. Its result, the final metadata commit, push, and fetched remote-equality check are recorded in the session completion report without changing the verified tree afterward.
 
 Current working-tree evidence:
 
 - dependency-input SHA-256: `f42a8ab7e4b2e47aaeb28225411a491db284072982cb6a7e540f61010d30a2f4`;
 - dependency contract SHA-256: `725d6de01db6a94d7009ee956fc2675e2bbfb1bf45c301e8e4ae340f97657fb8`;
 - deterministic working-tree SBOM SHA-256: `78f54c595d27287cf29377772ef0f41cbc2e823e472ca3df60d9ed3c91c438c4`, 104277 bytes;
+- deterministic source-bound clean-checkout SBOM SHA-256: `b7044cf40d344933a051e9ccdeb7e385654a712f76aab61f5fa9011bc4810c36`, 104399 bytes;
+- clean-checkout dependency-input SHA-256: `6c95b753c9d1fe72bae2f55ce10d1d19dc2271c9e81e953a202c0db457211728`;
 - NuGet raw response SHA-256: `52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316`;
 - PyPI raw response SHA-256: `c3f35597bc2f08cc990c2a5fe57bef6687b3a3d7c61d8b0ba4cc067777eb1def`.
 
-The source revision was intentionally omitted from the working-tree SBOM. Exact-commit source binding is tested adversarially but will be exercised from a clean checkpoint checkout before the automatable work is declared complete.
+The working-tree SBOM intentionally omitted source revision. The clean-checkout SBOM embeds and verifies source revision `46de0c8597f462ad083284797e6f1fa09d52d47b`; the disposable checkout was clean before generation and remained clean afterward except for ignored SBOM artifacts, then was removed.
 
 ## Preserved project provenance
 
@@ -113,10 +121,8 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 
 ## Outstanding
 
-1. Regenerate the governed bundle manifest, run the governed Quick gate, and create a scoped implementation checkpoint.
-2. Generate and inspect a source-bound SBOM from a clean checkout of that exact commit, record the evidence, move `TL-0006` to `review`, and rerun the exact-tree Quick gate.
-3. Obtain a named human licence/redistribution review bound to the exact reviewed commit and matrix SHA-256 before `done` or any release gate.
-4. Repeat the Full tier in an approved environment that can execute the unsigned test assemblies, or after later governed signing/lifecycle work provides the approved execution path; do not weaken Smart App Control.
+1. Obtain a named human licence/redistribution review bound to the exact reviewed commit and matrix SHA-256 before `done` or any release gate.
+2. Repeat the Full tier in an approved environment that can execute the unsigned test assemblies, or after later governed signing/lifecycle work provides the approved execution path; do not weaken Smart App Control.
 
 ## Next dependency-ready task
 
