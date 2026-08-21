@@ -75,6 +75,20 @@ def repository_copy() -> Iterator[Path]:
     with tempfile.TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory) / "repository"
         shutil.copytree(REPOSITORY_ROOT, root, ignore=_copy_ignore)
+        # Most mutation tests exercise dependency discovery independently of
+        # the real repository's Git-bound human approval.  Reset only the
+        # copied review table to its canonical pending state; approval-specific
+        # tests create their own temporary Git history and exact binding.
+        for field, value in {
+            "Review status": "Pending",
+            "Reviewer": "Not recorded",
+            "Role": "Not recorded",
+            "Review date": "Not recorded",
+            "Result": "Not recorded",
+            "Reviewed commit": "Not recorded",
+            "Matrix SHA-256": "Not recorded",
+        }.items():
+            replace_review_value(root, field, value)
         yield root
 
 
@@ -247,7 +261,7 @@ class CurrentInventoryTests(SupplyChainTestCase):
             Counter(component.relationship for component in result.inventory),
             Counter({"ci": 3, "direct": 5, "toolchain": 2, "transitive": 10}),
         )
-        self.assertEqual(result.approval_state.casefold(), "pending")
+        self.assertEqual(result.approval_state.casefold(), "approved")
         self.assertRegex(result.lock_digest, r"\A[0-9a-f]{64}\Z")
         self.assertRegex(result.matrix_digest, r"\A[0-9a-f]{64}\Z")
         self.assertTrue(result.dependency_graph)

@@ -19,7 +19,7 @@ At `TL-0610`, verified pilot behavior is populated and the sheet remains clearly
 | Reverse-domain application ID | TBD before preview |
 | Product version | TBD at release freeze |
 | Publisher | TBD before preview |
-| Licence | TBD after dependency/licence review |
+| Licence | TBD at release freeze; the TL-0006 dependency/licence matrix review does not select the final product licence |
 | Supported operating systems | Windows 11 x64 support window to be frozen from release evidence |
 | Team / queue | Team B / B1 |
 | Maintenance state | Active development until `TL-0710` |

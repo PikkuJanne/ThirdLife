@@ -651,7 +651,7 @@ tasks:
   workstream: supply-chain
   kind: build
   priority: P0
-  status: review
+  status: done
   size: M
   executor: hybrid
   environment: any
@@ -781,9 +781,44 @@ tasks:
     reference: Code Integrity events 3077 and 3033; isolated current project exits 1/1; detached TL-0005 baseline project
       exits 1/1; baseline commit b5c435c92e55f1d326963fc4aea9d4dd50525d37
     limitation: The Full tier is not green on this machine. Smart App Control was not disabled or bypassed. TL-0006 has no
-      declared Full-tier trigger, and its expected targeted supply-chain checks pass, but release-gate Full verification must
-      be repeated in an approved environment that can execute the unsigned test assemblies or after the project's governed
-      signing/lifecycle work provides an approved path
+      declared Full-tier trigger and did not change a component identity, version, source, or restored dependency graph, so its
+      expected targeted supply-chain checks govern completion; release-gate Full verification must nevertheless be repeated in
+      an approved environment that can execute the unsigned test assemblies or after the project's governed signing/lifecycle
+      work provides an approved path
+  - summary: Named human reviewer approved the complete TL-0006 licence and redistribution proposal contract without conditions,
+      accepting the recorded limitations, not-shipped plans, and withheld rights exactly as written rather than granting blanket
+      redistribution permission.
+    task: TL-0006
+    command_or_review: Explicit approval supplied by Janne Vuorela in the Codex task and bound in the governed review table
+    tier: human review
+    result: passed
+    environment: Human governance review by Janne Vuorela, Principal Software Architect & Sole Project Owner
+    date: '2026-08-21'
+    duration: Explicit approval recorded at 2026-08-21T16:30:41Z; not an automated timed test
+    reference: reviewed commit 11711bcab68c5c23fea4705a49ca7ff2d021d485; matrix
+      sha256:f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73;
+      docs/supply-chain/dependencies.md; docs/supply-chain/license-matrix.csv
+    limitation: Approves the current governance contract and distribution plans only; it is not legal advice, blanket
+      redistribution permission, final product-licence selection, release authorization, or evidence that the recorded
+      xunit.abstractions/toolchain limitations have been removed
+  - summary: Post-approval regressions and two deterministic working-tree SBOM generations confirmed that the named human review
+      is accepted only when bound to the exact reviewed commit and matrix digest, and that generated metadata reports the approved
+      state without removing the documented evidence limitations or withheld redistribution rights.
+    task: TL-0006
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_supply_chain; .\eng\generate-sbom.ps1 twice with
+      distinct output paths; bounded JSON/reference/hash inspection
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; repository working tree after named approval
+    date: '2026-08-21'
+    duration: 43.440 s focused tests; SBOM generation and inspection completed in the bounded approval check
+    reference: 20/20 tests passed; SBOM sha256:dda4cb9363deecd8abfe24e3da819dfdda5436ff0c6a69e210e17262a6b9fbcb;
+      104278 bytes; dependency-input sha256:f42a8ab7e4b2e47aaeb28225411a491db284072982cb6a7e540f61010d30a2f4;
+      matrix sha256:f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73; reviewed commit
+      11711bcab68c5c23fea4705a49ca7ff2d021d485
+    limitation: Working-tree SBOM source revision was intentionally omitted because the approval metadata changes were not yet
+      committed; the separate clean-checkout proof remains bound to checkpoint 46de0c8597f462ad083284797e6f1fa09d52d47b,
+      and this approval does not authorize a release or broaden any redistribution right
   human_evidence_required:
   - A human reviews licenses and redistribution claims before a release gate.
   expected_test_tier: targeted

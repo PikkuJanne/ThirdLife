@@ -1,16 +1,18 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-21  
-**Snapshot preparation time:** 2026-08-21T18:01:52+02:00  
+**Snapshot preparation time:** 2026-08-21T18:30:41+02:00  
 **Bundle baseline:** 0.3.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M0 — Foundation and product contract  
 **Current task:** `TL-0006` — Create dependency, license, and SBOM controls  
-**Task state:** `review`
+**Task state:** `done`
 
 ## Current state
 
-The automatable TL-0006 contract is complete. Its focused checks, locked restore, point-in-time vulnerability queries, deterministic working-tree inspection, and exact-commit clean-checkout SBOM proof pass. The task is now in `review`; it cannot become `done` until a named human reviews the licence and redistribution proposals against the exact matrix digest and reviewed commit.
+`TL-0006` is complete. Its focused checks, locked restore, point-in-time vulnerability queries, deterministic working-tree inspection, and exact-commit clean-checkout SBOM proof pass. Janne Vuorela, Principal Software Architect & Sole Project Owner, approved the complete licence and redistribution proposal contract without conditions on 2026-08-21, bound to reviewed commit `11711bcab68c5c23fea4705a49ca7ff2d021d485` and matrix SHA-256 `f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73`.
+
+The approval accepts the contract exactly as written. It preserves the `xunit.abstractions` evidence limitation and withheld toolchain redistribution; it is not blanket redistribution permission, legal advice, a final product-licence decision, or release authorization.
 
 A defensive Full-tier run passed every step through the zero-warning Release build, but Windows Smart App Control blocked two unsigned DLL loads in the final test phase; the same two project tests are blocked from the untouched TL-0005 baseline. This environmental limitation is recorded without weakening or bypassing the policy.
 
@@ -25,10 +27,11 @@ The current inventory contains 20 external components: 14 NuGet test-only packag
 | Implementation baseline | `b5c435c92e55f1d326963fc4aea9d4dd50525d37` — completed TL-0005 checkpoint |
 | History handling | Continued from the fetched baseline; no reset, rebase, force push, or history rewrite |
 | Implementation checkpoint | `46de0c8597f462ad083284797e6f1fa09d52d47b` — clean-checkout SBOM source revision |
-| Final review metadata checkpoint | The commit containing this file; resolve with `git rev-parse HEAD` after commit |
-| Upstream | Not yet configured for this new task branch |
+| Reviewed contract checkpoint | `11711bcab68c5c23fea4705a49ca7ff2d021d485` — exact matrix reviewed by the named owner |
+| Approval checkpoint | The commit containing this file; resolve with `git rev-parse HEAD` after commit |
+| Upstream | `origin/codex/tl-0006-dependency-license-sbom-controls`; approval-session baseline was equal at `11711bcab68c5c23fea4705a49ca7ff2d021d485` |
 
-The configured SSH remote rejected unattended public-key authentication on this machine in the preceding task. Publication will use GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
+The configured SSH remote rejected unattended public-key authentication on this machine in the preceding task. Approval-checkpoint publication uses GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
 
 ## Supply-chain outcome
 
@@ -44,38 +47,41 @@ The implementation now provides:
 - exact-HEAD source provenance that rejects fabricated, stale, dirty, or incomplete governed input claims;
 - fail-closed human approval binding to a real reviewed commit and exact matrix SHA-256.
 
-The licence matrix SHA-256 is `f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73`. Its global review state is `Pending`; every row-level conclusion remains explicitly proposed.
+The licence matrix SHA-256 is `f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73`. Its global review state is `Approved`; row text remains explicitly proposed so the exact human decision and the underlying evidence are not conflated.
 
 ## Material limitations
 
-- `xunit.abstractions` 2.0.3 publishes a legacy mutable licence URL. Its Apache-2.0 conclusion remains a proposal, and redistribution is withheld unless the human review accepts adequate immutable evidence or the dependency is changed.
+- `xunit.abstractions` 2.0.3 publishes a legacy mutable licence URL. The approved contract preserves that evidence limitation and withholds redistribution until stronger immutable evidence is recorded and reviewed or the dependency is changed.
 - The .NET SDK and CPython are build toolchains, not release payloads. Redistribution remains withheld pending exact installer provenance, hashes/signatures, applicable licences, and notices.
 - NuGet `contentHash` values are restore-integrity metadata, not independently computed `.nupkg` hashes or publisher-signature proof.
 - The PyYAML SHA-256 admits only `pyyaml-6.0.3-cp314-cp314-win_amd64.whl`; no sdist, other wheel, platform, or architecture is admitted.
 - Vulnerability observations are point-in-time and source-dependent; zero returned records are not a guarantee of safety or advisory completeness.
-- The Full tier is not green on the active machine because the enforced Smart App Control policy blocks two unsigned test DLL loads. The policy was not disabled or bypassed. `TL-0006` has no declared Full-tier trigger, but Full verification must be repeated in an approved executable/signing environment before a release gate.
+- The Full tier is not green on the active machine because the enforced Smart App Control policy blocks two unsigned test DLL loads. The policy was not disabled or bypassed. `TL-0006` changed dependency governance, validation, and evidence but did not change any component identity, version, source, or restored dependency graph, so the dependency-change Full trigger did not apply and the task declares no other Full-tier trigger. Full verification must still be repeated in an approved executable/signing environment before a release gate.
 
 ## Verification evidence
 
 | Scope | Result | Duration |
 |---|---|---:|
 | Pre-change governed Quick baseline | Passed; 80 tests plus bundle/repository validation | 63.168 s test |
-| Final focused supply-chain regressions so far | 20/20 passed | 43.408 s test |
+| Pre-approval focused supply-chain regressions | 20/20 passed | 43.408 s test |
 | Locked NuGet restore | Passed for all 26 projects with the exact graph | 9.877 s |
 | NuGet direct/transitive advisory query | Exit 0; 26 projects/frameworks; 0 vulnerable top-level and 0 vulnerable transitive records | 6.700 s |
 | Exact PyYAML/PyPI release check | Identity, wheel, yanked state, SHA-256, and schema matched; 0 non-withdrawn records | 0.372 s |
-| Two working-tree SBOM generations and structural inspection | Byte-identical; 20 unique components, 21 dependency records, complete reference closure | 3.6 s including validation/generation summary |
+| Two pre-approval working-tree SBOM generations and structural inspection | Byte-identical; 20 unique components, 21 dependency records, complete reference closure | 3.6 s including validation/generation summary |
 | Exact-commit clean-checkout SBOM proof | Passed twice from detached checkpoint `46de0c8`; exact `HEAD` provenance, deterministic bytes, complete reference closure, clean ignored-output behavior | 19.019 s wall including worktree creation and cleanup |
 | Defensive governed Full tier | 100 tests, validators, locked restore, format, and zero-warning Release build passed; final .NET tests failed on two Smart App Control blocks | 80.007 s Python tests; 21.35 s build; about 146 s wall |
 | Isolated current and detached TL-0005 baseline diagnosis | Both affected project tests exited 1 under the same Smart App Control block; policy was preserved | 18.757 s baseline comparison plus isolated rerun |
+| Named licence/rights review | Janne Vuorela approved the exact reviewed commit and matrix without conditions while preserving all recorded limitations and withheld rights | Explicit approval at 2026-08-21T16:30:41Z |
+| Post-approval targeted regression | The live approved review state and exact Git/matrix binding passed all 20 focused supply-chain tests | 43.440 s |
+| Post-approval working-tree SBOM inspection | Two outputs were byte-identical CycloneDX 1.6 documents with approved review metadata, 20 components, 21 dependency records, and complete reference closure | SHA-256 `dda4cb9363deecd8abfe24e3da819dfdda5436ff0c6a69e210e17262a6b9fbcb`; 104278 bytes |
 
 The exact-tree Quick gate is run after this status record and the bundle manifest are finalized. Its result, the final metadata commit, push, and fetched remote-equality check are recorded in the session completion report without changing the verified tree afterward.
 
-Current working-tree evidence:
+Current approved working-tree evidence and preserved clean-checkout checkpoint evidence:
 
 - dependency-input SHA-256: `f42a8ab7e4b2e47aaeb28225411a491db284072982cb6a7e540f61010d30a2f4`;
-- dependency contract SHA-256: `725d6de01db6a94d7009ee956fc2675e2bbfb1bf45c301e8e4ae340f97657fb8`;
-- deterministic working-tree SBOM SHA-256: `78f54c595d27287cf29377772ef0f41cbc2e823e472ca3df60d9ed3c91c438c4`, 104277 bytes;
+- approved dependency contract SHA-256: `c5c7d45e3aa6d96b4fa577579d5eeba40aaceedfdd29951b12fa1e61aca0ea89`;
+- approved deterministic working-tree SBOM SHA-256: `dda4cb9363deecd8abfe24e3da819dfdda5436ff0c6a69e210e17262a6b9fbcb`, 104278 bytes;
 - deterministic source-bound clean-checkout SBOM SHA-256: `b7044cf40d344933a051e9ccdeb7e385654a712f76aab61f5fa9011bc4810c36`, 104399 bytes;
 - clean-checkout dependency-input SHA-256: `6c95b753c9d1fe72bae2f55ce10d1d19dc2271c9e81e953a202c0db457211728`;
 - NuGet raw response SHA-256: `52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316`;
@@ -121,9 +127,8 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 
 ## Outstanding
 
-1. Obtain a named human licence/redistribution review bound to the exact reviewed commit and matrix SHA-256 before `done` or any release gate.
-2. Repeat the Full tier in an approved environment that can execute the unsigned test assemblies, or after later governed signing/lifecycle work provides the approved execution path; do not weaken Smart App Control.
+1. Repeat the Full tier in an approved environment that can execute the unsigned test assemblies, or after later governed signing/lifecycle work provides the approved execution path; do not weaken Smart App Control. This is a release-gate limitation, not missing TL-0006 human evidence.
 
 ## Next dependency-ready task
 
-`TL-0007` — Create synthetic pilot fixtures and reference inputs. Do not start it while TL-0006 remains the selected active task.
+`TL-0007` — Create synthetic pilot fixtures and reference inputs.

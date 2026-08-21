@@ -187,7 +187,7 @@ The following checks ran from the active Windows checkout on 2026-08-21 after a 
 | NuGet | `2026-08-21T15:34:22Z` | `dotnet package list --project ThirdLife.sln --vulnerable --include-transitive --configfile NuGet.Config --format json --output-version 1 --no-restore` against the sole configured `nuget.org` audit source | Exit 0; 26 projects and 26 target frameworks inspected; 0 vulnerable top-level and 0 vulnerable transitive package records | 6.700 s | Raw UTF-8 response: `52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316` |
 | PyPI | `2026-08-21T15:20:07Z` | `https://pypi.org/pypi/PyYAML/6.0.3/json` | Identity matched; admitted CPython 3.14 Windows x64 wheel present and not yanked; wheel SHA-256 matched; 0 non-withdrawn vulnerability records; response `last_serial` 31526105 | 0.372 s | Raw response: `c3f35597bc2f08cc990c2a5fe57bef6687b3a3d7c61d8b0ba4cc067777eb1def` |
 
-Environment: Windows, .NET SDK 10.0.400, and CPython 3.14.7. The NuGet result is limited to advisories returned through the configured source for the already-restored graph. The PyPI result is limited to the exact release and wheel named above. Neither zero-result observation proves the absence of unpublished, delayed, incomplete, or incorrectly mapped advisories, and neither substitutes for the pending human licence and redistribution review.
+Environment: Windows, .NET SDK 10.0.400, and CPython 3.14.7. The NuGet result is limited to advisories returned through the configured source for the already-restored graph. The PyPI result is limited to the exact release and wheel named above. Neither zero-result observation proves the absence of unpublished, delayed, incomplete, or incorrectly mapped advisories, and neither substitutes for the named human licence and redistribution review recorded below.
 
 ## Release-interface evidence mapping
 
@@ -195,7 +195,7 @@ Environment: Windows, .NET SDK 10.0.400, and CPython 3.14.7. The NuGet result is
 
 | Release-interface evidence | TL-0006 source |
 |---|---|
-| Product licence | Named human review of the exact matrix digest; still TBD while review is pending |
+| Product licence | Dependency/licence matrix review is completed and bound below; the final product licence remains TBD at release freeze |
 | Dependency-lock revision | Frozen source commit plus dependency-input digest emitted in the SBOM |
 | SBOM/third-party notices | Generated CycloneDX file, its SHA-256, matrix digest, review record, and later release-specific notices |
 | Source commit | Exact checked-out `HEAD` supplied as `-SourceRevision`, with every governed input verified against that commit |
@@ -214,16 +214,18 @@ This task does not produce a release artifact hash, signature, installer, third-
 
 ## Human licence and rights review
 
-The global review is pending. No proposed licence conclusion, installation right, or redistribution right in the matrix is approved yet.
+The global review is approved. The approval accepts the matrix proposals exactly as written for their recorded scopes and distribution plans; it does not convert a withheld right into an allowed right or authorize blanket redistribution.
 
 | Field | Value |
 |---|---|
-| Review status | Pending |
-| Reviewer | Not recorded |
-| Role | Not recorded |
-| Review date | Not recorded |
-| Result | Not recorded |
-| Reviewed commit | Not recorded |
-| Matrix SHA-256 | Not recorded |
+| Review status | Approved |
+| Reviewer | Janne Vuorela |
+| Role | Principal Software Architect & Sole Project Owner |
+| Review date | 2026-08-21 |
+| Result | Approved without conditions |
+| Reviewed commit | 11711bcab68c5c23fea4705a49ca7ff2d021d485 |
+| Matrix SHA-256 | f88260289c14c8b3d651d6149f560f083232bf131ee5398563462e1df4e9ca73 |
 
-Before a release gate, a named human reviewer must inspect every row, resolve or explicitly reject mutable/missing evidence, confirm installation and redistribution conclusions separately against the actual distribution plan, and bind the result to both the reviewed commit and matrix SHA-256. Until then, `TL-0006` remains in `review` after its automatable verification is complete.
+Janne Vuorela supplied the explicit approval in the Codex task at `2026-08-21T16:30:41Z`. “Approved without conditions” means that the governed contract is accepted without an additional unrecorded condition; the limitations and withheld rights already written into the matrix remain binding. In particular, the mutable licence-evidence limitation for `xunit.abstractions` remains recorded, and redistribution of `.NET SDK` or `CPython` remains withheld pending exact installer provenance, hashes/signatures, applicable licences, and notices. This approval is governance evidence for the current dependency plan, not legal advice, a final product-licence decision, or release authorization.
+
+A material version, source, publisher, licence, integrity, purpose, scope, relationship, distribution-plan, or matrix change invalidates this review and requires a new named approval bound to the changed commit and digest.
