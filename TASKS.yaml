@@ -1,6 +1,6 @@
 schema_version: 1
-bundle_version: 0.3.0
-generated_on: '2026-08-15'
+bundle_version: 0.3.1
+generated_on: '2026-08-22'
 project:
   name: ThirdLife
   component: ThirdLife Setup Core
@@ -2812,7 +2812,7 @@ tasks:
   objective: Compare Microsoft.WinGet.Client and the WinGet COM API under ThirdLife's elevation, scope, progress, cancellation,
     and verification requirements.
   deliverables:
-  - docs/adr/ADR-004-winget-backend.md
+  - docs/adr/0009-winget-backend.md
   - spikes/WinGet.BackendSpike
   - artifacts/spikes/winget-backend-results.md
   acceptance_criteria:
@@ -2826,7 +2826,8 @@ tasks:
   - Capture API/library versions and representative success, failure, and cancellation results.
   evidence: []
   human_evidence_required:
-  - A maintainer reviews the spike evidence and approves ADR-004 before production adapter work begins.
+  - A maintainer reviews the spike evidence and approves ADR 0009 at docs/adr/0009-winget-backend.md before production adapter
+    work begins.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

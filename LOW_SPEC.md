@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Modest-Hardware Engineering and Same-Machine Evidence
 
-**Bundle version:** 0.3.0  
+**Bundle version:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Physical validation scope:** active Codex machine only
 

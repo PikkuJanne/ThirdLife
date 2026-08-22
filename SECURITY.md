@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Security Policy and Threat Baseline
 
 **Status:** Binding baseline; expanded and evidenced by roadmap tasks  
-**Bundle version:** 0.3.0
+**Bundle version:** 0.3.1
 
 ## 1. Security objective
 

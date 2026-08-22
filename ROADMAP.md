@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Binding Development Roadmap
 
-**Bundle version:** 0.3.0  
+**Bundle version:** 0.3.1  
 **Portfolio roadmap:** ThirdLife Software Portfolio v2.1 (15 August 2026)  
 **Project / queue:** ThirdLife Setup Core — Team B / B1  
 **Pilot target:** v0.1 controlled partner pilot at `TL-0611`  
@@ -347,7 +347,7 @@ Every milestone gate transitively depends on all work in that milestone. Every t
 
 | Task | Deliverable | Executor | Direct dependencies |
 |---|---|---|---|
-| `TL-0401` | Spike structured WinGet integration paths | `hybrid` | `TL-0314`, `TL-0006` |
+| `TL-0401` | Spike structured WinGet integration paths and record ADR 0009 | `hybrid` | `TL-0314`, `TL-0006` |
 | `TL-0402` | Implement the production package-manager adapter | `codex` | `TL-0401` |
 | `TL-0403` | Enforce package resolution and trust policy | `codex` | `TL-0402`, `TL-0301`, `TL-0307` |
 | `TL-0404` | Implement one approved machine-wide package action | `codex` | `TL-0403`, `TL-0313` |
@@ -358,6 +358,8 @@ Every milestone gate transitively depends on all work in that milestone. Every t
 | `TL-0409` | Make package execution idempotent and safely retryable | `codex` | `TL-0408` |
 | `TL-0410` | Complete the first write-capable end-to-end slice | `hybrid` | `TL-0409` |
 | `TL-0411` | Validate the M4 package-installation gate | `hybrid` | `TL-0410` |
+
+Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md` and reserves ADR 0009 for the future TL-0401 backend decision at `docs/adr/0009-winget-backend.md`; see the [approved bundle 0.3.1 numbering amendment](docs/amendments/2026-08-22-adr-0009-reservation.md). The reservation does not select a backend or satisfy TL-0401's spike, verification, or maintainer-approval requirements.
 
 **Gate:** `TL-0411` — Validate the M4 package-installation gate. The gate is not complete until its automated verification and every declared human evidence item are attached.
 

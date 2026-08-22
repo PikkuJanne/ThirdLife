@@ -1,12 +1,12 @@
 # ThirdLife Setup Core — Frozen Decision Register
 
-**Bundle version:** 0.3.0  
-**Generated:** 2026-08-15  
+**Bundle version:** 0.3.1  
+**Generated:** 2026-08-22  
 **Status:** Binding for the Team B/B1 ThirdLife Setup Core roadmap
 
 ## Purpose and authority
 
-This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, modest-hardware, testing, continuity, and delivery choices that Codex must treat as constraints rather than suggestions. This 0.3.0 revision adopts the ThirdLife Software Portfolio v2.1 single-machine and risk-based testing baseline before the former TL-0008 hardware-lab procedure is executed.
+This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, modest-hardware, testing, continuity, and delivery choices that Codex must treat as constraints rather than suggestions. Revision 0.3.1 preserves the ThirdLife Software Portfolio v2.1 single-machine and risk-based testing baseline and records the approved unique ADR-number reservation for the future TL-0401 WinGet backend decision.
 
 When implementation pressure conflicts with a decision here, stop, record the conflict, and request an explicit human decision. Do not silently reinterpret a frozen decision.
 
@@ -556,6 +556,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Rationale.** The bundle must remain synchronized and resistant to safety, scope, and cross-project drift.
 
 **Implementation constraint.** A change requires a human-approved decision/ADR, graph validation, synchronized document updates, and an explicit bundle-version change.
+
+**Approved amendment `AMD-2026-08-22-ADR-0009` — unique TL-0401 ADR number (22 August 2026).** Janne Vuorela, Principal Software Architect & Sole Project Owner, approved preserving the completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md` and reserving the next unoccupied identifier, ADR 0009 for TL-0401 at `docs/adr/0009-winget-backend.md`. The future task's deliverable and human-evidence wording change together; its dependencies, status, evidence, package/security requirements, and separate maintainer approval remain unchanged. The complete impact, alternatives, rollout, rollback, and historical-evidence treatment are recorded in [`docs/amendments/2026-08-22-adr-0009-reservation.md`](docs/amendments/2026-08-22-adr-0009-reservation.md). This amendment changes no product, boundary, runtime, data, licence, or release decision.
 
 **Revisit trigger.** Only through a human-approved governance revision.
 

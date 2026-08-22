@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import itertools
 import re
 import subprocess
 import sys
@@ -2000,6 +2001,10 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
                 TASK_BY_ID if task_by_id is None else task_by_id,
                 DECISION_IDS,
             )
+            validate_bundle.validate_tl0401_adr_reservation(
+                validation,
+                TASK_BY_ID if task_by_id is None else task_by_id,
+            )
         return validation
 
     def test_current_architecture_decision_records_satisfy_contract(self) -> None:
@@ -2331,6 +2336,251 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
                 validation.errors,
             )
 
+    def test_tl0401_partial_legacy_adr_contract_is_rejected(self) -> None:
+        mutations = (
+            (
+                "deliverables",
+                "docs/adr/0009-winget-backend.md",
+                "docs/adr/ADR-004-winget-backend.md",
+                "WinGet ADR deliverable must be exactly",
+            ),
+            (
+                "human_evidence_required",
+                "ADR 0009",
+                "ADR-004",
+                "human evidence must name 'ADR 0009'",
+            ),
+        )
+        for field, old, new, expected in mutations:
+            with (
+                self.subTest(field=field),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                root = Path(temporary_directory)
+                self.copy_architecture_documents(root)
+                task_by_id = dict(TASK_BY_ID)
+                task = dict(TASK_BY_ID["TL-0401"])
+                values = list(task[field])
+                matching_indexes = [
+                    index for index, value in enumerate(values) if old in value
+                ]
+                self.assertEqual(matching_indexes, [0])
+                index = matching_indexes[0]
+                values[index] = values[index].replace(old, new, 1)
+                task[field] = values
+                task_by_id["TL-0401"] = task
+                validation = self.validate_documents(root, task_by_id)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_duplicate_adr_0009_reservation_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            task_by_id = dict(TASK_BY_ID)
+            task = dict(TASK_BY_ID["TL-0702"])
+            task["deliverables"] = [
+                *task["deliverables"],
+                "docs/adr/ADR-009-backup-adapter.md",
+            ]
+            task_by_id["TL-0702"] = task
+            validation = self.validate_documents(root, task_by_id)
+            self.assertTrue(
+                any(
+                    "ADR 0009: reservation must belong only" in error
+                    for error in validation.errors
+                ),
+                validation.errors,
+            )
+
+    def test_noncanonical_duplicate_adr_0009_reservations_are_rejected(self) -> None:
+        duplicate_paths = (
+            "./docs/adr/0009-backup-adapter.md",
+            r"docs\adr\0009-backup-adapter.md",
+            "Create docs/adr/0009-backup-adapter.md",
+            "docs/adr/0009-backup-adapter.md#draft",
+        )
+        for duplicate_path in duplicate_paths:
+            with (
+                self.subTest(duplicate_path=duplicate_path),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                root = Path(temporary_directory)
+                self.copy_architecture_documents(root)
+                task_by_id = dict(TASK_BY_ID)
+                task = dict(TASK_BY_ID["TL-0702"])
+                task["deliverables"] = [
+                    *task["deliverables"],
+                    duplicate_path,
+                ]
+                task_by_id["TL-0702"] = task
+                validation = self.validate_documents(root, task_by_id)
+                self.assertTrue(
+                    any(
+                        "ADR 0009: reservation must belong only" in error
+                        for error in validation.errors
+                    ),
+                    validation.errors,
+                )
+
+    def test_tl0401_rejects_legacy_alias_alongside_current_reservation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            task_by_id = dict(TASK_BY_ID)
+            task = dict(TASK_BY_ID["TL-0401"])
+            task["human_evidence_required"] = [
+                task["human_evidence_required"][0] + " Legacy alias: ADR-0004."
+            ]
+            task_by_id["TL-0401"] = task
+            validation = self.validate_documents(root, task_by_id)
+            self.assertTrue(
+                any(
+                    "superseded ADR 0004 marker is not permitted" in error
+                    for error in validation.errors
+                ),
+                validation.errors,
+            )
+
+    def test_tl0401_rejects_obfuscated_legacy_aliases(self) -> None:
+        aliases = (
+            "ADR_004",
+            "ADR–004",
+            "ADR\t004",
+            "ADR-**004**",
+            "ADR-\u200b004",
+        )
+        for alias in aliases:
+            with (
+                self.subTest(alias=repr(alias)),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                root = Path(temporary_directory)
+                self.copy_architecture_documents(root)
+                task_by_id = dict(TASK_BY_ID)
+                task = dict(TASK_BY_ID["TL-0401"])
+                task["human_evidence_required"] = [
+                    task["human_evidence_required"][0]
+                    + f" Superseded alias: {alias}."
+                ]
+                task_by_id["TL-0401"] = task
+                validation = self.validate_documents(root, task_by_id)
+                self.assertTrue(
+                    any(
+                        "superseded ADR 0004 marker is not permitted" in error
+                        for error in validation.errors
+                    ),
+                    validation.errors,
+                )
+
+    def test_tl0401_preserves_exact_maintainer_approval_gate(self) -> None:
+        mutations = (
+            [
+                "ADR 0009 at docs/adr/0009-winget-backend.md does not require "
+                "maintainer review or approval."
+            ],
+            [
+                validate_bundle.TL0401_HUMAN_EVIDENCE,
+                "No maintainer approval is actually required.",
+            ],
+        )
+        for human_evidence in mutations:
+            with (
+                self.subTest(human_evidence=human_evidence),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                root = Path(temporary_directory)
+                self.copy_architecture_documents(root)
+                task_by_id = dict(TASK_BY_ID)
+                task = dict(TASK_BY_ID["TL-0401"])
+                task["human_evidence_required"] = human_evidence
+                task_by_id["TL-0401"] = task
+                validation = self.validate_documents(root, task_by_id)
+                self.assertTrue(
+                    any(
+                        "must remain the one exact approved maintainer gate" in error
+                        for error in validation.errors
+                    ),
+                    validation.errors,
+                )
+
+    def test_tl0401_backlog_rejects_premature_adr_0009_file(self) -> None:
+        premature_paths = (
+            validate_bundle.TL0401_WINGET_ADR_PATH,
+            "docs/adr/ADR-009-backup.md",
+            "docs/adr/009-backup.md",
+        )
+        for premature_path in premature_paths:
+            with (
+                self.subTest(premature_path=premature_path),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                root = Path(temporary_directory)
+                self.copy_architecture_documents(root)
+                path = root / premature_path
+                path.write_text("# Premature future decision\n", encoding="utf-8")
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(
+                        "ADR 0009 file must not exist before the task executes" in error
+                        for error in validation.errors
+                    ),
+                    validation.errors,
+                )
+
+    def test_authority_documents_require_exact_amendment_link(self) -> None:
+        mutations = (
+            "](docs/amendments/MISSING.md)",
+            f"] ({validate_bundle.ADR_NUMBERING_AMENDMENT_PATH})",
+        )
+        for relative, mutation in itertools.product(
+            ("DECISIONS.md", "ROADMAP.md"),
+            mutations,
+        ):
+            with (
+                self.subTest(relative=relative, mutation=mutation),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                root = Path(temporary_directory)
+                self.copy_architecture_documents(root)
+                path = root / relative
+                body = path.read_text(encoding="utf-8")
+                link = f"]({validate_bundle.ADR_NUMBERING_AMENDMENT_PATH})"
+                self.assertEqual(body.count(link), 1)
+                path.write_text(
+                    body.replace(link, mutation, 1),
+                    encoding="utf-8",
+                )
+                validation = self.validate_documents(root)
+                self.assertIn(
+                    f"{relative}: must link exactly once to "
+                    f"{validate_bundle.ADR_NUMBERING_AMENDMENT_PATH}",
+                    validation.errors,
+                )
+
+    def test_authority_documents_require_amendment_identity(self) -> None:
+        for relative in ("DECISIONS.md", "ROADMAP.md"):
+            with (
+                self.subTest(relative=relative),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                root = Path(temporary_directory)
+                self.copy_architecture_documents(root)
+                path = root / relative
+                self.replace_once(
+                    path,
+                    "AMD-2026-08-22-ADR-0009",
+                    "AMD-MISSING",
+                )
+                validation = self.validate_documents(root)
+                self.assertIn(
+                    f"{relative}: missing ADR-numbering authority phrase "
+                    "'AMD-2026-08-22-ADR-0009'",
+                    validation.errors,
+                )
+
     def test_adr_paths_are_required_manifest_inputs(self) -> None:
         record_paths = tuple(
             relative
@@ -2340,6 +2590,10 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
         self.assertTrue(
             set(validate_bundle.ARCHITECTURE_DECISION_PATHS)
             <= set(validate_bundle.REQUIRED_FILES)
+        )
+        self.assertIn(
+            validate_bundle.ADR_NUMBERING_AMENDMENT_PATH,
+            validate_bundle.REQUIRED_FILES,
         )
 
 
@@ -2685,7 +2939,7 @@ class TestingDocumentContractTests(unittest.TestCase):
                     validation.errors,
                 )
 
-    def test_v030_required_files_and_authority_are_frozen(self) -> None:
+    def test_current_required_files_and_authority_are_frozen(self) -> None:
         self.assertIn("DEVELOPMENT_WORKFLOW.md", validate_bundle.REQUIRED_FILES)
         self.assertIn("TESTING.md", validate_bundle.REQUIRED_FILES)
         self.assertIn("STATUS.md", validate_bundle.REQUIRED_FILES)
@@ -2718,15 +2972,45 @@ class TestingDocumentContractTests(unittest.TestCase):
             ),
         )
 
-    def test_live_task_metadata_matches_v030_contract(self) -> None:
-        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.3.0")
-        self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-08-15")
+    def test_live_task_metadata_matches_v031_contract(self) -> None:
+        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.3.1")
+        self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-08-22")
         self.assertEqual(TASK_DOCUMENT["portfolio"]["roadmap_version"], "2.1")
         self.assertEqual(
             TASK_DOCUMENT["portfolio"]["test_tiers"],
             ["quick", "targeted", "full", "extended"],
         )
         self.assertEqual(len(TASK_DOCUMENT["tasks"]), 91)
+
+    def test_stale_active_bundle_header_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            for relative in validate_bundle.CURRENT_BUNDLE_DOCUMENT_MARKERS:
+                source = REPOSITORY_ROOT / relative
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(source.read_bytes())
+            path = root / "SECURITY.md"
+            body = path.read_text(encoding="utf-8")
+            self.assertEqual(body.count("**Bundle version:** 0.3.1"), 1)
+            path.write_text(
+                body.replace(
+                    "**Bundle version:** 0.3.1",
+                    "**Bundle version:** 0.3.0",
+                    1,
+                )
+                + "\n**Bundle version:** 0.3.1\n",
+                encoding="utf-8",
+            )
+            validation = validate_bundle.Validation()
+            with patch.object(validate_bundle, "ROOT", root):
+                validate_bundle.validate_current_bundle_document_markers(validation)
+            self.assertIn(
+                "SECURITY.md: 'Bundle version' metadata must be exactly one line "
+                "'**Bundle version:** 0.3.1'; found "
+                "['**Bundle version:** 0.3.0', '**Bundle version:** 0.3.1']",
+                validation.errors,
+            )
 
 
 if __name__ == "__main__":

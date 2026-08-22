@@ -1,6 +1,6 @@
 # AGENTS.md — ThirdLife Setup Core Codex Operating Contract
 
-**Bundle version:** 0.3.0  
+**Bundle version:** 0.3.1  
 **Project:** ThirdLife Setup Core — Team B / B1  
 **Physical validation scope:** active Codex machine only
 
@@ -125,7 +125,7 @@ Use states truthfully:
 
 Evidence entries include task, command/review, tier, result, environment/constraint, date, duration, artifact/commit/reference, and limitation. Do not paste secrets, personal data, recovery material, or large raw logs into YAML.
 
-When applying bundle 0.3.0 to an in-progress repository, preserve existing `status`, `evidence`, and `blocked_reason` using `tools/merge_task_contracts.py` or an equivalent reviewed merge.
+When applying a synchronized bundle revision to an in-progress repository, preserve existing `status`, `evidence`, and `blocked_reason`. The one-time 0.3.0 TL-0008 transition uses `tools/merge_task_contracts.py`; a later governed amendment must merge only its approved contract changes and retain prior execution history.
 
 ## 7. Test-tier selection
 

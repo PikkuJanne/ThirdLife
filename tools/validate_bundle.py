@@ -24,6 +24,14 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+ADR_NUMBERING_AMENDMENT_PATH = (
+    "docs/amendments/2026-08-22-adr-0009-reservation.md"
+)
+TL0401_WINGET_ADR_PATH = "docs/adr/0009-winget-backend.md"
+TL0401_HUMAN_EVIDENCE = (
+    "A maintainer reviews the spike evidence and approves ADR 0009 at "
+    "docs/adr/0009-winget-backend.md before production adapter work begins."
+)
 ARCHITECTURE_DECISION_PATHS = (
     "docs/adr/0001-windows-wpf-stack.md",
     "docs/adr/0002-evidence-policy-separation.md",
@@ -55,6 +63,7 @@ REQUIRED_FILES = (
     "TL-0008_TRANSITION.md",
     "CHANGELOG.md",
     "docs/change-control.md",
+    ADR_NUMBERING_AMENDMENT_PATH,
     "docs/glossary.md",
     "docs/non-goals.md",
     "docs/product-contract.md",
@@ -699,14 +708,48 @@ ALLOWED_KIND = {"build", "code", "data", "docs", "gate", "release", "security", 
 ALLOWED_TEST_TIER = {"quick", "targeted", "full", "extended"}
 MUTABLE_FIELDS = ["status", "evidence", "blocked_reason"]
 
-V030_BUNDLE_VERSION = "0.3.0"
-V030_GENERATED_ON = "2026-08-15"
-V030_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 67))
-V030_TASK_COUNT = 91
+CURRENT_BUNDLE_VERSION = "0.3.1"
+CURRENT_BUNDLE_GENERATED_ON = "2026-08-22"
+CURRENT_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 67))
+CURRENT_TASK_COUNT = 91
 V030_TL0008_SOURCE_COMMIT = "4fa3ea050fd5e9985fde9cc8218281698d371cc8"
 V030_TL0008_PROCEDURE_DIGEST = (
     "ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b"
 )
+CURRENT_BUNDLE_DOCUMENT_MARKERS = {
+    "ACCESSIBILITY.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "AGENTS.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "CHANGELOG.md": "## 0.3.1 — 22 August 2026",
+    "CODEX_START_PROMPT.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "DECISIONS.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "DEVELOPMENT_WORKFLOW.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "FUTURE_ASSEMBLY_NOTES.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "LOW_SPEC.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "PROJECT_BOUNDARY.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "README.md": (
+        f"**Roadmap bundle:** {CURRENT_BUNDLE_VERSION} / "
+        "ThirdLife Software Portfolio v2.1"
+    ),
+    "RELEASE_INTERFACE.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "ROADMAP.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "SECURITY.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+    "STATUS.md": f"**Bundle baseline:** {CURRENT_BUNDLE_VERSION}",
+    "TESTING.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
+}
+CURRENT_BUNDLE_METADATA_LABELS = {
+    **{
+        relative: "Bundle version"
+        for relative in CURRENT_BUNDLE_DOCUMENT_MARKERS
+        if relative
+        not in {
+            "CHANGELOG.md",
+            "README.md",
+            "STATUS.md",
+        }
+    },
+    "README.md": "Roadmap bundle",
+    "STATUS.md": "Bundle baseline",
+}
 
 # Exact fragments from the superseded draft that are never valid as live
 # instructions. Historical and explicit rejection text remains permitted.
@@ -1416,6 +1459,38 @@ def markdown_visible_text(text: str) -> str:
     return "".join(visible_lines)
 
 
+def exact_inline_markdown_link_count(text: str, target: str) -> int:
+    visible_text = markdown_visible_text(text)
+    return len(
+        re.findall(
+            rf"(?<!!)\[[^\]\r\n]+\]\({re.escape(target)}\)",
+            visible_text,
+        )
+    )
+
+
+def adr_path_numbers(text: str) -> list[int]:
+    normalized_text = unicodedata.normalize("NFKC", text)
+    normalized_text = "".join(
+        character
+        for character in normalized_text
+        if unicodedata.category(character) != "Cf"
+    ).replace("\\", "/")
+    normalized_text = "".join(
+        "-" if unicodedata.category(character) == "Pd" else character
+        for character in normalized_text
+    )
+    return [
+        int(match.group(1))
+        for match in re.finditer(
+            r"(?i)(?<![A-Z0-9])(?:\./)?docs/adr/"
+            r"(?:ADR[-_\s]*)?(\d{3,4})-[^/\s#?]+\.md"
+            r"(?=$|[\s#?.,;:)\]}`'\"])",
+            normalized_text,
+        )
+    ]
+
+
 def validate_governed_adr_markdown(
     relative: str,
     text: str,
@@ -1620,6 +1695,191 @@ def validate_architecture_decision_records(
             "TL-0009: ADR set does not cover declared decision_refs "
             f"{missing_task_decisions}"
         )
+
+
+def validate_tl0401_adr_reservation(
+    validation: Validation,
+    task_by_id: dict[str, dict[str, Any]],
+) -> None:
+    task = task_by_id.get("TL-0401")
+    if not isinstance(task, dict):
+        validation.error("TASKS.yaml: missing TL-0401")
+        return
+
+    deliverables = task.get("deliverables")
+    if not isinstance(deliverables, list):
+        deliverables = []
+    if TL0401_WINGET_ADR_PATH not in deliverables:
+        validation.error(
+            f"TL-0401: deliverables must reserve {TL0401_WINGET_ADR_PATH}"
+        )
+    winget_adr_paths = [
+        value
+        for value in deliverables
+        if isinstance(value, str)
+        and value.casefold().startswith("docs/adr/")
+        and "winget" in value.casefold()
+    ]
+    if winget_adr_paths != [TL0401_WINGET_ADR_PATH]:
+        validation.error(
+            "TL-0401: WinGet ADR deliverable must be exactly "
+            f"{TL0401_WINGET_ADR_PATH!r}"
+        )
+
+    human_evidence = task.get("human_evidence_required")
+    if not isinstance(human_evidence, list):
+        human_evidence = []
+    if human_evidence != [TL0401_HUMAN_EVIDENCE]:
+        validation.error(
+            "TL-0401: human_evidence_required must remain the one exact approved "
+            f"maintainer gate {TL0401_HUMAN_EVIDENCE!r}"
+        )
+    human_text = "\n".join(
+        value for value in human_evidence if isinstance(value, str)
+    )
+    for phrase in ("ADR 0009", TL0401_WINGET_ADR_PATH):
+        if phrase not in human_text:
+            validation.error(
+                f"TL-0401: human evidence must name {phrase!r}"
+            )
+
+    live_contract_text = "\n".join(
+        value
+        for values in (deliverables, human_evidence)
+        for value in values
+        if isinstance(value, str)
+    )
+    normalized_contract = unicodedata.normalize("NFKC", live_contract_text)
+    normalized_contract_parts: list[str] = []
+    for character in normalized_contract:
+        category = unicodedata.category(character)
+        if category == "Cf" or character in "*`~":
+            continue
+        if category == "Pd" or character == "_" or character.isspace():
+            normalized_contract_parts.append("-")
+        else:
+            normalized_contract_parts.append(character)
+    normalized_contract = re.sub(
+        r"-+",
+        "-",
+        "".join(normalized_contract_parts),
+    )
+    legacy_adr_match = re.search(
+        r"(?<![A-Z0-9])ADR-?0*4(?![0-9])",
+        normalized_contract,
+        re.IGNORECASE,
+    )
+    if legacy_adr_match is not None:
+        validation.error(
+            "TL-0401: superseded ADR 0004 marker is not permitted in the live contract"
+        )
+
+    reservations: dict[int, list[str]] = defaultdict(list)
+    for other_task_id, other_task in task_by_id.items():
+        other_deliverables = other_task.get("deliverables", [])
+        if not isinstance(other_deliverables, list):
+            continue
+        for value in other_deliverables:
+            if not isinstance(value, str):
+                continue
+            for number in adr_path_numbers(value):
+                reservations[number].append(
+                    f"{other_task_id}:{value}"
+                )
+    expected_reservations = {
+        4: "TL-0009:docs/adr/0004-ephemeral-broker.md",
+        9: f"TL-0401:{TL0401_WINGET_ADR_PATH}",
+    }
+    for number, expected_owner in expected_reservations.items():
+        owners = sorted(reservations.get(number, []))
+        if owners != [expected_owner]:
+            validation.error(
+                f"ADR {number:04d}: reservation must belong only to "
+                f"{expected_owner!r}; found {owners}"
+            )
+
+    task_status = task.get("status")
+    if task_status in {"backlog", "ready"}:
+        premature_paths = sorted(
+            path.relative_to(ROOT).as_posix()
+            for path in (ROOT / "docs/adr").glob("*.md")
+            if path.is_file()
+            and 9 in adr_path_numbers(path.relative_to(ROOT).as_posix())
+        )
+        if premature_paths:
+            validation.error(
+                "TL-0401: ADR 0009 file must not exist before the task executes; "
+                f"found {premature_paths}"
+            )
+
+    amendment_text = require_phrases(
+        ADR_NUMBERING_AMENDMENT_PATH,
+        (),
+        validation,
+    )
+    amendment_visible = markdown_visible_text(amendment_text)
+    amendment_phrases = (
+        "AMD-2026-08-22-ADR-0009",
+        "Janne Vuorela — Principal Software Architect & Sole Project Owner",
+        "Approval date | 2026-08-22",
+        "`0.3.0` → `0.3.1`",
+        "docs/adr/0004-ephemeral-broker.md",
+        TL0401_WINGET_ADR_PATH,
+        "This amendment is numbering approval only; it is not that future backend-selection approval.",
+        "The 91-task dependency graph and every milestone gate remain unchanged.",
+        "No frozen decision text or meaning changes.",
+        "Janne Vuorela owns this numbering amendment.",
+    )
+    amendment_folded = amendment_visible.casefold()
+    for phrase in amendment_phrases:
+        if phrase.casefold() not in amendment_folded:
+            validation.error(
+                f"{ADR_NUMBERING_AMENDMENT_PATH}: missing required amendment phrase {phrase!r}"
+            )
+    validate_local_markdown_links(
+        ADR_NUMBERING_AMENDMENT_PATH,
+        amendment_text,
+        validation,
+    )
+
+    readme_text = require_phrases("README.md", (), validation)
+    readme_visible = markdown_visible_text(readme_text)
+    expected_navigation = f"({ADR_NUMBERING_AMENDMENT_PATH})"
+    if exact_inline_markdown_link_count(readme_text, ADR_NUMBERING_AMENDMENT_PATH) != 1:
+        validation.error(
+            f"README.md: must link exactly once to {ADR_NUMBERING_AMENDMENT_PATH}"
+        )
+
+    authority_contracts = {
+        "DECISIONS.md": (
+            "AMD-2026-08-22-ADR-0009",
+            ADR_NUMBERING_AMENDMENT_PATH,
+            "completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md`",
+            f"ADR 0009 for TL-0401 at `{TL0401_WINGET_ADR_PATH}`",
+        ),
+        "ROADMAP.md": (
+            "AMD-2026-08-22-ADR-0009",
+            ADR_NUMBERING_AMENDMENT_PATH,
+            "completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md`",
+            f"ADR 0009 for the future TL-0401 backend decision at `{TL0401_WINGET_ADR_PATH}`",
+        ),
+    }
+    for relative, phrases in authority_contracts.items():
+        authority_text = require_phrases(relative, (), validation)
+        authority_visible = markdown_visible_text(authority_text)
+        authority_folded = authority_visible.casefold()
+        for phrase in phrases:
+            if phrase.casefold() not in authority_folded:
+                validation.error(
+                    f"{relative}: missing ADR-numbering authority phrase {phrase!r}"
+                )
+        if exact_inline_markdown_link_count(
+            authority_text,
+            ADR_NUMBERING_AMENDMENT_PATH,
+        ) != 1:
+            validation.error(
+                f"{relative}: must link exactly once to {ADR_NUMBERING_AMENDMENT_PATH}"
+            )
 
 
 def security_field(body: str, field: str) -> str:
@@ -4842,7 +5102,7 @@ def same_machine_constraint_ids(text: str) -> tuple[str, ...]:
 def has_obsolete_active_hardware_obligation(line: str, heading: str = "") -> bool:
     """Identify a live obligation to obtain external physical test hardware.
 
-    The v0.3.0 documents intentionally discuss the retired lab model in negative,
+    Documents derived from v0.3.0 intentionally discuss the retired lab model in negative,
     historical, search, and supersession contexts. Those references remain valid;
     affirmative requirements do not.
     """
@@ -5035,10 +5295,59 @@ def validate_no_obsolete_hardware_obligations(
                 )
 
 
-def validate_v030_document_markers(validation: Validation) -> None:
+def validate_current_bundle_document_markers(validation: Validation) -> None:
+    for relative, marker in CURRENT_BUNDLE_DOCUMENT_MARKERS.items():
+        text = require_phrases(relative, (), validation)
+        visible_text = markdown_visible_text(text)
+        if relative == "CHANGELOG.md":
+            version_headings = re.findall(r"(?m)^##\s+[^\r\n]+$", visible_text)
+            if not version_headings or version_headings[0] != marker:
+                validation.error(
+                    f"{relative}: first version heading must be {marker!r}"
+                )
+            if visible_text.count(marker) != 1:
+                validation.error(
+                    f"{relative}: must contain exactly one current version heading {marker!r}"
+                )
+            continue
+
+        label = CURRENT_BUNDLE_METADATA_LABELS[relative]
+        metadata_lines = [
+            line.rstrip(" \t")
+            for line in re.findall(
+            rf"(?m)^\*\*{re.escape(label)}:\*\*[^\r\n]*$",
+            visible_text,
+            )
+        ]
+        if metadata_lines != [marker]:
+            validation.error(
+                f"{relative}: {label!r} metadata must be exactly one line {marker!r}; "
+                f"found {metadata_lines}"
+            )
+
+    additional_markers = {
+        "DECISIONS.md": (f"**Generated:** {CURRENT_BUNDLE_GENERATED_ON}",),
+        "RELEASE_INTERFACE.md": (
+            f"| Interface revision | Draft {CURRENT_BUNDLE_VERSION} |",
+        ),
+    }
+    for relative, markers in additional_markers.items():
+        text = require_phrases(relative, (), validation)
+        visible_text = markdown_visible_text(text)
+        for marker in markers:
+            exact_lines = re.findall(
+                rf"(?m)^{re.escape(marker)}[ \t]*$",
+                visible_text,
+            )
+            if len(exact_lines) != 1:
+                validation.error(
+                    f"{relative}: required metadata line must appear exactly once "
+                    f"as {marker!r}"
+                )
+
     required_markers: dict[str, tuple[str, ...]] = {
         "ROADMAP.md": (
-            "**Bundle version:** 0.3.0",
+            CURRENT_BUNDLE_DOCUMENT_MARKERS["ROADMAP.md"],
             "ThirdLife Software Portfolio v2.1",
             "active Codex machine",
             "quick",
@@ -5123,7 +5432,7 @@ def validate_testing_documents(
     task_by_id: dict[str, dict[str, Any]],
     decision_ids: set[str],
 ) -> None:
-    """Validate the active v0.3.0 same-machine testing contract.
+    """Validate the active same-machine testing contract introduced in v0.3.0.
 
     The superseded draft required commit-bound physical walkthrough evidence;
     the current contract deliberately does not.
@@ -5154,7 +5463,7 @@ def validate_testing_documents(
             "No physical hardware walkthrough",
         ),
         "LOW_SPEC.md": (
-            "**Bundle version:** 0.3.0",
+            CURRENT_BUNDLE_DOCUMENT_MARKERS["LOW_SPEC.md"],
             "active Codex machine only",
             "concurrency explicit, configurable, and conservative",
             "working CPU path",
@@ -5405,13 +5714,13 @@ def validate() -> int:
 
     if task_doc.get("schema_version") != 1:
         validation.error("TASKS.yaml: schema_version must equal 1")
-    if task_doc.get("bundle_version") != V030_BUNDLE_VERSION:
+    if task_doc.get("bundle_version") != CURRENT_BUNDLE_VERSION:
         validation.error(
-            f"TASKS.yaml: bundle_version must equal {V030_BUNDLE_VERSION!r}"
+            f"TASKS.yaml: bundle_version must equal {CURRENT_BUNDLE_VERSION!r}"
         )
-    if str(task_doc.get("generated_on")) != V030_GENERATED_ON:
+    if str(task_doc.get("generated_on")) != CURRENT_BUNDLE_GENERATED_ON:
         validation.error(
-            f"TASKS.yaml: generated_on must equal {V030_GENERATED_ON}"
+            f"TASKS.yaml: generated_on must equal {CURRENT_BUNDLE_GENERATED_ON}"
         )
     project = task_doc.get("project", {})
     if not isinstance(project, dict):
@@ -5480,9 +5789,9 @@ def validate() -> int:
         validation.error(
             "DECISIONS.md: decision headings must be contiguous and ordered from D-001"
         )
-    if tuple(decision_ids) != V030_DECISION_IDS:
+    if tuple(decision_ids) != CURRENT_DECISION_IDS:
         validation.error(
-            "DECISIONS.md: v0.3.0 must contain exactly D-001 through D-066"
+            "DECISIONS.md: current bundle must contain exactly D-001 through D-066"
         )
 
     milestones = task_doc.get("milestones")
@@ -5642,9 +5951,10 @@ def validate() -> int:
 
     if task_order != sorted(task_order):
         validation.error("TASKS.yaml: tasks must be ordered by task ID")
-    if len(task_by_id) != V030_TASK_COUNT:
+    if len(task_by_id) != CURRENT_TASK_COUNT:
         validation.error(
-            f"TASKS.yaml: v0.3.0 must contain {V030_TASK_COUNT} tasks, found {len(task_by_id)}"
+            "TASKS.yaml: current bundle must contain "
+            f"{CURRENT_TASK_COUNT} tasks, found {len(task_by_id)}"
         )
 
     task_ids = set(task_by_id)
@@ -5710,11 +6020,12 @@ def validate() -> int:
 
     validate_governance_documents(validation)
     validate_architecture_decision_records(validation, task_by_id, decision_set)
+    validate_tl0401_adr_reservation(validation, task_by_id)
     validate_security_documents(validation, task_by_id, decision_set)
     validate_privacy_documents(validation, task_by_id, decision_set)
     validate_pilot_fixtures(validation, task_by_id)
     validate_testing_documents(validation, task_by_id, decision_set)
-    validate_v030_document_markers(validation)
+    validate_current_bundle_document_markers(validation)
 
     active_hardware_scope_documents = {
         relative: (ROOT / relative).read_text(encoding="utf-8")

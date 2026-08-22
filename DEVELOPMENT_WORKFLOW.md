@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Development and GitHub Continuity Workflow
 
-**Bundle version:** 0.3.0  
+**Bundle version:** 0.3.1  
 **Continuity source of truth:** GitHub repository  
 **Runtime hardware scope:** active Codex machine only
 

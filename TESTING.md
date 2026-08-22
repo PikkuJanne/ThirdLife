@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Testing Strategy and Execution Contract
 
-**Bundle version:** 0.3.0  
+**Bundle version:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Authoritative runtime hardware:** active Codex machine only
 

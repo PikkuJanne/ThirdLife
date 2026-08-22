@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Portfolio Boundary and Validation Contract
 
 **Status:** Binding project boundary  
-**Bundle version:** 0.3.0  
+**Bundle version:** 0.3.1  
 **Portfolio source:** *ThirdLife Software Portfolio — Two-Team Development Roadmap and Boundary Architecture*, version 2.1, 15 August 2026  
 **Current queue position:** Team B / B1  
 **Future suite project:** Team B / B4 — ThirdLife Deployment and Suite Assembly

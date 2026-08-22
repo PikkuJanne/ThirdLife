@@ -3,7 +3,7 @@
 This repository develops ThirdLife Setup Core: a local-first, auditable Windows refurbishment workflow for volunteer and staff refurbishers. Development follows the frozen decisions, standalone Team B/B1 boundary, and dependency-ordered task graph checked into this repository.
 
 **Current project:** Team B / B1 — ThirdLife Setup Core  
-**Roadmap bundle:** 0.3.0 / ThirdLife Software Portfolio v2.1  
+**Roadmap bundle:** 0.3.1 / ThirdLife Software Portfolio v2.1  
 **Physical validation scope:** active Codex machine only  
 **Pilot gate:** `TL-0611` — controlled v0.1 partner pilot  
 **Standalone release gate:** `TL-0710` — ThirdLife Setup Core 1.0  
@@ -11,6 +11,13 @@ This repository develops ThirdLife Setup Core: a local-first, auditable Windows 
 **Future integration project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
 
 The governed roadmap contains **91 tasks**, **8 milestone gates**, and **66 frozen decisions**. Current implementation progress and the next dependency-ready work are recorded in `TASKS.yaml` and `STATUS.md`; do not infer them from this README.
+
+## What changed in governed bundle 0.3.1
+
+- Preserved the completed ephemeral-broker decision as ADR 0004 and reserved the next unoccupied identifier, ADR 0009, for the future TL-0401 WinGet backend decision.
+- Synchronized the TL-0401 deliverable path and its separate maintainer-approval wording without changing the task graph, execution history, package/security requirements, or backend-selection outcome.
+- Recorded Janne Vuorela's 2026-08-22 approval and the complete impact, alternatives, rollout, rollback, and historical-evidence treatment in the governed amendment record.
+- Added validator regression coverage so the superseded future `ADR-004` path, reuse of ADR 0004 by TL-0401, or a second ADR 0009 task reservation cannot silently return.
 
 ## What changed in portfolio-aligned bundle 0.3.0
 
@@ -42,6 +49,7 @@ See `CHANGELOG.md` for the file-level change record.
 | [`docs/non-goals.md`](docs/non-goals.md) | Explicit existing-PC, bypass, optimizer, sibling-domain, shared-infrastructure, and early-B4 exclusions. |
 | [`docs/glossary.md`](docs/glossary.md) | Governed meanings for evidence, requirements, blockers, dispositions, action state, and frozen-release integration terms. |
 | [`docs/change-control.md`](docs/change-control.md) | Exact authority order, task-state limits, governed-amendment process, contradiction stop rule, and review checklist. |
+| [`docs/amendments/2026-08-22-adr-0009-reservation.md`](docs/amendments/2026-08-22-adr-0009-reservation.md) | Janne Vuorela's approved bundle 0.3.1 reservation of ADR 0009 for TL-0401 while preserving ADR 0004 and completed evidence. |
 | [`docs/security/threat-model.md`](docs/security/threat-model.md) | Assets, actors, threats, control/task mappings, residual-risk decisions, and named-owner approval state tracked by `TL-0004`. |
 | [`docs/security/data-flow.md`](docs/security/data-flow.md) | Accessible diagram and textual inventory of processes, stores, flows, validation, recovery, and distinct trust boundaries. |
 | [`docs/security/abuse-cases.md`](docs/security/abuse-cases.md) | Stable adversarial scenarios with detection, fail-closed behavior, recovery, task traceability, and residual risks. |
@@ -94,6 +102,8 @@ The initial ADR set records existing frozen choices as planned constraints; it d
 - [`0006-report-privacy-classes.md`](docs/adr/0006-report-privacy-classes.md) — independent workshop, recipient, and sanitized-support projections.
 - [`0007-standalone-late-binding-boundary.md`](docs/adr/0007-standalone-late-binding-boundary.md) — standalone project vacuum and future frozen-release B4 boundary.
 - [`0008-minimal-release-interface-envelope.md`](docs/adr/0008-minimal-release-interface-envelope.md) — verified human-readable black-box release facts without a shared API.
+
+ADR 0009 is reserved for the dependency-gated TL-0401 WinGet comparison at `docs/adr/0009-winget-backend.md`. That file does not exist until TL-0401 executes; the reservation is not a backend decision or maintainer approval.
 
 ## Authority order
 

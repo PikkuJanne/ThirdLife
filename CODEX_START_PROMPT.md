@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Codex Start and Reusable Prompts
 
-**Bundle version:** 0.3.0  
+**Bundle version:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1
 
 ## 1. Prompt selection

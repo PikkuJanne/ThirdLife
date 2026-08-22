@@ -1,5 +1,22 @@
 # Roadmap Bundle Changelog
 
+## 0.3.1 — 22 August 2026
+
+Governance patch that assigns a unique future ADR identity without changing product scope or runtime behavior.
+
+### Approved amendment
+
+- Janne Vuorela, Principal Software Architect & Sole Project Owner, approved the [named ADR-number uniqueness amendment](docs/amendments/2026-08-22-adr-0009-reservation.md) on 22 August 2026. The approval covers the named resolution, not an exact-byte review of the later implementation commit.
+- Preserved `docs/adr/0004-ephemeral-broker.md` and its completed TL-0009 evidence unchanged.
+- Reserved ADR 0009 for TL-0401 at `docs/adr/0009-winget-backend.md`; the former future `docs/adr/ADR-004-winget-backend.md` contract path is superseded and never contained a file or evidence.
+- Updated the TL-0401 deliverable and human-evidence wording together. Dependencies, status, evidence, backend requirements, test triggers, and the future maintainer approval remain unchanged.
+- Added `docs/amendments/2026-08-22-adr-0009-reservation.md` and validator coverage for the exact ADR 0004/0009 ownership and path reservation; no portfolio-wide ADR registry is created.
+- Synchronized active bundle metadata from 0.3.0 to 0.3.1 and regenerated the governed manifest.
+
+### Impact
+
+No frozen product decision, project boundary, task dependency, milestone gate, runtime, data, migration, security, privacy, accessibility, low-spec, licence, redistribution, release, or sibling-integration behavior changes.
+
 ## 0.3.0 — 15 August 2026
 
 Single-machine development and risk-based testing revision aligned with the ThirdLife Software Portfolio v2.1 baseline.

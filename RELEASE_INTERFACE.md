@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Minimal Release Interface Sheet
 
 **Status:** Draft placeholder; not a published compatibility contract  
-**Bundle version:** 0.3.0  
+**Bundle version:** 0.3.1  
 **Pilot draft task:** `TL-0610`  
 **Stable completion task:** `TL-0706`  
 **Stable-release gate:** `TL-0710`
@@ -232,5 +232,5 @@ After `TL-0710`, B4 may use this frozen sheet, installer, hashes, samples, and p
 | Issue/support route | TBD before preview |
 | Security route | TBD before preview; see `SECURITY.md` |
 | Release owner | TBD |
-| Interface revision | Draft 0.3.0 |
+| Interface revision | Draft 0.3.1 |
 | Approved stable version | Not yet approved |
