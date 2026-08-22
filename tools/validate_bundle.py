@@ -32,6 +32,46 @@ TL0401_HUMAN_EVIDENCE = (
     "A maintainer reviews the spike evidence and approves ADR 0009 at "
     "docs/adr/0009-winget-backend.md before production adapter work begins."
 )
+M0_FOUNDATION_GATE_PATH = "artifacts/gates/M0-foundation.md"
+M0_GATE_PREDECESSORS = tuple(f"TL-{number:04d}" for number in range(1, 10))
+M0_TASK_STATUS_TO_RECORD_STATE = {
+    "backlog": "Candidate",
+    "ready": "Candidate",
+    "in_progress": "Candidate",
+    "blocked": "Blocked",
+    "review": "Review",
+    "done": "Approved",
+}
+M0_RECORD_STATE_TO_DECISION = {
+    "Candidate": "Pending",
+    "Blocked": "Blocked",
+    "Review": "Review",
+    "Approved": "Approved",
+}
+M0_RESPONSIBILITY_INPUTS = (
+    "Product contract and non-goals",
+    "Threat and security model",
+    "Privacy and logging model",
+    "Accessibility baseline",
+    "Modest-hardware design and limitations",
+    "Dependencies, licence, and redistribution rights",
+    "Reference-machine profile, test tiers, constraints, and manual tests",
+    "Initial ADR inputs",
+    "M0 gate decision",
+)
+M0_REQUIRED_FINAL_CHECKS = (
+    "Focused M0 gate-record regressions",
+    "Working-tree governed Quick",
+    "Exact-commit clean-clone Quick",
+    "Exact-commit clean-clone Full",
+    "Post-evidence bundle and repository validation",
+)
+M0_FINAL_APPROVAL_FIELDS = {
+    "Project-owner decision": "Signed",
+    "Security-owner M0 acknowledgement": "Acknowledged",
+    "Privacy-owner M0 acknowledgement": "Acknowledged",
+    "Dependency/licence-owner M0 acknowledgement": "Acknowledged",
+}
 ARCHITECTURE_DECISION_PATHS = (
     "docs/adr/0001-windows-wpf-stack.md",
     "docs/adr/0002-evidence-policy-separation.md",
@@ -91,6 +131,7 @@ REQUIRED_FILES = (
     "docs/testing/manual-hardware-tests.md",
     "docs/testing/reference-machine-profile.md",
     "docs/testing/same-machine-constraints.md",
+    M0_FOUNDATION_GATE_PATH,
     "tools/merge_task_contracts.py",
     "tools/requirements.txt",
     "tools/tests/test_pilot_fixtures.py",
@@ -5295,6 +5336,538 @@ def validate_no_obsolete_hardware_obligations(
                 )
 
 
+def validate_m0_foundation_gate(
+    validation: Validation,
+    task_by_id: dict[str, dict[str, Any]],
+) -> None:
+    """Validate the durable TL-0010 checklist and its truthful lifecycle state."""
+
+    relative = M0_FOUNDATION_GATE_PATH
+    text = require_phrases(
+        relative,
+        (
+            "TL-0010",
+            "M0",
+            "codex/tl-0010-m0-foundation-gate",
+            "REF-CODEX-001",
+            "Required test tier:** Full",
+            "Extended test tier:** Not triggered",
+            "Team B/B1",
+            "project vacuum",
+            "not a shared application API",
+            "xunit.abstractions",
+            "remains mutable upstream evidence",
+            "Redistribution of the .NET SDK and CPython toolchains remains withheld",
+            "NOASSERTION",
+            "non-installable",
+            "no-artifact",
+            "not-shipped",
+            "separately withheld for installation and redistribution",
+            (
+                "No predecessor or M0 acknowledgement grants blanket installation, "
+                "redistribution, legal, production, release, or final-product-licence rights."
+            ),
+            "no cross-hardware certification",
+            "no Extended-tier trigger",
+        ),
+        validation,
+    )
+    if not text:
+        return
+    if "<!--" in text or "-->" in text:
+        validation.error(f"{relative}: HTML comments are not permitted")
+    if re.search(r"(?m)^ {0,3}(?:`{3,}|~{3,})", text):
+        validation.error(f"{relative}: fenced code blocks are not permitted")
+
+    visible_text = markdown_visible_text(text)
+    task = task_by_id.get("TL-0010")
+    if task is None:
+        validation.error("TL-0010: M0 gate task is missing")
+        return
+    task_status = task.get("status")
+    expected_record_state = M0_TASK_STATUS_TO_RECORD_STATE.get(str(task_status))
+    if expected_record_state is None:
+        validation.error(f"TL-0010: cannot map task status {task_status!r} to gate state")
+        return
+
+    def exact_metadata_value(label: str) -> str | None:
+        values = [
+            match.group(1).strip()
+            for match in re.finditer(
+                rf"(?m)^\*\*{re.escape(label)}:\*\*\s+([^\r\n]+?)\s*$",
+                visible_text,
+            )
+        ]
+        if len(values) != 1:
+            validation.error(
+                f"{relative}: expected exactly one {label!r} metadata value; found {values}"
+            )
+            return None
+        return values[0]
+
+    record_status = exact_metadata_value("Record status")
+    record_state = record_status.split(" —", 1)[0] if record_status else None
+    if record_state != expected_record_state:
+        validation.error(
+            f"{relative}: record state {record_state!r} must match "
+            f"TL-0010 status {task_status!r} as {expected_record_state!r}"
+        )
+    decision_value = exact_metadata_value("Decision")
+    expected_decision = M0_RECORD_STATE_TO_DECISION[expected_record_state]
+    if decision_value != expected_decision:
+        validation.error(
+            f"{relative}: Decision must be {expected_decision!r} while "
+            f"TL-0010 is {task_status!r}"
+        )
+
+    predecessor_table = markdown_table_after_heading(
+        visible_text,
+        "## 2. Predecessor closure",
+        relative,
+        validation,
+    )
+    if predecessor_table is not None:
+        header, rows = predecessor_table
+        expected_header = ("Task", "State", "Durable M0 input", "Gate treatment")
+        if header != expected_header:
+            validation.error(
+                f"{relative}: predecessor header must equal {expected_header!r}"
+            )
+        row_ids = tuple(row[0].strip("`") for row in rows)
+        if row_ids != M0_GATE_PREDECESSORS:
+            validation.error(
+                f"{relative}: predecessor rows must be exactly "
+                f"{M0_GATE_PREDECESSORS!r}; found {row_ids!r}"
+            )
+        for row in rows:
+            predecessor_id = row[0].strip("`")
+            predecessor = task_by_id.get(predecessor_id)
+            if predecessor is None:
+                continue
+            evidence = predecessor.get("evidence")
+            evidence_count = len(evidence) if isinstance(evidence, list) else 0
+            if predecessor.get("status") != "done" or evidence_count == 0:
+                validation.error(
+                    f"{relative}: predecessor {predecessor_id} must be done with evidence"
+                )
+            expected_state = f"`done`; {evidence_count} evidence entries"
+            if row[1] != expected_state:
+                validation.error(
+                    f"{relative}: predecessor {predecessor_id} state must equal "
+                    f"{expected_state!r}; found {row[1]!r}"
+                )
+
+    responsibility_table = markdown_table_after_heading(
+        visible_text,
+        "## 4. Named responsibility and acknowledgement matrix",
+        relative,
+        validation,
+    )
+    responsibility_rows: tuple[tuple[str, ...], ...] = ()
+    if responsibility_table is not None:
+        header, responsibility_rows = responsibility_table
+        expected_header = (
+            "M0 input",
+            "Governed artifacts",
+            "Existing approved owner/evidence",
+            "Proposed accountable M0 owner",
+            "M0 acknowledgement",
+        )
+        if header != expected_header:
+            validation.error(
+                f"{relative}: responsibility header must equal {expected_header!r}"
+            )
+        inputs = tuple(row[0] for row in responsibility_rows)
+        if inputs != M0_RESPONSIBILITY_INPUTS:
+            validation.error(
+                f"{relative}: responsibility rows must be exactly "
+                f"{M0_RESPONSIBILITY_INPUTS!r}; found {inputs!r}"
+            )
+        placeholder_re = re.compile(
+            r"(?i)\b(?:pending|tbd|unknown|unassigned|none|codex)\b"
+        )
+        for row in responsibility_rows:
+            proposed_owner = row[3]
+            owner_name = proposed_owner.split("—", 1)[0].strip()
+            if (
+                placeholder_re.search(proposed_owner)
+                or len(owner_name.split()) < 2
+                or "—" not in proposed_owner
+            ):
+                validation.error(
+                    f"{relative}: {row[0]!r} must have a named human and role"
+                )
+
+    verification_table = markdown_table_after_heading(
+        visible_text,
+        "## 7. Verification evidence",
+        relative,
+        validation,
+    )
+    verification_by_check: dict[str, tuple[str, ...]] = {}
+    if verification_table is not None:
+        header, rows = verification_table
+        expected_header = (
+            "Check",
+            "Source revision",
+            "Environment",
+            "Result",
+            "Duration / durable reference",
+        )
+        if header != expected_header:
+            validation.error(
+                f"{relative}: verification header must equal {expected_header!r}"
+            )
+        for row in rows:
+            check = row[0]
+            if check in verification_by_check:
+                validation.error(f"{relative}: duplicate verification row {check!r}")
+            verification_by_check[check] = row
+        for check in M0_REQUIRED_FINAL_CHECKS:
+            if check not in verification_by_check:
+                validation.error(f"{relative}: missing verification row {check!r}")
+
+    approval_table = markdown_table_after_heading(
+        visible_text,
+        "### Approval target",
+        relative,
+        validation,
+    )
+    approval_by_field: dict[str, str] = {}
+    if approval_table is not None:
+        header, rows = approval_table
+        if header != ("Field", "Value"):
+            validation.error(
+                f"{relative}: approval-target header must equal ('Field', 'Value')"
+            )
+        for row in rows:
+            if row[0] in approval_by_field:
+                validation.error(f"{relative}: duplicate approval field {row[0]!r}")
+            approval_by_field[row[0]] = row[1]
+        expected_approval_fields = (
+            "Verification candidate commit",
+            "Gate-record candidate SHA-256",
+            "Full-tier result",
+            "Clean-checkout Quick result",
+            "Project-owner decision",
+            "Security-owner M0 acknowledgement",
+            "Privacy-owner M0 acknowledgement",
+            "Dependency/licence-owner M0 acknowledgement",
+        )
+        if tuple(approval_by_field) != expected_approval_fields:
+            validation.error(
+                f"{relative}: approval fields must be exactly "
+                f"{expected_approval_fields!r}; found {tuple(approval_by_field)!r}"
+            )
+
+    try:
+        matrix_bytes = (ROOT / "docs/supply-chain/license-matrix.csv").read_bytes()
+    except OSError as exc:
+        validation.error(
+            f"docs/supply-chain/license-matrix.csv: cannot read for M0 binding: {exc}"
+        )
+    else:
+        matrix_digest = hashlib.sha256(matrix_bytes).hexdigest()
+        if matrix_digest not in visible_text.casefold():
+            validation.error(
+                f"{relative}: current licence-matrix SHA-256 {matrix_digest} is missing"
+            )
+    dependency_text = require_phrases(
+        "docs/supply-chain/dependencies.md",
+        (),
+        validation,
+    )
+    reviewed_commit_match = re.search(
+        r"(?m)^\| Reviewed commit \|\s*`?([0-9a-f]{40})`?\s*\|\s*$",
+        dependency_text,
+    )
+    if reviewed_commit_match is None:
+        validation.error(
+            "docs/supply-chain/dependencies.md: missing exact reviewed commit row"
+        )
+    elif reviewed_commit_match.group(1) not in visible_text:
+        validation.error(
+            f"{relative}: current supply-chain reviewed commit is missing"
+        )
+
+    contradiction_patterns = (
+        r"(?i)blanket (?:installation or )?redistribution rights? (?:are|is) "
+        r"(?:granted|approved|allowed|authorized)",
+        r"(?i)(?:\.NET SDK|CPython).{0,80}redistribution.{0,30}"
+        r"(?:is|are) (?:approved|allowed|granted|authorized)",
+        r"(?i)xunit\.abstractions.{0,80}(?:limitation|evidence).{0,30}"
+        r"(?:removed|resolved|waived)",
+    )
+    for pattern in contradiction_patterns:
+        if re.search(pattern, visible_text):
+            validation.error(
+                f"{relative}: contains an affirmative contradiction to a binding "
+                "licence or redistribution limitation"
+            )
+
+    if expected_record_state in {"Review", "Approved"}:
+        for check in M0_REQUIRED_FINAL_CHECKS:
+            row = verification_by_check.get(check)
+            if row is not None and re.match(r"(?i)^pass(?:\b|:)", row[3]) is None:
+                validation.error(
+                    f"{relative}: {check!r} must begin with Pass in "
+                    f"{expected_record_state} state"
+                )
+        for field in ("Full-tier result", "Clean-checkout Quick result"):
+            value = approval_by_field.get(field, "")
+            if re.match(r"(?i)^pass(?:\b|:)", value) is None:
+                validation.error(
+                    f"{relative}: approval field {field!r} must begin with Pass in "
+                    f"{expected_record_state} state"
+                )
+
+    if expected_record_state == "Blocked":
+        unresolved_blockers = exact_metadata_value("Unresolved blockers")
+        if unresolved_blockers is not None and unresolved_blockers.casefold() in {
+            "none",
+            "pending",
+        }:
+            validation.error(
+                f"{relative}: Blocked state must name a concrete unresolved blocker"
+            )
+
+    if expected_record_state != "Approved":
+        return
+
+    candidate_commit = approval_by_field.get("Verification candidate commit", "")
+    if re.fullmatch(r"[0-9a-f]{40}", candidate_commit) is None:
+        validation.error(
+            f"{relative}: approved candidate commit must be a lowercase 40-hex Git ID"
+        )
+    candidate_digest = approval_by_field.get("Gate-record candidate SHA-256", "")
+    if re.fullmatch(r"[0-9a-f]{64}", candidate_digest) is None:
+        validation.error(
+            f"{relative}: approved gate-record candidate digest must be lowercase SHA-256"
+        )
+    candidate_blob: bytes | None = None
+    if re.fullmatch(r"[0-9a-f]{40}", candidate_commit) is not None:
+        try:
+            commit_check = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(ROOT),
+                    "cat-file",
+                    "-e",
+                    f"{candidate_commit}^{{commit}}",
+                ],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            commit_check = None
+        if commit_check is None or commit_check.returncode != 0:
+            validation.error(
+                f"{relative}: approved candidate must name an existing Git commit"
+            )
+        else:
+            object_name = f"{candidate_commit}:{M0_FOUNDATION_GATE_PATH}"
+            try:
+                size_result = subprocess.run(
+                    ["git", "-C", str(ROOT), "cat-file", "-s", object_name],
+                    check=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    timeout=5,
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                size_result = None
+            try:
+                candidate_size = (
+                    int(size_result.stdout.decode("ascii").strip())
+                    if size_result is not None and size_result.returncode == 0
+                    else -1
+                )
+            except (UnicodeDecodeError, ValueError):
+                candidate_size = -1
+            if candidate_size < 0 or candidate_size > 512 * 1024:
+                validation.error(
+                    f"{relative}: approved candidate gate blob is missing or exceeds 512 KiB"
+                )
+            else:
+                try:
+                    blob_result = subprocess.run(
+                        ["git", "-C", str(ROOT), "show", object_name],
+                        check=False,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL,
+                        timeout=5,
+                    )
+                except (OSError, subprocess.TimeoutExpired):
+                    blob_result = None
+                if blob_result is None or blob_result.returncode != 0:
+                    validation.error(
+                        f"{relative}: approved candidate gate blob cannot be read"
+                    )
+                else:
+                    candidate_blob = blob_result.stdout
+    if candidate_blob is not None and re.fullmatch(r"[0-9a-f]{64}", candidate_digest):
+        actual_candidate_digest = hashlib.sha256(candidate_blob).hexdigest()
+        if candidate_digest != actual_candidate_digest:
+            validation.error(
+                f"{relative}: approved gate digest does not match the candidate commit blob"
+            )
+    for check in M0_REQUIRED_FINAL_CHECKS:
+        row = verification_by_check.get(check)
+        if row is not None and candidate_commit not in row[1]:
+            validation.error(
+                f"{relative}: final verification {check!r} must cite the approved "
+                "candidate commit"
+            )
+
+    responsibility_owner_names = {
+        row[0]: row[3].split("—", 1)[0].strip()
+        for row in responsibility_rows
+    }
+    approval_owner_inputs = {
+        "Project-owner decision": "M0 gate decision",
+        "Security-owner M0 acknowledgement": "Threat and security model",
+        "Privacy-owner M0 acknowledgement": "Privacy and logging model",
+        "Dependency/licence-owner M0 acknowledgement": (
+            "Dependencies, licence, and redistribution rights"
+        ),
+    }
+    for field, prefix in M0_FINAL_APPROVAL_FIELDS.items():
+        value = approval_by_field.get(field, "")
+        if not value.startswith(f"{prefix} — "):
+            validation.error(
+                f"{relative}: approved field {field!r} must begin {prefix!r} "
+                "and name the human/durable reference"
+            )
+        elif re.search(r"(?i)\b(?:pending|tbd|unknown|unassigned|none|codex)\b", value):
+            validation.error(
+                f"{relative}: approved field {field!r} contains a placeholder"
+            )
+        owner_name = responsibility_owner_names.get(approval_owner_inputs[field], "")
+        if owner_name and owner_name not in value:
+            validation.error(
+                f"{relative}: approved field {field!r} must name declared owner "
+                f"{owner_name!r}"
+            )
+        if candidate_commit not in value or candidate_digest not in value:
+            validation.error(
+                f"{relative}: approved field {field!r} must bind the candidate "
+                "commit and gate digest"
+            )
+    for row in responsibility_rows:
+        acknowledgement = row[4]
+        required_prefix = "Signed — " if row[0] == "M0 gate decision" else "Acknowledged — "
+        if not acknowledgement.startswith(required_prefix):
+            validation.error(
+                f"{relative}: approved responsibility {row[0]!r} must begin "
+                f"{required_prefix!r}"
+            )
+        owner_name = responsibility_owner_names.get(row[0], "")
+        if owner_name and owner_name not in acknowledgement:
+            validation.error(
+                f"{relative}: approved responsibility {row[0]!r} must name "
+                f"declared owner {owner_name!r}"
+            )
+    unresolved_blockers = exact_metadata_value("Unresolved blockers")
+    if unresolved_blockers != "None":
+        validation.error(f"{relative}: approved gate must have no unresolved blockers")
+
+    evidence = task.get("evidence")
+    if not isinstance(evidence, list):
+        return
+    evidence_fields = (
+        "task",
+        "command_or_review",
+        "tier",
+        "result",
+        "environment",
+        "date",
+        "duration",
+        "reference",
+        "limitation",
+    )
+    complete_entries: list[dict[str, Any]] = []
+    for index, entry in enumerate(evidence):
+        if not isinstance(entry, dict):
+            validation.error(f"TL-0010: evidence[{index}] must be a mapping when done")
+            continue
+        missing_fields = [
+            field
+            for field in evidence_fields
+            if not isinstance(entry.get(field), str) or not entry[field].strip()
+        ]
+        if missing_fields:
+            validation.error(
+                f"TL-0010: evidence[{index}] has empty required fields {missing_fields}"
+            )
+            continue
+        complete_entries.append(entry)
+
+    def entry_text(entry: dict[str, Any]) -> str:
+        return re.sub(
+            r"\s+",
+            " ",
+            " ".join(str(entry.get(field, "")) for field in evidence_fields)
+            .replace("/", "\\")
+            .casefold(),
+        )
+
+    def passed(entry: dict[str, Any]) -> bool:
+        return re.match(r"(?i)^passed(?:$|[;:])", str(entry.get("result", ""))) is not None
+
+    quick_evidence = any(
+        passed(entry)
+        and entry.get("task") == "TL-0010"
+        and "quick" in str(entry.get("tier", "")).casefold()
+        and "active codex machine" in entry_text(entry)
+        and ("clean clone" in entry_text(entry) or "clean worktree" in entry_text(entry))
+        and "eng\\verify.ps1 -tier quick" in entry_text(entry)
+        for entry in complete_entries
+    )
+    if not quick_evidence:
+        validation.error(
+            "TL-0010: done evidence must include passed active-machine clean-checkout Quick"
+        )
+    full_evidence = any(
+        passed(entry)
+        and entry.get("task") == "TL-0010"
+        and "full" in str(entry.get("tier", "")).casefold()
+        and "active codex machine" in entry_text(entry)
+        and "eng\\verify.ps1 -tier full" in entry_text(entry)
+        for entry in complete_entries
+    )
+    if not full_evidence:
+        validation.error(
+            "TL-0010: done evidence must include passed active-machine Full verification"
+        )
+    human_text = " ".join(
+        entry_text(entry)
+        for entry in complete_entries
+        if passed(entry) and "human" in str(entry.get("tier", "")).casefold()
+    )
+    for phrase in ("project owner", "security", "privacy"):
+        if phrase not in human_text:
+            validation.error(
+                f"TL-0010: done human evidence must include {phrase!r} acknowledgement"
+            )
+    if "licence" not in human_text and "license" not in human_text:
+        validation.error(
+            "TL-0010: done human evidence must include licence-owner acknowledgement"
+        )
+    for owner_name in sorted(set(responsibility_owner_names.values())):
+        if owner_name and owner_name.casefold() not in human_text:
+            validation.error(
+                f"TL-0010: done human evidence must name declared owner {owner_name!r}"
+            )
+    if candidate_commit not in human_text or candidate_digest not in human_text:
+        validation.error(
+            "TL-0010: done human evidence must bind the approved candidate commit "
+            "and gate digest"
+        )
+
+
 def validate_current_bundle_document_markers(validation: Validation) -> None:
     for relative, marker in CURRENT_BUNDLE_DOCUMENT_MARKERS.items():
         text = require_phrases(relative, (), validation)
@@ -6025,6 +6598,7 @@ def validate() -> int:
     validate_privacy_documents(validation, task_by_id, decision_set)
     validate_pilot_fixtures(validation, task_by_id)
     validate_testing_documents(validation, task_by_id, decision_set)
+    validate_m0_foundation_gate(validation, task_by_id)
     validate_current_bundle_document_markers(validation)
 
     active_hardware_scope_documents = {

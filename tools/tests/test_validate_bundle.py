@@ -2597,6 +2597,334 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
         )
 
 
+class M0FoundationGateContractTests(unittest.TestCase):
+    def copy_contract(self, root: Path) -> None:
+        for relative in (
+            validate_bundle.M0_FOUNDATION_GATE_PATH,
+            "docs/supply-chain/dependencies.md",
+            "docs/supply-chain/license-matrix.csv",
+        ):
+            source = REPOSITORY_ROOT / relative
+            destination = root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(source.read_bytes())
+
+    def validate_contract(
+        self,
+        root: Path,
+        tasks: dict[str, dict[str, object]] | None = None,
+    ) -> validate_bundle.Validation:
+        validation = validate_bundle.Validation()
+        with patch.object(validate_bundle, "ROOT", root):
+            validate_bundle.validate_m0_foundation_gate(
+                validation,
+                TASK_BY_ID if tasks is None else tasks,
+            )
+        return validation
+
+    def gate_path(self, root: Path) -> Path:
+        return root / validate_bundle.M0_FOUNDATION_GATE_PATH
+
+    def replace_gate_text(self, root: Path, old: str, new: str) -> None:
+        path = self.gate_path(root)
+        body = path.read_text(encoding="utf-8")
+        self.assertIn(old, body)
+        path.write_text(body.replace(old, new, 1), encoding="utf-8")
+
+    def test_candidate_accepts_pending_verification_and_acknowledgements(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_contract(root)
+            validation = self.validate_contract(root)
+            self.assertEqual(validation.errors, [])
+
+    def test_gate_artifact_is_governed_required_input(self) -> None:
+        self.assertIn(
+            validate_bundle.M0_FOUNDATION_GATE_PATH,
+            validate_bundle.REQUIRED_FILES,
+        )
+
+    def test_task_and_record_lifecycle_must_match(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_contract(root)
+            tasks = dict(TASK_BY_ID)
+            gate_task = dict(tasks["TL-0010"])
+            gate_task["status"] = "done"
+            tasks["TL-0010"] = gate_task
+            validation = self.validate_contract(root, tasks)
+            self.assertTrue(
+                any("record state" in error for error in validation.errors),
+                validation.errors,
+            )
+            self.assertTrue(
+                any("Decision must be 'Approved'" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_approved_state_requires_an_existing_candidate_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_contract(root)
+            self.replace_gate_text(
+                root,
+                "**Record status:** Candidate — verification and human acknowledgements pending",
+                "**Record status:** Approved — M0 gate complete",
+            )
+            self.replace_gate_text(root, "**Decision:** Pending", "**Decision:** Approved")
+            self.replace_gate_text(
+                root,
+                "| Verification candidate commit | Pending |",
+                f"| Verification candidate commit | {'0' * 40} |",
+            )
+            self.replace_gate_text(
+                root,
+                "| Gate-record candidate SHA-256 | Pending |",
+                f"| Gate-record candidate SHA-256 | {'1' * 64} |",
+            )
+            tasks = dict(TASK_BY_ID)
+            gate_task = dict(tasks["TL-0010"])
+            gate_task["status"] = "done"
+            tasks["TL-0010"] = gate_task
+            validation = self.validate_contract(root, tasks)
+            self.assertTrue(
+                any("existing Git commit" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_approved_digest_must_match_candidate_gate_blob(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_contract(root)
+            subprocess.run(
+                ["git", "init", "--quiet", str(root)],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(root), "config", "user.name", "Synthetic Reviewer"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "config",
+                    "user.email",
+                    "synthetic@example.invalid",
+                ],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(root), "add", "."],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(root), "commit", "--quiet", "-m", "candidate"],
+                check=True,
+                capture_output=True,
+            )
+            candidate_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            self.replace_gate_text(
+                root,
+                "**Record status:** Candidate — verification and human acknowledgements pending",
+                "**Record status:** Approved — M0 gate complete",
+            )
+            self.replace_gate_text(root, "**Decision:** Pending", "**Decision:** Approved")
+            self.replace_gate_text(
+                root,
+                "| Verification candidate commit | Pending |",
+                f"| Verification candidate commit | {candidate_commit} |",
+            )
+            self.replace_gate_text(
+                root,
+                "| Gate-record candidate SHA-256 | Pending |",
+                f"| Gate-record candidate SHA-256 | {'0' * 64} |",
+            )
+            tasks = dict(TASK_BY_ID)
+            gate_task = dict(tasks["TL-0010"])
+            gate_task["status"] = "done"
+            tasks["TL-0010"] = gate_task
+            validation = self.validate_contract(root, tasks)
+            self.assertTrue(
+                any(
+                    "gate digest does not match the candidate commit blob" in error
+                    for error in validation.errors
+                ),
+                validation.errors,
+            )
+
+    def test_approved_signature_must_name_the_declared_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_contract(root)
+            self.replace_gate_text(
+                root,
+                "**Record status:** Candidate — verification and human acknowledgements pending",
+                "**Record status:** Approved — M0 gate complete",
+            )
+            self.replace_gate_text(root, "**Decision:** Pending", "**Decision:** Approved")
+            candidate_commit = "0" * 40
+            candidate_digest = "1" * 64
+            self.replace_gate_text(
+                root,
+                "| Verification candidate commit | Pending |",
+                f"| Verification candidate commit | {candidate_commit} |",
+            )
+            self.replace_gate_text(
+                root,
+                "| Gate-record candidate SHA-256 | Pending |",
+                f"| Gate-record candidate SHA-256 | {candidate_digest} |",
+            )
+            self.replace_gate_text(
+                root,
+                "| Project-owner decision | Pending |",
+                "| Project-owner decision | Signed — x; "
+                f"{candidate_commit}; {candidate_digest} |",
+            )
+            tasks = dict(TASK_BY_ID)
+            gate_task = dict(tasks["TL-0010"])
+            gate_task["status"] = "done"
+            tasks["TL-0010"] = gate_task
+            validation = self.validate_contract(root, tasks)
+            self.assertTrue(
+                any(
+                    "Project-owner decision" in error
+                    and "declared owner 'Janne Vuorela'" in error
+                    for error in validation.errors
+                ),
+                validation.errors,
+            )
+
+    def test_blocked_state_accepts_a_named_unresolved_gate_blocker(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_contract(root)
+            self.replace_gate_text(
+                root,
+                "**Record status:** Candidate — verification and human acknowledgements pending",
+                "**Record status:** Blocked — required Full tier did not pass",
+            )
+            self.replace_gate_text(root, "**Decision:** Pending", "**Decision:** Blocked")
+            tasks = dict(TASK_BY_ID)
+            gate_task = dict(tasks["TL-0010"])
+            gate_task["status"] = "blocked"
+            tasks["TL-0010"] = gate_task
+            validation = self.validate_contract(root, tasks)
+            self.assertEqual(validation.errors, [])
+
+    def test_predecessor_count_must_match_live_append_only_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_contract(root)
+            self.replace_gate_text(
+                root,
+                "`TL-0008` | `done`; 4 evidence entries",
+                "`TL-0008` | `done`; 3 evidence entries",
+            )
+            validation = self.validate_contract(root)
+            self.assertTrue(
+                any("TL-0008 state must equal" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_unfinished_or_evidence_free_predecessor_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_contract(root)
+            tasks = dict(TASK_BY_ID)
+            predecessor = dict(tasks["TL-0009"])
+            predecessor["status"] = "review"
+            predecessor["evidence"] = []
+            tasks["TL-0009"] = predecessor
+            validation = self.validate_contract(root, tasks)
+            self.assertTrue(
+                any(
+                    "predecessor TL-0009 must be done with evidence" in error
+                    for error in validation.errors
+                ),
+                validation.errors,
+            )
+
+    def test_current_matrix_digest_is_bound_dynamically(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_contract(root)
+            self.replace_gate_text(
+                root,
+                "32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193",
+                "0" * 64,
+            )
+            validation = self.validate_contract(root)
+            self.assertTrue(
+                any("current licence-matrix SHA-256" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_supply_chain_limitations_cannot_be_removed(self) -> None:
+        mutations = (
+            (
+                "remains mutable upstream evidence",
+                "has final and complete upstream evidence",
+                "missing required contract phrase 'remains mutable upstream evidence'",
+            ),
+            (
+                "Redistribution of the .NET SDK and CPython toolchains remains withheld",
+                "Redistribution of the .NET SDK and CPython toolchains is approved",
+                "missing required contract phrase 'Redistribution of the .NET SDK and CPython toolchains remains withheld'",
+            ),
+        )
+        for old, new, expected in mutations:
+            with self.subTest(new=new), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_contract(root)
+                self.replace_gate_text(root, old, new)
+                validation = self.validate_contract(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_affirmative_blanket_redistribution_claim_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_contract(root)
+            path = self.gate_path(root)
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\nBlanket redistribution rights are granted.\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_contract(root)
+            self.assertTrue(
+                any("affirmative contradiction" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_comments_and_fences_cannot_hide_gate_claims(self) -> None:
+        probes = ("<!-- hidden -->\n", "```text\nhidden\n```\n")
+        for probe in probes:
+            with self.subTest(probe=probe), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_contract(root)
+                path = self.gate_path(root)
+                path.write_text(
+                    path.read_text(encoding="utf-8") + "\n" + probe,
+                    encoding="utf-8",
+                )
+                validation = self.validate_contract(root)
+                self.assertTrue(validation.errors)
+
+
 class TestingDocumentContractTests(unittest.TestCase):
     def copy_testing_documents(self, root: Path) -> None:
         for relative in TESTING_DOCUMENTS:
