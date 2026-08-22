@@ -1112,7 +1112,7 @@ tasks:
   workstream: architecture
   kind: docs
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: any
@@ -1164,7 +1164,50 @@ tasks:
   verification:
   - Run link/reference checks.
   - Review project references against the documented direction.
-  evidence: []
+  evidence:
+  - summary: Eight accepted ADRs record the governed stack, evidence/policy separation, SQLite store, ephemeral broker,
+      replaceable package seam, report privacy classes, standalone late-binding boundary, and minimal release-interface
+      envelope without amending higher-authority decisions or claiming runtime implementation.
+    task: TL-0009
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_validate_bundle.ArchitectureDecisionRecordContractTests;
+      .venv\Scripts\python.exe -m unittest discover -s tools\tests -p test_validate_bundle.py; .venv\Scripts\python.exe
+      tools\validate_bundle.py
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; repository-local pinned .venv
+    date: '2026-08-22'
+    duration: 19 focused tests in 2.928 s; 99 validator regressions in 43.952 s
+    reference: docs/adr/0001-windows-wpf-stack.md through docs/adr/0008-minimal-release-interface-envelope.md; 91 tasks;
+      8 milestones; 66 frozen decisions; valid DAG
+    limitation: ADRs record planned constraints only; they are not evidence that later persistence, package, broker, report,
+      UI, lifecycle, or release behavior exists
+  - summary: Project-reference review confirmed the documented initial inward dependency posture without changing any project
+      file; all 13 production assemblies have zero production-to-production ProjectReference edges, only ThirdLife.UI enables
+      WPF, and the 15 existing references are test-to-production references.
+    task: TL-0009
+    command_or_review: rg -n '<ProjectReference Include=' src tests -g '*.csproj'; rg -n '<UseWPF>true</UseWPF>' src -g
+      '*.csproj'; structured review against ROADMAP.md and ADR 0001
+    tier: targeted
+    result: passed
+    environment: Windows 11 x64; repository working tree
+    date: '2026-08-22'
+    duration: Static review completed in the bounded TL-0009 verification session
+    reference: 13 production projects; 13 test projects; 0 production edges; 15 test references; ThirdLife.UI is the sole
+      WPF project
+    limitation: Later owning tasks may add only contract-required inward references and must revalidate the acyclic graph
+  - summary: The manifested implementation candidate passed the governed Quick tier, including the complete validator,
+      pilot-fixture, bundle, manifest, repository-boundary, package-lock, supply-chain, licence-approval, and CI-control checks.
+    task: TL-0009
+    command_or_review: .\eng\verify.ps1 -Tier Quick
+    tier: quick
+    result: passed
+    environment: Windows 11 x64; Python 3.14.7; reference profile REF-CODEX-001 revision 2026-08-21.1
+    date: '2026-08-22'
+    duration: 139 Python tests in 111.043 s; complete command in 00:01:56.034
+    reference: branch codex/tl-0009-architecture-decisions-boundaries; baseline
+      40a46c3e70bd495887e2e244c5d34bcbbb42adc6
+    limitation: TL-0009 declares no Full or extended trigger; the inherited Smart App Control limitation on unsigned Release
+      test assemblies remains a later release-gate concern
   expected_test_tier: quick
   full_test_triggers: []
   extended_test_triggers: []

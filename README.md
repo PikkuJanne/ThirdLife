@@ -82,6 +82,19 @@ See `CHANGELOG.md` for the file-level change record.
 
 Production projects live under `src/`; their focused xUnit projects live under `tests/`. Only `ThirdLife.UI` enables WPF. Production-to-production references are added only when a selected implementation task introduces an approved contract, keeping the initial dependency graph acyclic and avoiding speculative coupling.
 
+### Initial architecture decision records
+
+The initial ADR set records existing frozen choices as planned constraints; it does not amend the higher-authority decisions or claim that later runtime behavior is implemented:
+
+- [`0001-windows-wpf-stack.md`](docs/adr/0001-windows-wpf-stack.md) — Windows/.NET/WPF selection and inward assembly dependency direction.
+- [`0002-evidence-policy-separation.md`](docs/adr/0002-evidence-policy-separation.md) — immutable evidence, versioned policy, reproducible decisions, and separate verification.
+- [`0003-sqlite-job-store.md`](docs/adr/0003-sqlite-job-store.md) — local SQLite persistence, bounded attachments, migrations, history, and split-state recovery.
+- [`0004-ephemeral-broker.md`](docs/adr/0004-ephemeral-broker.md) — unelevated UI, authenticated typed IPC, and short-lived allowlisted elevation.
+- [`0005-package-adapter.md`](docs/adr/0005-package-adapter.md) — replaceable structured package backend pending the governed WinGet spike.
+- [`0006-report-privacy-classes.md`](docs/adr/0006-report-privacy-classes.md) — independent workshop, recipient, and sanitized-support projections.
+- [`0007-standalone-late-binding-boundary.md`](docs/adr/0007-standalone-late-binding-boundary.md) — standalone project vacuum and future frozen-release B4 boundary.
+- [`0008-minimal-release-interface-envelope.md`](docs/adr/0008-minimal-release-interface-envelope.md) — verified human-readable black-box release facts without a shared API.
+
 ## Authority order
 
 Apply files in this order:

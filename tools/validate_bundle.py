@@ -24,6 +24,16 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+ARCHITECTURE_DECISION_PATHS = (
+    "docs/adr/0001-windows-wpf-stack.md",
+    "docs/adr/0002-evidence-policy-separation.md",
+    "docs/adr/0003-sqlite-job-store.md",
+    "docs/adr/0004-ephemeral-broker.md",
+    "docs/adr/0005-package-adapter.md",
+    "docs/adr/0006-report-privacy-classes.md",
+    "docs/adr/0007-standalone-late-binding-boundary.md",
+    "docs/adr/0008-minimal-release-interface-envelope.md",
+)
 REQUIRED_FILES = (
     "ROADMAP.md",
     "DECISIONS.md",
@@ -48,6 +58,7 @@ REQUIRED_FILES = (
     "docs/glossary.md",
     "docs/non-goals.md",
     "docs/product-contract.md",
+    *ARCHITECTURE_DECISION_PATHS,
     "docs/history/TL-0008-draft-1-superseded.md",
     "docs/privacy/logging-standard.md",
     "docs/privacy/privacy-model.md",
@@ -196,6 +207,134 @@ PRIVACY_DOCUMENTS = (
     "docs/privacy/logging-standard.md",
     "docs/privacy/redaction-test-cases.yaml",
 )
+ARCHITECTURE_DECISION_RECORDS = (
+    (
+        ARCHITECTURE_DECISION_PATHS[0],
+        "# ADR 0001 — Windows and WPF stack",
+        frozenset({"D-027", "D-058", "D-059", "D-061", "D-063"}),
+    ),
+    (
+        ARCHITECTURE_DECISION_PATHS[1],
+        "# ADR 0002 — Evidence, policy, and decision separation",
+        frozenset({"D-018", "D-023", "D-032"}),
+    ),
+    (
+        ARCHITECTURE_DECISION_PATHS[2],
+        "# ADR 0003 — SQLite job store and bounded attachments",
+        frozenset({"D-018", "D-028", "D-032", "D-053"}),
+    ),
+    (
+        ARCHITECTURE_DECISION_PATHS[3],
+        "# ADR 0004 — Ephemeral elevated broker",
+        frozenset({"D-023", "D-029", "D-030", "D-031", "D-032"}),
+    ),
+    (
+        ARCHITECTURE_DECISION_PATHS[4],
+        "# ADR 0005 — Replaceable structured package adapter",
+        frozenset(
+            {"D-023", "D-024", "D-025", "D-026", "D-032", "D-043", "D-055"}
+        ),
+    ),
+    (
+        ARCHITECTURE_DECISION_PATHS[5],
+        "# ADR 0006 — Separate report privacy classes",
+        frozenset({"D-011", "D-013", "D-014", "D-036", "D-037", "D-053"}),
+    ),
+    (
+        ARCHITECTURE_DECISION_PATHS[6],
+        "# ADR 0007 — Standalone product and late-binding boundary",
+        frozenset(
+            {
+                "D-046",
+                "D-047",
+                "D-048",
+                "D-049",
+                "D-050",
+                "D-051",
+                "D-053",
+                "D-054",
+                "D-055",
+            }
+        ),
+    ),
+    (
+        ARCHITECTURE_DECISION_PATHS[7],
+        "# ADR 0008 — Minimal release-interface envelope",
+        frozenset(
+            {
+                "D-047",
+                "D-048",
+                "D-049",
+                "D-050",
+                "D-052",
+                "D-053",
+                "D-058",
+                "D-059",
+                "D-061",
+                "D-063",
+            }
+        ),
+    ),
+)
+ADR_REQUIRED_SECTIONS = (
+    "Status and authority",
+    "Decision IDs",
+    "Context",
+    "Decision",
+    "Alternatives considered",
+    "Consequences",
+    "References",
+)
+ADR_CONTRACT_PHRASES = {
+    ARCHITECTURE_DECISION_PATHS[0]: (
+        "The dependency direction is inward",
+        "`ThirdLife.Core` is the innermost domain boundary",
+        "`ThirdLife.UI` is the only WPF production assembly",
+        "no assembly is added merely as a future extension point or portfolio integration layer",
+    ),
+    ARCHITECTURE_DECISION_PATHS[1]: (
+        "An evidence record is immutable and attributable",
+        "A policy evaluation creates a new reproducible decision record",
+        "`Applied` is not completion",
+    ),
+    ARCHITECTURE_DECISION_PATHS[2]: (
+        "uses SQLite for structured local job state",
+        "Raw provider, backend, installer, command, and exception input has zero persistent retention by default",
+        "The elevated broker and its package/system backend have no database",
+    ),
+    ARCHITECTURE_DECISION_PATHS[3]: (
+        "ephemeral elevated `ThirdLife.Broker` process",
+        "broker independently validates the initiating caller's user/session",
+        "no arbitrary or free-form PowerShell/shell command",
+        "No permanent LocalSystem service",
+    ),
+    ARCHITECTURE_DECISION_PATHS[4]: (
+        "replaceable structured package-backend seam",
+        "portable `ThirdLife.Actions` does not reference the Windows package implementation",
+        "Backend selection remains open until `TL-0401`",
+        "Profiles select reviewed generic capabilities",
+        "grants no blanket redistribution right",
+    ),
+    ARCHITECTURE_DECISION_PATHS[5]: (
+        "Technical workshop record (`WORKSHOP_RESTRICTED`)",
+        "Plain-language recipient guide (`RECIPIENT_GUIDE`)",
+        "Sanitized diagnostic bundle (`SUPPORT_SANITIZED`)",
+        "never created by copying and redacting the already-rendered workshop record",
+        "there is no telemetry, automatic upload, or background sender",
+    ),
+    ARCHITECTURE_DECISION_PATHS[6]: (
+        "B1 is developed and released in a project vacuum",
+        "creates no shared SDK",
+        "The note creates no B1 code, dependency, acceptance criterion",
+        "Any adapter remains optional, version-bounded, independently disableable",
+    ),
+    ARCHITECTURE_DECISION_PATHS[7]: (
+        "human-readable [`RELEASE_INTERFACE.md`]",
+        "only implemented and verified standalone facts",
+        "TL-0009 does not populate speculative values",
+        "documentation, not an API, SDK, plugin contract",
+    ),
+}
 REDACTION_FIXTURE_SCHEMA_VERSION = "thirdlife.redaction-fixtures.v1"
 REDACTION_CASE_ID_RE = re.compile(r"^RDX-[0-9]{3}$")
 REDACTION_CASE_IDS = tuple(f"RDX-{index:03d}" for index in range(1, 57))
@@ -1221,6 +1360,266 @@ def validate_governance_documents(validation: Validation) -> None:
                 validation.error(
                     f"docs/glossary.md: {term!r} definition is missing {fragment!r}"
                 )
+
+
+def markdown_visible_text(text: str) -> str:
+    visible_lines: list[str] = []
+    fence_character: str | None = None
+    fence_length = 0
+    inside_comment = False
+    for line in text.splitlines(keepends=True):
+        line_without_ending = line.rstrip("\r\n")
+        if fence_character is not None:
+            closing_fence = re.match(
+                rf"^ {{0,3}}{re.escape(fence_character)}{{{fence_length},}}[ \t]*$",
+                line_without_ending,
+            )
+            if closing_fence is not None:
+                fence_character = None
+                fence_length = 0
+            continue
+
+        if not inside_comment:
+            opening_fence = re.match(
+                r"^ {0,3}(`{3,}|~{3,})(.*)$",
+                line_without_ending,
+            )
+            if opening_fence is not None:
+                marker = opening_fence.group(1)
+                information = opening_fence.group(2)
+                if marker[0] != "`" or "`" not in information:
+                    fence_character = marker[0]
+                    fence_length = len(marker)
+                    continue
+
+        visible_line_parts: list[str] = []
+        position = 0
+        while position < len(line):
+            if inside_comment:
+                comment_end = line.find("-->", position)
+                if comment_end == -1:
+                    position = len(line)
+                    break
+                inside_comment = False
+                position = comment_end + 3
+                continue
+
+            comment_start = line.find("<!--", position)
+            if comment_start == -1:
+                visible_line_parts.append(line[position:])
+                break
+            visible_line_parts.append(line[position:comment_start])
+            inside_comment = True
+            position = comment_start + 4
+
+        visible_lines.extend(visible_line_parts)
+    return "".join(visible_lines)
+
+
+def validate_governed_adr_markdown(
+    relative: str,
+    text: str,
+    validation: Validation,
+) -> None:
+    if "<!--" in text or "-->" in text:
+        validation.error(f"{relative}: HTML comments are not permitted in governed ADRs")
+    if re.search(r"(?m)^ {0,3}(?:`{3,}|~{3,})", text):
+        validation.error(f"{relative}: fenced code blocks are not permitted in governed ADRs")
+    if re.search(r"(?m)^(?: {4}| {0,3}\t)", text):
+        validation.error(
+            f"{relative}: indented Markdown lines are not permitted in governed ADRs"
+        )
+    if re.search(r"!\[[^\]\r\n]*\]\([^\r\n]*\)", text):
+        validation.error(f"{relative}: Markdown images are not permitted in governed ADRs")
+    if re.search(r"(?i)</?[a-z][^>]*>", text):
+        validation.error(f"{relative}: raw HTML is not permitted in governed ADRs")
+
+
+def markdown_heading_fragments(text: str) -> set[str]:
+    counts: dict[str, int] = defaultdict(int)
+    fragments: set[str] = set()
+    for match in re.finditer(
+        r"^#{1,6}\s+(.+?)\s*#*\s*$",
+        markdown_visible_text(text),
+        re.MULTILINE,
+    ):
+        heading = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", match.group(1))
+        heading = re.sub(r"[`*_~]", "", heading).strip().casefold()
+        base = re.sub(r"[^\w\- ]", "", heading)
+        base = re.sub(r"\s", "-", base)
+        if not base:
+            continue
+        duplicate_index = counts[base]
+        counts[base] += 1
+        fragments.add(base if duplicate_index == 0 else f"{base}-{duplicate_index}")
+    return fragments
+
+
+def validate_local_markdown_links(
+    relative: str,
+    text: str,
+    validation: Validation,
+) -> None:
+    owner_path = ROOT / relative
+    root = ROOT.resolve()
+    visible_text = markdown_visible_text(text)
+    if re.search(r"(?m)^\s*\[[^\]\r\n]+\]:\s*\S+", visible_text):
+        validation.error(
+            f"{relative}: ADR references must use inline Markdown links"
+        )
+    for match in re.finditer(
+        r"(?<!!)\[[^\]\r\n]+\]\(([^)\r\n]+)\)",
+        visible_text,
+    ):
+        target = match.group(1).strip()
+        if target.startswith("<") and target.endswith(">"):
+            target = target[1:-1].strip()
+        else:
+            target = target.split(maxsplit=1)[0]
+        parsed = urlsplit(target)
+        if parsed.scheme:
+            if parsed.scheme.casefold() not in {"http", "https", "mailto"}:
+                validation.error(
+                    f"{relative}: Markdown link uses unsupported scheme {parsed.scheme!r}"
+                )
+            continue
+        if parsed.netloc:
+            validation.error(f"{relative}: Markdown link has an unsafe network path")
+            continue
+        if not parsed.path:
+            if not parsed.fragment:
+                continue
+            destination = owner_path.resolve()
+        else:
+            destination = (owner_path.parent / Path(unquote(parsed.path))).resolve()
+        try:
+            destination.relative_to(root)
+        except ValueError:
+            validation.error(
+                f"{relative}: Markdown link leaves the repository: {target!r}"
+            )
+            continue
+        if not destination.is_file():
+            validation.error(
+                f"{relative}: Markdown link target does not exist: {target!r}"
+            )
+            continue
+        if parsed.fragment:
+            try:
+                destination_text = destination.read_text(encoding="utf-8")
+            except (OSError, UnicodeError) as exc:
+                validation.error(
+                    f"{relative}: cannot validate Markdown fragment in {target!r}: {exc}"
+                )
+                continue
+            fragment = unquote(parsed.fragment).casefold()
+            if fragment not in markdown_heading_fragments(destination_text):
+                validation.error(
+                    f"{relative}: Markdown fragment does not exist: {target!r}"
+                )
+
+
+def validate_architecture_decision_records(
+    validation: Validation,
+    task_by_id: dict[str, dict[str, Any]],
+    decision_set: set[str],
+) -> None:
+    task = task_by_id.get("TL-0009")
+    if task is None:
+        validation.error("TASKS.yaml: missing TL-0009")
+        return
+
+    expected_paths = list(ARCHITECTURE_DECISION_PATHS)
+    record_paths = [relative for relative, _, _ in ARCHITECTURE_DECISION_RECORDS]
+    if record_paths != expected_paths:
+        validation.error("ADR validator path registry is internally inconsistent")
+    if task.get("deliverables") != expected_paths:
+        validation.error(
+            "TL-0009: deliverables must exactly match the governed initial ADR set"
+        )
+
+    try:
+        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+    except OSError as exc:
+        validation.error(f"README.md: cannot read for ADR navigation: {exc}")
+        readme_text = ""
+    readme_visible = markdown_visible_text(readme_text)
+
+    all_cited_decisions: set[str] = set()
+    for relative, expected_title, required_decisions in ARCHITECTURE_DECISION_RECORDS:
+        required_phrases = (
+            "records existing binding decisions as planned architecture constraints",
+            "does not amend",
+            "not evidence that the planned behavior is implemented or verified",
+            *ADR_CONTRACT_PHRASES[relative],
+        )
+        text = require_phrases(relative, (), validation)
+        validate_governed_adr_markdown(relative, text, validation)
+        visible_text = markdown_visible_text(text)
+        visible_folded = visible_text.casefold()
+        for phrase in required_phrases:
+            if phrase.casefold() not in visible_folded:
+                validation.error(
+                    f"{relative}: missing required contract phrase {phrase!r}"
+                )
+        if not text.startswith(expected_title + "\n"):
+            validation.error(
+                f"{relative}: first heading must equal {expected_title!r}"
+            )
+
+        sections = markdown_level_two_sections(visible_text)
+        for heading in ADR_REQUIRED_SECTIONS:
+            if not sections.get(heading.casefold(), "").strip():
+                validation.error(
+                    f"{relative}: missing or empty required section {heading!r}"
+                )
+
+        decision_body = sections.get("decision ids", "")
+        cited_sequence = re.findall(
+            r"(?m)^-\s+\[(D-\d{3})\]\(\.\./\.\./DECISIONS\.md\)"
+            r"\s+—\s+\S.*$",
+            decision_body,
+        )
+        cited_decisions = set(cited_sequence)
+        if len(cited_sequence) != len(cited_decisions):
+            validation.error(f"{relative}: Decision IDs section has duplicate citations")
+        all_cited_decisions.update(cited_decisions)
+        missing_required = sorted(required_decisions - cited_decisions)
+        if missing_required:
+            validation.error(
+                f"{relative}: Decision IDs section is missing {missing_required}"
+            )
+
+        for decision_id in sorted(set(re.findall(r"\bD-\d{3}\b", visible_text))):
+            if decision_id not in decision_set:
+                validation.error(
+                    f"{relative}: references unknown decision {decision_id}"
+                )
+        task_references = set(re.findall(r"\bTL-\d{4}\b", visible_text))
+        if "TL-0009" not in task_references:
+            validation.error(f"{relative}: must reference owning task TL-0009")
+        for task_id in sorted(task_references):
+            if task_id not in task_by_id:
+                validation.error(f"{relative}: references unknown task {task_id}")
+
+        validate_local_markdown_links(relative, text, validation)
+        navigation_matches = re.findall(
+            rf"(?m)^-\s+\[[^\]\r\n]+\]\({re.escape(relative)}\)"
+            r"\s+—\s+\S.*$",
+            readme_visible,
+        )
+        if len(navigation_matches) != 1:
+            validation.error(f"README.md: missing navigation link to {relative}")
+
+    declared_decisions = task.get("decision_refs")
+    if not isinstance(declared_decisions, list):
+        declared_decisions = []
+    missing_task_decisions = sorted(set(declared_decisions) - all_cited_decisions)
+    if missing_task_decisions:
+        validation.error(
+            "TL-0009: ADR set does not cover declared decision_refs "
+            f"{missing_task_decisions}"
+        )
 
 
 def security_field(body: str, field: str) -> str:
@@ -5310,6 +5709,7 @@ def validate() -> int:
                     )
 
     validate_governance_documents(validation)
+    validate_architecture_decision_records(validation, task_by_id, decision_set)
     validate_security_documents(validation, task_by_id, decision_set)
     validate_privacy_documents(validation, task_by_id, decision_set)
     validate_pilot_fixtures(validation, task_by_id)

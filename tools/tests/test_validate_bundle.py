@@ -1972,6 +1972,377 @@ class GovernanceDocumentContractTests(unittest.TestCase):
             )
 
 
+class ArchitectureDecisionRecordContractTests(unittest.TestCase):
+    def copy_architecture_documents(self, root: Path) -> None:
+        relatives = set(validate_bundle.REQUIRED_FILES) | {"ThirdLife.sln"}
+        for relative in relatives:
+            source = REPOSITORY_ROOT / relative
+            if not source.is_file():
+                continue
+            destination = root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(source.read_bytes())
+
+    def replace_once(self, path: Path, old: str, new: str) -> None:
+        body = path.read_text(encoding="utf-8")
+        self.assertEqual(body.count(old), 1, f"expected one occurrence of {old!r}")
+        path.write_text(body.replace(old, new, 1), encoding="utf-8")
+
+    def validate_documents(
+        self,
+        root: Path,
+        task_by_id: dict[str, dict[str, object]] | None = None,
+    ) -> validate_bundle.Validation:
+        validation = validate_bundle.Validation()
+        with patch.object(validate_bundle, "ROOT", root):
+            validate_bundle.validate_architecture_decision_records(
+                validation,
+                TASK_BY_ID if task_by_id is None else task_by_id,
+                DECISION_IDS,
+            )
+        return validation
+
+    def test_current_architecture_decision_records_satisfy_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            validation = self.validate_documents(root)
+            self.assertEqual(validation.errors, [])
+
+    def test_missing_required_section_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0001-windows-wpf-stack.md"
+            self.replace_once(path, "## Consequences\n", "## Outcomes\n")
+            validation = self.validate_documents(root)
+            self.assertIn(
+                "docs/adr/0001-windows-wpf-stack.md: missing or empty required "
+                "section 'Consequences'",
+                validation.errors,
+            )
+
+    def test_missing_topic_decision_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0005-package-adapter.md"
+            citation = (
+                "- [D-024](../../DECISIONS.md) — Structured WinGet integration\n"
+            )
+            self.replace_once(path, citation, f"<!--\n{citation}-->\n")
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any(
+                    "Decision IDs section is missing" in error and "'D-024'" in error
+                    for error in validation.errors
+                ),
+                validation.errors,
+            )
+
+    def test_unclosed_html_comment_cannot_supply_a_decision_citation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0005-package-adapter.md"
+            citation = (
+                "- [D-024](../../DECISIONS.md) — Structured WinGet integration\n"
+            )
+            self.replace_once(path, citation, f"<!--\n{citation}")
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any(
+                    "Decision IDs section is missing" in error and "'D-024'" in error
+                    for error in validation.errors
+                ),
+                validation.errors,
+            )
+
+    def test_indented_code_cannot_supply_a_contract_phrase(self) -> None:
+        for indentation in ("    ", " \t"):
+            with (
+                self.subTest(indentation=repr(indentation)),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                root = Path(temporary_directory)
+                self.copy_architecture_documents(root)
+                path = root / "docs/adr/0005-package-adapter.md"
+                phrase = "Profiles select reviewed generic capabilities."
+                self.replace_once(path, phrase, f"{indentation}{phrase}")
+                validation = self.validate_documents(root)
+                self.assertIn(
+                    "docs/adr/0005-package-adapter.md: indented Markdown lines are "
+                    "not permitted in governed ADRs",
+                    validation.errors,
+                )
+
+    def test_semantic_contract_phrase_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0005-package-adapter.md"
+            self.replace_once(
+                path,
+                "Profiles select reviewed generic capabilities.",
+                "Profiles select exact package identities.",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any(
+                    "Profiles select reviewed generic capabilities" in error
+                    for error in validation.errors
+                )
+            )
+
+    def test_unknown_decision_and_task_references_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0002-evidence-policy-separation.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\nUnknown references must fail: D-999 and TL-9999.\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertIn(
+                "docs/adr/0002-evidence-policy-separation.md: references unknown decision D-999",
+                validation.errors,
+            )
+            self.assertIn(
+                "docs/adr/0002-evidence-policy-separation.md: references unknown task TL-9999",
+                validation.errors,
+            )
+
+    def test_broken_local_link_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0004-ephemeral-broker.md"
+            self.replace_once(
+                path,
+                "../../SECURITY.md#7-privileged-broker-requirements",
+                "../../MISSING.md#broker",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any(
+                    "Markdown link target does not exist" in error
+                    for error in validation.errors
+                )
+            )
+
+    def test_broken_local_fragment_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0004-ephemeral-broker.md"
+            self.replace_once(
+                path,
+                "../../SECURITY.md#7-privileged-broker-requirements",
+                "../../SECURITY.md#missing-broker-heading",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any(
+                    "Markdown fragment does not exist" in error
+                    for error in validation.errors
+                )
+            )
+
+    def test_broken_same_document_fragment_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0001-windows-wpf-stack.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\n[Broken same-document link](#missing-heading)\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any(
+                    "Markdown fragment does not exist" in error
+                    for error in validation.errors
+                )
+            )
+
+    def test_unsafe_link_forms_are_rejected(self) -> None:
+        mutations = (
+            (
+                "../../SECURITY.md#7-privileged-broker-requirements",
+                "file:///unsafe.md",
+                "unsupported scheme",
+            ),
+            (
+                "../../SECURITY.md#7-privileged-broker-requirements",
+                "../../../outside.md",
+                "leaves the repository",
+            ),
+        )
+        for old, new, expected in mutations:
+            with self.subTest(new=new), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_architecture_documents(root)
+                path = root / "docs/adr/0004-ephemeral-broker.md"
+                self.replace_once(path, old, new)
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_reference_style_links_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0004-ephemeral-broker.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\n[broker-reference]: ../../SECURITY.md\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any(
+                    "ADR references must use inline Markdown links" in error
+                    for error in validation.errors
+                )
+            )
+
+    def test_missing_readme_navigation_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "README.md"
+            self.replace_once(
+                path,
+                "(docs/adr/0008-minimal-release-interface-envelope.md)",
+                "(docs/adr/unlisted.md)",
+            )
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\n<!--\n- [hidden](docs/adr/0008-minimal-release-interface-envelope.md) — hidden\n-->\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertIn(
+                "README.md: missing navigation link to "
+                "docs/adr/0008-minimal-release-interface-envelope.md",
+                validation.errors,
+            )
+
+    def test_fenced_code_cannot_supply_a_decision_citation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0005-package-adapter.md"
+            citation = (
+                "- [D-024](../../DECISIONS.md) — Structured WinGet integration\n"
+            )
+            self.replace_once(path, citation, f"```text\n{citation}```\n")
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any(
+                    "Decision IDs section is missing ['D-024']" in error
+                    for error in validation.errors
+                )
+            )
+
+    def test_shorter_fence_run_cannot_reveal_hidden_decision_citation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0005-package-adapter.md"
+            citation = (
+                "- [D-024](../../DECISIONS.md) — Structured WinGet integration\n"
+            )
+            self.replace_once(
+                path,
+                citation,
+                f"````text\n```\n{citation}````\n",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any(
+                    "Decision IDs section is missing ['D-024']" in error
+                    for error in validation.errors
+                )
+            )
+
+    def test_comment_marker_inside_fence_cannot_hide_following_bad_link(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            path = root / "docs/adr/0005-package-adapter.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\n```text\n<!--\n```\n[Bad link](../../MISSING.md)\n",
+                encoding="utf-8",
+            )
+            validation = self.validate_documents(root)
+            self.assertTrue(
+                any(
+                    "Markdown link target does not exist" in error
+                    for error in validation.errors
+                ),
+                validation.errors,
+            )
+
+    def test_unsupported_rendered_link_forms_are_rejected(self) -> None:
+        mutations = (
+            (
+                '<a href="../../MISSING.md">bad</a>',
+                "raw HTML is not permitted in governed ADRs",
+            ),
+            (
+                "![bad](../../MISSING.png)",
+                "Markdown images are not permitted in governed ADRs",
+            ),
+        )
+        for addition, expected in mutations:
+            with self.subTest(addition=addition), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_architecture_documents(root)
+                path = root / "docs/adr/0005-package-adapter.md"
+                path.write_text(
+                    path.read_text(encoding="utf-8") + f"\n{addition}\n",
+                    encoding="utf-8",
+                )
+                validation = self.validate_documents(root)
+                self.assertTrue(
+                    any(expected in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_task_deliverable_drift_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            task_by_id = dict(TASK_BY_ID)
+            task_by_id["TL-0009"] = dict(TASK_BY_ID["TL-0009"])
+            task_by_id["TL-0009"]["deliverables"] = [
+                "docs/adr/0001-windows-wpf-stack.md"
+            ]
+            validation = self.validate_documents(root, task_by_id)
+            self.assertIn(
+                "TL-0009: deliverables must exactly match the governed initial ADR set",
+                validation.errors,
+            )
+
+    def test_adr_paths_are_required_manifest_inputs(self) -> None:
+        record_paths = tuple(
+            relative
+            for relative, _, _ in validate_bundle.ARCHITECTURE_DECISION_RECORDS
+        )
+        self.assertEqual(record_paths, validate_bundle.ARCHITECTURE_DECISION_PATHS)
+        self.assertTrue(
+            set(validate_bundle.ARCHITECTURE_DECISION_PATHS)
+            <= set(validate_bundle.REQUIRED_FILES)
+        )
+
+
 class TestingDocumentContractTests(unittest.TestCase):
     def copy_testing_documents(self, root: Path) -> None:
         for relative in TESTING_DOCUMENTS:
