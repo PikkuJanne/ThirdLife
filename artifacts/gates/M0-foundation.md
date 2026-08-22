@@ -1,13 +1,13 @@
 # ThirdLife Setup Core — M0 foundation gate record
 
-**Record status:** Candidate — verification and human acknowledgements pending  
+**Record status:** Blocked — required Full tier did not pass  
 **Task:** `TL-0010` — Validate the M0 foundation gate  
 **Milestone:** `M0` — Foundation and product contract  
 **Record revision:** 1  
 **Prepared:** 2026-08-22  
 **Branch:** `codex/tl-0010-m0-foundation-gate`  
 **Source baseline:** `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516`  
-**Verification candidate:** Pending first manifest-bound TL-0010 checkpoint  
+**Verification candidate:** `17975419badd4154b82895d9d92a4a904790c7c0`  
 **Reference-machine profile:** `REF-CODEX-001`, revision `2026-08-21.1`  
 **Required test tier:** Full  
 **Extended test tier:** Not triggered
@@ -49,23 +49,23 @@ The structured predecessor audit enumerated all 54 deliverables, 56 acceptance c
 
 | # | Milestone exit criterion | Candidate result |
 |---:|---|---|
-| 1 | The repository builds from a clean checkout on supported Windows on the active Codex machine. | Pending exact-candidate clean-clone Full; Quick and the Release-build phase are recorded separately so a blocked test phase cannot be called a passing Full tier. |
+| 1 | The repository builds from a clean checkout on supported Windows on the active Codex machine. | Pass: exact-candidate locked restore, formatting, and the warnings-as-errors Release build completed with 0 warnings and 0 errors. The later Release-test phase is separately blocked and Full is not green. |
 | 2 | Product, non-goals, threat, privacy, accessibility, modest-hardware, dependency/licence, reference-profile, test-tier, and ADR inputs have named owners. | Pending human acceptance of the complete responsibility matrix in section 4. |
 | 3 | No lab, physical-device pool, lower-performance test machine, external runtime matrix, or missing equipment is a dependency or release blocker. | Pass: the same-machine contract and explicit limitations require none of these inputs. |
 | 4 | The Team B/B1 project-vacuum boundary and future B4 late-binding posture are explicit and validated. | Pass: authority review and live validators confirm the boundary. |
-| 5 | The roadmap bundle, GitHub workflow, task graph, and repository rules are internally consistent and validated. | Pass for the candidate working tree; exact-commit clean-checkout verification and final owner review remain. |
+| 5 | The roadmap bundle, GitHub workflow, task graph, and repository rules are internally consistent and validated. | Pass at the exact published candidate; clean-clone Quick and pre-test Full phases passed. Final owner review remains pending because Full is blocked. |
 
 ### TL-0010 acceptance criteria
 
 | # | `TL-0010` acceptance criterion | Candidate result | Evidence or unblock condition |
 |---:|---|---|---|
 | 1 | All predecessor tasks are done with evidence. | Pass | Section 2 and live task-graph validation; all nine transitive M0 predecessors are `done` with non-empty evidence. |
-| 2 | The documented clean-checkout Quick command passes on the active Codex machine. | Pending | Run `.\eng\verify.ps1 -Tier Quick` from an exact-commit clean clone on the active machine and record the sanitized result in section 7. |
+| 2 | The documented clean-checkout Quick command passes on the active Codex machine. | Pass | Exact published candidate `17975419badd4154b82895d9d92a4a904790c7c0` passed `.\eng\verify.ps1 -Tier Quick` from a disposable clean clone on the active machine. |
 | 3 | Threat, privacy, accessibility, modest-hardware, dependency, and licence reviews have named owners. | Pending human acknowledgement | Historical owners and proposed M0 responsibility assignments are explicit in section 4; proposed assignments take effect only through the exact sign-off in section 9. |
 | 4 | The reference profile, test tiers, same-machine constraints, and manual-test specification are approved without requiring a device pool. | Pending human acknowledgement | The governed specifications are complete and validated; the project owner must approve the exact M0 input set in section 9. No physical device pool, second PC, lower-performance machine, or missing-equipment approval is required. |
 | 5 | `PROJECT_BOUNDARY.md` states Team B/B1 and prohibits live sibling dependencies and B4 work. | Pass | [`PROJECT_BOUNDARY.md`](../../PROJECT_BOUNDARY.md) states the Team B/B1 project vacuum, active-machine-only validation, and future B4 late binding against frozen releases. |
 | 6 | `RELEASE_INTERFACE.md` remains an honest draft rather than a speculative API. | Pass | [`RELEASE_INTERFACE.md`](../../RELEASE_INTERFACE.md) is a draft placeholder, leaves unknown fields `TBD`, and remains **not a shared application API** or early B4 adapter contract. |
-| 7 | `STATUS.md` identifies branch, commit, tests, and next action without chat history. | Pending final handoff update | Update [`STATUS.md`](../../STATUS.md) with the exact candidate, verification outcome, gate state, and unblock/approval action after the runs in section 7. |
+| 7 | `STATUS.md` identifies branch, commit, tests, and next action without chat history. | Pass | [`STATUS.md`](../../STATUS.md) records the exact branch/candidate, clean-clone results, Full blocker, cleanup, and safe unblock condition. |
 | 8 | No unresolved contradiction exists among binding bundle files. | Pass for the candidate review; owner confirmation pending | Bundle/repository validators and the structured authority review found no contradiction. The project-owner checklist review remains required before approval. |
 
 ## 4. Named responsibility and acknowledgement matrix
@@ -120,17 +120,29 @@ Smart App Control, Code Integrity, warnings, analyzers, signatures, hashes, prov
 |---|---|---|---|---|
 | Pre-change bundle validator | `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516` | Active Codex machine; repository-local Python 3.14.7 / PyYAML 6.0.3 | Pass: 91 tasks, 8 milestones, 66 decisions, valid DAG | 2026-08-22; combined pre-change bundle/repository validation 3.751 s |
 | Pre-change repository validator | `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516` | Active Codex machine; 26 projects, 26 locks, 24 governed components | Pass | 2026-08-22; included in the 3.751 s baseline command |
-| Focused M0 gate-record regressions | Candidate working tree based on `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516` | Active Codex machine; repository-local Python 3.14.7 / PyYAML 6.0.3 | Pass: 13/13 lifecycle, predecessor, commit/blob binding, owner attribution, digest, limitation, contradiction, and hidden-content tests | 2026-08-22; 1.243 s focused tests; complete 162-test suite passed in 115.723 s; `M0FoundationGateContractTests` |
+| Focused M0 gate-record regressions | `17975419badd4154b82895d9d92a4a904790c7c0` | Active Codex machine; repository-local Python 3.14.7 / PyYAML 6.0.3 | Pass: 13/13 lifecycle, predecessor, commit/blob binding, owner attribution, digest, limitation, contradiction, and hidden-content tests; exact-clone Quick reran the complete suite | 2026-08-22; 1.243 s focused pre-checkpoint run; exact-clone complete suite included below; `M0FoundationGateContractTests` |
 | Working-tree governed Quick | Manifest-bound candidate working tree based on `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516` | Active Codex machine; `REF-CODEX-001` revision `2026-08-21.1` | Pass: 162 Python tests, bundle/schema/manifest, repository boundaries, package locks, and licence controls | 2026-08-22; `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick`; 108.033 s tests; 00:01:53.042 wall |
-| Exact-commit clean-clone Quick | Pending | Disposable clean clone on the active Codex machine | Pending | Add exact candidate and duration; no machine-specific path |
-| Exact-commit clean-clone Full | Pending | Disposable clean clone on the active Codex machine | Pending | Add exact candidate, build/test result, duration, and bounded defect reference if needed |
-| Post-evidence bundle and repository validation | Pending | Active Codex machine | Pending | Add after `TASKS.yaml`, `STATUS.md`, this record, and the manifest are synchronized |
+| Exact-commit clean-clone Quick | `17975419badd4154b82895d9d92a4a904790c7c0` | Disposable clean clone on the active Codex machine; `REF-CODEX-001` revision `2026-08-21.1`; pinned environment bootstrap 7.331 s | Pass: 162 Python tests in 110.348 s plus bundle, manifest, repository, lock, supply-chain, licence, and CI controls | 2026-08-22; `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick`; 00:01:55.378 wall; tracked-clean before/after bootstrap |
+| Exact-commit clean-clone Full | `17975419badd4154b82895d9d92a4a904790c7c0` | Same disposable clean clone on the active Codex machine; no host-security setting changed | Blocked: exit 1 after 162 Python tests, bundle/repository controls, locked restore, formatting, and a 0-warning/0-error Release build passed; four Release assembly-contract tests were blocked by Application Control error `0x800711C7` | 2026-08-22; `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Full`; 00:03:01.538 wall; bounded diagnosis below |
+| Blocked-state governed Quick | Blocked-state evidence working tree derived from `17975419badd4154b82895d9d92a4a904790c7c0` | Active Codex machine; repository-local Python 3.14.7 / PyYAML 6.0.3; `REF-CODEX-001` revision `2026-08-21.1` | Pass: 162 Python tests plus live bundle, manifest, repository, lock, supply-chain, licence, and CI controls | 2026-08-22; `.\eng\verify.ps1 -Tier Quick`; 118.166 s tests |
+| Post-evidence bundle and repository validation | Blocked-state evidence working tree derived from `17975419badd4154b82895d9d92a4a904790c7c0` | Active Codex machine; repository-local Python 3.14.7 / PyYAML 6.0.3 | Pass: 13/13 focused M0 tests; 91 tasks, 8 milestones, 66 decisions, valid DAG; 26 projects, 26 locks, 24 governed components and licence controls valid | 2026-08-22; focused 2.173 s wall / 1.419 s tests; bundle 2.644 s; repository 1.636 s |
 
-### Known pre-gate risk
+### Full-tier blocker and focused diagnosis
 
-The previous Full attempt reached and passed validators, locked restore, formatting, and a zero-warning Release build, then Smart App Control blocked loads of unsigned Release test assemblies during the final test phase. That inherited observation is not a current TL-0010 result. This gate must run Full again on the exact candidate without weakening host security. If the block recurs, the gate is `blocked`, not `review` or `approved`, even if Quick and the clean Release build pass.
+The exact TL-0010 candidate reproduced the inherited Smart App Control risk. Full passed 162 Python regressions in 110.313 s, both live validators, locked restore, formatting, and a Release build in 17.50 s with 0 warnings and 0 errors. The Release test phase then passed 10 tests across 9 projects and failed the assembly-contract test in each of these 4 projects:
+
+- `ThirdLife.Packages.Tests` — load of `ThirdLife.Packages.dll` blocked;
+- `ThirdLife.Persistence.Tests` — load of `ThirdLife.Persistence.dll` blocked;
+- `ThirdLife.Reports.Tests` — load of `ThirdLife.Reports.dll` blocked; and
+- `ThirdLife.Verification.Tests` — load of `ThirdLife.Verification.dll` blocked.
+
+Each focused one-project rerun exited 1 with `System.IO.FileLoadException`, “An Application Control policy has blocked this file,” and error `0x800711C7`. The four application DLLs report Authenticode status `NotSigned` and only the ordinary `:$DATA` stream; no `Zone.Identifier` stream was present. Bounded Code Integrity observations recorded event IDs 3033 and 3077 under the enforced Smart App Control policy for the four basenames. No raw event export or machine-specific path is retained.
+
+Smart App Control, Code Integrity, warnings, analyzers, hashes, and provenance were not disabled or bypassed. A clone or worktree change is not a remedy because this exact clean clone has no alternate-stream block to remove. The gate remains `blocked` until an approved same-machine hosted environment can run the unsigned assemblies under the governed Full command, or later governed signing/lifecycle work provides an approved path. Full must then pass at the exact candidate/replacement checkpoint before human gate approval can be requested.
 
 The first working-tree wrapper attempt omitted the process-scoped PowerShell execution-policy argument and was rejected by Windows before `eng/verify.ps1` loaded (exit 1; 0.421 s). The successful rerun used the repository's previously evidenced `-ExecutionPolicy Bypass` process argument. It did not change the persistent execution policy, Smart App Control, or Code Integrity, and no repository verification result was inferred from the rejected invocation.
+
+The disposable exact-candidate clone remained tracked-clean after verification. Cleanup verified the resolved target was under the operating-system temporary directory and still identified the expected commit. The execution layer rejected two recursive `Remove-Item` invocations before they ran; bounded cleanup then removed the verified clone, normalized the three remaining read-only Git pack-file attributes after the first directory-delete attempt, completed deletion, and confirmed no clone directory remained.
 
 ## 8. Boundary, risk, and data review
 
@@ -146,10 +158,10 @@ The first working-tree wrapper attempt omitted the process-scoped PowerShell exe
 
 | Field | Value |
 |---|---|
-| Verification candidate commit | Pending |
-| Gate-record candidate SHA-256 | Pending |
-| Full-tier result | Pending |
-| Clean-checkout Quick result | Pending |
+| Verification candidate commit | 17975419badd4154b82895d9d92a4a904790c7c0 |
+| Gate-record candidate SHA-256 | b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153 |
+| Full-tier result | Blocked — Application Control rejected four unsigned Release application DLL loads; exit 1; `0x800711C7` |
+| Clean-checkout Quick result | Pass — exact candidate; 162 tests plus governed bundle/repository controls; 00:01:55.378 wall |
 | Project-owner decision | Pending |
 | Security-owner M0 acknowledgement | Pending |
 | Privacy-owner M0 acknowledgement | Pending |
@@ -165,8 +177,8 @@ The approval is valid only after section 7 records passing required verification
 
 ## 10. Final gate decision
 
-**Decision:** Pending  
-**Decision date:** Pending  
-**Approver:** Pending  
-**Unresolved blockers:** Required clean-checkout Quick, required Full tier, final status/manifest synchronization, and all gate-specific human acknowledgements remain pending.  
-**Next action:** Create and publish the manifest-bound candidate, run the exact-commit clean-clone Quick and Full tiers on the active Codex machine, then update this record and request the exact human review above.
+**Decision:** Blocked  
+**Decision date:** 2026-08-22  
+**Approver:** Not applicable — required Full verification did not pass, so human gate approval was not requested  
+**Unresolved blockers:** The enforced Windows Smart App Control / Code Integrity policy blocks unsigned `ThirdLife.Packages.dll`, `ThirdLife.Persistence.dll`, `ThirdLife.Reports.dll`, and `ThirdLife.Verification.dll` during the required Release test phase; gate-specific human acknowledgements also remain pending until Full passes.  
+**Next action:** Provide an approved same-machine hosted environment that can execute the governed Full command without weakening host security, or complete later governed signing/lifecycle work; rerun exact-candidate Quick and Full, then request the exact human acknowledgements only after Full passes.

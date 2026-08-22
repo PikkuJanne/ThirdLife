@@ -1,18 +1,18 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-22  
-**Snapshot preparation time:** 2026-08-22T10:04:50+02:00  
+**Snapshot preparation time:** 2026-08-22T10:20:59+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M0 — Foundation and product contract  
 **Current task:** `TL-0010` — Validate the M0 foundation gate  
-**Action state:** in progress; manifest-bound candidate and exact-commit gate verification pending
+**Action state:** blocked; exact-candidate Full verification did not pass under Windows Application Control
 
 ## Current state
 
-`TL-0010` is the only selected task. All nine transitive M0 predecessors, `TL-0001` through `TL-0009`, are `done` with non-empty evidence. The candidate gate record is [`artifacts/gates/M0-foundation.md`](artifacts/gates/M0-foundation.md); it indexes predecessor closure, the eight gate acceptance criteria, proposed named M0 ownership, preserved licence/redistribution limitations, the clean-checkout method, verification evidence, risk/boundary review, and the exact human approval statement.
+`TL-0010` is the only selected task and is `blocked`. All nine transitive M0 predecessors, `TL-0001` through `TL-0009`, are `done` with non-empty evidence. The gate record is [`artifacts/gates/M0-foundation.md`](artifacts/gates/M0-foundation.md); it indexes predecessor closure, the five milestone exit criteria, eight task acceptance criteria, proposed named M0 ownership, preserved licence/redistribution limitations, exact-candidate verification, risk/boundary review, blocker, and future exact human approval statement.
 
-The gate record and validator are still candidate work. Clean-checkout Quick and Full have not yet run against a manifest-bound TL-0010 checkpoint, and no fresh M0 project-owner/security/privacy/licence acknowledgement is recorded. `TL-0010` therefore remains `in_progress` and cannot unlock M1.
+Published candidate `17975419badd4154b82895d9d92a4a904790c7c0` passed clean-checkout Quick. Its Full run passed all Python/governance checks, locked restore, formatting, and a Release build with 0 warnings and 0 errors, then failed during Release tests because Windows Application Control blocked four unsigned ThirdLife application DLL loads with `0x800711C7`. Full is not green, so fresh M0 project-owner/security/privacy/licence acknowledgements were not requested and M1 remains locked.
 
 The previously approved `AMD-2026-08-22-ADR-0009` amendment remains complete at baseline `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516`. TL-0010 does not change ADR numbering, the task graph, a frozen decision, the product boundary, or that amendment's historical evidence.
 
@@ -21,12 +21,12 @@ The previously approved `AMD-2026-08-22-ADR-0009` amendment remains complete at 
 | Area | Current state | Next proof |
 |---|---|---|
 | M0 predecessors | Pass: all nine are `done` with evidence | Revalidated by live bundle/task-graph checks |
-| Gate artifact | Candidate created and structurally governed | Manifest and exact candidate checkpoint |
-| Named owners | Historical security/privacy/licence owners preserved; explicit M0 roles proposed | Exact human acknowledgement after technical verification |
-| Clean-checkout Quick | Pending | Run `.\eng\verify.ps1 -Tier Quick` from the exact published candidate in a disposable same-machine clone |
-| Full tier | Pending; inherited Smart App Control risk remains | Run `.\eng\verify.ps1 -Tier Full` without disabling or bypassing host security |
+| Gate artifact | Blocked record created and structurally governed | Keep exact candidate/digest and append-only evidence intact |
+| Named owners | Historical security/privacy/licence owners preserved; explicit M0 roles proposed | Request exact human acknowledgement only after Full passes |
+| Clean-checkout Quick | Pass at `17975419badd4154b82895d9d92a4a904790c7c0` | 162 tests plus all governed static/manifest/repository controls |
+| Full tier | Blocked in Release tests after restore/format/build passed | Approved same-machine hosted path or later governed signing/lifecycle work, then exact rerun |
 | Extended tier | Not triggered | None |
-| Gate decision | Pending | Passing required verification, then exact human sign-off |
+| Gate decision | Blocked | Do not approve or mark `done` until Full passes and every human acknowledgement is attached |
 
 ## Git state
 
@@ -36,8 +36,8 @@ The previously approved `AMD-2026-08-22-ADR-0009` amendment remains complete at 
 | Branch | `codex/tl-0010-m0-foundation-gate` |
 | Source baseline | `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516` — published bundle 0.3.1 ADR-reservation checkpoint |
 | History handling | Continued from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Candidate checkpoint | The first manifest-bound commit containing this status, the M0 gate record, validator regressions, and `TL-0010: in_progress`; resolve from the published branch tip |
-| Publication state | Pending candidate commit and push |
+| Verification candidate | `17975419badd4154b82895d9d92a4a904790c7c0`; gate-record candidate SHA-256 `b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153` |
+| Publication state | Published and fetched; local/upstream equality 0 ahead and 0 behind before clean-clone verification |
 
 The configured SSH remote rejects unattended public-key authentication on this machine. Publication uses GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
 
@@ -49,12 +49,17 @@ The configured SSH remote rejects unattended public-key authentication on this m
 | Focused M0 gate-record regressions | 13/13 passed, including lifecycle mismatch, predecessor closure/count, real commit/blob digest binding, declared-owner attribution, matrix digest, retained limitations, affirmative blanket-right rejection, and hidden-content rejection | 1.243 s focused run |
 | Complete Python regression suite | 162/162 passed after independent-review hardening | 115.723 s tests; 00:01:56.664 wall |
 | Working-tree governed Quick | Passed 162 Python tests, bundle/manifest controls, repository boundaries, package locks, and licence controls after independent-review hardening | 108.033 s tests; 00:01:53.042 wall; candidate working tree |
-| Exact-commit clean-clone Quick | Pending | Run from published candidate on active Codex machine |
-| Exact-commit clean-clone Full | Pending | Required milestone-gate check; no Extended tier |
+| Exact-commit clean-clone Quick | Passed at `17975419badd4154b82895d9d92a4a904790c7c0`; clone tracked-clean | Bootstrap 7.331 s; 162 tests 110.348 s; complete command 00:01:55.378 |
+| Exact-commit clean-clone Full | Blocked: exit 1 in Release tests after 162 Python tests, validators, locked restore, formatting, and 0-warning/0-error Release build passed | 162 tests 110.313 s; build 17.50 s; attempt 00:03:01.538 |
+| Blocked-state governed Quick | Passed all 162 Python tests and live bundle/manifest/repository/lock/supply-chain/licence/CI controls after recording the Full blocker | 162 tests 118.166 s; same active machine |
+| Focused failure diagnosis | Four one-project reruns exited 1; four application DLLs `NotSigned`, only `:$DATA`; Code Integrity event IDs 3033/3077 under the enforced Smart App Control policy | Packages 2.552 s; Reports 2.226 s; Persistence/Verification bounded reruns; no raw log retained |
+| Disposable-clone cleanup | Passed; exact target/commit verified, read-only Git pack attributes normalized after an initial bounded delete failure, no clone directory remains | Same session; no repository or user data removed |
 
-### Known Full-tier risk
+### Current Full-tier blocker
 
-An earlier non-TL-0010 Full attempt passed validators, locked restore, formatting, and a zero-warning Release build before Windows Smart App Control blocked two unsigned Release test-assembly loads. That observation is not current gate evidence. Smart App Control has not been and will not be disabled or bypassed. If the exact TL-0010 candidate reproduces the block, the truthful task state is `blocked`, even when clean-checkout Quick and the Release build pass.
+The exact candidate failed one assembly-contract test in each of `ThirdLife.Packages.Tests`, `ThirdLife.Persistence.Tests`, `ThirdLife.Reports.Tests`, and `ThirdLife.Verification.Tests`. Application Control rejected loads of `ThirdLife.Packages.dll`, `ThirdLife.Persistence.dll`, `ThirdLife.Reports.dll`, and `ThirdLife.Verification.dll` with `0x800711C7`. Nine other .NET test projects passed 10 tests before the aggregate command exited 1.
+
+Focused reruns reproduced all four blocks. Each application DLL is unsigned and has no `Zone.Identifier` stream, so changing clone/worktree location or removing alternate streams is not a remedy. Smart App Control and Code Integrity were not disabled or bypassed. The safe unblock condition is an approved same-machine hosted environment that can execute the governed Full command without weakening host security, or later governed signing/lifecycle work followed by an exact Full rerun.
 
 The first wrapper preflight omitted the process-scoped PowerShell execution-policy argument and Windows rejected the script before the verifier loaded (exit 1; 0.421 s). The successful command used the repository's previously evidenced `-ExecutionPolicy Bypass` process argument; it changed no persistent policy and did not weaken Smart App Control or Code Integrity.
 
@@ -70,24 +75,24 @@ The superseded `TL-0008` draft-1 procedure remains preserved at source commit `4
 - **Security / privacy:** No executable, privilege, IPC, network, package, signing, logging, retention, or support-export behavior changed. The gate validator fails closed on lifecycle mismatch, stale evidence counts, owner placeholders, missing verification rows, matrix/review drift, removed rights limitations, and affirmative blanket-right claims.
 - **Accessibility / low-spec:** No UI or runtime path was added. No manual accessibility, physical hardware, failure-injection, resource, cold-boot, or constrained scenario is claimed. Same-machine evidence remains non-certifying.
 
-## Changed paths in the candidate working tree
+## Changed paths on the TL-0010 branch
 
 - `artifacts/gates/M0-foundation.md`: new governed gate checklist and human approval target.
 - `tools/validate_bundle.py`: M0 structure, lifecycle, ownership, verification, approval, and rights-limitation validation.
 - `tools/tests/test_validate_bundle.py`: adversarial M0 gate-record regressions.
-- `TASKS.yaml`: only `TL-0010.status`, from `backlog` to `in_progress`.
+- `TASKS.yaml`: only TL-0010 execution fields—`status`, append-only `evidence`, and `blocked_reason`—with the final state `blocked`.
 - `STATUS.md`: current branch, checkpoint plan, test state, risk, and next action.
-- `BUNDLE_MANIFEST.sha256`: pending regeneration after candidate content stabilizes.
+- `BUNDLE_MANIFEST.sha256`: synchronized to the governed blocked-state evidence after final validation.
 
 The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` was present before TL-0010 and remains untouched and unstaged.
 
 ## Outstanding
 
-1. Synchronize and validate the final candidate manifest.
-2. Commit and publish the exact candidate; verify local/upstream equality.
-3. Clone that exact commit into a verified disposable same-machine path, bootstrap the hash-pinned Python environment, and run clean-checkout Quick and Full.
-4. If Full passes, update the record to `review` and request the exact human acknowledgements. If Full is blocked, record the bounded defect and unblock condition and set `TL-0010` to `blocked`.
-5. `TL-0010` may become `done` only after every automated and human requirement is evidenced.
+1. Do not disable Smart App Control, edit Code Integrity policy, remove alternate streams, enable test signing, skip tests, or weaken the governed Full command.
+2. Provide an approved same-machine hosted environment that can run the exact Full tier, or complete later governed signing/lifecycle work through its owning task and approval path.
+3. Publish the resulting exact checkpoint, rerun clean-checkout Quick and Full, and require Full to pass.
+4. Only then move `TL-0010` to `review` and request the exact project-owner/security/privacy/licence acknowledgements bound to the reviewed commit and gate digest.
+5. Mark `done` only after the complete automated and human evidence contract passes.
 
 ## Next dependency-ready task
 

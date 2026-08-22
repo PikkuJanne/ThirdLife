@@ -1217,7 +1217,7 @@ tasks:
   workstream: release
   kind: gate
   priority: P0
-  status: in_progress
+  status: blocked
   size: S
   executor: hybrid
   environment: any
@@ -1269,7 +1269,95 @@ tasks:
   - Run tools/validate_bundle.py.
   - Run repository verification.
   - Review the M0 checklist with the project owner.
-  evidence: []
+  evidence:
+  - summary: The governed M0 gate record and fail-closed lifecycle validator cover all nine transitive predecessors,
+      five milestone exit criteria, eight task acceptance criteria, current ownership proposals, verification state,
+      exact approval binding, and retained licence/redistribution limitations.
+    task: TL-0010
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_validate_bundle.M0FoundationGateContractTests;
+      .venv\Scripts\python.exe -m unittest discover -s tools\tests -p test_*.py; independent adversarial candidate
+      review
+    tier: targeted
+    result: passed
+    environment: Active Codex machine; Windows 11 x64; Python 3.14.7; PyYAML 6.0.3
+    date: '2026-08-22'
+    duration: 13 focused tests in 1.243 s; 162 complete Python tests in 115.723 s
+    reference: artifacts/gates/M0-foundation.md; candidate commit 17975419badd4154b82895d9d92a4a904790c7c0;
+      gate-record candidate sha256:b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153
+    limitation: Contract and repository evidence only; proposed M0 owner assignments and gate-specific human acknowledgements
+      remain pending and no runtime product capability is claimed
+  - summary: The manifested candidate passed the governed working-tree Quick tier and was published with exact local/upstream
+      equality before clean-clone testing.
+    task: TL-0010
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick;
+      authenticated HTTPS push/fetch; git rev-list --left-right --count HEAD...@{upstream}
+    tier: quick
+    result: passed
+    environment: Active Codex machine; Windows 11 x64; repository working tree; REF-CODEX-001 revision 2026-08-21.1
+    date: '2026-08-22'
+    duration: 162 tests in 108.033 s; complete Quick command in 00:01:53.042
+    reference: branch codex/tl-0010-m0-foundation-gate; candidate 17975419badd4154b82895d9d92a4a904790c7c0;
+      local/upstream 0 ahead and 0 behind
+    limitation: Working-tree and Git continuity evidence; it does not replace the separately required clean-checkout Quick
+      or Full result
+  - summary: An exact published-candidate clean clone bootstrapped only the hash-pinned Python dependency and passed the
+      complete governed Quick tier while remaining tracked-clean.
+    task: TL-0010
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick
+    tier: clean-checkout quick
+    result: passed
+    environment: Active Codex machine; disposable clean clone; Windows 11 x64; REF-CODEX-001 revision 2026-08-21.1;
+      Python 3.14.7; PyYAML 6.0.3
+    date: '2026-08-22'
+    duration: Pinned environment bootstrap 7.331 s; 162 tests in 110.348 s; complete Quick command in 00:01:55.378
+    reference: candidate 17975419badd4154b82895d9d92a4a904790c7c0; artifacts/gates/M0-foundation.md verification
+      evidence
+    limitation: One active-machine clean clone only; no second machine, hardware matrix, cross-hardware certification,
+      manual hardware test, accessibility audit, failure matrix, or Extended scenario is claimed
+  - summary: The required exact-candidate Full tier passed all Python and governance controls, locked restore, formatting,
+      and a Release build with zero warnings and errors, then failed because Application Control blocked four unsigned
+      application-assembly loads in the Release test phase.
+    task: TL-0010
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Full
+    tier: full milestone gate
+    result: blocked; exit 1 in the required Release test phase after every earlier Full phase passed
+    environment: Active Codex machine; same disposable exact-candidate clean clone; Windows 11 x64; .NET SDK 10.0.400;
+      Python 3.14.7; REF-CODEX-001 revision 2026-08-21.1
+    date: '2026-08-22'
+    duration: 162 Python tests in 110.313 s; Release build 17.50 s; complete Full attempt in 00:03:01.538
+    reference: candidate 17975419badd4154b82895d9d92a4a904790c7c0; error 0x800711C7 in ThirdLife.Packages.Tests,
+      ThirdLife.Persistence.Tests, ThirdLife.Reports.Tests, and ThirdLife.Verification.Tests
+    limitation: Full is not green; Smart App Control and Code Integrity were not disabled or bypassed, and passing restore/build
+      phases do not satisfy the required Full tier
+  - summary: Focused reruns reproduced all four blocks; the affected application DLLs are NotSigned with only the ordinary
+      data stream, bounded Code Integrity events identify the enforced policy, and the verified disposable clone was removed.
+    task: TL-0010
+    command_or_review: Four independently invoked dotnet test project commands with --configuration Release --no-build
+      --no-restore; Get-AuthenticodeSignature; bounded Code Integrity event review; verified temporary-clone cleanup
+    tier: targeted failure diagnosis and cleanup
+    result: blocked; all four focused assembly-contract reruns exited 1 with the same Application Control block; cleanup passed
+    environment: Active Codex machine; exact-candidate disposable clean clone; host security unchanged
+    date: '2026-08-22'
+    duration: Packages focused rerun 2.552 s; Reports focused rerun 2.226 s; Persistence and Verification bounded reruns
+      completed in the Full-diagnosis command; cleanup not separately timed
+    reference: Code Integrity event IDs 3033 and 3077 under the enforced Smart App Control policy; basenames
+      ThirdLife.Packages.dll, ThirdLife.Persistence.dll, ThirdLife.Reports.dll, ThirdLife.Verification.dll; 0x800711C7
+    limitation: No raw event export or machine-specific path retained; the clone/worktree method cannot remedy an unsigned-code
+      policy block, and no ungoverned signing workaround is authorized
+  - summary: The synchronized blocked-state evidence reran the complete governed Quick tier successfully without weakening
+      host security or changing the Full-tier conclusion.
+    task: TL-0010
+    command_or_review: .\eng\verify.ps1 -Tier Quick
+    tier: blocked-state quick
+    result: passed
+    environment: Active Codex machine; Windows 11 x64; repository working tree; Python 3.14.7; PyYAML 6.0.3;
+      REF-CODEX-001 revision 2026-08-21.1
+    date: '2026-08-22'
+    duration: 162 Python tests in 118.166 s; live bundle and repository validators also passed
+    reference: branch codex/tl-0010-m0-foundation-gate derived from candidate 17975419badd4154b82895d9d92a4a904790c7c0;
+      artifacts/gates/M0-foundation.md
+    limitation: This validates the blocked-state evidence and static controls; it does not replace or satisfy the blocked
+      exact-candidate Full tier, and no human gate approval is claimed
   human_evidence_required:
   - Project owner signs the M0 gate record.
   - Security, privacy, and license owners acknowledge their M0 artifacts.
@@ -1279,6 +1367,11 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  blocked_reason: Required Full verification at candidate 17975419badd4154b82895d9d92a4a904790c7c0 is blocked on the
+    active Codex machine because the enforced Windows Smart App Control / Code Integrity policy
+    rejects four unsigned ThirdLife application DLL loads during Release tests with 0x800711C7. Unblock only through an
+    approved same-machine hosted environment that can run the governed Full command without weakening host security,
+    or later governed signing/lifecycle work; then rerun Full before human M0 approval.
 - id: TL-0101
   title: Implement core job and evidence domain models
   milestone: M1

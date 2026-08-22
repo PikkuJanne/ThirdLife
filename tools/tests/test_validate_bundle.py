@@ -2598,6 +2598,11 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
 
 
 class M0FoundationGateContractTests(unittest.TestCase):
+    verification_candidate = "17975419badd4154b82895d9d92a4a904790c7c0"
+    verification_candidate_digest = (
+        "b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153"
+    )
+
     def copy_contract(self, root: Path) -> None:
         for relative in (
             validate_bundle.M0_FOUNDATION_GATE_PATH,
@@ -2635,7 +2640,17 @@ class M0FoundationGateContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_contract(root)
-            validation = self.validate_contract(root)
+            self.replace_gate_text(
+                root,
+                "**Record status:** Blocked — required Full tier did not pass",
+                "**Record status:** Candidate — verification or human evidence pending",
+            )
+            self.replace_gate_text(root, "**Decision:** Blocked", "**Decision:** Pending")
+            tasks = dict(TASK_BY_ID)
+            gate_task = dict(tasks["TL-0010"])
+            gate_task["status"] = "in_progress"
+            tasks["TL-0010"] = gate_task
+            validation = self.validate_contract(root, tasks)
             self.assertEqual(validation.errors, [])
 
     def test_gate_artifact_is_governed_required_input(self) -> None:
@@ -2668,18 +2683,19 @@ class M0FoundationGateContractTests(unittest.TestCase):
             self.copy_contract(root)
             self.replace_gate_text(
                 root,
-                "**Record status:** Candidate — verification and human acknowledgements pending",
+                "**Record status:** Blocked — required Full tier did not pass",
                 "**Record status:** Approved — M0 gate complete",
             )
-            self.replace_gate_text(root, "**Decision:** Pending", "**Decision:** Approved")
+            self.replace_gate_text(root, "**Decision:** Blocked", "**Decision:** Approved")
             self.replace_gate_text(
                 root,
-                "| Verification candidate commit | Pending |",
+                f"| Verification candidate commit | {self.verification_candidate} |",
                 f"| Verification candidate commit | {'0' * 40} |",
             )
             self.replace_gate_text(
                 root,
-                "| Gate-record candidate SHA-256 | Pending |",
+                "| Gate-record candidate SHA-256 | "
+                f"{self.verification_candidate_digest} |",
                 f"| Gate-record candidate SHA-256 | {'1' * 64} |",
             )
             tasks = dict(TASK_BY_ID)
@@ -2736,18 +2752,19 @@ class M0FoundationGateContractTests(unittest.TestCase):
             ).stdout.strip()
             self.replace_gate_text(
                 root,
-                "**Record status:** Candidate — verification and human acknowledgements pending",
+                "**Record status:** Blocked — required Full tier did not pass",
                 "**Record status:** Approved — M0 gate complete",
             )
-            self.replace_gate_text(root, "**Decision:** Pending", "**Decision:** Approved")
+            self.replace_gate_text(root, "**Decision:** Blocked", "**Decision:** Approved")
             self.replace_gate_text(
                 root,
-                "| Verification candidate commit | Pending |",
+                f"| Verification candidate commit | {self.verification_candidate} |",
                 f"| Verification candidate commit | {candidate_commit} |",
             )
             self.replace_gate_text(
                 root,
-                "| Gate-record candidate SHA-256 | Pending |",
+                "| Gate-record candidate SHA-256 | "
+                f"{self.verification_candidate_digest} |",
                 f"| Gate-record candidate SHA-256 | {'0' * 64} |",
             )
             tasks = dict(TASK_BY_ID)
@@ -2769,20 +2786,21 @@ class M0FoundationGateContractTests(unittest.TestCase):
             self.copy_contract(root)
             self.replace_gate_text(
                 root,
-                "**Record status:** Candidate — verification and human acknowledgements pending",
+                "**Record status:** Blocked — required Full tier did not pass",
                 "**Record status:** Approved — M0 gate complete",
             )
-            self.replace_gate_text(root, "**Decision:** Pending", "**Decision:** Approved")
+            self.replace_gate_text(root, "**Decision:** Blocked", "**Decision:** Approved")
             candidate_commit = "0" * 40
             candidate_digest = "1" * 64
             self.replace_gate_text(
                 root,
-                "| Verification candidate commit | Pending |",
+                f"| Verification candidate commit | {self.verification_candidate} |",
                 f"| Verification candidate commit | {candidate_commit} |",
             )
             self.replace_gate_text(
                 root,
-                "| Gate-record candidate SHA-256 | Pending |",
+                "| Gate-record candidate SHA-256 | "
+                f"{self.verification_candidate_digest} |",
                 f"| Gate-record candidate SHA-256 | {candidate_digest} |",
             )
             self.replace_gate_text(
@@ -2809,12 +2827,6 @@ class M0FoundationGateContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_contract(root)
-            self.replace_gate_text(
-                root,
-                "**Record status:** Candidate — verification and human acknowledgements pending",
-                "**Record status:** Blocked — required Full tier did not pass",
-            )
-            self.replace_gate_text(root, "**Decision:** Pending", "**Decision:** Blocked")
             tasks = dict(TASK_BY_ID)
             gate_task = dict(tasks["TL-0010"])
             gate_task["status"] = "blocked"
