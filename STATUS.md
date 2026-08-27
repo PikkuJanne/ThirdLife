@@ -1,16 +1,16 @@
 # ThirdLife Setup Core — Current Handoff Status
 
-**Snapshot date:** 2026-08-27  
-**Snapshot preparation time:** 2026-08-27T23:41:45+02:00  
+**Snapshot date:** 2026-08-28  
+**Snapshot preparation time:** 2026-08-28T00:01:44+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
-**Current task:** `TL-0102` — Implement the SQLite job store and migrations — `in_progress`  
-**Action state:** implementation and Targeted verification complete; exact checkpoint pushed; the Sandbox Quick preflight defect is reduced and fixed with a transient 184-test Quick pass; preparing the exact clean fix checkpoint before trigger-required Full
+**Current task:** `TL-0102` — Implement the SQLite job store and migrations — `review`  
+**Action state:** implementation and all automated Targeted, Quick, Full, security, supply-chain, and source-bound SBOM evidence complete; preparing the exact pushed human-approval candidate
 
 ## Executive state
 
-M0 is complete and `TL-0101` is done. `TL-0102` now implements the first durable local job-store slice and has passed its complete 72-test Targeted suite both on the host and in a hardened same-machine Windows Sandbox. Checkpoints through `0d22cae67f31b50da418760fb76afc5062b6a9bd` are published. Focused Quick diagnostics found that successful quiet Git commands produced an empty output string that a mandatory diagnostic parameter rejected; the fixed harness explicitly accepts empty diagnostic text while retaining the command label. A transient same-machine Sandbox Quick then passed all 184 tests in 294.352 seconds. The task is not yet complete: that fix needs an exact pushed, persisted-evidence Quick pass, the persistence and dependency changes trigger Full, and the expanded 28-component matrix requires a fresh named human approval bound to an exact pushed commit and matrix digest.
+M0 is complete and `TL-0101` is done. `TL-0102` now implements the first durable local job-store slice and has passed its complete 72-test Targeted suite both on the host and in a hardened same-machine Windows Sandbox. Exact checkpoint `8a4330afd288f4aead03e01bf95c935c4d342785` passed persisted-evidence Quick and trigger-required Full: 184 governed regressions, locked restore and NuGet audit, format verification, a zero-warning/zero-error Release build, and all 145 solution tests. Two source-bound CycloneDX 1.6 SBOMs are byte-identical. Automated work is complete; the task remains `review` solely for fresh named human approval of the exact 28-component licence/installation/redistribution matrix at the pushed review candidate.
 
 No release, production packaging, retention/deletion, backup/restore, attachment, sibling-integration, cross-hardware, or legal-rights claim is made by this checkpoint.
 
@@ -33,7 +33,7 @@ No release, production packaging, retention/deletion, backup/restore, attachment
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
 | Branch | `codex/tl-0102-sqlite-job-store` |
 | Starting commit | `929f0e34dda02704c32658af9d7b8efc59c44028` — published TL-0101 completion handoff |
-| Current commit | `0d22cae67f31b50da418760fb76afc5062b6a9bd` — published diagnostic checkpoint; bounded quiet-command fix is being prepared |
+| Current commit | `8a4330afd288f4aead03e01bf95c935c4d342785` — published implementation and Sandbox-fix checkpoint; review-evidence commit is being prepared |
 | History handling | Started from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
 | Publication state | Implementation checkpoint is pushed and equals its upstream; final review candidate is not yet established |
 
@@ -55,11 +55,12 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 | Supply-chain and bundle regressions | Passed 159/159 | 120.969 s |
 | Point-in-time NuGet advisory query | Exit 0; 0 vulnerable direct/transitive records | 5.923 s; response SHA-256 `52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316` |
 | Pending-review SBOM | Two byte-identical CycloneDX 1.6 files; 28 components | SHA-256 `228962193bd56ddd0c21abcc290197ff13d650cee51356c6b3160037d0c65c10`; 136,475 bytes |
-| Governed Quick | First exact attempt failed closed before tests; focused transient rerun now passes 184/184; exact persisted rerun pending | Failure 18.385 s at `61e112a`; transient fix verification 294.352 s complete / 219.042 s regressions; transient result SHA-256 `96408265fbab512f9947927d306f7b94262f4c6c58bbc56faafa587f56dcd5ee` |
-| Trigger-required Full | Pending exact candidate commit | Triggered by persistence/migration, dependency, and security-boundary changes |
+| Governed Quick | Passed exact checkpoint `8a4330a`; 184/184 | 294.487 s complete / 219.503 s regressions; source SHA-256 `a2bb4d47b1723ef74daf76f68eb9d26fdb88a0ec700ca386baf6e7a83f2b49b6`; result SHA-256 `a5865981761e6fb8a64ce2e1c5d871d7ea0db55a7f83936d5003c3140e3be957`; networking disabled |
+| Trigger-required Full | Passed exact checkpoint `8a4330a`; 145/145 solution tests | 471.959 s complete; locked restore/audit, unchanged format, 42.55 s zero-warning/error build, 31 s persistence tests; result SHA-256 `7f9424e23a59ae757e182eed6fcba4fd9effd268de4d06778bf0b4be34e087c5`; networking enabled only for NuGet audit |
+| Source-bound SBOM | Two byte-identical CycloneDX 1.6 files; 28 components / 29 dependency records | 15.581 s; 136,597 bytes; SHA-256 `47e46fc7e0c61032a8e3bac74206a01ae22da36c70c5b535586a85d8d68d0ab3`; source `8a4330a`; review pending |
 | Extended | Not triggered | TL-0102 declares no Extended trigger; deterministic process-kill/path cases are part of Targeted |
 
-Sandbox Targeted used a 4096 MiB same-machine guest, disabled networking, exact lock-derived NuGet packages, no broad host cache, no host Git metadata, bounded source/dependency inputs, a 2 MiB hard in-memory command-output ceiling, an 8 KiB sanitized evidence tail, and a kill-on-close Windows job that verified no descendant remained. This evidence is not direct-host policy compatibility, physical power-loss, filesystem-filter coverage, accessibility or modest-hardware certification, or a cross-hardware claim.
+Sandbox Targeted, Quick, and Full used a 4096 MiB same-machine guest, exact lock-derived NuGet packages, bounded source/dependency/history inputs, no host Git configuration/hooks/credentials or broad package cache, a 2 MiB hard in-memory command-output ceiling, an 8 KiB sanitized evidence tail, and a kill-on-close Windows job that verified no descendant remained. Networking was disabled for Targeted and Quick and enabled in Full only for the declared NuGet audit. This evidence is not direct-host policy compatibility, physical power-loss, filesystem-filter coverage, accessibility or modest-hardware certification, or a cross-hardware claim.
 
 ## Defect handling
 
@@ -70,7 +71,7 @@ The required reduce–fix–focus–broaden sequence was followed:
 3. An intermittent native rename defect was reduced to missing trailing UTF-16 buffer capacity; the focused 28-case migration set passed, followed by two consecutive 72-case suites.
 4. Sandbox review removed the broad NuGet cache, raw output persistence, host `.git` exposure, overwrite evidence, reparse-unsafe cleanup, unbounded staging, polling output cap, and wrapper-only termination.
 5. Live Sandbox attempts exposed an empty-output PowerShell 5.1 sum bug, first-use CLIXML version parsing, persistent build-server descendants, and an omitted untracked Core port. Each failed closed, was reduced and corrected, then RoundTrip 1/1 and Targeted 72/72 passed.
-6. The first exact-pushed Sandbox Quick stopped during Git-history preflight after tool-version checks. A bounded host reproduction passed archive, bundle, init, fetch, reference binding, reset, and commit verification 6/6. Stable command-stage classifiers reduced the Sandbox failure to a `ParameterBindingValidationException`: successful `git init --quiet` returned an empty bounded output tail that the diagnostic helper's mandatory string rejected. Explicit empty-string admission fixes that diagnostics-only defect; a focused transient Sandbox Quick then passed 184/184. Passing evidence remains pending the exact clean fix commit.
+6. The first exact-pushed Sandbox Quick stopped during Git-history preflight after tool-version checks. A bounded host reproduction passed archive, bundle, init, fetch, reference binding, reset, and commit verification 6/6. Stable command-stage classifiers reduced the Sandbox failure to a `ParameterBindingValidationException`: successful `git init --quiet` returned an empty bounded output tail that the diagnostic helper's mandatory string rejected. Explicit empty-string admission fixed that diagnostics-only defect; a focused transient Quick passed, followed by exact persisted Quick 184/184 and Full 145/145 at `8a4330a`.
 
 No blind rerun is accepted as evidence. Raw guest output was never retained; only bounded sanitized tails and structured result hashes were used.
 
@@ -91,7 +92,7 @@ The inventory now has 28 components: 18 NuGet, four synthetic catalogue rows, th
 - `SQLitePCLRaw.core` 2.1.12 — transitive, Apache-2.0; and
 - `SQLitePCLRaw.provider.winsqlite3` 2.1.11 — transitive, Apache-2.0.
 
-The provider uses supported Windows `winsqlite3.dll`; no native SQLite binary is included or admitted for redistribution. The current matrix SHA-256 is `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`, pending final candidate confirmation. All four runtime rows remain `not-shipped`, and redistribution/release admission is withheld.
+The provider uses supported Windows `winsqlite3.dll`; no native SQLite binary is included or admitted for redistribution. The exact current matrix SHA-256 is `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`. All four runtime rows remain `not-shipped`, and redistribution/release admission is withheld pending the named review.
 
 The prior TL-0006 approval remains immutable evidence only for its exact 24-component commit/digest. It does not approve the four TL-0102 runtime components.
 
@@ -105,15 +106,13 @@ The prior TL-0006 approval remains immutable evidence only for its exact 24-comp
 
 ## Outstanding and next steps
 
-1. Checkpoint and push the bounded empty-output fix and failure-evidence hardening, then rerun governed Quick from that exact clean commit with persisted structured evidence.
-2. After Quick passes, run trigger-required Full from the same exact clean commit in Windows Sandbox; generate and compare source-bound SBOMs.
-3. Append the final automated evidence, set `TL-0102` to `review`, update this handoff, and push the exact approval candidate.
-4. Obtain Janne Vuorela's named approval of that candidate commit and exact matrix digest, preserving every documented limitation and withheld right, plus explicit authorization to append renewed TL-0006 evidence without altering prior evidence.
-5. Record the approval, rerun the approval-bound governance checks, set `TL-0102` to `done`, commit/push, and verify upstream equality.
+1. Validate this final automated-evidence update, commit/push it, and verify the exact review-candidate commit against upstream.
+2. Obtain Janne Vuorela's named approval of that candidate commit and matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`, preserving every documented limitation and withheld right, plus explicit authorization to append renewed TL-0006 evidence without altering prior evidence.
+3. Record the approval, rerun the approval-bound governance checks and Quick tier, set `TL-0102` to `done`, commit/push, and verify upstream equality.
 
 ## Upcoming decisions
 
-- **Required now:** approve or reject the exact 28-component licence/installation/redistribution proposal at the forthcoming pushed candidate. Approval is governance of the recorded proposals only; it grants no blanket redistribution, native-SQLite redistribution, release authorization, legal advice, or removal of any limitation.
+- **Required now:** after the review-candidate push, approve or reject that exact commit and the 28-component licence/installation/redistribution proposal at matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`. Approval is governance of the recorded proposals only; it grants no blanket redistribution, native-SQLite redistribution, release authorization, legal advice, or removal of any limitation.
 - **Later tasks, not TL-0102:** retention/deletion policy enforcement, backup/export and incompatible-migration recovery, typed attachment admission, uninstall cleanup, production packaging/notices, and release signing/lifecycle.
 
 ## Next dependency-ready task

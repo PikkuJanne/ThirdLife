@@ -1628,7 +1628,7 @@ tasks:
   workstream: persistence
   kind: code
   priority: P0
-  status: in_progress
+  status: review
   size: L
   executor: codex
   environment: windows
@@ -1744,6 +1744,45 @@ tasks:
       sha256:086d45de478c6f068983a40009ce89cfed5c3b67e3bd8f4d19fb803cfcaf37bf
     limitation: Failure evidence only; it proves safe fail-closed behavior and reduction, not a passing Quick gate, product behavior,
       release readiness, or cross-hardware compatibility; raw guest output was discarded
+  - summary: After the quiet-command diagnostic defect was reduced and fixed, the exact pushed implementation checkpoint passed
+      governed Quick and the trigger-required Full gate in Windows Sandbox. Full repeated Quick, completed the locked restore and
+      governed NuGet audit, verified formatting, built Release with zero warnings/errors, and passed all 145 tests across 13 test
+      projects, including all 72 persistence tests.
+    task: TL-0102
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\run-tl0102-sandbox.ps1 -Phase Quick
+      -PersistEvidence; powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\run-tl0102-sandbox.ps1 -Phase Full
+      -PersistEvidence
+    tier: quick and full
+    result: passed; Quick 184/184 governed regressions; Full locked audit/restore, format, 0-warning/0-error Release build, and
+      145/145 solution tests with 0 failed or skipped
+    environment: Windows Sandbox on the active physical Codex machine; 4096 MiB guest; exact commit and lock-derived inputs;
+      networking disabled for Quick and enabled only for the governed NuGet audit in Full
+    date: '2026-08-27'
+    duration: Quick 294.487 s complete / 219.503 s regressions; Full 471.959 s complete / 42.55 s build / 31 s persistence tests
+    reference: checkpoint 8a4330afd288f4aead03e01bf95c935c4d342785; source
+      sha256:a2bb4d47b1723ef74daf76f68eb9d26fdb88a0ec700ca386baf6e7a83f2b49b6; Quick result
+      sha256:a5865981761e6fb8a64ce2e1c5d871d7ea0db55a7f83936d5003c3140e3be957; Full result
+      sha256:7f9424e23a59ae757e182eed6fcba4fd9effd268de4d06778bf0b4be34e087c5
+    limitation: Same-machine disposable guest evidence only; Full networking was bounded to the declared point-in-time NuGet
+      audit; no release authorization, physical power-loss, hostile filter-driver, cross-hardware, accessibility, retention,
+      backup/restore, packaging, signing, or native-SQLite redistribution claim is made
+  - summary: Two offline source-bound CycloneDX 1.6 SBOM generations for the exact pushed checkpoint were byte-identical and
+      contained the complete 28-component inventory with 29 dependency records, the exact source revision, current matrix digest,
+      and truthful pending licence-review state.
+    task: TL-0102
+    command_or_review: .\eng\generate-sbom.ps1 twice with distinct outputs and
+      -SourceRevision 8a4330afd288f4aead03e01bf95c935c4d342785; SHA-256, size, component, dependency, source, matrix, and review-state comparison
+    tier: targeted supply-chain evidence
+    result: passed; two byte-identical SBOMs, 28 components, 29 dependency records, exact source binding, review=pending
+    environment: Active Windows 11 x64 Codex machine; Python 3.14.7; offline generation from exact repository inputs
+    date: '2026-08-28'
+    duration: 15.581 s for two generations and bounded comparison
+    reference: checkpoint 8a4330afd288f4aead03e01bf95c935c4d342785; SBOM
+      sha256:47e46fc7e0c61032a8e3bac74206a01ae22da36c70c5b535586a85d8d68d0ab3; 136597 bytes; matrix
+      sha256:e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418
+    limitation: Development evidence only; the named licence/installation/redistribution review remains pending and every
+      xunit.abstractions, toolchain, synthetic-placeholder, native-SQLite, packaging, notice, withheld-right, no-blanket-right,
+      and no-release limitation remains binding
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
