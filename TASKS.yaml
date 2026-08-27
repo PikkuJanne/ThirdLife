@@ -1726,6 +1726,24 @@ tasks:
     limitation: Advisory evidence is point-in-time and source-dependent; SBOM review remains pending; every recorded
       xunit.abstractions, toolchain, synthetic-placeholder, native-SQLite, packaging, notice, withheld-right, and no-release
       limitation remains binding
+  - summary: The first exact-pushed Sandbox Quick attempt failed closed during the sanitized Git-history preflight after resolving
+      the governed .NET and Git versions; no validator or product test ran. A bounded host reproduction then passed all six exact
+      history commands, reducing the defect to the same-machine Sandbox command-runner boundary and motivating stable non-sensitive
+      command-start diagnostics before retry.
+    task: TL-0102
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\run-tl0102-sandbox.ps1 -Phase Quick
+      -PersistEvidence; bounded exact Git archive/bundle/init/fetch/ref/reset/cat-file host reproduction
+    tier: quick failure reduction
+    result: failed closed with preflight_failed after 18.385 s; focused host history sequence passed 6/6; no blind rerun accepted
+    environment: Windows Sandbox on the active physical Codex machine; 4096 MiB guest; networking disabled; protected host
+      security controls unchanged
+    date: '2026-08-27'
+    duration: 18.385 s Sandbox attempt; 5.3 s focused host reproduction
+    reference: checkpoint 61e112a6bbd0f6d19cde75a977e8fe9960623ccd; source
+      sha256:d5a39f493d07a95696319d7cbe805fe46ef39e892f4fc93f6a5867ded53c5a8d; failed result
+      sha256:086d45de478c6f068983a40009ce89cfed5c3b67e3bd8f4d19fb803cfcaf37bf
+    limitation: Failure evidence only; it proves safe fail-closed behavior and reduction, not a passing Quick gate, product behavior,
+      release readiness, or cross-hardware compatibility; raw guest output was discarded
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

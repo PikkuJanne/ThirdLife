@@ -6,11 +6,11 @@
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
 **Current task:** `TL-0102` — Implement the SQLite job store and migrations — `in_progress`  
-**Action state:** implementation and Targeted verification complete; preparing the exact pushed candidate for governed Quick, trigger-required Full, source-bound SBOM, and named licence/rights review
+**Action state:** implementation and Targeted verification complete; exact checkpoint pushed; first governed Quick failed closed in Git-history preflight and is under focused same-machine Sandbox diagnosis before trigger-required Full
 
 ## Executive state
 
-M0 is complete and `TL-0101` is done. `TL-0102` now implements the first durable local job-store slice and has passed its complete 72-test Targeted suite both on the host and in a hardened same-machine Windows Sandbox. The task is not yet complete: the persistence and dependency changes trigger Full, and the expanded 28-component matrix requires a fresh named human approval bound to an exact pushed commit and matrix digest.
+M0 is complete and `TL-0101` is done. `TL-0102` now implements the first durable local job-store slice and has passed its complete 72-test Targeted suite both on the host and in a hardened same-machine Windows Sandbox. Checkpoint `61e112a6bbd0f6d19cde75a977e8fe9960623ccd` is published. Its first governed Sandbox Quick attempt failed closed before tests in the Git-history preflight; the exact six-step history sequence passes on the host, narrowing the defect to the Sandbox command-runner boundary. The task is not yet complete: Quick must pass, the persistence and dependency changes trigger Full, and the expanded 28-component matrix requires a fresh named human approval bound to an exact pushed commit and matrix digest.
 
 No release, production packaging, retention/deletion, backup/restore, attachment, sibling-integration, cross-hardware, or legal-rights claim is made by this checkpoint.
 
@@ -33,9 +33,9 @@ No release, production packaging, retention/deletion, backup/restore, attachment
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
 | Branch | `codex/tl-0102-sqlite-job-store` |
 | Starting commit | `929f0e34dda02704c32658af9d7b8efc59c44028` — published TL-0101 completion handoff |
-| Current commit | Starting commit; TL-0102 candidate commit is being prepared |
+| Current commit | `61e112a6bbd0f6d19cde75a977e8fe9960623ccd` — published implementation checkpoint; diagnostic hardening is in progress |
 | History handling | Started from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Publication state | TL-0102 changes are not yet committed or pushed at this checkpoint |
+| Publication state | Implementation checkpoint is pushed and equals its upstream; final review candidate is not yet established |
 
 The configured SSH remote rejects unattended public-key authentication on this machine. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
 
@@ -55,7 +55,7 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 | Supply-chain and bundle regressions | Passed 159/159 | 120.969 s |
 | Point-in-time NuGet advisory query | Exit 0; 0 vulnerable direct/transitive records | 5.923 s; response SHA-256 `52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316` |
 | Pending-review SBOM | Two byte-identical CycloneDX 1.6 files; 28 components | SHA-256 `228962193bd56ddd0c21abcc290197ff13d650cee51356c6b3160037d0c65c10`; 136,475 bytes |
-| Governed Quick | Pending exact candidate commit | Required before checkpoint/final evidence |
+| Governed Quick | Failed closed before tests at pushed checkpoint `61e112a`; focused reduction active | 18.385 s; Git-history preflight after governed tool versions; failed result SHA-256 `086d45de478c6f068983a40009ce89cfed5c3b67e3bd8f4d19fb803cfcaf37bf` |
 | Trigger-required Full | Pending exact candidate commit | Triggered by persistence/migration, dependency, and security-boundary changes |
 | Extended | Not triggered | TL-0102 declares no Extended trigger; deterministic process-kill/path cases are part of Targeted |
 
@@ -70,6 +70,7 @@ The required reduce–fix–focus–broaden sequence was followed:
 3. An intermittent native rename defect was reduced to missing trailing UTF-16 buffer capacity; the focused 28-case migration set passed, followed by two consecutive 72-case suites.
 4. Sandbox review removed the broad NuGet cache, raw output persistence, host `.git` exposure, overwrite evidence, reparse-unsafe cleanup, unbounded staging, polling output cap, and wrapper-only termination.
 5. Live Sandbox attempts exposed an empty-output PowerShell 5.1 sum bug, first-use CLIXML version parsing, persistent build-server descendants, and an omitted untracked Core port. Each failed closed, was reduced and corrected, then RoundTrip 1/1 and Targeted 72/72 passed.
+6. The first exact-pushed Sandbox Quick stopped during Git-history preflight after tool-version checks. A bounded host reproduction passed archive, bundle, init, fetch, reference binding, reset, and commit verification 6/6. Stable command-start markers and command-specific failure classification were added so the next exact run can identify a Sandbox-only runner failure without retaining raw output.
 
 No blind rerun is accepted as evidence. Raw guest output was never retained; only bounded sanitized tails and structured result hashes were used.
 
@@ -102,8 +103,8 @@ The prior TL-0006 approval remains immutable evidence only for its exact 24-comp
 
 ## Outstanding and next steps
 
-1. Refresh governed manifest hashes, run live bundle/repository validation, and create/push the exact implementation checkpoint.
-2. Run governed Quick and trigger-required Full from that exact clean commit in Windows Sandbox; generate and compare source-bound SBOMs.
+1. Checkpoint and push the bounded Sandbox diagnostic hardening, then rerun governed Quick from that exact clean commit using the new non-sensitive stage marker.
+2. After Quick passes, run trigger-required Full from the same exact clean commit in Windows Sandbox; generate and compare source-bound SBOMs.
 3. Append the final automated evidence, set `TL-0102` to `review`, update this handoff, and push the exact approval candidate.
 4. Obtain Janne Vuorela's named approval of that candidate commit and exact matrix digest, preserving every documented limitation and withheld right, plus explicit authorization to append renewed TL-0006 evidence without altering prior evidence.
 5. Record the approval, rerun the approval-bound governance checks, set `TL-0102` to `done`, commit/push, and verify upstream equality.

@@ -706,6 +706,7 @@ function Invoke-BoundedCommand {
         [Parameter(Mandatory = $false)][string] $SuccessMarker = ""
     )
     $script:commandSequence += 1
+    Add-DiagnosticTail -Label ("start-" + $Label) -Text "" -Truncated $false
     $commandRequestPath = Join-Path $stateDirectory "command-$($script:commandSequence).json"
     $commandRequest = [ordered]@{ file_path = $FilePath; arguments = @($Arguments) } | ConvertTo-Json -Depth 3 -Compress
     Write-Utf8CreateNew -Path $commandRequestPath -Content $commandRequest
@@ -775,12 +776,15 @@ function Invoke-RequiredCommand {
         [Parameter(Mandatory = $true)][ValidateSet("source_binding_failed", "python_bootstrap_failed", "restore_failed", "test_failed", "verification_failed")][string] $Failure,
         [Parameter(Mandatory = $false)][string] $SuccessMarker = ""
     )
+    $previousFailureCode = $script:failureCode
+    $script:failureCode = $Failure
     $command = Invoke-BoundedCommand -Label $Label -FilePath $FilePath -Arguments $Arguments -SuccessMarker $SuccessMarker
     $script:exitCode = $command.exit_code
     if ($command.timed_out) { $script:failureCode = "command_timeout"; throw "A governed command exceeded its timeout." }
     if ($command.output_exceeded) { $script:failureCode = "output_limit_exceeded"; throw "A governed command exceeded its raw output limit." }
     if ($command.exit_code -ne 0) { $script:failureCode = $Failure; throw "A governed command returned a failure." }
     if (-not $command.marker_found) { $script:exitCode = 2; $script:failureCode = "success_marker_missing"; throw "A governed command omitted its required success marker." }
+    $script:failureCode = $previousFailureCode
 }
 
 function Assert-ExactObjectKeys {
