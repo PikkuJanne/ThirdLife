@@ -33,6 +33,13 @@ TL0401_HUMAN_EVIDENCE = (
     "docs/adr/0009-winget-backend.md before production adapter work begins."
 )
 M0_FOUNDATION_GATE_PATH = "artifacts/gates/M0-foundation.md"
+M0_SANDBOX_HOST_PATH = "eng/run-tl0010-sandbox.ps1"
+M0_SANDBOX_GUEST_PATH = "eng/run-tl0010-sandbox-guest.ps1"
+M0_SANDBOX_CANDIDATE = "17975419badd4154b82895d9d92a4a904790c7c0"
+M0_SANDBOX_GATE_DIGEST = (
+    "b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153"
+)
+M0_SANDBOX_RESULT_SCHEMA_VERSION = 1
 M0_GATE_PREDECESSORS = tuple(f"TL-{number:04d}" for number in range(1, 10))
 M0_TASK_STATUS_TO_RECORD_STATE = {
     "backlog": "Candidate",
@@ -131,6 +138,8 @@ REQUIRED_FILES = (
     "docs/testing/manual-hardware-tests.md",
     "docs/testing/reference-machine-profile.md",
     "docs/testing/same-machine-constraints.md",
+    M0_SANDBOX_GUEST_PATH,
+    M0_SANDBOX_HOST_PATH,
     M0_FOUNDATION_GATE_PATH,
     "tools/merge_task_contracts.py",
     "tools/requirements.txt",
@@ -5336,6 +5345,192 @@ def validate_no_obsolete_hardware_obligations(
                 )
 
 
+def validate_m0_sandbox_scripts(validation: Validation) -> None:
+    """Keep the approved TL-0010 hosted rerun bounded and fail closed."""
+
+    host_text = require_phrases(
+        M0_SANDBOX_HOST_PATH,
+        (
+            M0_SANDBOX_CANDIDATE,
+            M0_SANDBOX_GATE_DIGEST,
+            f'$ResultSchemaVersion = {M0_SANDBOX_RESULT_SCHEMA_VERSION}',
+            '$SandboxTimeoutMinutes = 30',
+            '$RemoteVerificationTimeoutSeconds = 30',
+            '$RemoteVerificationUrl = "https://github.com/PikkuJanne/ThirdLife.git"',
+            '$SourceBranch = "codex/tl-0010-m0-foundation-gate"',
+            '$HostedConstraintProfile = "TL0010-WSB-2026-08-27.1"',
+            '$SandboxMemoryMb = 8192',
+            '[switch] $PreflightOnly',
+            'ls-files --error-unmatch',
+            '"symbolic-ref", "--short", "HEAD"',
+            'if ($upstream -ne "origin/$SourceBranch")',
+            'rev-list", "--left-right", "--count"',
+            'Get-BoundedRemoteBranchHash',
+            '$process.WaitForExit($TimeoutSeconds * 1000)',
+            '$startInfo.EnvironmentVariables["GIT_TERMINAL_PROMPT"] = "0"',
+            'if ($remoteBranchHash -ne $harnessCommit)',
+            '"clone", "--local", "--no-hardlinks", "--no-checkout"',
+            'status --porcelain=v1 --untracked-files=all',
+            'Get-FileHash -LiteralPath $stagedGatePath -Algorithm SHA256',
+            '<VGpu>Disable</VGpu>',
+            '<Networking>Enable</Networking>',
+            '<ProtectedClient>Enable</ProtectedClient>',
+            '<ClipboardRedirection>Disable</ClipboardRedirection>',
+            '<AudioInput>Disable</AudioInput>',
+            '<VideoInput>Disable</VideoInput>',
+            '<PrinterRedirection>Disable</PrinterRedirection>',
+            '<SandboxFolder>C:\\TL0010\\Input\\Source</SandboxFolder>',
+            '<SandboxFolder>C:\\TL0010\\Output</SandboxFolder>',
+            '<ReadOnly>false</ReadOnly>',
+            'Read-BoundedResult -Path $pendingPath -Phase "Guest"',
+            'Assert-GuestOutputDirectory -Path $resultDirectory',
+            'The guest result directory contains unexpected output.',
+            'Assert-FinalOutputDirectory -Path $resultDirectory',
+            '$liveBindings = [ordered] @{',
+            'launcher_sha256 = $launcherDigest',
+            'cannot use an all-zero placeholder.',
+            'Assert-VerifiedStagingPath',
+            'Refusing cleanup outside the operating-system temporary directory.',
+            'Refusing recursive cleanup because verified staging contains a reparse point.',
+            'One Windows Sandbox session on the active physical Codex machine; '
+            'no cross-hardware certification or host-compatibility claim.',
+        ),
+        validation,
+    )
+    guest_text = require_phrases(
+        M0_SANDBOX_GUEST_PATH,
+        (
+            M0_SANDBOX_CANDIDATE,
+            M0_SANDBOX_GATE_DIGEST,
+            f'$ResultSchemaVersion = {M0_SANDBOX_RESULT_SCHEMA_VERSION}',
+            '$ResultLimitBytes = 16384',
+            'CiTool.exe" -lp -json',
+            'VerifiedAndReputableDesktop',
+            'VerifiedAndReputableDesktopEvaluation',
+            '$sandboxIdentityVerified = $env:USERNAME -eq "WDAGUtilityAccount"',
+            '$sandboxMappedInvocation = [StringComparer]::OrdinalIgnoreCase.Equals(',
+            'if (-not $sandboxIdentityVerified)',
+            'if (-not $sandboxMappedInvocation)',
+            'if ($sandboxMappedInvocation -and $sandboxIdentityVerified)',
+            'if ($beforeObservation.query -ne "succeeded")',
+            'code_integrity_policy_fingerprint_before',
+            '$policiesProperty = $document.PSObject.Properties["Policies"]',
+            '$policyIdProperty.Value -isnot [string]',
+            '$friendlyNameProperty.Value -isnot [string]',
+            '$isEnforcedProperty.Value -isnot [bool]',
+            '$_.IsEnforced -eq $true',
+            'candidate_unchanged_after',
+            'gate_record_unchanged_after',
+            'full_last_completed_stage',
+            'not_run_reason',
+            '[DateTime]::UtcNow.ToString("o")',
+            'Invoke-GovernedTier -Tier "Quick"',
+            'if ($result.quick_result -eq "passed")',
+            'Invoke-GovernedTier -Tier "Full"',
+            'security_mutation_attempted = $false',
+            'Move-Item -LiteralPath $temporaryPath -Destination $Path -Force',
+            'Write-Utf8Atomic -Path $completionMarkerPath',
+            'The disposable Sandbox will close in 15 seconds.',
+            'raw guest logs will be discarded.',
+            'One Windows Sandbox session on the active physical Codex machine; '
+            'no cross-hardware certification or host-compatibility claim.',
+        ),
+        validation,
+    )
+    if not host_text or not guest_text:
+        return
+
+    read_only_count = host_text.count("<ReadOnly>true</ReadOnly>")
+    writable_count = host_text.count("<ReadOnly>false</ReadOnly>")
+    if read_only_count != 6 or writable_count != 1:
+        validation.error(
+            f"{M0_SANDBOX_HOST_PATH}: expected six explicit read-only mappings "
+            f"and one writable result mapping; found {read_only_count} and {writable_count}"
+        )
+    output_mapping = re.search(
+        r"<MappedFolder><HostFolder>\$resultXml</HostFolder>"
+        r"<SandboxFolder>C:\\TL0010\\Output</SandboxFolder>"
+        r"<ReadOnly>false</ReadOnly></MappedFolder>",
+        host_text,
+    )
+    if output_mapping is None:
+        validation.error(
+            f"{M0_SANDBOX_HOST_PATH}: the sole writable mapping must be the "
+            "dedicated result folder"
+        )
+
+    close_index = host_text.find('$closeDeadline = [DateTimeOffset]::UtcNow.AddMinutes(5)')
+    result_read_index = host_text.find('Read-BoundedResult -Path $pendingPath -Phase "Guest"')
+    if not (0 <= close_index < result_read_index):
+        validation.error(
+            f"{M0_SANDBOX_HOST_PATH}: the Sandbox must close before its result "
+            "mapping is validated"
+        )
+
+    identity_guard_index = guest_text.find('if (-not $sandboxIdentityVerified)')
+    result_initialization_index = guest_text.find('$result = [ordered] @{')
+    guest_try_index = guest_text.find('try {', result_initialization_index)
+    mapped_guard_index = guest_text.find('if (-not $sandboxMappedInvocation)')
+    if not (
+        0 <= identity_guard_index < result_initialization_index
+        < guest_try_index < mapped_guard_index
+    ):
+        validation.error(
+            f"{M0_SANDBOX_GUEST_PATH}: physical-host identity must fail before "
+            "the guest result or cleanup flow begins"
+        )
+
+    marker_write_index = guest_text.find(
+        'Write-Utf8Atomic -Path $completionMarkerPath'
+    )
+    shutdown_finally_index = guest_text.rfind('    finally {')
+    shutdown_index = guest_text.find('shutdown.exe', shutdown_finally_index)
+    if not (
+        0 <= marker_write_index < shutdown_finally_index < shutdown_index
+    ):
+        validation.error(
+            f"{M0_SANDBOX_GUEST_PATH}: disposable shutdown must remain in the "
+            "outer bounded-result finally path"
+        )
+
+    quick_index = guest_text.find('Invoke-GovernedTier -Tier "Quick"')
+    guard_index = guest_text.find('if ($result.quick_result -eq "passed")')
+    full_index = guest_text.find('Invoke-GovernedTier -Tier "Full"')
+    if not (0 <= quick_index < guard_index < full_index):
+        validation.error(
+            f"{M0_SANDBOX_GUEST_PATH}: Quick must run before, and gate, Full"
+        )
+
+    combined = f"{host_text}\n{guest_text}"
+    prohibited_patterns = {
+        r"(?im)^\s*Set-ExecutionPolicy\b": "persistent execution-policy mutation",
+        r"(?i)\bUnblock-File\b": "file trust bypass",
+        r"(?im)(?:\bInvoke-Expression\b|^\s*iex\b)": "dynamic command execution",
+        r"(?i)\b(?:Set|Add|Remove)-MpPreference\b": "Defender policy mutation",
+        r"(?i)\breg(?:\.exe)?\s+(?:add|delete)\b": "registry mutation",
+        r"(?i)\bbcdedit(?:\.exe)?\b|\btestsigning\b": "boot trust mutation",
+        r"(?i)CiTool(?:\.exe)?[\"']?\s+-(?:rp|up|r)\b": "Code Integrity policy mutation",
+        r"(?i)\bZone\.Identifier\b": "alternate-stream trust bypass",
+        r"(?i)--(?:filter|trusted-host|ignore-failed-sources|force-evaluate)\b": "test or provenance bypass",
+        r"(?i)-Verb\s+RunAs\b": "automatic elevation",
+    }
+    for pattern, label in prohibited_patterns.items():
+        if re.search(pattern, combined):
+            validation.error(
+                f"TL-0010 Sandbox harness contains prohibited {label}"
+            )
+
+    host_parameter_block = host_text.split(")", 1)[0]
+    if re.search(
+        r"(?i)(?:candidate|repository|command|url|uri|branch)\w*\s*[,\)]",
+        host_parameter_block,
+    ):
+        validation.error(
+            f"{M0_SANDBOX_HOST_PATH}: the human entry point must not accept an "
+            "arbitrary candidate, repository, command, URL, or branch"
+        )
+
+
 def validate_m0_foundation_gate(
     validation: Validation,
     task_by_id: dict[str, dict[str, Any]],
@@ -5363,6 +5558,12 @@ def validate_m0_foundation_gate(
             "no-artifact",
             "not-shipped",
             "separately withheld for installation and redistribution",
+            "Approved one-command Windows Sandbox hosted rerun",
+            "powershell.exe -NoProfile -ExecutionPolicy Bypass -File "
+            ".\\eng\\run-tl0010-sandbox.ps1",
+            "the sole writable host mapping",
+            "The host's enforced security remains enabled and is not changed.",
+            "test execution, not shipment",
             (
                 "No predecessor or M0 acknowledgement grants blanket installation, "
                 "redistribution, legal, production, release, or final-product-licence rights."
@@ -6598,6 +6799,7 @@ def validate() -> int:
     validate_privacy_documents(validation, task_by_id, decision_set)
     validate_pilot_fixtures(validation, task_by_id)
     validate_testing_documents(validation, task_by_id, decision_set)
+    validate_m0_sandbox_scripts(validation)
     validate_m0_foundation_gate(validation, task_by_id)
     validate_current_bundle_document_markers(validation)
 

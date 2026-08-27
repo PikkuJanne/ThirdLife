@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import itertools
+import json
 import re
 import subprocess
 import sys
@@ -2595,6 +2596,416 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
             validate_bundle.ADR_NUMBERING_AMENDMENT_PATH,
             validate_bundle.REQUIRED_FILES,
         )
+
+
+class M0SandboxHarnessContractTests(unittest.TestCase):
+    script_paths = (
+        validate_bundle.M0_SANDBOX_HOST_PATH,
+        validate_bundle.M0_SANDBOX_GUEST_PATH,
+    )
+
+    def copy_scripts(self, root: Path) -> None:
+        for relative in self.script_paths:
+            source = REPOSITORY_ROOT / relative
+            destination = root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(source.read_bytes())
+
+    def validate_scripts(self, root: Path) -> validate_bundle.Validation:
+        validation = validate_bundle.Validation()
+        with patch.object(validate_bundle, "ROOT", root):
+            validate_bundle.validate_m0_sandbox_scripts(validation)
+        return validation
+
+    def valid_result(self) -> dict[str, object]:
+        return {
+            "schema_version": 1,
+            "task": "TL-0010",
+            "run_id": "a" * 32,
+            "candidate_commit": validate_bundle.M0_SANDBOX_CANDIDATE,
+            "source_branch": "codex/tl-0010-m0-foundation-gate",
+            "gate_record_sha256": validate_bundle.M0_SANDBOX_GATE_DIGEST,
+            "harness_commit": "b" * 40,
+            "launcher_sha256": "e" * 64,
+            "runner_sha256": "c" * 64,
+            "sandbox_config_sha256": "d" * 64,
+            "environment": "Windows Sandbox",
+            "reference_profile": "REF-CODEX-001 revision 2026-08-21.1",
+            "hosted_constraint_profile": "TL0010-WSB-2026-08-27.1",
+            "sandbox_memory_mb": 8192,
+            "sandbox_executable_version": "10.0.26100.1",
+            "windows_build": "10.0.26100.1",
+            "architecture": "AMD64",
+            "git_version": "2.55.0.windows.5",
+            "dotnet_sdk": "10.0.400",
+            "python_version": "3.14.7",
+            "pyyaml_version": "6.0.3",
+            "smart_app_control_before": "not_detected",
+            "smart_app_control_after": "not_detected",
+            "code_integrity_policy_fingerprint_before": "f" * 64,
+            "code_integrity_policy_fingerprint_after": "f" * 64,
+            "code_integrity_query_before": "succeeded",
+            "code_integrity_query_after": "succeeded",
+            "guest_policy_state_unchanged": True,
+            "security_mutation_attempted": False,
+            "networking_enabled": True,
+            "protected_client_enabled": True,
+            "source_mapping_read_only": True,
+            "tool_mappings_read_only": True,
+            "only_result_mapping_writable": True,
+            "started_utc": "2026-08-27T12:00:00Z",
+            "completed_utc": "2026-08-27T12:05:00Z",
+            "quick_command": (
+                "powershell.exe -NoProfile -ExecutionPolicy Bypass -File "
+                ".\\eng\\verify.ps1 -Tier Quick"
+            ),
+            "quick_result": "passed",
+            "quick_exit_code": 0,
+            "quick_duration_seconds": 100.0,
+            "quick_success_marker": True,
+            "full_command": (
+                "powershell.exe -NoProfile -ExecutionPolicy Bypass -File "
+                ".\\eng\\verify.ps1 -Tier Full"
+            ),
+            "full_result": "passed",
+            "full_exit_code": 0,
+            "full_duration_seconds": 180.0,
+            "full_success_marker": True,
+            "full_last_completed_stage": "tests",
+            "tracked_clean_before": True,
+            "tracked_clean_after": True,
+            "candidate_unchanged_after": True,
+            "gate_record_unchanged_after": True,
+            "overall_result": "passed",
+            "not_run_reason": "none",
+            "failure_phase": "none",
+            "failure_code": "none",
+            "affected_assemblies": [],
+            "limitation": (
+                "One Windows Sandbox session on the active physical Codex machine; "
+                "no cross-hardware certification or host-compatibility claim."
+            ),
+            "sandbox_closed": True,
+            "host_staging_cleanup": "passed",
+            "host_result_validated": True,
+        }
+
+    def run_result_validator(self, result: dict[str, object]) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "result.json"
+            path.write_text(json.dumps(result, separators=(",", ":")), encoding="utf-8")
+            return subprocess.run(
+                [
+                    "powershell.exe",
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    str(REPOSITORY_ROOT / validate_bundle.M0_SANDBOX_HOST_PATH),
+                    "-ValidateResultOnly",
+                    str(path),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+
+    def test_scripts_are_governed_required_inputs(self) -> None:
+        for relative in self.script_paths:
+            with self.subTest(relative=relative):
+                self.assertIn(relative, validate_bundle.REQUIRED_FILES)
+
+    def test_current_scripts_satisfy_the_fail_closed_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_scripts(root)
+            validation = self.validate_scripts(root)
+            self.assertEqual(validation.errors, [])
+
+    def test_host_accepts_a_valid_bounded_final_result(self) -> None:
+        completed = self.run_result_validator(self.valid_result())
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("PASS: validated bounded TL-0010 result", completed.stdout)
+
+    def test_host_rejects_contradictory_or_unbound_results(self) -> None:
+        mutations = (
+            ("quick_exit_code", 1),
+            ("candidate_commit", "0" * 40),
+            ("run_id", "0" * 32),
+            ("security_mutation_attempted", True),
+            ("code_integrity_query_before", "unavailable"),
+            ("code_integrity_policy_fingerprint_after", "0" * 64),
+            ("tracked_clean_after", False),
+            ("candidate_unchanged_after", False),
+            ("full_last_completed_stage", "build"),
+            ("sandbox_memory_mb", True),
+            ("started_utc", "2026-08-27T12:00:00+00:00"),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field):
+                result = self.valid_result()
+                result[field] = value
+                completed = self.run_result_validator(result)
+                self.assertNotEqual(completed.returncode, 0, completed.stdout)
+
+    def test_host_rejects_extra_result_fields(self) -> None:
+        result = self.valid_result()
+        result["raw_log"] = "not permitted"
+        completed = self.run_result_validator(result)
+        self.assertNotEqual(completed.returncode, 0, completed.stdout)
+
+    def test_host_accepts_schema_valid_preflight_and_full_failures(self) -> None:
+        preflight = self.valid_result()
+        preflight.update(
+            {
+                "git_version": "unavailable",
+                "dotnet_sdk": "unavailable",
+                "python_version": "unavailable",
+                "pyyaml_version": "unavailable",
+                "smart_app_control_before": "unavailable",
+                "smart_app_control_after": "unavailable",
+                "code_integrity_policy_fingerprint_before": "0" * 64,
+                "code_integrity_policy_fingerprint_after": "0" * 64,
+                "code_integrity_query_before": "unavailable",
+                "code_integrity_query_after": "unavailable",
+                "guest_policy_state_unchanged": False,
+                "quick_result": "not_run",
+                "quick_exit_code": None,
+                "quick_duration_seconds": 0.0,
+                "quick_success_marker": False,
+                "full_result": "not_run",
+                "full_exit_code": None,
+                "full_duration_seconds": 0.0,
+                "full_success_marker": False,
+                "full_last_completed_stage": "not_started",
+                "tracked_clean_before": False,
+                "tracked_clean_after": False,
+                "candidate_unchanged_after": False,
+                "gate_record_unchanged_after": False,
+                "overall_result": "failed",
+                "not_run_reason": "preflight_failed",
+                "failure_phase": "preflight",
+                "failure_code": "preflight_failed",
+            }
+        )
+        completed = self.run_result_validator(preflight)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+        full_failure = self.valid_result()
+        full_failure.update(
+            {
+                "full_result": "failed",
+                "full_exit_code": -1073741819,
+                "full_success_marker": False,
+                "full_last_completed_stage": "build",
+                "overall_result": "failed",
+                "failure_phase": "full",
+                "failure_code": "full_failed",
+            }
+        )
+        completed = self.run_result_validator(full_failure)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+        marker_failure = self.valid_result()
+        marker_failure.update(
+            {
+                "quick_result": "failed",
+                "quick_exit_code": 0,
+                "quick_success_marker": False,
+                "full_result": "not_run",
+                "full_exit_code": None,
+                "full_duration_seconds": 0.0,
+                "full_success_marker": False,
+                "full_last_completed_stage": "not_started",
+                "overall_result": "failed",
+                "not_run_reason": "quick_failed",
+                "failure_phase": "quick",
+                "failure_code": "quick_marker_missing",
+            }
+        )
+        completed = self.run_result_validator(marker_failure)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_host_rejects_blocked_result_without_postflight_integrity(self) -> None:
+        blocked = self.valid_result()
+        blocked.update(
+            {
+                "full_result": "blocked",
+                "full_exit_code": 1,
+                "full_success_marker": False,
+                "full_last_completed_stage": "build",
+                "overall_result": "blocked",
+                "failure_phase": "full",
+                "failure_code": "0x800711C7",
+                "affected_assemblies": ["ThirdLife.Packages.dll"],
+            }
+        )
+        completed = self.run_result_validator(blocked)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+        blocked["guest_policy_state_unchanged"] = False
+        completed = self.run_result_validator(blocked)
+        self.assertNotEqual(completed.returncode, 0, completed.stdout)
+
+    def test_host_rejects_a_false_postflight_failure_claim(self) -> None:
+        contradictory = self.valid_result()
+        contradictory.update(
+            {
+                "overall_result": "failed",
+                "failure_phase": "postflight",
+                "failure_code": "postflight_failed",
+            }
+        )
+        completed = self.run_result_validator(contradictory)
+        self.assertNotEqual(completed.returncode, 0, completed.stdout)
+
+        contradictory["tracked_clean_after"] = False
+        completed = self.run_result_validator(contradictory)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_powershell_scripts_parse_without_errors(self) -> None:
+        for relative in self.script_paths:
+            with self.subTest(relative=relative):
+                script_path = str(REPOSITORY_ROOT / relative).replace("'", "''")
+                command = (
+                    "$tokens=$null; $errors=$null; "
+                    "[void][System.Management.Automation.Language.Parser]::ParseFile("
+                    f"'{script_path}',[ref]$tokens,[ref]$errors); "
+                    "if ($errors.Count -ne 0) { $errors | ForEach-Object { "
+                    "[Console]::Error.WriteLine($_.Message) }; exit 1 }"
+                )
+                completed = subprocess.run(
+                    [
+                        "powershell.exe",
+                        "-NoLogo",
+                        "-NoProfile",
+                        "-Command",
+                        command,
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_only_the_result_mapping_may_be_writable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_scripts(root)
+            path = root / validate_bundle.M0_SANDBOX_HOST_PATH
+            body = path.read_text(encoding="utf-8")
+            self.assertIn("<ReadOnly>true</ReadOnly>", body)
+            path.write_text(
+                body.replace(
+                    "<ReadOnly>true</ReadOnly>",
+                    "<ReadOnly>false</ReadOnly>",
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            validation = self.validate_scripts(root)
+            self.assertTrue(
+                any("six explicit read-only mappings" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_quick_must_gate_full(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_scripts(root)
+            path = root / validate_bundle.M0_SANDBOX_GUEST_PATH
+            body = path.read_text(encoding="utf-8")
+            guard = 'if ($result.quick_result -eq "passed")'
+            self.assertIn(guard, body)
+            path.write_text(body.replace(guard, "if ($true)", 1), encoding="utf-8")
+            validation = self.validate_scripts(root)
+            self.assertTrue(
+                any("Quick must run before, and gate, Full" in error for error in validation.errors),
+                validation.errors,
+            )
+
+    def test_security_or_trust_mutation_is_rejected(self) -> None:
+        probes = (
+            "Set-ExecutionPolicy Unrestricted",
+            "Unblock-File .\\ThirdLife.Core.dll",
+            "Set-MpPreference -DisableRealtimeMonitoring $true",
+            "bcdedit.exe /set testsigning on",
+            "CiTool.exe -rp 00000000-0000-0000-0000-000000000000",
+            "dotnet test --filter SafeSubset",
+        )
+        for probe in probes:
+            with self.subTest(probe=probe), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_scripts(root)
+                path = root / validate_bundle.M0_SANDBOX_GUEST_PATH
+                path.write_text(
+                    path.read_text(encoding="utf-8") + f"\n{probe}\n",
+                    encoding="utf-8",
+                )
+                validation = self.validate_scripts(root)
+                self.assertTrue(
+                    any("prohibited" in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_candidate_or_gate_digest_drift_is_rejected(self) -> None:
+        mutations = (
+            (validate_bundle.M0_SANDBOX_CANDIDATE, "0" * 40),
+            (validate_bundle.M0_SANDBOX_GATE_DIGEST, "1" * 64),
+        )
+        for old, new in mutations:
+            with self.subTest(old=old), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_scripts(root)
+                path = root / validate_bundle.M0_SANDBOX_GUEST_PATH
+                body = path.read_text(encoding="utf-8")
+                self.assertIn(old, body)
+                path.write_text(body.replace(old, new, 1), encoding="utf-8")
+                validation = self.validate_scripts(root)
+                self.assertTrue(
+                    any("missing required contract phrase" in error for error in validation.errors),
+                    validation.errors,
+                )
+
+    def test_remote_publication_and_citool_types_are_governed(self) -> None:
+        mutations = (
+            (
+                validate_bundle.M0_SANDBOX_HOST_PATH,
+                'if ($remoteBranchHash -ne $harnessCommit)',
+                'if ($false)',
+            ),
+            (
+                validate_bundle.M0_SANDBOX_GUEST_PATH,
+                '$isEnforcedProperty.Value -isnot [bool]',
+                '$false',
+            ),
+            (
+                validate_bundle.M0_SANDBOX_GUEST_PATH,
+                'if (-not $sandboxIdentityVerified)',
+                'if ($false)',
+            ),
+            (
+                validate_bundle.M0_SANDBOX_GUEST_PATH,
+                'if ($sandboxMappedInvocation -and $sandboxIdentityVerified)',
+                'if ($sandboxMappedInvocation)',
+            ),
+        )
+        for relative, old, new in mutations:
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_scripts(root)
+                path = root / relative
+                body = path.read_text(encoding="utf-8")
+                self.assertIn(old, body)
+                path.write_text(body.replace(old, new, 1), encoding="utf-8")
+                validation = self.validate_scripts(root)
+                self.assertTrue(
+                    any("missing required contract phrase" in error for error in validation.errors),
+                    validation.errors,
+                )
 
 
 class M0FoundationGateContractTests(unittest.TestCase):

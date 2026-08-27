@@ -1367,11 +1367,11 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
-  blocked_reason: Required Full verification at candidate 17975419badd4154b82895d9d92a4a904790c7c0 is blocked on the
-    active Codex machine because the enforced Windows Smart App Control / Code Integrity policy
-    rejects four unsigned ThirdLife application DLL loads during Release tests with 0x800711C7. Unblock only through an
-    approved same-machine hosted environment that can run the governed Full command without weakening host security,
-    or later governed signing/lifecycle work; then rerun Full before human M0 approval.
+  blocked_reason: Required Full verification at candidate 17975419badd4154b82895d9d92a4a904790c7c0 remains blocked because
+    the enforced host Windows Smart App Control / Code Integrity policy rejected four unsigned ThirdLife application DLL
+    loads with 0x800711C7. Windows Sandbox is installed and was approved on 2026-08-27 as the same-machine hosted rerun
+    environment, but that bounded Quick/Full procedure has not yet produced a passing result. Run the governed one-command
+    Sandbox harness without weakening host or guest security, then require Full to pass before human M0 gate approval.
 - id: TL-0101
   title: Implement core job and evidence domain models
   milestone: M1

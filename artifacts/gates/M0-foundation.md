@@ -112,7 +112,33 @@ The current gate uses a disposable clean clone of the exact published candidate 
 7. record the exact commit, reference-profile revision, start/end/duration, result, and any focused diagnosis without a machine-specific path; and
 8. remove only the verified disposable clone after evidence is captured.
 
-Smart App Control, Code Integrity, warnings, analyzers, signatures, hashes, provenance, privacy, accessibility, and recovery controls must remain enabled. `Unblock-File`, alternate data-stream removal, Smart App Control disablement, Code Integrity policy edits, test omission, configuration weakening, or a false substitute for the Full tier is prohibited.
+On the active host, Smart App Control, Code Integrity, warnings, analyzers, signatures, hashes, provenance, privacy, accessibility, and recovery controls must remain enabled. A hosted guest may truthfully report that it does not inherit a host control, but its baseline controls must be observed and must not be changed. `Unblock-File`, alternate data-stream removal, Smart App Control disablement, Code Integrity policy edits, test omission, configuration weakening, or a false substitute for the Full tier is prohibited.
+
+### Approved one-command Windows Sandbox hosted rerun
+
+On 2026-08-27, Janne Vuorela, acting as Principal Software Architect & Sole Project Owner, selected the installed Windows Sandbox capability on the active Codex machine as the same-machine hosted environment for this exact rerun. This approves the environment and bounded procedure only. It is not an M0 gate approval, human evidence acknowledgement, release authorization, blanket redistribution right, or claim about another machine.
+
+**Hosted constraint profile:** `TL0010-WSB-2026-08-27.1` — 8192 MiB guest memory, vGPU/clipboard/audio/video/printer redirection disabled, Protected Client and required restore networking enabled; source branch `codex/tl-0010-m0-foundation-gate`.
+
+The complete human procedure is one command from a clean tracked checkout of this branch:
+
+`powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\run-tl0010-sandbox.ps1`
+
+No human cloning, guest command entry, tool installation, hash calculation, raw-log curation, or temporary-directory cleanup is required. The governed launcher:
+
+1. verifies Windows Sandbox and the exact host Git, .NET SDK 10.0.400, and CPython 3.14.7 inputs;
+2. creates a standalone no-hardlink clone of candidate `17975419badd4154b82895d9d92a4a904790c7c0`, verifies that it is clean, and verifies gate-record SHA-256 `b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153`;
+3. maps that standalone project-local clone checked out at the exact candidate (including its reachable ThirdLife Git history), the minimal runner/request, and installed tool roots read-only; the dedicated ignored result directory is the sole writable host mapping;
+4. disables vGPU, clipboard, audio, video, and printer redirection, enables Protected Client, and enables networking only for the hash-pinned Python bootstrap and locked NuGet restore/audit;
+5. copies the candidate into guest-local writable storage, records the guest Windows/toolchain and Smart App Control/Code Integrity observations, runs Quick, and runs the exact governed Full command only after Quick passes;
+6. keeps raw command and Code Integrity output inside the disposable guest, retaining only a schema-checked result of at most 16 KiB with exact hashes, versions, times, exits, success markers, last completed Full stage, clean/candidate/gate checks, a privacy-safe normalized policy fingerprint, stable failure classification, and the one-machine limitation; and
+7. closes the disposable guest, verifies temporary staging cleanup, and prints `passed`, `failed`, or `blocked` plus the bounded local evidence path.
+
+Quick-before-Full deliberately preserves the existing gate contract even though Full repeats the Quick phases. Efficiency comes from eliminating human setup, repeated manual diagnosis, and unbounded evidence handling; it does not skip governed work. If Full reproduces `0x800711C7`, the runner records the error and any recognized affected basenames once and stops—four additional one-project reruns are unnecessary unless the Full output cannot classify the failure.
+
+The host's enforced security remains enabled and is not changed. Windows Sandbox is a disposable hosted Windows environment and may not inherit the host's Smart App Control policy. The runner observes the guest state before and after without changing it. The reviewed harness declares `security_mutation_attempted=false`, while repository controls reject its known security/trust-mutation operations; that field is not independent operating-system instrumentation. A passing exact Full run in this approved hosted environment is valid automated unblock evidence only when the guest state is unchanged; the evidence must name the observed guest state and must not claim that unsigned assemblies are compatible with the enforced host policy. A changed or unobservable transition is not silently converted into a pass.
+
+Read-only use of the installed host .NET SDK and CPython roots in this same-machine Sandbox is test execution, not shipment. The existing toolchain redistribution limitations remain binding.
 
 ## 7. Verification evidence
 
@@ -181,4 +207,4 @@ The approval is valid only after section 7 records passing required verification
 **Decision date:** 2026-08-22  
 **Approver:** Not applicable — required Full verification did not pass, so human gate approval was not requested  
 **Unresolved blockers:** The enforced Windows Smart App Control / Code Integrity policy blocks unsigned `ThirdLife.Packages.dll`, `ThirdLife.Persistence.dll`, `ThirdLife.Reports.dll`, and `ThirdLife.Verification.dll` during the required Release test phase; gate-specific human acknowledgements also remain pending until Full passes.  
-**Next action:** Provide an approved same-machine hosted environment that can execute the governed Full command without weakening host security, or complete later governed signing/lifecycle work; rerun exact-candidate Quick and Full, then request the exact human acknowledgements only after Full passes.
+**Next action:** Publish the governed Windows Sandbox harness checkpoint, run its one-command exact-candidate Quick and Full procedure without weakening host or guest security, and request the exact human acknowledgements only after Full passes.
