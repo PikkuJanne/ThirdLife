@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-27  
-**Snapshot preparation time:** 2026-08-27T17:46:13+02:00  
+**Snapshot preparation time:** 2026-08-27T17:54:17+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M0 — Foundation and product contract — complete  
@@ -40,7 +40,7 @@ The previously approved `AMD-2026-08-22-ADR-0009` amendment remains complete at 
 | Source baseline | `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516` — published bundle 0.3.1 ADR-reservation checkpoint |
 | History handling | Continued from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
 | Verification candidate | `17975419badd4154b82895d9d92a4a904790c7c0`; gate-record candidate SHA-256 `b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153` |
-| Publication state | Harness checkpoint `9f86bfa09571a2e027d868b1f9d1cee48fee4fe2` and Review-state handoff `f913c8ae242d9457bbe65a83f3852b5b4f8524fb` were published, fetched, and verified at local/upstream equality 0 ahead and 0 behind; the Approved-state completion checkpoint is pending publication |
+| Publication state | Harness checkpoint `9f86bfa09571a2e027d868b1f9d1cee48fee4fe2` and Approved-state completion checkpoint `1886c542a56159caf77e54c36dfb23d226bb9b52` were published, fetched, and verified at local/upstream equality 0 ahead and 0 behind; this handoff-only update changes no implementation or approval semantics |
 | Hosted rerun method | Windows Sandbox installed on the active physical machine; exact-candidate source and host tool roots mapped read-only; one writable bounded result directory; reviewed mutation declaration plus fail-closed static/behavioral guards |
 
 The configured SSH remote rejects unattended public-key authentication on this machine. Publication uses GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
