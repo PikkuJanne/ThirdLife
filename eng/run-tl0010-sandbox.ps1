@@ -763,7 +763,12 @@ function Assert-VerifiedStagingPath {
 
 function Get-ActiveWindowsSandboxProcesses {
     return @(
-        Get-Process -Name @("WindowsSandbox", "WindowsSandboxClient") -ErrorAction SilentlyContinue
+        Get-Process -Name @(
+            "WindowsSandbox",
+            "WindowsSandboxClient",
+            "WindowsSandboxRemoteSession",
+            "WindowsSandboxServer"
+        ) -ErrorAction SilentlyContinue
     )
 }
 

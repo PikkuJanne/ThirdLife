@@ -2978,6 +2978,16 @@ class M0SandboxHarnessContractTests(unittest.TestCase):
                 'if ($false)',
             ),
             (
+                validate_bundle.M0_SANDBOX_HOST_PATH,
+                '"WindowsSandboxRemoteSession"',
+                '"UnobservedSandboxRemoteSession"',
+            ),
+            (
+                validate_bundle.M0_SANDBOX_HOST_PATH,
+                '"WindowsSandboxServer"',
+                '"UnobservedSandboxServer"',
+            ),
+            (
                 validate_bundle.M0_SANDBOX_GUEST_PATH,
                 '$isEnforcedProperty.Value -isnot [bool]',
                 '$false',

@@ -5390,6 +5390,8 @@ def validate_m0_sandbox_scripts(validation: Validation) -> None:
             'launcher_sha256 = $launcherDigest',
             'cannot use an all-zero placeholder.',
             'Assert-VerifiedStagingPath',
+            '"WindowsSandboxRemoteSession"',
+            '"WindowsSandboxServer"',
             'Refusing cleanup outside the operating-system temporary directory.',
             'Refusing recursive cleanup because verified staging contains a reparse point.',
             'One Windows Sandbox session on the active physical Codex machine; '
