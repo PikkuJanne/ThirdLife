@@ -530,7 +530,16 @@ function Assert-ResultSchema {
         throw "The Sandbox result contains an invalid fixed contract value."
     }
     foreach ($binding in $Expected.GetEnumerator()) {
-        if ($Result.($binding.Key) -ne $binding.Value) { throw "The Sandbox result is not bound to the live $($binding.Key)." }
+        if ($Result.($binding.Key) -ne $binding.Value) {
+            if ($binding.Key -eq "source_digest" -and $Result.result -eq "failed" -and
+                $Result.source_digest -eq ("0" * 64) -and -not $Result.source_unchanged_after) {
+                continue
+            }
+            if ($binding.Key -like "*_digest" -or $binding.Key -like "*_sha256") {
+                throw "The Sandbox result is not bound to the live $($binding.Key): expected $($binding.Value), received $($Result.($binding.Key))."
+            }
+            throw "The Sandbox result is not bound to the live $($binding.Key)."
+        }
     }
     foreach ($digestName in @(
         "history_bundle_sha256", "launcher_sha256", "runner_sha256", "sandbox_config_sha256", "nuget_closure_sha256",

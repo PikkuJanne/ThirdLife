@@ -684,7 +684,7 @@ function ConvertTo-SanitizedLine {
 function Add-DiagnosticTail {
     param(
         [Parameter(Mandatory = $true)][string] $Label,
-        [Parameter(Mandatory = $true)][string] $Text,
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string] $Text,
         [Parameter(Mandatory = $true)][bool] $Truncated
     )
     $lines = @($Text -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Last 30)
@@ -706,7 +706,7 @@ function Invoke-BoundedCommand {
         [Parameter(Mandatory = $false)][string] $SuccessMarker = ""
     )
     $script:commandSequence += 1
-    Add-DiagnosticTail -Label ("start-" + $Label) -Text "" -Truncated $false
+    Add-DiagnosticTail -Label ("start-" + $Label) -Text "started" -Truncated $false
     $commandRequestPath = Join-Path $stateDirectory "command-$($script:commandSequence).json"
     $commandRequest = [ordered]@{ file_path = $FilePath; arguments = @($Arguments) } | ConvertTo-Json -Depth 3 -Compress
     Write-Utf8CreateNew -Path $commandRequestPath -Content $commandRequest
@@ -727,25 +727,39 @@ exit [int]$code
     $previousRequestPath = [Environment]::GetEnvironmentVariable("TL0102_COMMAND_REQUEST", [EnvironmentVariableTarget]::Process)
     try {
         [Environment]::SetEnvironmentVariable("TL0102_COMMAND_REQUEST", $commandRequestPath, [EnvironmentVariableTarget]::Process)
-        $nativeResult = [ThirdLife.Sandbox.BoundedCommandRunner]::Run(
-            (Join-Path $PSHOME "powershell.exe"),
-            "-NoLogo -NoProfile -NonInteractive -OutputFormat Text -ExecutionPolicy Bypass -EncodedCommand $encoded",
-            (Get-Location).ProviderPath,
-            ($CommandTimeoutSeconds * 1000),
-            $CommandRawOutputLimitBytes,
-            $CommandTailReadBytes
-        )
+        try {
+            $nativeResult = [ThirdLife.Sandbox.BoundedCommandRunner]::Run(
+                (Join-Path $PSHOME "powershell.exe"),
+                "-NoLogo -NoProfile -NonInteractive -OutputFormat Text -ExecutionPolicy Bypass -EncodedCommand $encoded",
+                (Get-Location).ProviderPath,
+                ($CommandTimeoutSeconds * 1000),
+                $CommandRawOutputLimitBytes,
+                $CommandTailReadBytes
+            )
+        }
+        catch {
+            $exceptionType = $_.Exception.GetType().FullName -replace "[^A-Za-z0-9.]", "_"
+            $nativeCode = if ($_.Exception -is [System.ComponentModel.Win32Exception]) { $_.Exception.NativeErrorCode } else { -1 }
+            Add-DiagnosticTail -Label $Label -Text "runner_exception_${exceptionType}_code_${nativeCode}" -Truncated $false
+            throw
+        }
         if (-not $nativeResult.ProcessTreeTerminated) {
             $script:commandTreeTerminationUnverified = $true
             throw "A bounded command tree could not be confirmed terminated; result publication is prohibited."
         }
         if (-not $nativeResult.DrainCompleted -or -not [string]::IsNullOrEmpty($nativeResult.DrainError)) {
+            Add-DiagnosticTail -Label $Label -Text "runner_output_drain_incomplete" -Truncated $false
             throw "A bounded command output stream did not drain completely."
         }
         if (-not $nativeResult.ExitCodeAvailable -and -not $nativeResult.TimedOut -and -not $nativeResult.OutputExceeded) {
+            Add-DiagnosticTail -Label $Label -Text "runner_exit_code_unavailable" -Truncated $false
             throw "A bounded command exit code was unavailable."
         }
-        $tailText = [System.Text.UTF8Encoding]::new($false, $false).GetString($nativeResult.TailBytes)
+        $tailText = ""
+        if ($nativeResult.RawBytesAccepted -gt 0) {
+            [byte[]] $tailBytes = @($nativeResult.TailBytes)
+            $tailText = [System.Text.UTF8Encoding]::new($false, $false).GetString($tailBytes)
+        }
         if ($nativeResult.TailTruncated) {
             $firstLineEnd = $tailText.IndexOf("`n")
             $tailText = if ($firstLineEnd -ge 0) { $tailText.Substring($firstLineEnd + 1) } else { "" }
@@ -778,7 +792,15 @@ function Invoke-RequiredCommand {
     )
     $previousFailureCode = $script:failureCode
     $script:failureCode = $Failure
-    $command = Invoke-BoundedCommand -Label $Label -FilePath $FilePath -Arguments $Arguments -SuccessMarker $SuccessMarker
+    try {
+        $command = Invoke-BoundedCommand -Label $Label -FilePath $FilePath -Arguments $Arguments -SuccessMarker $SuccessMarker
+    }
+    catch {
+        $exceptionType = $_.Exception.GetType().FullName -replace "[^A-Za-z0-9.]", "_"
+        $nativeCode = if ($_.Exception -is [System.ComponentModel.Win32Exception]) { $_.Exception.NativeErrorCode } else { -1 }
+        Add-DiagnosticTail -Label $Label -Text "command_exception_${exceptionType}_code_${nativeCode}" -Truncated $false
+        throw
+    }
     $script:exitCode = $command.exit_code
     if ($command.timed_out) { $script:failureCode = "command_timeout"; throw "A governed command exceeded its timeout." }
     if ($command.output_exceeded) { $script:failureCode = "output_limit_exceeded"; throw "A governed command exceeded its raw output limit." }
