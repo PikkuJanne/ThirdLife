@@ -1217,7 +1217,7 @@ tasks:
   workstream: release
   kind: gate
   priority: P0
-  status: review
+  status: done
   size: S
   executor: hybrid
   environment: any
@@ -1439,6 +1439,58 @@ tasks:
       harness 9f86bfa09571a2e027d868b1f9d1cee48fee4fe2; hosted run 64dda9491c7fddf8a9e9f18429a6957b
     limitation: Automated Review-state evidence only; the exact project-owner, security, privacy, and dependency/licence M0
       acknowledgements remain required before done
+  - summary: The completion audit binds the already-passing hosted run to the exact internal Full command and active-machine
+      evidence phrases required by the done-state contract without replacing or rewriting the prior result.
+    task: TL-0010
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Full; invoked inside the
+      governed guest only after Quick passed; host validation of the bounded schema-2 result
+    tier: full milestone gate completion
+    result: passed; exit 0 with success marker through tests, exact candidate/gate/clean checks passed, Sandbox closed, and
+      staging cleanup passed
+    environment: Active Codex machine; one protected Windows Sandbox session on the same physical machine; 8192 MiB;
+      REF-CODEX-001 revision 2026-08-21.1; TL0010-WSB-2026-08-27.1
+    date: '2026-08-27'
+    duration: Quick 106.316 s; Full 1070.198 s; guest interval 1192.232 s
+    reference: candidate 17975419badd4154b82895d9d92a4a904790c7c0; gate-record candidate sha256:b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153;
+      harness 9f86bfa09571a2e027d868b1f9d1cee48fee4fe2; run 64dda9491c7fddf8a9e9f18429a6957b; bounded result
+      sha256:170ff71314ea8c46d161e42bc1f6564b719f8b04e0d6bee371e01c67c8ce4dea
+    limitation: This is a durable binding of the existing passing run, not a second Full execution; guest SAC evaluation and
+      fallback fingerprint were unchanged, while EFI enumeration, direct enforced-host compatibility, signing, redistribution,
+      cross-hardware certification, and unrun scenarios remain unclaimed
+  - summary: Janne Vuorela provided the exact section 9 approval, signed the M0 gate as Project Owner, and acknowledged the
+      security, privacy, dependency and licence, accessibility, modest-hardware, validation, product-boundary, and architecture roles.
+    task: TL-0010
+    command_or_review: Verbatim human approval of artifacts/gates/M0-foundation.md section 9 after review of the exact candidate,
+      gate digest, passing Quick/Full evidence, named responsibility matrix, and binding section 5 limitations
+    tier: human project owner, security, privacy, and dependency licence M0 approval
+    result: passed; project-owner decision signed and every required named-owner acknowledgement completed by Janne Vuorela
+    environment: Human governance review; Active Codex machine evidence context; no runtime execution inferred from the approval
+    date: '2026-08-27'
+    duration: Human approval statement; not timed
+    reference: Janne Vuorela; candidate 17975419badd4154b82895d9d92a4a904790c7c0; gate-record candidate
+      sha256:b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153; artifacts/gates/M0-foundation.md
+      sections 4, 5, 7, and 9
+    limitation: Every section 5 limitation remains binding, including the xunit.abstractions evidence limitation, withheld .NET
+      SDK and CPython redistribution, withheld synthetic-placeholder rights, no blanket redistribution or release authorization,
+      no cross-hardware certification, and no claim that unrun manual, accessibility, failure, resource, or Extended scenarios passed
+  - summary: The synchronized Approved-state gate passed the focused lifecycle/harness suite and complete governed Quick tier
+      after the exact human approval and append-only completion evidence were recorded.
+    task: TL-0010
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_validate_bundle.M0FoundationGateContractTests
+      tools.tests.test_validate_bundle.M0SandboxHarnessContractTests; powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+      .\eng\verify.ps1 -Tier Quick
+    tier: approved-state targeted and quick
+    result: passed; 29 focused tests, 178-test Quick, bundle/manifest/task-graph validation, and repository/lock/supply-chain/licence
+      controls all passed
+    environment: Active Codex machine; Windows 11 x64; repository working tree; Python 3.14.7; PyYAML 6.0.3;
+      REF-CODEX-001 revision 2026-08-21.1
+    date: '2026-08-27'
+    duration: Focused 20.267 s; Quick tests 144.185 s; complete Quick command not separately timed
+    reference: approved candidate 17975419badd4154b82895d9d92a4a904790c7c0; gate-record candidate
+      sha256:b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153; hosted run
+      64dda9491c7fddf8a9e9f18429a6957b; branch codex/tl-0010-m0-foundation-gate
+    limitation: Final approval-state governance evidence only; it does not rerun or broaden the exact hosted Full result and
+      does not weaken any section 5 limitation or make a direct-host, release, redistribution, or cross-hardware claim
   human_evidence_required:
   - Project owner signs the M0 gate record.
   - Security, privacy, and license owners acknowledge their M0 artifacts.

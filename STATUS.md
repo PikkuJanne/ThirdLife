@@ -1,20 +1,20 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-27  
-**Snapshot preparation time:** 2026-08-27T17:37:22+02:00  
+**Snapshot preparation time:** 2026-08-27T17:46:13+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
-**Current milestone:** M0 — Foundation and product contract  
-**Current task:** `TL-0010` — Validate the M0 foundation gate  
-**Action state:** review; automated Quick and Full verification passed in the approved Windows Sandbox environment, and the exact human M0 acknowledgements remain pending
+**Current milestone:** M0 — Foundation and product contract — complete  
+**Current task:** `TL-0010` — Validate the M0 foundation gate — `done`  
+**Action state:** done; automated verification and the exact project-owner/security/privacy/dependency-licence acknowledgements are complete
 
 ## Current state
 
-`TL-0010` is the only selected task and is `review`. All nine transitive M0 predecessors, `TL-0001` through `TL-0009`, are `done` with non-empty evidence. The gate record is [`artifacts/gates/M0-foundation.md`](artifacts/gates/M0-foundation.md); it indexes predecessor closure, the five milestone exit criteria, eight task acceptance criteria, proposed named M0 ownership, preserved licence/redistribution limitations, exact-candidate verification, risk/boundary review, historical host limitation, and exact human approval statement.
+`TL-0010` is `done`. All nine transitive M0 predecessors, `TL-0001` through `TL-0009`, are also `done` with non-empty evidence. The approved gate record is [`artifacts/gates/M0-foundation.md`](artifacts/gates/M0-foundation.md); it indexes predecessor closure, the five milestone exit criteria, eight task acceptance criteria, named M0 ownership, preserved licence/redistribution limitations, exact-candidate verification, risk/boundary review, historical host limitation, and attributable human approval.
 
 Published candidate `17975419badd4154b82895d9d92a4a904790c7c0` passed its original clean-checkout Quick. Its direct-host Full attempt remains historically blocked because the enforced host policy rejected four unsigned ThirdLife application DLL loads with `0x800711C7`. Janne Vuorela approved installed Windows Sandbox on 2026-08-27 as the same-machine hosted environment for the exact rerun. From published harness checkpoint `9f86bfa09571a2e027d868b1f9d1cee48fee4fe2`, the one-command runner then passed Quick in 106.316 s and the exact Full command in 1070.198 s. The guest Smart App Control state was `evaluation` before and after, the `registry_and_system_policy_files` fingerprint was unchanged, no security mutation was attempted, and host validation confirmed exact candidate/gate binding, tracked-clean state, Sandbox shutdown, and staging cleanup.
 
-The automated gate is now green, but `TL-0010` is not `done`. The exact project-owner signature plus security, privacy, and dependency/licence M0 acknowledgements in gate section 9 remain required. M1 remains locked until those human evidence items are recorded and final validation is rerun.
+Janne Vuorela provided the exact section 9 statement on 2026-08-27, signing as Principal Software Architect & Sole Project Owner and completing the M0 security, privacy, dependency/licence, accessibility, modest-hardware, validation, product-boundary, and architecture acknowledgements. The signature is bound to candidate `17975419badd4154b82895d9d92a4a904790c7c0` and historical gate-record candidate SHA-256 `b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153`. Every section 5 limitation remains binding. M1 is unlocked but has not been started in this gate-completion session.
 
 The previously approved `AMD-2026-08-22-ADR-0009` amendment remains complete at baseline `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516`. TL-0010 does not change ADR numbering, the task graph, a frozen decision, the product boundary, or that amendment's historical evidence.
 
@@ -23,13 +23,13 @@ The previously approved `AMD-2026-08-22-ADR-0009` amendment remains complete at 
 | Area | Current state | Next proof |
 |---|---|---|
 | M0 predecessors | Pass: all nine are `done` with evidence | Revalidated by live bundle/task-graph checks |
-| Gate artifact | Review-state record created and structurally governed | Preserve exact candidate/digest and append-only evidence |
-| Named owners | Historical security/privacy/licence owners preserved; explicit M0 roles proposed | Obtain the exact section 9 project-owner and named-owner acknowledgements |
+| Gate artifact | Approved record structurally governed and bound to the historical candidate blob | Preserve exact candidate/digest and append-only evidence |
+| Named owners | Complete: every M0 role acknowledged by Janne Vuorela; historical security attribution preserved | None |
 | Clean-checkout Quick | Pass at `17975419badd4154b82895d9d92a4a904790c7c0` | 162 tests plus all governed static/manifest/repository controls |
 | Hosted harness | Pass: 15/15 focused contracts, 177-test working-tree Quick, published preflight, and bounded final result | Retain the exact schema-2 evidence and claim limits |
-| Full tier | Pass in approved Windows Sandbox: Quick then Full through `tests`; direct enforced-host block remains a limitation | Human gate review only; no direct-host compatibility or signing claim |
+| Full tier | Pass in approved Windows Sandbox: Quick then Full through `tests`; direct enforced-host block remains a limitation | Retain the no-direct-host-compatibility and no-signing claim limits |
 | Extended tier | Not triggered | None |
-| Gate decision | Review | Do not mark `done` until every section 9 human acknowledgement is attached |
+| Gate decision | Approved | M0 complete; section 5 limitations remain binding |
 
 ## Git state
 
@@ -40,7 +40,7 @@ The previously approved `AMD-2026-08-22-ADR-0009` amendment remains complete at 
 | Source baseline | `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516` — published bundle 0.3.1 ADR-reservation checkpoint |
 | History handling | Continued from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
 | Verification candidate | `17975419badd4154b82895d9d92a4a904790c7c0`; gate-record candidate SHA-256 `b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153` |
-| Publication state | Harness checkpoint `9f86bfa09571a2e027d868b1f9d1cee48fee4fe2` and Review-state evidence checkpoint `95e5fa83746f3414705bd1aba662f01b6501e265` were each published, fetched, and verified at local/upstream equality 0 ahead and 0 behind; this handoff-only update contains no implementation change |
+| Publication state | Harness checkpoint `9f86bfa09571a2e027d868b1f9d1cee48fee4fe2` and Review-state handoff `f913c8ae242d9457bbe65a83f3852b5b4f8524fb` were published, fetched, and verified at local/upstream equality 0 ahead and 0 behind; the Approved-state completion checkpoint is pending publication |
 | Hosted rerun method | Windows Sandbox installed on the active physical machine; exact-candidate source and host tool roots mapped read-only; one writable bounded result directory; reviewed mutation declaration plus fail-closed static/behavioral guards |
 
 The configured SSH remote rejects unattended public-key authentication on this machine. Publication uses GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
@@ -63,7 +63,8 @@ The configured SSH remote rejects unattended public-key authentication on this m
 | Hosted attempt 1 defect handling | Failed before Quick because the launcher omitted the Store Sandbox process identities; no result was accepted or retained; focused regression added | 23.489 s at `be7c64eecea9656e7b32593b77c0715cc5bacd9d`; corrected at `b03181e8a4756451c955117327b83a1a9f61d6c3` |
 | Hosted attempt 2 defect handling | Failed closed in guest preflight because unelevated `CiTool` was unavailable; Quick and Full were not run; bounded schema-1 result retained | 64.019 s; run `24152eb7ea38ba9e3a07226592644a7a`; result SHA-256 `d131b1d2b662dff0a3bae9a23a53c04b6303f31416864319f5a818912d07d3d4` |
 | Exact-candidate Windows Sandbox Quick and Full | Passed: Quick exit 0/marker true, then Full exit 0/marker true through `tests`; policy state/fingerprint unchanged; exact candidate/gate/clean checks, Sandbox close, and cleanup passed | Quick 106.316 s; Full 1070.198 s; guest interval 1192.232 s; run `64dda9491c7fddf8a9e9f18429a6957b`; result SHA-256 `170ff71314ea8c46d161e42bc1f6564b719f8b04e0d6bee371e01c67c8ce4dea` |
-| Review-state focused and governed Quick | Passed: 28/28 M0 lifecycle/harness tests, 177-test Quick, bundle/manifest/task-graph controls, and repository/lock/supply-chain/licence controls | Quick tests 102.973 s; latest focused run 15.270 s; live validators passed |
+| Approved-state focused and governed Quick | Passed: 29/29 M0 lifecycle/harness tests, 178-test Quick, bundle/manifest/task-graph controls, and repository/lock/supply-chain/licence controls | Focused 20.267 s; Quick tests 144.185 s; live validators passed; `TL-0101` dependency-ready |
+| Human M0 gate approval | Passed: Janne Vuorela signed the project-owner decision and acknowledged security, privacy, dependency/licence, accessibility, modest-hardware, validation, product-boundary, and architecture roles against the exact candidate/digest | 2026-08-27; human statement not timed; every section 5 limitation retained |
 | Disposable-clone cleanup | Passed; exact target/commit verified, read-only Git pack attributes normalized after an initial bounded delete failure, no clone directory remains | Same session; no repository or user data removed |
 
 ### Historical direct-host limitation and hosted resolution
@@ -95,18 +96,16 @@ The superseded `TL-0008` draft-1 procedure remains preserved at source commit `4
 - `eng/run-tl0010-sandbox-guest.ps1`: internal exact-candidate bootstrap, guest policy observation, Quick-before-Full execution, bounded evidence, and disposable shutdown.
 - `tools/validate_bundle.py`: M0 structure, lifecycle, ownership, verification, approval, and rights-limitation validation.
 - `tools/tests/test_validate_bundle.py`: adversarial M0 gate-record and hosted-harness regressions.
-- `TASKS.yaml`: only TL-0010 execution fields—`status`, append-only `evidence`, and `blocked_reason`—with the current state `review`.
+- `TASKS.yaml`: only TL-0010 execution fields—`status`, append-only `evidence`, and `blocked_reason`—with the final state `done`.
 - `STATUS.md`: current branch, checkpoint plan, test state, risk, and next action.
-- `BUNDLE_MANIFEST.sha256`: synchronized to the governed review-state evidence after final validation.
+- `BUNDLE_MANIFEST.sha256`: synchronized to the governed approved-state evidence after final validation.
 
 The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` was present before TL-0010 and remains untouched and unstaged.
 
 ## Outstanding
 
-1. Janne Vuorela must explicitly approve the exact statement in section 9 of `artifacts/gates/M0-foundation.md`, identifying candidate `17975419badd4154b82895d9d92a4a904790c7c0` and gate-record candidate SHA-256 `b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153`.
-2. Record the project-owner decision plus the security-owner, privacy-owner, and dependency/licence-owner M0 acknowledgements without weakening any section 5 limitation.
-3. Rerun final governed validation after the human evidence update; mark `done` only when the complete automated and human evidence contract passes.
+None for `TL-0010`. The historical direct-host unsigned-assembly limitation and every gate section 5 claim limitation remain recorded; neither is an unresolved M0 blocker.
 
 ## Next dependency-ready task
 
-None. `TL-0101` remains dependency-blocked until `TL-0010` is `done`.
+`TL-0101` — Implement core job and evidence domain models. It is dependency-ready but was not started in this gate-completion session.

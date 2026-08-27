@@ -3103,11 +3103,10 @@ class M0FoundationGateContractTests(unittest.TestCase):
             self.copy_contract(root)
             self.replace_gate_text(
                 root,
-                "**Record status:** Review — automated verification passed; human "
-                "acknowledgements remain",
+                "**Record status:** Approved — M0 gate complete",
                 "**Record status:** Candidate — verification or human evidence pending",
             )
-            self.replace_gate_text(root, "**Decision:** Review", "**Decision:** Pending")
+            self.replace_gate_text(root, "**Decision:** Approved", "**Decision:** Pending")
             tasks = dict(TASK_BY_ID)
             gate_task = dict(tasks["TL-0010"])
             gate_task["status"] = "in_progress"
@@ -3121,13 +3120,18 @@ class M0FoundationGateContractTests(unittest.TestCase):
             validate_bundle.REQUIRED_FILES,
         )
 
+    def test_current_approved_gate_satisfies_contract(self) -> None:
+        validation = validate_bundle.Validation()
+        validate_bundle.validate_m0_foundation_gate(validation, TASK_BY_ID)
+        self.assertEqual(validation.errors, [])
+
     def test_task_and_record_lifecycle_must_match(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_contract(root)
             tasks = dict(TASK_BY_ID)
             gate_task = dict(tasks["TL-0010"])
-            gate_task["status"] = "done"
+            gate_task["status"] = "review"
             tasks["TL-0010"] = gate_task
             validation = self.validate_contract(root, tasks)
             self.assertTrue(
@@ -3135,7 +3139,7 @@ class M0FoundationGateContractTests(unittest.TestCase):
                 validation.errors,
             )
             self.assertTrue(
-                any("Decision must be 'Approved'" in error for error in validation.errors),
+                any("Decision must be 'Review'" in error for error in validation.errors),
                 validation.errors,
             )
 
@@ -3143,13 +3147,6 @@ class M0FoundationGateContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_contract(root)
-            self.replace_gate_text(
-                root,
-                "**Record status:** Review — automated verification passed; human "
-                "acknowledgements remain",
-                "**Record status:** Approved — M0 gate complete",
-            )
-            self.replace_gate_text(root, "**Decision:** Review", "**Decision:** Approved")
             self.replace_gate_text(
                 root,
                 f"| Verification candidate commit | {self.verification_candidate} |",
@@ -3215,13 +3212,6 @@ class M0FoundationGateContractTests(unittest.TestCase):
             ).stdout.strip()
             self.replace_gate_text(
                 root,
-                "**Record status:** Review — automated verification passed; human "
-                "acknowledgements remain",
-                "**Record status:** Approved — M0 gate complete",
-            )
-            self.replace_gate_text(root, "**Decision:** Review", "**Decision:** Approved")
-            self.replace_gate_text(
-                root,
                 f"| Verification candidate commit | {self.verification_candidate} |",
                 f"| Verification candidate commit | {candidate_commit} |",
             )
@@ -3248,13 +3238,6 @@ class M0FoundationGateContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_contract(root)
-            self.replace_gate_text(
-                root,
-                "**Record status:** Review — automated verification passed; human "
-                "acknowledgements remain",
-                "**Record status:** Approved — M0 gate complete",
-            )
-            self.replace_gate_text(root, "**Decision:** Review", "**Decision:** Approved")
             candidate_commit = "0" * 40
             candidate_digest = "1" * 64
             self.replace_gate_text(
@@ -3270,7 +3253,9 @@ class M0FoundationGateContractTests(unittest.TestCase):
             )
             self.replace_gate_text(
                 root,
-                "| Project-owner decision | Pending |",
+                "| Project-owner decision | Signed — Janne Vuorela; 2026-08-27; "
+                f"candidate {self.verification_candidate}; gate SHA-256 "
+                f"{self.verification_candidate_digest} |",
                 "| Project-owner decision | Signed — x; "
                 f"{candidate_commit}; {candidate_digest} |",
             )
@@ -3294,16 +3279,13 @@ class M0FoundationGateContractTests(unittest.TestCase):
             self.copy_contract(root)
             self.replace_gate_text(
                 root,
-                "**Record status:** Review — automated verification passed; human "
-                "acknowledgements remain",
+                "**Record status:** Approved — M0 gate complete",
                 "**Record status:** Blocked — synthetic environment blocker",
             )
-            self.replace_gate_text(root, "**Decision:** Review", "**Decision:** Blocked")
+            self.replace_gate_text(root, "**Decision:** Approved", "**Decision:** Blocked")
             self.replace_gate_text(
                 root,
-                "**Unresolved blockers:** None for automated verification. The historical "
-                "direct-host unsigned-assembly limitation remains binding but does not "
-                "invalidate the approved hosted result.",
+                "**Unresolved blockers:** None",
                 "**Unresolved blockers:** Synthetic environment blocker prevents the "
                 "required verification run.",
             )
