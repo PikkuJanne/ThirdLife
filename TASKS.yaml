@@ -1507,7 +1507,7 @@ tasks:
   workstream: core
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: any
@@ -1536,7 +1536,89 @@ tasks:
   verification:
   - Unit-test invariants and serialization round trips.
   - Property-test invalid state combinations where practical.
-  evidence: []
+  evidence:
+  - summary: The pre-change Core test baseline passed before TL-0101 implementation began.
+    task: TL-0101
+    command_or_review: dotnet test tests\ThirdLife.Core.Tests\ThirdLife.Core.Tests.csproj --no-restore --nologo
+    tier: targeted baseline
+    result: passed; 1/1 test
+    environment: Active Codex machine; Windows 11 x64; direct host; .NET SDK 10.0.400
+    date: '2026-08-27'
+    duration: 12.355 s
+    reference: baseline commit cfdc68d6e8d8f6c2f31b3123e3edd2aee3ed6670
+    limitation: Pre-change regression baseline only; it does not evidence the TL-0101 implementation
+  - summary: Immutable job, device, evidence, provenance, observation, human-test, requirement, sanitization, disposition,
+      and action-state contracts compile cleanly with strict serialization and bounded value validation.
+    task: TL-0101
+    command_or_review: dotnet format ThirdLife.sln --no-restore --verify-no-changes --include src\ThirdLife.Core tests\ThirdLife.Core.Tests;
+      dotnet build tests\ThirdLife.Core.Tests\ThirdLife.Core.Tests.csproj --no-restore --nologo; git diff --check
+    tier: targeted
+    result: passed; formatter and diff clean; build completed with 0 warnings and 0 errors
+    environment: Active Codex machine; Windows 11 x64; direct host; .NET SDK 10.0.400
+    date: '2026-08-27'
+    duration: 23.818 s combined final formatter, build, and diff check
+    reference: src/ThirdLife.Core/DomainJson.cs; src/ThirdLife.Core/Jobs; src/ThirdLife.Core/Evidence; src/ThirdLife.Core/Sanitization;
+      tests/ThirdLife.Core.Tests
+    limitation: Compilation and static formatting evidence only; direct-host test execution remains subject to the recorded
+      Application Control limitation
+  - summary: Contract review against D-007, D-014, D-015, D-017, D-018, D-032, ADR 0002, the privacy model, and manual-test
+      rules found and resolved fail-open enum omissions, unsafe evidence privacy/provenance combinations, path-unsafe IDs,
+      inferred sanitization promotion, unattributed human confirmation, provider-observed pass promotion, and contradictory
+      sanitization states.
+    task: TL-0101
+    command_or_review: Independent read-only domain, serialization, and test audits followed by post-fix acceptance review
+    tier: targeted review
+    result: passed; final reviews found no remaining P0 or P1 blocker
+    environment: Repository semantic and source review on the active Codex machine
+    date: '2026-08-27'
+    duration: Not separately timed; reviews ran during the bounded implementation session
+    reference: DECISIONS.md D-007/D-014/D-015/D-017/D-018/D-032; docs/adr/0002-evidence-policy-separation.md;
+      docs/privacy/privacy-model.md; docs/testing/manual-hardware-tests.md; TL-0101 tests
+    limitation: Canonical YAML fixture-to-domain mapping belongs to a later adapter/provider task; the current platform-purity
+      guard is a practical reference/import blacklist plus source review, not a formal framework allowlist
+  - summary: Direct-host execution was blocked by enforced Application Control; same-machine Windows Sandbox exposed two
+      nullable-ID round-trip failures, then later exposed stale test fixtures after attribution rules were tightened. Each
+      failure was reduced, corrected, rerun in isolation, and followed by the related complete targeted suite.
+    task: TL-0101
+    command_or_review: dotnet test tests\ThirdLife.Core.Tests\ThirdLife.Core.Tests.csproj --no-restore --nologo with focused
+      FullyQualifiedName filters in the governed TL-0101 Windows Sandbox runner
+    tier: targeted defect handling
+    result: passed after correction; initial 41/43 failure reduced to 5/5 focused pass and 43/43 pass; later 59/61 fixture
+      failure reduced to 4/4 focused pass before the final complete rerun
+    environment: Windows Sandbox on the active Codex machine; 4096 MiB guest; source, SDK, and package cache mapped read-only;
+      one bounded writable result mapping
+    date: '2026-08-27'
+    duration: Initial failure 33.255 s; nullable-ID focused pass 32.320 s; corrected suite 31.380 s; final fixture failure
+      31.199 s; final focused pass 31.914 s
+    reference: deterministic ThirdLife.Core.Tests state matrices and serialization regressions; no raw guest log retained
+    limitation: The direct host did not execute the assertions; Sandbox execution is same-physical-machine deterministic
+      model evidence only and is not host-policy compatibility, physical hardware, manual-test, or cross-hardware evidence
+  - summary: The exact final TL-0101 Core targeted suite passed after all review findings and regression fixes.
+    task: TL-0101
+    command_or_review: dotnet restore tests\ThirdLife.Core.Tests\ThirdLife.Core.Tests.csproj --locked-mode --nologo; dotnet
+      test tests\ThirdLife.Core.Tests\ThirdLife.Core.Tests.csproj --no-restore --nologo
+    tier: targeted
+    result: passed; 61/61 tests; 0 failed; 0 skipped
+    environment: Windows Sandbox on the active Codex machine; 4096 MiB guest; governed network available only for pinned
+      locked restore and mandatory NuGet audit; read-only source/tool mappings and bounded result output
+    date: '2026-08-27'
+    duration: 30.652 s complete guest run; 213 ms reported test duration
+    reference: bounded result schema thirdlife.tl0101.targeted.v1 sha256:f96e6d80963b172312f93263f2e978bc9bcc4f8d3ef605226eec77d7a930e0ea
+    limitation: No direct-host compatibility, signing, production persistence, YAML adapter, real human confirmation, physical
+      hardware behavior, accessibility walkthrough, modest-hardware certification, or cross-hardware claim
+  - summary: The governed Quick tier passed the complete validator regression suite and live bundle, manifest, repository,
+      package-lock, supply-chain, licence, and CI-control checks after TL-0101 evidence synchronization.
+    task: TL-0101
+    command_or_review: powershell -NoProfile -ExecutionPolicy Bypass -File eng\verify.ps1 -Tier Quick
+    tier: quick
+    result: passed; 178/178 Python regressions and all live governed controls passed
+    environment: Active Codex machine; Windows 11 x64; Python 3.14.7; PyYAML 6.0.3; no remote runtime dependency
+    date: '2026-08-27'
+    duration: 178 tests in 134.633 s; complete Quick command not separately timed
+    reference: synchronized TASKS.yaml, STATUS.md, BUNDLE_MANIFEST.sha256, bundle DAG, repository controls, package locks,
+      supply-chain inventory, licence approval, and optional Windows workflow configuration
+    limitation: Documentation/schema/static Quick evidence; deterministic .NET domain assertions are evidenced separately by
+      the same-machine Sandbox Targeted pass
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

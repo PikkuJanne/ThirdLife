@@ -1,111 +1,92 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-27  
-**Snapshot preparation time:** 2026-08-27T17:54:17+02:00  
+**Snapshot preparation time:** 2026-08-27T18:56:09+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
-**Current milestone:** M0 — Foundation and product contract — complete  
-**Current task:** `TL-0010` — Validate the M0 foundation gate — `done`  
-**Action state:** done; automated verification and the exact project-owner/security/privacy/dependency-licence acknowledgements are complete
+**Current milestone:** M1 — Audit-only vertical slice — active  
+**Current task:** `TL-0101` — Implement core job and evidence domain models — `done`  
+**Action state:** implementation, Targeted verification, contract review, and governed Quick complete; commit and push remain
 
 ## Current state
 
-`TL-0010` is `done`. All nine transitive M0 predecessors, `TL-0001` through `TL-0009`, are also `done` with non-empty evidence. The approved gate record is [`artifacts/gates/M0-foundation.md`](artifacts/gates/M0-foundation.md); it indexes predecessor closure, the five milestone exit criteria, eight task acceptance criteria, named M0 ownership, preserved licence/redistribution limitations, exact-candidate verification, risk/boundary review, historical host limitation, and attributable human approval.
+`TL-0101` implements immutable Core contracts for jobs, devices, typed evidence and provenance, observations, human tests, requirements, external sanitization evidence, the five dispositions, and the nine action-journal states. The implementation remains inside `ThirdLife.Core`; it has no WPF, SQLite, WinGet, shell, Windows API, or sibling dependency.
 
-Published candidate `17975419badd4154b82895d9d92a4a904790c7c0` passed its original clean-checkout Quick. Its direct-host Full attempt remains historically blocked because the enforced host policy rejected four unsigned ThirdLife application DLL loads with `0x800711C7`. Janne Vuorela approved installed Windows Sandbox on 2026-08-27 as the same-machine hosted environment for the exact rerun. From published harness checkpoint `9f86bfa09571a2e027d868b1f9d1cee48fee4fe2`, the one-command runner then passed Quick in 106.316 s and the exact Full command in 1070.198 s. The guest Smart App Control state was `evaluation` before and after, the `registry_and_system_policy_files` fingerprint was unchanged, no security mutation was attempted, and host validation confirmed exact candidate/gate binding, tracked-clean state, Sandbox shutdown, and staging cleanup.
+Evidence metadata keeps privacy classification, D-015 evidence classification, and value availability as separate axes. Real normalized evidence is workshop-restricted; wholly synthetic evidence may be public-reference or conservatively workshop-restricted. Recipient-guide, support-sanitized, and raw-untrusted classes cannot be persisted as normalized Core evidence. Unknown and not-applicable values remain distinct and cannot carry a value.
 
-Janne Vuorela provided the exact section 9 statement on 2026-08-27, signing as Principal Software Architect & Sole Project Owner and completing the M0 security, privacy, dependency/licence, accessibility, modest-hardware, validation, product-boundary, and architecture acknowledgements. The signature is bound to candidate `17975419badd4154b82895d9d92a4a904790c7c0` and historical gate-record candidate SHA-256 `b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153`. Every section 5 limitation remains binding. M1 is unlocked but has not been started in this gate-completion session.
+Human confirmation requires human-confirmation provenance and typed operator attribution. Human-test passes require attributable human-confirmed evidence, so provider presence cannot become a functional pass. `not_tested` remains distinct from `not_available`; the latter represents either an absent capability or unavailable/unsafe/equipment/provider conditions with a bounded limitation code.
 
-The previously approved `AMD-2026-08-22-ADR-0009` amendment remains complete at baseline `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516`. TL-0010 does not change ADR numbering, the task graph, a frozen decision, the product boundary, or that amendment's historical evidence.
+External sanitization records model exactly `verified`, `replacement_storage`, `no_donor_storage`, `unknown`, and `failed`. Inferred evidence cannot establish a trusted sanitization result. Unknown records carry no event attribution or media identifier; no-donor-storage cannot identify absent media; verified, replacement, and failed media cases require the governed attribution and verification combinations.
 
-## Gate contract state
-
-| Area | Current state | Next proof |
-|---|---|---|
-| M0 predecessors | Pass: all nine are `done` with evidence | Revalidated by live bundle/task-graph checks |
-| Gate artifact | Approved record structurally governed and bound to the historical candidate blob | Preserve exact candidate/digest and append-only evidence |
-| Named owners | Complete: every M0 role acknowledged by Janne Vuorela; historical security attribution preserved | None |
-| Clean-checkout Quick | Pass at `17975419badd4154b82895d9d92a4a904790c7c0` | 162 tests plus all governed static/manifest/repository controls |
-| Hosted harness | Pass: 15/15 focused contracts, 177-test working-tree Quick, published preflight, and bounded final result | Retain the exact schema-2 evidence and claim limits |
-| Full tier | Pass in approved Windows Sandbox: Quick then Full through `tests`; direct enforced-host block remains a limitation | Retain the no-direct-host-compatibility and no-signing claim limits |
-| Extended tier | Not triggered | None |
-| Gate decision | Approved | M0 complete; section 5 limitations remain binding |
+Serialization uses explicit property and enum wire names, nonzero governed enums that reject omitted default states under ordinary `System.Text.Json`, strict options that reject missing non-optional fields, unknown properties, and duplicates, scalar strong-ID converters, bounded well-formed Unicode, and an explicit bounded scalar evidence-value union. Opaque IDs reject traversal separators, dot aliases, colons, whitespace, controls, malformed Unicode, and Windows device aliases.
 
 ## Git state
 
 | Field | Verified value |
 |---|---|
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
-| Branch | `codex/tl-0010-m0-foundation-gate` |
-| Source baseline | `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516` — published bundle 0.3.1 ADR-reservation checkpoint |
-| History handling | Continued from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Verification candidate | `17975419badd4154b82895d9d92a4a904790c7c0`; gate-record candidate SHA-256 `b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153` |
-| Publication state | Harness checkpoint `9f86bfa09571a2e027d868b1f9d1cee48fee4fe2` and Approved-state completion checkpoint `1886c542a56159caf77e54c36dfb23d226bb9b52` were published, fetched, and verified at local/upstream equality 0 ahead and 0 behind; this handoff-only update changes no implementation or approval semantics |
-| Hosted rerun method | Windows Sandbox installed on the active physical machine; exact-candidate source and host tool roots mapped read-only; one writable bounded result directory; reviewed mutation declaration plus fail-closed static/behavioral guards |
+| Branch | `codex/tl-0101-core-domain-models` |
+| Starting commit | `cfdc68d6e8d8f6c2f31b3123e3edd2aee3ed6670` — published TL-0010 completion handoff |
+| History handling | Started from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
+| Publication state | Pending commit, push, fetch, and divergence verification |
 
-The configured SSH remote rejects unattended public-key authentication on this machine. Publication uses GitHub CLI's authenticated HTTPS credential bridge without changing the configured remote or exposing a credential.
+The configured SSH remote rejects unattended public-key authentication on this machine. Publication will use the already governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
+
+The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` predates TL-0101 and remains untouched and unstaged.
 
 ## Verification evidence
 
-| Scope | Result | Duration / revision |
+| Scope | Result | Duration / limitation |
 |---|---|---|
-| Pre-change bundle and repository validators | Passed: 91 tasks, 8 milestones, 66 decisions, valid DAG; 26 projects, 26 locks, 24 governed components | 3.751 s combined at `1c2aeff4b6517d676a3fc127fe1f912fb6b6c516` |
-| Focused M0 gate-record regressions | 13/13 passed, including lifecycle mismatch, predecessor closure/count, real commit/blob digest binding, declared-owner attribution, matrix digest, retained limitations, affirmative blanket-right rejection, and hidden-content rejection | 1.243 s focused run |
-| Hosted harness contract regressions | 15/15 passed, including exact candidate/digest, Quick-before-Full, strict bounded-result states, policy-method coherence/change rejection, invalid blocked/postflight evidence, physical-host identity refusal, live remote binding, mapping permissions, fail-closed Code Integrity fallback, prohibited trust mutation, and PowerShell parsing | 13.713 s; Windows PowerShell 5.1-backed behavioral validation |
-| Complete Python regression suite | 177/177 passed after final policy-observation hardening | 103.602 s tests within the governed Quick run |
-| Working-tree governed Quick | Passed 177 Python tests, bundle/manifest controls, repository boundaries, package locks, and licence controls | Tests 103.602 s; complete command not separately timed |
-| Bounded live remote query | Passed; exact governed remote branch resolved to the current published pre-harness checkpoint without changing repository state | 30 s bound; completed in 2.7 s wall including invocation overhead |
-| Published-checkpoint Sandbox preflight | Passed exact host/tool/candidate/gate checks and verified staging cleanup without launching the guest | 4.9 s at `9f86bfa09571a2e027d868b1f9d1cee48fee4fe2` |
-| Exact-commit clean-clone Quick | Passed at `17975419badd4154b82895d9d92a4a904790c7c0`; clone tracked-clean | Bootstrap 7.331 s; 162 tests 110.348 s; complete command 00:01:55.378 |
-| Historical direct-host Full | Blocked: exit 1 in Release tests after 162 Python tests, validators, locked restore, formatting, and 0-warning/0-error Release build passed | 162 tests 110.313 s; build 17.50 s; attempt 00:03:01.538 |
-| Blocked-state governed Quick | Passed all 162 Python tests and live bundle/manifest/repository/lock/supply-chain/licence/CI controls after recording the Full blocker | 162 tests 118.166 s; same active machine |
-| Focused failure diagnosis | Four one-project reruns exited 1; four application DLLs `NotSigned`, only `:$DATA`; Code Integrity event IDs 3033/3077 under the enforced Smart App Control policy | Packages 2.552 s; Reports 2.226 s; Persistence/Verification bounded reruns; no raw log retained |
-| Hosted attempt 1 defect handling | Failed before Quick because the launcher omitted the Store Sandbox process identities; no result was accepted or retained; focused regression added | 23.489 s at `be7c64eecea9656e7b32593b77c0715cc5bacd9d`; corrected at `b03181e8a4756451c955117327b83a1a9f61d6c3` |
-| Hosted attempt 2 defect handling | Failed closed in guest preflight because unelevated `CiTool` was unavailable; Quick and Full were not run; bounded schema-1 result retained | 64.019 s; run `24152eb7ea38ba9e3a07226592644a7a`; result SHA-256 `d131b1d2b662dff0a3bae9a23a53c04b6303f31416864319f5a818912d07d3d4` |
-| Exact-candidate Windows Sandbox Quick and Full | Passed: Quick exit 0/marker true, then Full exit 0/marker true through `tests`; policy state/fingerprint unchanged; exact candidate/gate/clean checks, Sandbox close, and cleanup passed | Quick 106.316 s; Full 1070.198 s; guest interval 1192.232 s; run `64dda9491c7fddf8a9e9f18429a6957b`; result SHA-256 `170ff71314ea8c46d161e42bc1f6564b719f8b04e0d6bee371e01c67c8ce4dea` |
-| Approved-state focused and governed Quick | Passed: 29/29 M0 lifecycle/harness tests, 178-test Quick, bundle/manifest/task-graph controls, and repository/lock/supply-chain/licence controls | Focused 20.267 s; Quick tests 144.185 s; live validators passed; `TL-0101` dependency-ready |
-| Human M0 gate approval | Passed: Janne Vuorela signed the project-owner decision and acknowledged security, privacy, dependency/licence, accessibility, modest-hardware, validation, product-boundary, and architecture roles against the exact candidate/digest | 2026-08-27; human statement not timed; every section 5 limitation retained |
-| Disposable-clone cleanup | Passed; exact target/commit verified, read-only Git pack attributes normalized after an initial bounded delete failure, no clone directory remains | Same session; no repository or user data removed |
+| Pre-change Core baseline | Passed 1/1 | 12.355 s on the direct host at `cfdc68d6e8d8f6c2f31b3123e3edd2aee3ed6670` |
+| Final formatter, build, and diff check | Passed; 0 warnings/errors | 23.818 s combined on the direct host |
+| Direct-host test execution | Blocked by Application Control `0x800711C7` after successful compilation | Not accepted as pass evidence; no host-security control was weakened |
+| Initial Sandbox defect | 41/43 passed; nullable scalar-ID converter rejected explicit null optional fields | Reduced to the five sanitization round trips, corrected, then 5/5 and 43/43 passed |
+| Strict-serialization focus | Passed 4/4 | Omitted governed fields, explicit nulls, duplicate/unknown fields, and strict round trips |
+| Attribution-rule fixture defect | 59/61 passed; two stale tests still built a provider-observed `pass` | Corrected test data, then the focused serialization set passed 4/4 |
+| Exact final Targeted suite | Passed 61/61; 0 failed; 0 skipped | Windows Sandbox 4096 MiB guest, 30.652 s complete / 213 ms tests; bounded result SHA-256 `f96e6d80963b172312f93263f2e978bc9bcc4f8d3ef605226eec77d7a930e0ea` |
+| Independent final acceptance audits | Passed; no remaining P0/P1 blocker | Canonical YAML mapping and a formal framework allowlist remain later-work limitations, not TL-0101 blockers |
+| Governed Quick | Passed 178/178 validator regressions and every live governed control | 134.633 s reported test duration; complete command not separately timed |
+| Full / Extended | Not triggered | TL-0101 declares no broader trigger and changes no persistence/migration, privilege, package/update, installer/lifecycle, backup, or release boundary |
 
-### Historical direct-host limitation and hosted resolution
+Windows Sandbox ran on the active physical Codex machine with source, SDK, and NuGet cache mapped read-only and one bounded writable result directory. Networking was available only for pinned locked restore and mandatory NuGet audit. This is deterministic model/serialization evidence, not direct-host policy compatibility, real human confirmation, physical-hardware observation, accessibility or modest-hardware certification, or a cross-hardware claim.
 
-The exact candidate failed one assembly-contract test in each of `ThirdLife.Packages.Tests`, `ThirdLife.Persistence.Tests`, `ThirdLife.Reports.Tests`, and `ThirdLife.Verification.Tests`. Application Control rejected loads of `ThirdLife.Packages.dll`, `ThirdLife.Persistence.dll`, `ThirdLife.Reports.dll`, and `ThirdLife.Verification.dll` with `0x800711C7`. Nine other .NET test projects passed 10 tests before the aggregate command exited 1.
+## Defect handling
 
-Focused reruns reproduced all four blocks. Each application DLL is unsigned and has no `Zone.Identifier` stream, so changing clone/worktree location or removing alternate streams is not a remedy. Smart App Control and Code Integrity were not disabled or bypassed. The approved same-machine Windows Sandbox execution satisfied the automated unblock condition without weakening host security. It does not prove compatibility with the enforced host policy, authorize signing, or erase the historical limitation.
+The implementation followed the required reduce-fix-focus-broaden sequence:
 
-The first hosted attempt exposed incomplete process tracking for the Store-delivered Sandbox process names and retained no result. The second failed closed before Quick because the unelevated guest could not enumerate Code Integrity policy through `CiTool`. The final schema-2 runner added validated Store process identities and a read-only, fail-closed fallback over the documented SAC registry state plus readable system-volume Code Integrity policy files. The fallback produced a stable nonzero fingerprint on the host, passed independent review with no P0/P1 finding, and then succeeded in the guest. EFI-resident policy enumeration is explicitly not claimed.
+1. Two optional scalar-ID null round-trip failures were reduced to the five sanitization-state theory cases; the converter boundary was corrected; 5/5 focused and then 43/43 related tests passed.
+2. The first hardened complete suite passed 60/61 because a test expected exactly `ArgumentException` after operator validation correctly produced `ArgumentNullException`; the exact case passed 1/1 after correcting the assertion, then 61/61 passed.
+3. The final human-pass rule correctly invalidated two provider-observed `pass` test fixtures; the strict-serialization focus passed 4/4 after fixture correction, followed by the exact final 61/61 pass.
 
-The first wrapper preflight omitted the process-scoped PowerShell execution-policy argument and Windows rejected the script before the verifier loaded (exit 1; 0.421 s). The successful command used the repository's previously evidenced `-ExecutionPolicy Bypass` process argument; it changed no persistent policy and did not weaken Smart App Control or Code Integrity.
+No blind rerun was accepted. Bounded failure summaries were retained only long enough to diagnose and record sanitized task evidence; raw guest output was not checked in.
 
 ## Historical TL-0008 transition
 
-The superseded `TL-0008` draft-1 procedure remains preserved at source commit `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, with procedure SHA-256 `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`. No physical hardware walkthrough was performed for that transition. Its old device-pool language is historical and does not satisfy or block the current M0 gate.
+The superseded `TL-0008` draft-1 procedure remains preserved at source commit `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, with procedure SHA-256 `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`. No physical hardware walkthrough was performed for that transition. Its former device-pool language remains historical only and is not current TL-0101 evidence.
 
 ## Boundary and risk impact
 
-- **Project vacuum / sibling integration:** No sibling repository was browsed and no sibling source, runtime, data, service, profile, adapter, schema, SDK, plugin framework, dependency, or acceptance test was introduced.
-- **Data / migration:** No runtime data location, database, schema, migration, retention, deletion, export, telemetry, personal-data, or uninstall behavior changed. Two ignored bounded local result/summary pairs are retained—one preflight failure and the final pass; raw guest logs were discarded.
-- **Release interface:** `RELEASE_INTERFACE.md` remains an honest draft placeholder. No API, compatibility, release, product-licence, or redistribution promise was populated.
-- **Security / privacy:** No product executable, privilege, IPC, signing, logging, retention, telemetry, or support-export behavior changed. The test-only harness adds a disposable Sandbox execution path with required restore/audit networking, six read-only source/tool mappings, one writable bounded evidence mapping, normalized policy-state observations, exact schemas, discarded raw logs, and fail-closed mutation/provenance checks. The `security_mutation_attempted` field is a reviewed harness declaration, not independent operating-system instrumentation.
-- **Accessibility / low-spec:** No product UI or product runtime path was added. The hosted constraint profile assigns 8192 MiB to one disposable guest and records only active-machine evidence; it makes no lower-memory, manual accessibility, physical-hardware, failure-injection, resource, cold-boot, constrained-device, or cross-hardware claim.
+- **Project vacuum / sibling integration:** No sibling repository, source, runtime, data, service, profile, adapter, schema, SDK, framework, dependency, or acceptance test was introduced.
+- **Data / migration:** No runtime persistence location, database, schema migration, retention, deletion, export, or telemetry behavior was implemented. TL-0102 owns persistence and path/junction integration tests.
+- **Release interface:** No release behavior or compatibility promise was added to `RELEASE_INTERFACE.md`.
+- **Security / privacy:** Domain construction and deserialization fail closed for omitted governed states, privacy projection misuse, inferred sanitization promotion, unattributed human confirmation, provider-observed functional pass, contradictory availability/value states, malformed Unicode, and unsafe opaque IDs. Full media identifiers remain workshop-restricted values and ordinary `ToString()` redacts them.
+- **Accessibility / low-spec:** No UI, background process, concurrency, cache, database, device provider, or product runtime work was added. Tests are bounded in-memory models; no accessibility walkthrough, performance claim, or hardware certification is made.
 
-## Changed paths on the TL-0010 branch
+## Changed paths
 
-- `artifacts/gates/M0-foundation.md`: new governed gate checklist and human approval target.
-- `eng/run-tl0010-sandbox.ps1`: one-command host preflight, Sandbox configuration, bounded result validation, and verified cleanup.
-- `eng/run-tl0010-sandbox-guest.ps1`: internal exact-candidate bootstrap, guest policy observation, Quick-before-Full execution, bounded evidence, and disposable shutdown.
-- `tools/validate_bundle.py`: M0 structure, lifecycle, ownership, verification, approval, and rights-limitation validation.
-- `tools/tests/test_validate_bundle.py`: adversarial M0 gate-record and hosted-harness regressions.
-- `TASKS.yaml`: only TL-0010 execution fields—`status`, append-only `evidence`, and `blocked_reason`—with the final state `done`.
-- `STATUS.md`: current branch, checkpoint plan, test state, risk, and next action.
-- `BUNDLE_MANIFEST.sha256`: synchronized to the governed approved-state evidence after final validation.
-
-The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` was present before TL-0010 and remains untouched and unstaged.
+- `src/ThirdLife.Core/DomainValue.cs` and `DomainJson.cs`: bounded primitive validation and strict canonical JSON options.
+- `src/ThirdLife.Core/Jobs`: strong IDs, device/job records, and action-state vocabulary.
+- `src/ThirdLife.Core/Evidence`: classifications, provenance, typed values, observations, human tests, requirements, dispositions, and strong evidence IDs.
+- `src/ThirdLife.Core/Sanitization`: external sanitization evidence and exact state invariants.
+- `tests/ThirdLife.Core.Tests`: exhaustive state matrices, round trips, omissions/adversarial JSON, vocabulary, identifier, Unicode, and platform-purity coverage.
+- `TASKS.yaml`: only TL-0101 execution fields (`status` and append-only `evidence`).
+- `STATUS.md` and `BUNDLE_MANIFEST.sha256`: current handoff and governed hashes.
 
 ## Outstanding
 
-None for `TL-0010`. The historical direct-host unsigned-assembly limitation and every gate section 5 claim limitation remain recorded; neither is an unresolved M0 blocker.
+- Commit and publish the completed TL-0101 checkpoint, then fetch and verify local/upstream equality.
 
 ## Next dependency-ready task
 
-`TL-0101` — Implement core job and evidence domain models. It is dependency-ready but was not started in this gate-completion session.
+After TL-0101 is complete: `TL-0102` — Implement the SQLite job store and migrations. Do not start it in this session.
