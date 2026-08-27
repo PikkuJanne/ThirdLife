@@ -3103,10 +3103,11 @@ class M0FoundationGateContractTests(unittest.TestCase):
             self.copy_contract(root)
             self.replace_gate_text(
                 root,
-                "**Record status:** Blocked — required Full tier did not pass",
+                "**Record status:** Review — automated verification passed; human "
+                "acknowledgements remain",
                 "**Record status:** Candidate — verification or human evidence pending",
             )
-            self.replace_gate_text(root, "**Decision:** Blocked", "**Decision:** Pending")
+            self.replace_gate_text(root, "**Decision:** Review", "**Decision:** Pending")
             tasks = dict(TASK_BY_ID)
             gate_task = dict(tasks["TL-0010"])
             gate_task["status"] = "in_progress"
@@ -3144,10 +3145,11 @@ class M0FoundationGateContractTests(unittest.TestCase):
             self.copy_contract(root)
             self.replace_gate_text(
                 root,
-                "**Record status:** Blocked — required Full tier did not pass",
+                "**Record status:** Review — automated verification passed; human "
+                "acknowledgements remain",
                 "**Record status:** Approved — M0 gate complete",
             )
-            self.replace_gate_text(root, "**Decision:** Blocked", "**Decision:** Approved")
+            self.replace_gate_text(root, "**Decision:** Review", "**Decision:** Approved")
             self.replace_gate_text(
                 root,
                 f"| Verification candidate commit | {self.verification_candidate} |",
@@ -3213,10 +3215,11 @@ class M0FoundationGateContractTests(unittest.TestCase):
             ).stdout.strip()
             self.replace_gate_text(
                 root,
-                "**Record status:** Blocked — required Full tier did not pass",
+                "**Record status:** Review — automated verification passed; human "
+                "acknowledgements remain",
                 "**Record status:** Approved — M0 gate complete",
             )
-            self.replace_gate_text(root, "**Decision:** Blocked", "**Decision:** Approved")
+            self.replace_gate_text(root, "**Decision:** Review", "**Decision:** Approved")
             self.replace_gate_text(
                 root,
                 f"| Verification candidate commit | {self.verification_candidate} |",
@@ -3247,10 +3250,11 @@ class M0FoundationGateContractTests(unittest.TestCase):
             self.copy_contract(root)
             self.replace_gate_text(
                 root,
-                "**Record status:** Blocked — required Full tier did not pass",
+                "**Record status:** Review — automated verification passed; human "
+                "acknowledgements remain",
                 "**Record status:** Approved — M0 gate complete",
             )
-            self.replace_gate_text(root, "**Decision:** Blocked", "**Decision:** Approved")
+            self.replace_gate_text(root, "**Decision:** Review", "**Decision:** Approved")
             candidate_commit = "0" * 40
             candidate_digest = "1" * 64
             self.replace_gate_text(
@@ -3288,6 +3292,21 @@ class M0FoundationGateContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_contract(root)
+            self.replace_gate_text(
+                root,
+                "**Record status:** Review — automated verification passed; human "
+                "acknowledgements remain",
+                "**Record status:** Blocked — synthetic environment blocker",
+            )
+            self.replace_gate_text(root, "**Decision:** Review", "**Decision:** Blocked")
+            self.replace_gate_text(
+                root,
+                "**Unresolved blockers:** None for automated verification. The historical "
+                "direct-host unsigned-assembly limitation remains binding but does not "
+                "invalidate the approved hosted result.",
+                "**Unresolved blockers:** Synthetic environment blocker prevents the "
+                "required verification run.",
+            )
             tasks = dict(TASK_BY_ID)
             gate_task = dict(tasks["TL-0010"])
             gate_task["status"] = "blocked"

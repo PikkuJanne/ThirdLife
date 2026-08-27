@@ -1217,7 +1217,7 @@ tasks:
   workstream: release
   kind: gate
   priority: P0
-  status: blocked
+  status: review
   size: S
   executor: hybrid
   environment: any
@@ -1358,6 +1358,87 @@ tasks:
       artifacts/gates/M0-foundation.md
     limitation: This validates the blocked-state evidence and static controls; it does not replace or satisfy the blocked
       exact-candidate Full tier, and no human gate approval is claimed
+  - summary: Janne Vuorela approved the installed Windows Sandbox capability on the active Codex machine as the same-machine
+      hosted environment for the exact TL-0010 rerun and approved the one-command bounded procedure.
+    task: TL-0010
+    command_or_review: Human review and approval of the hosted-environment proposal; artifacts/gates/M0-foundation.md section
+      6 records the approved procedure and claim boundary
+    tier: human environment review
+    result: approved for the exact hosted rerun
+    environment: Active Codex machine; installed Windows Sandbox; Janne Vuorela acting as Principal Software Architect
+      and Sole Project Owner
+    date: '2026-08-27'
+    duration: Human approval statement; not timed
+    reference: hosted constraint TL0010-WSB-2026-08-27.1; candidate 17975419badd4154b82895d9d92a4a904790c7c0;
+      gate-record candidate sha256:b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153
+    limitation: This approves only the environment and bounded test procedure; it is not the M0 project-owner signature,
+      a security/privacy/licence acknowledgement, release authorization, redistribution approval, or cross-hardware claim
+  - summary: Two bounded hosted attempts failed closed before Quick and isolated exact harness defects; Store Sandbox process
+      identity tracking and unelevated Code Integrity observation were corrected with focused regressions rather than blind reruns.
+    task: TL-0010
+    command_or_review: One-command hosted attempts; Store Sandbox process inspection; focused policy-observation extraction;
+      M0SandboxHarnessContractTests; independent fail-closed review
+    tier: targeted failure diagnosis
+    result: passed; both defects reproduced, reduced, fixed, and independently reviewed with no remaining P0/P1 finding
+    environment: Active Codex machine; Windows Sandbox; Windows PowerShell 5.1; host and guest security unchanged
+    date: '2026-08-27'
+    duration: First failed attempt 23.489 s; second failed attempt 64.019 s; final focused suite 15 tests in 13.713 s
+    reference: harness commits be7c64eecea9656e7b32593b77c0715cc5bacd9d and b03181e8a4756451c955117327b83a1a9f61d6c3;
+      failed run 24152eb7ea38ba9e3a07226592644a7a result sha256:d131b1d2b662dff0a3bae9a23a53c04b6303f31416864319f5a818912d07d3d4;
+      corrected harness 9f86bfa09571a2e027d868b1f9d1cee48fee4fe2
+    limitation: The first attempt retained no result and neither failed attempt ran Quick or Full; they are defect-handling
+      evidence only and do not contribute a passing verification claim
+  - summary: The corrected schema-2 hosted harness passed focused, governed Quick, bundle, repository, publication, and exact
+      published-checkpoint preflight verification before the final Sandbox execution.
+    task: TL-0010
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_validate_bundle.M0SandboxHarnessContractTests;
+      powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick; authenticated push/fetch;
+      powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\run-tl0010-sandbox.ps1 -PreflightOnly
+    tier: targeted and quick checkpoint
+    result: passed; 15 focused tests, 177-test Quick, live bundle/repository controls, exact remote equality, and verified
+      preflight cleanup all passed
+    environment: Active Codex machine; Windows 11 x64; Python 3.14.7; PyYAML 6.0.3; Windows Sandbox installed;
+      REF-CODEX-001 revision 2026-08-21.1
+    date: '2026-08-27'
+    duration: Focused 13.713 s; Quick tests 103.602 s; published preflight 4.9 s
+    reference: branch codex/tl-0010-m0-foundation-gate; harness 9f86bfa09571a2e027d868b1f9d1cee48fee4fe2;
+      local/upstream 0 ahead and 0 behind
+    limitation: Harness and preflight evidence alone do not satisfy Full or any human acknowledgement; the untracked unrelated
+      roadmap DOCX was not staged or modified
+  - summary: The exact candidate passed Quick and then the complete governed Full tier in the approved protected Windows
+      Sandbox flow; the host validated the bounded result and verified guest shutdown and staging cleanup.
+    task: TL-0010
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\run-tl0010-sandbox.ps1
+    tier: full milestone gate
+    result: passed; Quick exit 0 with success marker, Full exit 0 with success marker through tests, and overall result passed
+    environment: One Windows Sandbox session on the active physical Codex machine; protected client; 8192 MiB; source/tool
+      mappings read-only; result mapping solely writable; REF-CODEX-001 revision 2026-08-21.1; TL0010-WSB-2026-08-27.1
+    date: '2026-08-27'
+    duration: Quick 106.316 s; Full 1070.198 s; guest interval 1192.232 s
+    reference: candidate 17975419badd4154b82895d9d92a4a904790c7c0; gate-record candidate sha256:b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153;
+      harness 9f86bfa09571a2e027d868b1f9d1cee48fee4fe2; run 64dda9491c7fddf8a9e9f18429a6957b; bounded result
+      artifacts/audit/TL-0010/64dda9491c7fddf8a9e9f18429a6957b/tl0010-result.json sha256:170ff71314ea8c46d161e42bc1f6564b719f8b04e0d6bee371e01c67c8ce4dea
+    limitation: Guest Smart App Control was evaluation before and after using registry_and_system_policy_files with an unchanged
+      privacy-safe fingerprint; EFI policy enumeration and direct enforced-host compatibility are not claimed; no security
+      mutation, signing right, redistribution right, cross-hardware certification, or human M0 approval is inferred
+  - summary: The synchronized Review-state record passed focused lifecycle/harness regressions and the complete governed Quick
+      tier after the hosted Full evidence was appended.
+    task: TL-0010
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_validate_bundle.M0FoundationGateContractTests
+      tools.tests.test_validate_bundle.M0SandboxHarnessContractTests; powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+      .\eng\verify.ps1 -Tier Quick
+    tier: review-state targeted and quick
+    result: passed; 28 focused tests, 177-test Quick, live bundle/manifest/task-graph controls, and repository/lock/supply-chain/licence
+      controls all passed
+    environment: Active Codex machine; Windows 11 x64; repository working tree; Python 3.14.7; PyYAML 6.0.3;
+      REF-CODEX-001 revision 2026-08-21.1
+    date: '2026-08-27'
+    duration: Focused 15.294 s before the final evidence entry, then 15.209 s and 15.270 s after synchronization; Quick tests
+      102.973 s; complete Quick command not separately timed
+    reference: branch codex/tl-0010-m0-foundation-gate; candidate 17975419badd4154b82895d9d92a4a904790c7c0;
+      harness 9f86bfa09571a2e027d868b1f9d1cee48fee4fe2; hosted run 64dda9491c7fddf8a9e9f18429a6957b
+    limitation: Automated Review-state evidence only; the exact project-owner, security, privacy, and dependency/licence M0
+      acknowledgements remain required before done
   human_evidence_required:
   - Project owner signs the M0 gate record.
   - Security, privacy, and license owners acknowledge their M0 artifacts.
@@ -1367,11 +1448,7 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
-  blocked_reason: Required Full verification at candidate 17975419badd4154b82895d9d92a4a904790c7c0 remains blocked because
-    the enforced host Windows Smart App Control / Code Integrity policy rejected four unsigned ThirdLife application DLL
-    loads with 0x800711C7. Windows Sandbox is installed and was approved on 2026-08-27 as the same-machine hosted rerun
-    environment, but that bounded Quick/Full procedure has not yet produced a passing result. Run the governed one-command
-    Sandbox harness without weakening host or guest security, then require Full to pass before human M0 gate approval.
+  blocked_reason: null
 - id: TL-0101
   title: Implement core job and evidence domain models
   milestone: M1
