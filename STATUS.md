@@ -1,12 +1,12 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-27  
-**Snapshot preparation time:** 2026-08-27T18:56:09+02:00  
+**Snapshot preparation time:** 2026-08-27T19:04:40+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
 **Current task:** `TL-0101` — Implement core job and evidence domain models — `done`  
-**Action state:** implementation, Targeted verification, contract review, and governed Quick complete; commit and push remain
+**Action state:** done; implementation, Targeted verification, contract review, governed Quick, commit, push, fetch, and divergence verification complete
 
 ## Current state
 
@@ -27,8 +27,9 @@ Serialization uses explicit property and enum wire names, nonzero governed enums
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
 | Branch | `codex/tl-0101-core-domain-models` |
 | Starting commit | `cfdc68d6e8d8f6c2f31b3123e3edd2aee3ed6670` — published TL-0010 completion handoff |
+| Completion commit | `83579c513aea21a8e46aca7a85f2f9ecaa5c7d55` — TL-0101 implementation, tests, evidence, and completion state |
 | History handling | Started from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Publication state | Pending commit, push, fetch, and divergence verification |
+| Publication state | Completion commit published, fetched, and verified equal to upstream at 0 ahead and 0 behind |
 
 The configured SSH remote rejects unattended public-key authentication on this machine. Publication will use the already governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
 
@@ -85,7 +86,7 @@ The superseded `TL-0008` draft-1 procedure remains preserved at source commit `4
 
 ## Outstanding
 
-- Commit and publish the completed TL-0101 checkpoint, then fetch and verify local/upstream equality.
+None for `TL-0101`. The direct-host Application Control limitation and every Targeted claim boundary remain recorded; neither blocks the deterministic Core domain-model contract.
 
 ## Next dependency-ready task
 
