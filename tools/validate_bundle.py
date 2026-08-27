@@ -39,7 +39,7 @@ M0_SANDBOX_CANDIDATE = "17975419badd4154b82895d9d92a4a904790c7c0"
 M0_SANDBOX_GATE_DIGEST = (
     "b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153"
 )
-M0_SANDBOX_RESULT_SCHEMA_VERSION = 1
+M0_SANDBOX_RESULT_SCHEMA_VERSION = 2
 M0_GATE_PREDECESSORS = tuple(f"TL-{number:04d}" for number in range(1, 10))
 M0_TASK_STATUS_TO_RECORD_STATE = {
     "backlog": "Candidate",
@@ -5407,6 +5407,15 @@ def validate_m0_sandbox_scripts(validation: Validation) -> None:
             f'$ResultSchemaVersion = {M0_SANDBOX_RESULT_SCHEMA_VERSION}',
             '$ResultLimitBytes = 16384',
             'CiTool.exe" -lp -json',
+            'VerifiedAndReputablePolicyState',
+            '$sacDocument = Get-ItemProperty `\n'
+            '                -LiteralPath $sacRegistryPath `\n'
+            '                -ErrorAction Stop',
+            'registry_and_system_policy_files',
+            'System32\\CodeIntegrity\\CiPolicies\\Active',
+            '$policyRootDirectory = Join-Path $env:WINDIR "System32\\CodeIntegrity"',
+            'Where-Object { $_.Extension -ieq ".p7b" }',
+            'EFI-resident policy enumeration is not claimed.',
             'VerifiedAndReputableDesktop',
             'VerifiedAndReputableDesktopEvaluation',
             '$sandboxIdentityVerified = $env:USERNAME -eq "WDAGUtilityAccount"',
@@ -5416,6 +5425,7 @@ def validate_m0_sandbox_scripts(validation: Validation) -> None:
             'if ($sandboxMappedInvocation -and $sandboxIdentityVerified)',
             'if ($beforeObservation.query -ne "succeeded")',
             'code_integrity_policy_fingerprint_before',
+            'code_integrity_observation_method_before',
             '$policiesProperty = $document.PSObject.Properties["Policies"]',
             '$policyIdProperty.Value -isnot [string]',
             '$friendlyNameProperty.Value -isnot [string]',
@@ -5565,6 +5575,9 @@ def validate_m0_foundation_gate(
             ".\\eng\\run-tl0010-sandbox.ps1",
             "the sole writable host mapping",
             "The host's enforced security remains enabled and is not changed.",
+            "It prefers read-only `CiTool` enumeration",
+            "Registry/provider access errors make the observation unavailable",
+            "does not claim to enumerate EFI-resident policies",
             "test execution, not shipment",
             (
                 "No predecessor or M0 acknowledgement grants blanket installation, "

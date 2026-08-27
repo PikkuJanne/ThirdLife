@@ -2619,7 +2619,7 @@ class M0SandboxHarnessContractTests(unittest.TestCase):
 
     def valid_result(self) -> dict[str, object]:
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "task": "TL-0010",
             "run_id": "a" * 32,
             "candidate_commit": validate_bundle.M0_SANDBOX_CANDIDATE,
@@ -2644,6 +2644,8 @@ class M0SandboxHarnessContractTests(unittest.TestCase):
             "smart_app_control_after": "not_detected",
             "code_integrity_policy_fingerprint_before": "f" * 64,
             "code_integrity_policy_fingerprint_after": "f" * 64,
+            "code_integrity_observation_method_before": "registry_and_system_policy_files",
+            "code_integrity_observation_method_after": "registry_and_system_policy_files",
             "code_integrity_query_before": "succeeded",
             "code_integrity_query_after": "succeeded",
             "guest_policy_state_unchanged": True,
@@ -2683,7 +2685,10 @@ class M0SandboxHarnessContractTests(unittest.TestCase):
             "affected_assemblies": [],
             "limitation": (
                 "One Windows Sandbox session on the active physical Codex machine; "
-                "no cross-hardware certification or host-compatibility claim."
+                "no cross-hardware certification or host-compatibility claim. Guest "
+                "policy-change evidence covers the SAC registry state and readable "
+                "system-volume Code Integrity policy files; EFI-resident policy "
+                "enumeration is not claimed."
             ),
             "sandbox_closed": True,
             "host_staging_cleanup": "passed",
@@ -2736,6 +2741,7 @@ class M0SandboxHarnessContractTests(unittest.TestCase):
             ("run_id", "0" * 32),
             ("security_mutation_attempted", True),
             ("code_integrity_query_before", "unavailable"),
+            ("code_integrity_observation_method_before", "unavailable"),
             ("code_integrity_policy_fingerprint_after", "0" * 64),
             ("tracked_clean_after", False),
             ("candidate_unchanged_after", False),
@@ -2749,6 +2755,24 @@ class M0SandboxHarnessContractTests(unittest.TestCase):
                 result[field] = value
                 completed = self.run_result_validator(result)
                 self.assertNotEqual(completed.returncode, 0, completed.stdout)
+
+    def test_host_rejects_impossible_or_changed_policy_observations(self) -> None:
+        impossible_citool_state = self.valid_result()
+        impossible_citool_state.update(
+            {
+                "code_integrity_observation_method_before": "citool",
+                "code_integrity_observation_method_after": "citool",
+                "smart_app_control_before": "off",
+                "smart_app_control_after": "off",
+            }
+        )
+        completed = self.run_result_validator(impossible_citool_state)
+        self.assertNotEqual(completed.returncode, 0, completed.stdout)
+
+        changed_method = self.valid_result()
+        changed_method["code_integrity_observation_method_after"] = "citool"
+        completed = self.run_result_validator(changed_method)
+        self.assertNotEqual(completed.returncode, 0, completed.stdout)
 
     def test_host_rejects_extra_result_fields(self) -> None:
         result = self.valid_result()
@@ -2768,6 +2792,8 @@ class M0SandboxHarnessContractTests(unittest.TestCase):
                 "smart_app_control_after": "unavailable",
                 "code_integrity_policy_fingerprint_before": "0" * 64,
                 "code_integrity_policy_fingerprint_after": "0" * 64,
+                "code_integrity_observation_method_before": "unavailable",
+                "code_integrity_observation_method_after": "unavailable",
                 "code_integrity_query_before": "unavailable",
                 "code_integrity_query_after": "unavailable",
                 "guest_policy_state_unchanged": False,
@@ -2991,6 +3017,20 @@ class M0SandboxHarnessContractTests(unittest.TestCase):
                 validate_bundle.M0_SANDBOX_GUEST_PATH,
                 '$isEnforcedProperty.Value -isnot [bool]',
                 '$false',
+            ),
+            (
+                validate_bundle.M0_SANDBOX_GUEST_PATH,
+                '$sacDocument = Get-ItemProperty `\n'
+                '                -LiteralPath $sacRegistryPath `\n'
+                '                -ErrorAction Stop',
+                '$sacDocument = Get-ItemProperty `\n'
+                '                -LiteralPath $sacRegistryPath `\n'
+                '                -ErrorAction SilentlyContinue',
+            ),
+            (
+                validate_bundle.M0_SANDBOX_GUEST_PATH,
+                'Where-Object { $_.Extension -ieq ".p7b" }',
+                'Where-Object { $false }',
             ),
             (
                 validate_bundle.M0_SANDBOX_GUEST_PATH,

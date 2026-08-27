@@ -21,12 +21,12 @@ $SandboxMemoryMb = 8192
 $ExpectedDotNetSdk = "10.0.400"
 $ExpectedPythonVersion = "3.14.7"
 $ExpectedPyYamlVersion = "6.0.3"
-$ResultSchemaVersion = 1
+$ResultSchemaVersion = 2
 $ResultLimitBytes = 16384
 $SandboxTimeoutMinutes = 30
 $RemoteVerificationTimeoutSeconds = 30
 $RemoteVerificationUrl = "https://github.com/PikkuJanne/ThirdLife.git"
-$Limitation = "One Windows Sandbox session on the active physical Codex machine; no cross-hardware certification or host-compatibility claim."
+$Limitation = "One Windows Sandbox session on the active physical Codex machine; no cross-hardware certification or host-compatibility claim. Guest policy-change evidence covers the SAC registry state and readable system-volume Code Integrity policy files; EFI-resident policy enumeration is not claimed."
 $QuickCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick"
 $FullCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Full"
 $GuestResultName = "tl0010-result.pending.json"
@@ -315,6 +315,8 @@ function Assert-TL0010Result {
         "candidate_unchanged_after",
         "code_integrity_policy_fingerprint_after",
         "code_integrity_policy_fingerprint_before",
+        "code_integrity_observation_method_after",
+        "code_integrity_observation_method_before",
         "code_integrity_query_after",
         "code_integrity_query_before",
         "completed_utc",
@@ -419,20 +421,26 @@ function Assert-TL0010Result {
         Assert-Matches "git_version" $Result.git_version "^[0-9]+\.[0-9]+\.[0-9]+(?:\.windows\.[0-9]+)?$"
     }
     Assert-EnumValue "architecture" $Result.architecture @("AMD64", "ARM64", "x86")
-    Assert-EnumValue "smart_app_control_before" $Result.smart_app_control_before @("enforced", "evaluation", "not_detected", "unavailable")
-    Assert-EnumValue "smart_app_control_after" $Result.smart_app_control_after @("enforced", "evaluation", "not_detected", "unavailable")
+    Assert-EnumValue "smart_app_control_before" $Result.smart_app_control_before @("off", "enforced", "evaluation", "not_detected", "unavailable")
+    Assert-EnumValue "smart_app_control_after" $Result.smart_app_control_after @("off", "enforced", "evaluation", "not_detected", "unavailable")
     Assert-EnumValue "code_integrity_query_before" $Result.code_integrity_query_before @("succeeded", "unavailable")
     Assert-EnumValue "code_integrity_query_after" $Result.code_integrity_query_after @("succeeded", "unavailable")
+    Assert-EnumValue "code_integrity_observation_method_before" $Result.code_integrity_observation_method_before @("citool", "registry_and_system_policy_files", "unavailable")
+    Assert-EnumValue "code_integrity_observation_method_after" $Result.code_integrity_observation_method_after @("citool", "registry_and_system_policy_files", "unavailable")
     foreach ($observationSuffix in @("before", "after")) {
         $query = $Result.("code_integrity_query_$observationSuffix")
+        $method = $Result.("code_integrity_observation_method_$observationSuffix")
         $smartAppControl = $Result.("smart_app_control_$observationSuffix")
         $fingerprint = $Result.("code_integrity_policy_fingerprint_$observationSuffix")
         if ($query -eq "succeeded") {
-            if ($smartAppControl -eq "unavailable" -or $fingerprint -match "^0+$") {
+            if ($method -eq "unavailable" -or $smartAppControl -eq "unavailable" -or $fingerprint -match "^0+$") {
                 throw "A successful Code Integrity query requires a concrete normalized observation."
             }
+            if ($method -eq "citool" -and $smartAppControl -eq "off") {
+                throw "A CiTool observation cannot report the registry-only Smart App Control 'off' state."
+            }
         }
-        elseif ($smartAppControl -ne "unavailable" -or $fingerprint -notmatch "^0+$") {
+        elseif ($method -ne "unavailable" -or $smartAppControl -ne "unavailable" -or $fingerprint -notmatch "^0+$") {
             throw "An unavailable Code Integrity query cannot claim a concrete policy state."
         }
     }
@@ -527,6 +535,7 @@ function Assert-TL0010Result {
         $Result.code_integrity_query_after -eq "succeeded" -and
         $Result.smart_app_control_before -eq $Result.smart_app_control_after -and
         $Result.code_integrity_query_before -eq $Result.code_integrity_query_after -and
+        $Result.code_integrity_observation_method_before -eq $Result.code_integrity_observation_method_after -and
         $Result.code_integrity_policy_fingerprint_before -eq $Result.code_integrity_policy_fingerprint_after
     )
     if ($Result.guest_policy_state_unchanged -ne $policyStateMatches) {
@@ -1083,7 +1092,7 @@ try {
 - Failure phase/code: ``$($result.failure_phase)`` / ``$($result.failure_code)``
 - Full not-run rationale: ``$($result.not_run_reason)``
 - Recognized affected assemblies: ``$(@($result.affected_assemblies) -join ', ')``
-- Guest Smart App Control: ``$($result.smart_app_control_before)``; unchanged: ``$($result.guest_policy_state_unchanged)``
+- Guest Smart App Control: ``$($result.smart_app_control_before)``; observation method: ``$($result.code_integrity_observation_method_before)``; unchanged: ``$($result.guest_policy_state_unchanged)``
 - Harness declaration - security mutation attempted: ``$($result.security_mutation_attempted)``
 - Source tracked-clean before/after: ``$($result.tracked_clean_before)`` / ``$($result.tracked_clean_after)``; candidate/gate unchanged: ``$($result.candidate_unchanged_after)`` / ``$($result.gate_record_unchanged_after)``
 - Sandbox closed and staging cleanup: ``$($result.sandbox_closed)`` / ``$($result.host_staging_cleanup)``

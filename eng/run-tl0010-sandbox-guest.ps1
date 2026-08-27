@@ -14,9 +14,9 @@ $SandboxMemoryMb = 8192
 $ExpectedDotNetSdk = "10.0.400"
 $ExpectedPythonVersion = "3.14.7"
 $ExpectedPyYamlVersion = "6.0.3"
-$ResultSchemaVersion = 1
+$ResultSchemaVersion = 2
 $ResultLimitBytes = 16384
-$Limitation = "One Windows Sandbox session on the active physical Codex machine; no cross-hardware certification or host-compatibility claim."
+$Limitation = "One Windows Sandbox session on the active physical Codex machine; no cross-hardware certification or host-compatibility claim. Guest policy-change evidence covers the SAC registry state and readable system-volume Code Integrity policy files; EFI-resident policy enumeration is not claimed."
 $QuickCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick"
 $FullCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Full"
 
@@ -83,13 +83,32 @@ function Get-NativeOutput {
 function Get-CodeIntegrityObservation {
     $observation = [ordered] @{
         query = "unavailable"
+        method = "unavailable"
         smart_app_control = "unavailable"
         policy_fingerprint = "0000000000000000000000000000000000000000000000000000000000000000"
     }
+
+    function Get-NormalizedFingerprint {
+        param(
+            [Parameter(Mandatory = $true)]
+            [string[]] $Lines
+        )
+
+        $normalizedText = (@($Lines | Sort-Object) -join "`n")
+        $sha256 = [Security.Cryptography.SHA256]::Create()
+        try {
+            $fingerprintBytes = $sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($normalizedText))
+            return ([BitConverter]::ToString($fingerprintBytes) -replace "-", "").ToLowerInvariant()
+        }
+        finally {
+            $sha256.Dispose()
+        }
+    }
+
     try {
         $json = & "$env:WINDIR\System32\CiTool.exe" -lp -json 2>$null
         if ($LASTEXITCODE -ne 0 -or -not $json) {
-            return [pscustomobject] $observation
+            throw "CiTool policy enumeration is unavailable."
         }
         $document = ($json -join [Environment]::NewLine) | ConvertFrom-Json
         $policiesProperty = $document.PSObject.Properties["Policies"]
@@ -139,16 +158,9 @@ function Get-CodeIntegrityObservation {
             }
             $normalizedPolicies += ($normalizedFields -join "|")
         }
-        $normalizedText = (@($normalizedPolicies | Sort-Object) -join "`n")
-        $sha256 = [Security.Cryptography.SHA256]::Create()
-        try {
-            $fingerprintBytes = $sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($normalizedText))
-        }
-        finally {
-            $sha256.Dispose()
-        }
-        $observation.policy_fingerprint = ([BitConverter]::ToString($fingerprintBytes) -replace "-", "").ToLowerInvariant()
+        $observation.policy_fingerprint = Get-NormalizedFingerprint -Lines $normalizedPolicies
         $observation.query = "succeeded"
+        $observation.method = "citool"
         if (@($policies | Where-Object { $_.FriendlyName -eq "VerifiedAndReputableDesktop" -and $_.IsEnforced -eq $true }).Count -gt 0) {
             $observation.smart_app_control = "enforced"
         }
@@ -158,9 +170,70 @@ function Get-CodeIntegrityObservation {
         else {
             $observation.smart_app_control = "not_detected"
         }
+        return [pscustomobject] $observation
+    }
+    catch {
+        # The installed Sandbox image can deny unelevated CiTool enumeration.
+        # Fall back to documented, read-only policy surfaces without elevating.
+    }
+
+    try {
+        $sacRegistryPath = "Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\CI\Policy"
+        $sacValue = $null
+        if (Test-Path -LiteralPath $sacRegistryPath) {
+            $sacDocument = Get-ItemProperty `
+                -LiteralPath $sacRegistryPath `
+                -ErrorAction Stop
+            $sacProperty = $sacDocument.PSObject.Properties["VerifiedAndReputablePolicyState"]
+            if ($null -ne $sacProperty) {
+                if ($sacProperty.Value -isnot [int32]) {
+                    throw "The SAC registry observation has an unexpected type."
+                }
+                $sacValue = [int] $sacProperty.Value
+            }
+        }
+        $observation.smart_app_control = switch ($sacValue) {
+            $null { "not_detected" }
+            0 { "off" }
+            1 { "enforced" }
+            2 { "evaluation" }
+            default { throw "The SAC registry observation has an unexpected value." }
+        }
+
+        $activePolicyDirectory = Join-Path $env:WINDIR "System32\CodeIntegrity\CiPolicies\Active"
+        if (-not (Test-Path -LiteralPath $activePolicyDirectory -PathType Container)) {
+            throw "The system-volume Code Integrity policy directory is unavailable."
+        }
+        $policyFiles = @(
+            Get-ChildItem -LiteralPath $activePolicyDirectory -File -Force -ErrorAction Stop |
+                Where-Object { $_.Extension -ieq ".cip" }
+        )
+        $policyRootDirectory = Join-Path $env:WINDIR "System32\CodeIntegrity"
+        $policyFiles += @(
+            Get-ChildItem -LiteralPath $policyRootDirectory -File -Force -ErrorAction Stop |
+                Where-Object { $_.Extension -ieq ".p7b" }
+        )
+
+        $normalizedSurfaces = @("sac=$sacValue")
+        foreach ($policyFile in @($policyFiles | Sort-Object FullName)) {
+            if ($policyFile.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                throw "A system-volume Code Integrity policy file is a reparse point."
+            }
+            $scope = if ($policyFile.DirectoryName -ieq $activePolicyDirectory) { "active" } else { "root" }
+            $policyDigest = (Get-FileHash -LiteralPath $policyFile.FullName -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+            $normalizedSurfaces += "$scope/$($policyFile.Name.ToLowerInvariant())|$($policyFile.Length)|$policyDigest"
+        }
+        if ($policyFiles.Count -eq 0) {
+            $normalizedSurfaces += "policy_files=none"
+        }
+
+        $observation.policy_fingerprint = Get-NormalizedFingerprint -Lines $normalizedSurfaces
+        $observation.query = "succeeded"
+        $observation.method = "registry_and_system_policy_files"
     }
     catch {
         $observation.query = "unavailable"
+        $observation.method = "unavailable"
         $observation.smart_app_control = "unavailable"
         $observation.policy_fingerprint = "0000000000000000000000000000000000000000000000000000000000000000"
     }
@@ -326,6 +399,8 @@ $result = [ordered] @{
     code_integrity_policy_fingerprint_after = "0000000000000000000000000000000000000000000000000000000000000000"
     code_integrity_query_before = "unavailable"
     code_integrity_query_after = "unavailable"
+    code_integrity_observation_method_before = "unavailable"
+    code_integrity_observation_method_after = "unavailable"
     guest_policy_state_unchanged = $false
     security_mutation_attempted = $false
     networking_enabled = $true
@@ -427,6 +502,7 @@ try {
     $beforeObservation = Get-CodeIntegrityObservation
     $result.smart_app_control_before = $beforeObservation.smart_app_control
     $result.code_integrity_query_before = $beforeObservation.query
+    $result.code_integrity_observation_method_before = $beforeObservation.method
     $result.code_integrity_policy_fingerprint_before = $beforeObservation.policy_fingerprint
     if ($beforeObservation.query -ne "succeeded") {
         throw "The guest Code Integrity state could not be observed safely."
@@ -596,12 +672,14 @@ finally {
             $afterObservation = Get-CodeIntegrityObservation
             $result.smart_app_control_after = $afterObservation.smart_app_control
             $result.code_integrity_query_after = $afterObservation.query
+            $result.code_integrity_observation_method_after = $afterObservation.method
             $result.code_integrity_policy_fingerprint_after = $afterObservation.policy_fingerprint
             $result.guest_policy_state_unchanged = (
                 $result.code_integrity_query_before -eq "succeeded" -and
                 $result.code_integrity_query_after -eq "succeeded" -and
                 $result.smart_app_control_before -eq $result.smart_app_control_after -and
                 $result.code_integrity_query_before -eq $result.code_integrity_query_after -and
+                $result.code_integrity_observation_method_before -eq $result.code_integrity_observation_method_after -and
                 $result.code_integrity_policy_fingerprint_before -eq $result.code_integrity_policy_fingerprint_after
             )
 
