@@ -5776,36 +5776,6 @@ def validate_m0_foundation_gate(
                 f"{expected_approval_fields!r}; found {tuple(approval_by_field)!r}"
             )
 
-    try:
-        matrix_bytes = (ROOT / "docs/supply-chain/license-matrix.csv").read_bytes()
-    except OSError as exc:
-        validation.error(
-            f"docs/supply-chain/license-matrix.csv: cannot read for M0 binding: {exc}"
-        )
-    else:
-        matrix_digest = hashlib.sha256(matrix_bytes).hexdigest()
-        if matrix_digest not in visible_text.casefold():
-            validation.error(
-                f"{relative}: current licence-matrix SHA-256 {matrix_digest} is missing"
-            )
-    dependency_text = require_phrases(
-        "docs/supply-chain/dependencies.md",
-        (),
-        validation,
-    )
-    reviewed_commit_match = re.search(
-        r"(?m)^\| Reviewed commit \|\s*`?([0-9a-f]{40})`?\s*\|\s*$",
-        dependency_text,
-    )
-    if reviewed_commit_match is None:
-        validation.error(
-            "docs/supply-chain/dependencies.md: missing exact reviewed commit row"
-        )
-    elif reviewed_commit_match.group(1) not in visible_text:
-        validation.error(
-            f"{relative}: current supply-chain reviewed commit is missing"
-        )
-
     contradiction_patterns = (
         r"(?i)blanket (?:installation or )?redistribution rights? (?:are|is) "
         r"(?:granted|approved|allowed|authorized)",
@@ -5861,40 +5831,24 @@ def validate_m0_foundation_gate(
             f"{relative}: approved gate-record candidate digest must be lowercase SHA-256"
         )
     candidate_blob: bytes | None = None
+    candidate_matrix_blob: bytes | None = None
+    candidate_dependencies_blob: bytes | None = None
     if re.fullmatch(r"[0-9a-f]{40}", candidate_commit) is not None:
-        try:
-            commit_check = subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(ROOT),
-                    "cat-file",
-                    "-e",
-                    f"{candidate_commit}^{{commit}}",
-                ],
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=5,
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            commit_check = None
-        if commit_check is None or commit_check.returncode != 0:
-            validation.error(
-                f"{relative}: approved candidate must name an existing Git commit"
-            )
-        else:
-            object_name = f"{candidate_commit}:{M0_FOUNDATION_GATE_PATH}"
+        def git(arguments: list[str]) -> subprocess.CompletedProcess[bytes] | None:
             try:
-                size_result = subprocess.run(
-                    ["git", "-C", str(ROOT), "cat-file", "-s", object_name],
+                return subprocess.run(
+                    ["git", "-C", str(ROOT), *arguments],
                     check=False,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL,
                     timeout=5,
                 )
             except (OSError, subprocess.TimeoutExpired):
-                size_result = None
+                return None
+
+        def candidate_file(relative_path: str) -> bytes | None:
+            object_name = f"{candidate_commit}:{relative_path}"
+            size_result = git(["cat-file", "-s", object_name])
             try:
                 candidate_size = (
                     int(size_result.stdout.decode("ascii").strip())
@@ -5905,31 +5859,77 @@ def validate_m0_foundation_gate(
                 candidate_size = -1
             if candidate_size < 0 or candidate_size > 512 * 1024:
                 validation.error(
-                    f"{relative}: approved candidate gate blob is missing or exceeds 512 KiB"
+                    f"{relative}: approved candidate blob {relative_path} is missing "
+                    "or exceeds 512 KiB"
                 )
-            else:
-                try:
-                    blob_result = subprocess.run(
-                        ["git", "-C", str(ROOT), "show", object_name],
-                        check=False,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.DEVNULL,
-                        timeout=5,
-                    )
-                except (OSError, subprocess.TimeoutExpired):
-                    blob_result = None
-                if blob_result is None or blob_result.returncode != 0:
-                    validation.error(
-                        f"{relative}: approved candidate gate blob cannot be read"
-                    )
-                else:
-                    candidate_blob = blob_result.stdout
+                return None
+            blob_result = git(["show", object_name])
+            if blob_result is None or blob_result.returncode != 0:
+                validation.error(
+                    f"{relative}: approved candidate blob {relative_path} cannot be read"
+                )
+                return None
+            return blob_result.stdout
+
+        commit_check = git(["cat-file", "-e", f"{candidate_commit}^{{commit}}"])
+        if commit_check is None or commit_check.returncode != 0:
+            validation.error(
+                f"{relative}: approved candidate must name an existing Git commit"
+            )
+        else:
+            candidate_blob = candidate_file(M0_FOUNDATION_GATE_PATH)
+            candidate_matrix_blob = candidate_file(
+                "docs/supply-chain/license-matrix.csv"
+            )
+            candidate_dependencies_blob = candidate_file(
+                "docs/supply-chain/dependencies.md"
+            )
     if candidate_blob is not None and re.fullmatch(r"[0-9a-f]{64}", candidate_digest):
         actual_candidate_digest = hashlib.sha256(candidate_blob).hexdigest()
         if candidate_digest != actual_candidate_digest:
             validation.error(
                 f"{relative}: approved gate digest does not match the candidate commit blob"
             )
+    if candidate_matrix_blob is not None:
+        historical_matrix_digest = hashlib.sha256(candidate_matrix_blob).hexdigest()
+        if historical_matrix_digest not in visible_text.casefold():
+            validation.error(
+                f"{relative}: candidate licence-matrix SHA-256 "
+                f"{historical_matrix_digest} is missing"
+            )
+        if candidate_dependencies_blob is not None:
+            try:
+                candidate_dependencies_text = candidate_dependencies_blob.decode("utf-8")
+            except UnicodeDecodeError:
+                validation.error(
+                    f"{relative}: candidate supply-chain dependency record is not UTF-8"
+                )
+            else:
+                historical_reviewed_commit = re.search(
+                    r"(?m)^\| Reviewed commit \|\s*`?([0-9a-f]{40})`?\s*\|\s*$",
+                    candidate_dependencies_text,
+                )
+                historical_recorded_digest = re.search(
+                    r"(?m)^\| Matrix SHA-256 \|\s*`?([0-9a-f]{64})`?\s*\|\s*$",
+                    candidate_dependencies_text,
+                )
+                if historical_reviewed_commit is None:
+                    validation.error(
+                        f"{relative}: candidate supply-chain record lacks a reviewed commit"
+                    )
+                elif historical_reviewed_commit.group(1) not in visible_text:
+                    validation.error(
+                        f"{relative}: candidate supply-chain reviewed commit is missing"
+                    )
+                if historical_recorded_digest is None:
+                    validation.error(
+                        f"{relative}: candidate supply-chain record lacks a matrix digest"
+                    )
+                elif historical_recorded_digest.group(1) != historical_matrix_digest:
+                    validation.error(
+                        f"{relative}: candidate supply-chain record matrix digest does "
+                        "not match its candidate blob"
+                    )
     for check in M0_REQUIRED_FINAL_CHECKS:
         row = verification_by_check.get(check)
         if row is not None and candidate_commit not in row[1]:

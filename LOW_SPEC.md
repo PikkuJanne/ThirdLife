@@ -87,6 +87,8 @@ For each benchmark or resource-sensitive test, record:
 
 Initial numerical budgets remain `TBD` until measured. Codex must not invent a threshold to make a gate appear complete. Once a budget is approved, regression beyond it requires investigation, an explicit accepted trade-off, or a release-blocking limitation.
 
+`TL-0102` adds defensive persistence ceilings rather than a performance or supported-capacity claim: at most 10,000 jobs, 10,000 evidence records and 10,000 checkpoints per job, 256 records per evidence batch, 64 KiB per normalized JSON payload, and 256 MiB each for the SQLite database and rollback journal. Initialization residue is limited to 64 matching path entries before reconciliation fails closed. These values prevent unbounded growth in the initial store; they do not establish an approved retention period, expected workshop workload, modest-hardware throughput budget, or cross-hardware certification. Later lifecycle and resource tasks must measure representative workloads and define retention, export, backup, cleanup, and operator recovery.
+
 A slower result may be acceptable. The following are not acceptable for a supported core path:
 
 - out-of-memory termination;

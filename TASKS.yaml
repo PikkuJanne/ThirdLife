@@ -1628,7 +1628,7 @@ tasks:
   workstream: persistence
   kind: code
   priority: P0
-  status: backlog
+  status: in_progress
   size: L
   executor: codex
   environment: windows
@@ -1655,7 +1655,77 @@ tasks:
   - Integration-test create/reopen/archive and migrations.
   - Kill around transaction boundaries.
   - Test path traversal and junction defenses.
-  evidence: []
+  evidence:
+  - summary: The versioned SQLite store, Core-owned repository port, restrictive internal-ID job directories, atomic first-store
+      publication, migration ledger and schema fingerprints, typed evidence persistence, reversible archive checkpoints, bounded
+      growth controls, and corruption/path/interruption handling compile cleanly and pass the complete persistence suite.
+    task: TL-0102
+    command_or_review: dotnet build ThirdLife.sln -c Release --no-restore; dotnet format ThirdLife.sln --verify-no-changes
+      --no-restore; dotnet test tests\ThirdLife.Persistence.Tests\ThirdLife.Persistence.Tests.csproj --configuration Release
+      --no-build --no-restore --nologo
+    tier: targeted host implementation verification
+    result: passed; Release build completed with 0 warnings and 0 errors, formatting was unchanged, and 72/72 persistence tests
+      passed with 0 failed and 0 skipped
+    environment: Active Windows 11 x64 Codex machine; .NET SDK 10.0.400; direct host execution
+    date: '2026-08-27'
+    duration: 9.94 s build; 18.956 s format verification; 23 s reported test duration
+    reference: working-tree TL-0102 implementation; schema version 2; Microsoft.Data.Sqlite.Core 10.0.11; Windows
+      winsqlite3 engine through the pinned provider closure
+    limitation: Same-machine process interruption and deterministic adversarial filesystem evidence only; no physical power-loss,
+      arbitrary filesystem-filter, retention/deletion, backup/restore, release-packaging, or cross-hardware claim
+  - summary: The hardened same-machine Sandbox workflow first reduced a missing Core-port snapshot defect to the one-test round
+      trip, corrected the exact source selection, passed that case, then passed the complete persistence suite with offline exact
+      dependency staging, bounded in-memory output, kill-on-close process-tree control, sanitized evidence, and verified cleanup.
+    task: TL-0102
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\run-tl0102-sandbox.ps1 -Phase RoundTrip;
+      powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\run-tl0102-sandbox.ps1 -Phase Targeted
+    tier: targeted
+    result: passed; focused round trip 1/1 and complete persistence suite 72/72, with 0 failed and 0 skipped
+    environment: Windows Sandbox on the active physical Codex machine; 4096 MiB guest; networking disabled; exact lock-derived
+      NuGet closure only; no host Git configuration, hooks, credentials, or broad package cache exposed
+    date: '2026-08-27'
+    duration: RoundTrip 48.950 s complete / 573 ms tests; Targeted 81.510 s complete / 30 s tests
+    reference: source sha256:b7e099ea4f09dfe13be73fe36f5b6bb798d7ba09bc8d5dc4a60f7b2a11570fa8; Targeted
+      result sha256:bc04775fae8d28f8841a0fb66d5167fac77fd385ad0c01e43c3b41e55cbfb190
+    limitation: Transient dirty-working-tree evidence was schema/digest checked and then securely cleaned rather than persisted;
+      it proves the named same-machine guest inputs, not direct-host policy compatibility or cross-hardware certification
+  - summary: Independent schema, test, and security audits drove focused regressions for job and ledger bounds, full archive
+      history, concurrent migration, Core dependency direction, exact-handle orphan cleanup, database/journal identity and size,
+      repeated orphan-journal rejection, first-run crash publication, package-cache exposure, output/process-tree bounds, and safe
+      Sandbox evidence cleanup; the final persistence review found no remaining P0, P1, or P2 issue.
+    task: TL-0102
+    command_or_review: Independent read-only schema/test/security diff review; focused migration, corruption, path, concurrency,
+      and process-kill regressions; PowerShell AST and embedded command-runner checks
+    tier: targeted security and architecture review
+    result: passed; 28/28 focused migration/corruption cases, 4/4 first-run process-kill cases, and 72/72 full persistence cases;
+      no remaining persistence P0/P1/P2 finding
+    environment: Active Windows 11 x64 Codex machine and same-machine Windows Sandbox; protected host security controls unchanged
+    date: '2026-08-27'
+    duration: Focused and review steps completed during bounded implementation iterations; not one continuous timed command
+    reference: src/ThirdLife.Persistence; tests/ThirdLife.Persistence.Tests; eng/run-tl0102-sandbox.ps1;
+      eng/run-tl0102-sandbox-guest.ps1; SECURITY.md; ADR 0003
+    limitation: The narrow verified-journal startup interval remains an explicit same-user/local-administrator residual; no custom
+      SQLite VFS, hostile filter-driver fuzzing, physical power-loss claim, or release authorization is introduced
+  - summary: The expanded 28-component supply-chain contract, exact runtime closure, historical M0 binding, and deterministic
+      pending-review SBOM all validate; the point-in-time NuGet advisory query returned no vulnerable top-level or transitive
+      record, while fresh human licence/rights approval remains intentionally outstanding.
+    task: TL-0102
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_supply_chain tools.tests.test_validate_bundle;
+      .venv\Scripts\python.exe tools\supply_chain.py --root .; dotnet package list vulnerability query; two
+      eng\generate-sbom.ps1 invocations and digest comparison
+    tier: full supply-chain and targeted governance verification
+    result: passed; 159/159 regressions; 28 components with review=pending; NuGet query exit 0 with 0 vulnerable direct/transitive
+      records; two byte-identical CycloneDX 1.6 SBOMs
+    environment: Active Windows 11 x64 Codex machine; Python 3.14.7; .NET SDK 10.0.400; exact locks and configured nuget.org
+      advisory source; offline SBOM generation
+    date: '2026-08-27'
+    duration: 120.969 s regressions; 5.923 s NuGet query; 2.575 s two SBOM generations and comparison
+    reference: matrix sha256:e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418; NuGet response
+      sha256:52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316; pending SBOM
+      sha256:228962193bd56ddd0c21abcc290197ff13d650cee51356c6b3160037d0c65c10, 136475 bytes
+    limitation: Advisory evidence is point-in-time and source-dependent; SBOM review remains pending; every recorded
+      xunit.abstractions, toolchain, synthetic-placeholder, native-SQLite, packaging, notice, withheld-right, and no-release
+      limitation remains binding
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

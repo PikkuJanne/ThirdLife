@@ -96,7 +96,7 @@ Tests must cover cross-user connection, replay, stale request, oversized input, 
 
 B1 uses generic essentials and synthetic packages. Sibling products enter only through a future B4 compatibility cut against frozen artifacts.
 
-The subordinate [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) and [`docs/supply-chain/license-matrix.csv`](docs/supply-chain/license-matrix.csv) define the current dependency classes, exact provenance/integrity records, deterministic SBOM procedure, vulnerability-review limitations, and installation/redistribution proposals. Janne Vuorela approved the exact reviewed commit and matrix digest recorded there without conditions; the approval preserves every written limitation and withheld right and is not blanket redistribution permission or legal advice.
+The subordinate [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) and [`docs/supply-chain/license-matrix.csv`](docs/supply-chain/license-matrix.csv) define the current dependency classes, exact provenance/integrity records, deterministic SBOM procedure, vulnerability-review limitations, and installation/redistribution proposals. Janne Vuorela's prior approval remains bound only to its historical 24-component commit and digest. The current 28-component matrix adds four TL-0102 runtime packages and is pending a fresh named review; all recorded limitations and withheld rights remain binding, and no blanket redistribution permission, native SQLite redistribution, release authorization, or legal conclusion is claimed.
 
 ## 9. Data, secrets, and logging
 
@@ -117,8 +117,14 @@ The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md)
 
 ## 10. Filesystem and persistence
 
-- SQLite migrations are explicit and tested.
-- Per-job attachments use restrictive permissions and documented locations.
+- `TL-0102` implements the registered local store at `%LOCALAPPDATA%\ThirdLife\SetupCore\JobStore`; arbitrary roots are available only to internal deterministic tests.
+- A new database is migrated, fingerprinted, integrity-checked, and closed at a restrictive random sibling path before a no-overwrite same-directory handle rename publishes it. A crash therefore leaves either no final database or a complete identified database. Bounded, exactly named initialization residue is reconciled only after ACL, final-path, object-type, link-count, reparse-point, identity, and size checks.
+- SQLite migrations are embedded, explicit, versioned, transactional, and bound to immutable script and resulting-schema SHA-256 values in the migration ledger. Application ID, version, ledger, schema, quick-integrity, and foreign-key checks fail closed for unrelated, truncated, newer, altered, or corrupt stores.
+- The database, persistent rollback journal, store root, `jobs` root, and per-job directories use protected ACLs limited to the current user, LocalSystem, and local Administrators. Long-lived handles pin expected identities; hard links, reparse points, junctions, symlinks, alternate unexpected journal modes, path replacement, and unsafe ancestors are rejected.
+- Per-job directories derive from SHA-256 of validated internal job IDs rather than recipient or device names. `TL-0102` stores no attachments in them; a later typed attachment contract remains required before any file payload is admitted.
+- Current hard ceilings are 10,000 jobs, 10,000 evidence records and 10,000 checkpoints per job, 256 records per evidence batch, 64 KiB per normalized JSON payload, and 256 MiB each for the database and rollback journal. SQLite `max_page_count` and before/after operation checks enforce the database bound; exceeding a bound fails closed.
+- The implemented journal recovery path has a narrow startup interval between verified preflight and the steady-state no-delete-share journal guard. This is a same-user/local-administrator residual rather than a cross-user boundary; no custom SQLite VFS is introduced at `TL-0102`.
+- Archive and restore append lifecycle checkpoints and never delete evidence. Retention enforcement, explicit job deletion, backup/export, incompatible-migration recovery, attachment lifecycle, and uninstall cleanup remain later governed work.
 - Validate export destinations and prevent path traversal and unintended overwrite.
 - Use atomic write/replace patterns where possible.
 - Bound file size, archive expansion, record count, retries, timeouts, and concurrency.

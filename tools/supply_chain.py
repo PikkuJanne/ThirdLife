@@ -469,6 +469,19 @@ def _discover_nuget(validation: _Validation) -> list[_DiscoveredComponent]:
             if len(packages) > MAX_COMPONENTS:
                 validation.error(f"{label}: target framework has too many dependencies")
                 continue
+            resolved_versions: dict[str, str] = {}
+            for resolved_id, resolved_metadata in packages.items():
+                if (
+                    not isinstance(resolved_id, str)
+                    or not isinstance(resolved_metadata, dict)
+                    or resolved_metadata.get("type") == "Project"
+                ):
+                    continue
+                resolved_version = resolved_metadata.get("resolved")
+                if isinstance(resolved_version, str) and VERSION_RE.fullmatch(
+                    resolved_version
+                ):
+                    resolved_versions[resolved_id.casefold()] = resolved_version
             for package_id, metadata in sorted(
                 packages.items(), key=lambda item: str(item[0]).casefold()
             ):
@@ -482,7 +495,11 @@ def _discover_nuget(validation: _Validation) -> list[_DiscoveredComponent]:
                 relationship_value = metadata.get("type")
                 if relationship_value == "Project":
                     continue
-                relationship_map = {"Direct": "direct", "Transitive": "transitive"}
+                relationship_map = {
+                    "Direct": "direct",
+                    "CentralTransitive": "transitive",
+                    "Transitive": "transitive",
+                }
                 relationship = relationship_map.get(relationship_value)
                 if relationship is None:
                     validation.error(f"{package_label}: unsupported NuGet relationship")
@@ -522,7 +539,15 @@ def _discover_nuget(validation: _Validation) -> list[_DiscoveredComponent]:
                                 f"{package_label}: child {child_id!r} does not have an exact version"
                             )
                             continue
-                        dependency_specs.append(f"{child_id.casefold()}@{child_version}")
+                        resolved_child_version = resolved_versions.get(child_id.casefold())
+                        if resolved_child_version is None:
+                            validation.error(
+                                f"{package_label}: child {child_id!r} is absent from the resolved lock graph"
+                            )
+                            continue
+                        dependency_specs.append(
+                            f"{child_id.casefold()}@{resolved_child_version}"
+                        )
 
                 discovered = _DiscoveredComponent(
                     component_type="nuget",

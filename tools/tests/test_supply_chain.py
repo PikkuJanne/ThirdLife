@@ -241,14 +241,14 @@ class CurrentInventoryTests(SupplyChainTestCase):
         result = supply_chain.validate_supply_chain(REPOSITORY_ROOT)
 
         self.assertTrue(result.ok, "\n".join(result.errors))
-        self.assertEqual(len(result.inventory), 24)
+        self.assertEqual(len(result.inventory), 28)
         self.assertEqual(
             Counter(component.component_type for component in result.inventory),
             Counter(
                 {
                     "catalog-application": 4,
                     "github-action": 3,
-                    "nuget": 14,
+                    "nuget": 18,
                     "pypi": 1,
                     "toolchain": 2,
                 }
@@ -260,15 +260,16 @@ class CurrentInventoryTests(SupplyChainTestCase):
                 {
                     "build-only": 6,
                     "catalog-application": 4,
+                    "runtime": 4,
                     "test-only": 14,
                 }
             ),
         )
         self.assertEqual(
             Counter(component.relationship for component in result.inventory),
-            Counter({"ci": 3, "direct": 9, "toolchain": 2, "transitive": 10}),
+            Counter({"ci": 3, "direct": 11, "toolchain": 2, "transitive": 12}),
         )
-        self.assertEqual(result.approval_state.casefold(), "approved")
+        self.assertEqual(result.approval_state.casefold(), "pending")
         self.assertRegex(result.lock_digest, r"\A[0-9a-f]{64}\Z")
         self.assertRegex(result.matrix_digest, r"\A[0-9a-f]{64}\Z")
         self.assertTrue(result.dependency_graph)
@@ -338,6 +339,46 @@ class CurrentInventoryTests(SupplyChainTestCase):
         self.assertEqual(
             by_identity[("toolchain", "CPython")].integrity_value,
             ".github/workflows/verify.yml#python-version",
+        )
+        expected_runtime_packages = {
+            "Microsoft.Data.Sqlite.Core": (
+                "10.0.11",
+                "direct",
+                "hubA20AGenQ4Sx0ElWaPpB8DISjXpdx463+1zOGRslsT0e/t/06ITv+pHsop8CcJ0d8PZLfgnT7juCDVD79Dkw==",
+            ),
+            "SQLitePCLRaw.bundle_winsqlite3": (
+                "2.1.11",
+                "direct",
+                "kQ3Jo6XqPYYyjlgVh8KVGAFUfYsnyrrC8WvCYO33Coz0S2y1y1B8et8HCRmy7nt8rN+IA9XoaQz7QjI1PvXSAw==",
+            ),
+            "SQLitePCLRaw.core": (
+                "2.1.12",
+                "transitive",
+                "ETpNw9DY3ckWLgRRAeCHj+GKOuPi61aeczkXhgHexUvqoZBAYg8RYESE2J7O1M7+o6QbdSEZwrw9bfqztUVWXg==",
+            ),
+            "SQLitePCLRaw.provider.winsqlite3": (
+                "2.1.11",
+                "transitive",
+                "UpH9v68yuLAN3nvXB96s6GE3/tQhG1WnXenNJL/HulgfJAQ5S6ZT6BUy/sDFo5WpqaS0npBbW1z6szWlu6a4Xg==",
+            ),
+        }
+        for component_id, (version, relationship, content_hash) in expected_runtime_packages.items():
+            with self.subTest(component_id=component_id):
+                component = by_identity[("nuget", component_id)]
+                self.assertEqual(component.version, version)
+                self.assertEqual(component.relationship, relationship)
+                self.assertEqual(component.scope, "runtime")
+                self.assertEqual(component.integrity_algorithm, "nuget-content-sha512")
+                self.assertEqual(component.integrity_value, content_hash)
+                self.assertEqual(component.distribution_plan, "not-shipped")
+                self.assertTrue(
+                    component.proposed_redistribution_rights.startswith(
+                        "Proposed withheld"
+                    )
+                )
+        self.assertEqual(
+            by_identity[("nuget", "SQLitePCLRaw.provider.winsqlite3")].dependencies,
+            ("sqlitepclraw.core@2.1.12",),
         )
         self.assertTrue(
             all(

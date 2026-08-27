@@ -37,7 +37,21 @@ ThirdLife Setup Core uses SQLite for structured local job state and restrictive 
 - The elevated broker and its package/system backend have no database, job, attachment, or log handle. Structured authenticated results return to the unelevated journal boundary.
 - The store contains only Core-owned data. It neither discovers nor retains sibling-private content, credentials, recovery keys, or personal content.
 
-Exact paths, retention enforcement, migrations, and deletion behavior remain owned by later implementation and lifecycle tasks. The approved logical classes and defaults in the [privacy model](../privacy/privacy-model.md) constrain those tasks without becoming an implementation claim here.
+At ADR acceptance, exact paths, migrations, retention enforcement, and deletion behavior remained owned by later implementation and lifecycle tasks. The checkpoint below records the subset now implemented by `TL-0102`; retention enforcement and deletion remain later work. The approved logical classes and defaults in the [privacy model](../privacy/privacy-model.md) continue to constrain those tasks.
+
+## TL-0102 implementation checkpoint
+
+As of 2026-08-27, `TL-0102` implements the first bounded structured-store slice:
+
+- the public `IJobStore` port and typed job/evidence/checkpoint contracts are Core-owned and contain no SQLite or Windows implementation dependency;
+- `SqliteJobStore` uses the registered `%LOCALAPPDATA%\ThirdLife\SetupCore\JobStore` root, with arbitrary roots restricted to internal tests;
+- schema versions 1 and 2 persist jobs, typed observations, external sanitization evidence, human-test evidence, reversible archive state, and append-only store checkpoints;
+- each migration is embedded and transactionally recorded with its script digest and resulting schema digest; application identity, ledger, schema, integrity, foreign-key, version, and normalized-payload hashes are checked on reopen;
+- first creation builds and validates a complete store under a restrictive random sibling name, removes only its verified journal, then publishes the database through a no-overwrite same-directory handle rename; concurrent creators adopt the complete winner;
+- protected ACLs, held object identities, final-path and link-count validation, reparse/junction rejection, internal-ID-derived job directory names, deterministic orphan reconciliation, and bounded file/record counts fail closed; and
+- the implementation uses Windows `winsqlite3.dll` through the pinned managed provider closure. Those runtime packages remain development/test inputs with redistribution and release admission withheld until the fresh named review in the supply-chain contract is complete.
+
+This checkpoint does not implement general attachments, deletion, retention enforcement, backup/export, incompatible-schema rollback, uninstall cleanup, final packaging, or release authorization. Archive is reversible and preserves evidence. The narrow verified-journal startup interval documented in [`SECURITY.md`](../../SECURITY.md) remains an explicit same-user/local-administrator residual; a custom SQLite VFS is outside this task.
 
 ## Alternatives considered
 

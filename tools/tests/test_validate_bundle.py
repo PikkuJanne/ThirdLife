@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import itertools
 import json
 import re
@@ -3329,20 +3330,108 @@ class M0FoundationGateContractTests(unittest.TestCase):
                 validation.errors,
             )
 
-    def test_current_matrix_digest_is_bound_dynamically(self) -> None:
+    def test_later_matrix_change_does_not_rewrite_historical_gate_binding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_contract(root)
-            self.replace_gate_text(
-                root,
+            for relative in (
+                "docs/supply-chain/dependencies.md",
+                "docs/supply-chain/license-matrix.csv",
+            ):
+                historical = subprocess.run(
+                    [
+                        "git",
+                        "-C",
+                        str(REPOSITORY_ROOT),
+                        "show",
+                        f"{self.verification_candidate}:{relative}",
+                    ],
+                    check=True,
+                    capture_output=True,
+                ).stdout
+                (root / relative).write_bytes(historical)
+            subprocess.run(
+                ["git", "init", "--quiet", str(root)],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(root), "config", "user.name", "Synthetic Reviewer"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "config",
+                    "user.email",
+                    "synthetic@example.invalid",
+                ],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(root), "add", "."],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(root), "commit", "--quiet", "-m", "candidate"],
+                check=True,
+                capture_output=True,
+            )
+            candidate_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            candidate_gate_digest = hashlib.sha256(
+                self.gate_path(root).read_bytes()
+            ).hexdigest()
+
+            gate_path = self.gate_path(root)
+            gate_text = gate_path.read_text(encoding="utf-8")
+            gate_text = gate_text.replace(
+                self.verification_candidate,
+                candidate_commit,
+            ).replace(
+                self.verification_candidate_digest,
+                candidate_gate_digest,
+            )
+            gate_path.write_text(gate_text, encoding="utf-8")
+
+            matrix_path = root / "docs/supply-chain/license-matrix.csv"
+            matrix_path.write_bytes(
+                matrix_path.read_bytes() + b"# later governed matrix revision\n"
+            )
+            dependency_path = root / "docs/supply-chain/dependencies.md"
+            dependency_text = dependency_path.read_text(encoding="utf-8")
+            dependency_text = dependency_text.replace(
+                "7afc6c7599523fb56a66774a29e9107e6a9a0aac",
+                "0" * 40,
+            ).replace(
                 "32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193",
-                "0" * 64,
+                "1" * 64,
             )
-            validation = self.validate_contract(root)
-            self.assertTrue(
-                any("current licence-matrix SHA-256" in error for error in validation.errors),
-                validation.errors,
-            )
+            dependency_path.write_text(dependency_text, encoding="utf-8")
+
+            tasks = json.loads(json.dumps(TASK_BY_ID))
+            gate_task = tasks["TL-0010"]
+            for entry in gate_task["evidence"]:
+                for field, value in entry.items():
+                    if isinstance(value, str):
+                        entry[field] = value.replace(
+                            self.verification_candidate,
+                            candidate_commit,
+                        ).replace(
+                            self.verification_candidate_digest,
+                            candidate_gate_digest,
+                        )
+            validation = self.validate_contract(root, tasks)
+            self.assertEqual(validation.errors, [])
 
     def test_supply_chain_limitations_cannot_be_removed(self) -> None:
         mutations = (

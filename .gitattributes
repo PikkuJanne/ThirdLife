@@ -12,6 +12,7 @@
 *.txt text eol=lf
 *.csv text eol=lf
 *.sha256 text eol=lf
+*.sql text eol=lf
 
 # The application targets Windows; keep its native project formats consistent.
 *.cs text eol=crlf

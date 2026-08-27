@@ -70,6 +70,15 @@ MACHINE_PATH_RE = re.compile(
     r"(?i)(?:\b[a-z]:[\\/]|\\\\[^\\/\s]+[\\/][^\\/\s]+|"
     r"file:/+(?:[a-z]:|/)|/(?:home|users)/[^/\s]+/)"
 )
+LICENCE_APPROVAL_EVIDENCE_RE = re.compile(
+    r"(?:licen[cs]e|redistribution|rights).{0,80}approved|"
+    r"approved.{0,80}(?:licen[cs]e|redistribution|rights)",
+    re.IGNORECASE,
+)
+MATRIX_DIGEST_REFERENCE_RE = re.compile(
+    r"\bmatrix\s+(?:sha-?256|digest)\s*[:=]\s*([0-9a-f]{64})\b",
+    re.IGNORECASE,
+)
 
 
 class Validation:
@@ -750,42 +759,64 @@ def validate_supply_chain_contract(
         return result
 
     evidence = task.get("evidence")
-    evidence_claims_approval = isinstance(evidence, list) and any(
-        isinstance(item, dict)
+    evidence_items = evidence if isinstance(evidence, list) else []
+    approval_evidence = [
+        item
+        for item in evidence_items
+        if isinstance(item, dict)
         and str(item.get("result", "")).casefold() == "passed"
-        and re.search(
-            r"(?i)(?:licen[cs]e|redistribution|rights).{0,80}(?:review|owner).{0,40}approved|"
-            r"(?:review|owner).{0,80}approved.{0,40}(?:licen[cs]e|redistribution|rights)",
-            str(item.get("summary", "")),
-        )
+        and LICENCE_APPROVAL_EVIDENCE_RE.search(str(item.get("summary", "")))
         is not None
-        for item in evidence
-    )
-    if result.approval_state != "approved" and evidence_claims_approval:
+    ]
+    evidence_with_digests = [
+        (
+            item,
+            {
+                match.casefold()
+                for match in MATRIX_DIGEST_REFERENCE_RE.findall(
+                    str(item.get("reference", ""))
+                )
+            },
+        )
+        for item in approval_evidence
+    ]
+    unbound_approval_evidence = [
+        item for item, matrix_digests in evidence_with_digests if not matrix_digests
+    ]
+    current_approval_evidence = [
+        item
+        for item, matrix_digests in evidence_with_digests
+        if result.matrix_digest.casefold() in matrix_digests
+    ]
+    historical_approval_evidence = [
+        item
+        for item, matrix_digests in evidence_with_digests
+        if matrix_digests
+        and result.matrix_digest.casefold() not in matrix_digests
+    ]
+
+    if unbound_approval_evidence:
         validation.error(
-            "TL-0006 evidence cannot claim licence/rights approval while the governed review is Pending"
+            "TL-0006 licence/rights approval evidence must bind an exact matrix SHA-256"
         )
-    if task.get("status") == "done":
-        if result.approval_state != "approved":
+    if result.approval_state == "approved":
+        if not current_approval_evidence:
             validation.error(
-                "TL-0006 cannot be done while the human licence and rights review is Pending"
+                "TL-0006 approved review evidence must bind named human licence/rights approval to the current matrix digest"
             )
-        approval_evidence = isinstance(evidence, list) and any(
-            isinstance(item, dict)
-            and str(item.get("result", "")).casefold() == "passed"
-            and result.matrix_digest in str(item.get("reference", "")).casefold()
-            and re.search(
-                r"(?i)(?:licen[cs]e|redistribution|rights).{0,80}approved|"
-                r"approved.{0,80}(?:licen[cs]e|redistribution|rights)",
-                str(item.get("summary", "")),
-            )
-            is not None
-            for item in evidence
+    elif current_approval_evidence:
+        validation.error(
+            "TL-0006 evidence cannot claim licence/rights approval for the current matrix while the governed review is Pending"
         )
-        if not approval_evidence:
-            validation.error(
-                "TL-0006 done evidence must bind named human licence/rights approval to the current matrix digest"
-            )
+
+    if (
+        task.get("status") == "done"
+        and result.approval_state != "approved"
+        and not historical_approval_evidence
+    ):
+        validation.error(
+            "TL-0006 done with a Pending current matrix requires prior named human licence/rights approval bound to an earlier matrix digest"
+        )
     return result
 
 
