@@ -17,19 +17,28 @@ public sealed class ProviderFailureInjectionTests
             EvidenceValue.FromBoolean(true));
         var cancellationObserved = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var cases = new (FakeInventoryProvider Provider, ProviderRunOutcome Outcome, bool RetainsUnrelated)[]
+        var cases = new (
+            FakeInventoryProvider Provider,
+            ProviderRunOutcome Outcome,
+            ProviderRecoveryAction RecoveryAction,
+            ProviderLimitation Limitation,
+            bool RetainsUnrelated)[]
         {
             (
                 new FakeInventoryProvider(
                     ProviderTestData.Descriptor(definitions),
                     _ => ValueTask.FromResult(ProviderReadResult.Unavailable([retained]))),
                 ProviderRunOutcome.Unavailable,
+                ProviderRecoveryAction.RetryCollection,
+                ProviderLimitation.ProviderUnavailable,
                 true),
             (
                 new FakeInventoryProvider(
                     ProviderTestData.Descriptor(definitions),
                     _ => ValueTask.FromResult(ProviderReadResult.AccessDenied())),
                 ProviderRunOutcome.AccessDenied,
+                ProviderRecoveryAction.ReviewAccess,
+                ProviderLimitation.AccessDenied,
                 false),
             (
                 new FakeInventoryProvider(
@@ -44,6 +53,8 @@ public sealed class ProviderFailureInjectionTests
                             EvidenceValue.FromInteger(2)),
                     ]))),
                 ProviderRunOutcome.ContractInvalid,
+                ProviderRecoveryAction.ReviewProviderContract,
+                ProviderLimitation.ProviderContractInvalid,
                 false),
             (
                 new FakeInventoryProvider(
@@ -51,6 +62,8 @@ public sealed class ProviderFailureInjectionTests
                     _ => ValueTask.FromException<ProviderReadResult>(
                         new InvalidOperationException(sensitiveSeed))),
                 ProviderRunOutcome.Failed,
+                ProviderRecoveryAction.ReviewUnexpectedFailure,
+                ProviderLimitation.UnexpectedProviderFailure,
                 false),
             (
                 new FakeInventoryProvider(
@@ -71,6 +84,8 @@ public sealed class ProviderFailureInjectionTests
                         }
                     }),
                 ProviderRunOutcome.TimedOut,
+                ProviderRecoveryAction.RetryCollection,
+                ProviderLimitation.CollectionTimedOut,
                 false),
         };
 
@@ -87,7 +102,8 @@ public sealed class ProviderFailureInjectionTests
 
             Assert.Equal(item.Outcome, result.Outcome);
             Assert.NotNull(result.Error);
-            Assert.True(Enum.IsDefined(result.Error.RecoveryAction));
+            Assert.Equal(item.RecoveryAction, result.Error.RecoveryAction);
+            Assert.Equal(item.Limitation, result.Error.Limitation);
             Assert.Equal(1, item.Provider.InvocationCount);
             Assert.NotEmpty(affected);
             Assert.All(affected, observation =>
@@ -95,7 +111,7 @@ public sealed class ProviderFailureInjectionTests
                 Assert.Equal(EvidenceClassification.NotAvailable, observation.Metadata.EvidenceClassification);
                 Assert.Equal(ValueAvailability.Unknown, observation.Metadata.ValueAvailability);
                 Assert.Null(observation.Value);
-                Assert.NotNull(observation.LimitationCode);
+                Assert.Equal(result.Error.ErrorCode, observation.LimitationCode);
             });
             Assert.Equal(EvidenceClassification.NotAvailable, providerStatus.Metadata.EvidenceClassification);
             Assert.Equal(ValueAvailability.Unknown, providerStatus.Metadata.ValueAvailability);
