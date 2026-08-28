@@ -1,16 +1,18 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-28  
-**Snapshot preparation time:** 2026-08-28T15:04:56+02:00  
+**Snapshot preparation time:** 2026-08-28T20:30:07+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
-**Current task:** `TL-0104` — Implement structured logging and redaction — `done`  
-**Action state:** implementation, independent review, exact current-source Targeted, and synchronized Quick are complete; `TL-0105` is dependency-ready and has not been started
+**Current task:** `TL-0105` — Define inventory provider contracts and evidence normalization — `in_progress`  
+**Action state:** repository synchronization, dependency verification, binding-contract review, and the pre-change Inventory baseline are complete; contract implementation and Targeted verification remain
 
 ## Executive state
 
-M0 is complete. `TL-0101`, `TL-0102`, `TL-0103`, and `TL-0104` are done. TL-0104's implemented and verified local structured-logging/redaction subset provides a closed typed event schema, explicit sensitive-value wrappers, sanitization before persistence/display, protected bounded local records, deterministic execution of the exact synthetic privacy fixture, and an internal exact 25-field support projection.
+M0 is complete. `TL-0101`, `TL-0102`, `TL-0103`, and `TL-0104` are done. `TL-0105` is selected and in progress from the exact published TL-0104 completion. Its scope is a read-only, cancellable, timeout-bounded, platform-independent provider contract and evidence-normalization layer that preserves source-specific uncertainty and converts provider failure into explicit not-available evidence plus a sanitized error rather than a pass.
+
+TL-0105 has no Windows provider implementation scope: device, OS, storage, battery, firmware/security, and network adapters remain assigned to `TL-0106`–`TL-0111`. This task defines the common boundary those providers must obey and supplies deterministic fakes and the independently invokable provider-unavailable scenario without querying or modifying the active machine.
 
 The design is intentionally narrower than a conventional logger. Callers cannot provide free-form messages, arbitrary objects/maps, raw provider or command output, ordinary exception text, or caller-selected crash correlations. Secrets, personal content, raw outputs, and sibling-private fields cannot be constructed through the public wrapper. There is no telemetry SDK, uploader, account requirement, new network path, SQLite integration, or privileged service.
 
@@ -40,12 +42,11 @@ No support preview/archive/export, upload, production digest provenance, databas
 | Field | Verified value |
 |---|---|
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
-| Branch | `codex/tl-0104-structured-logging` |
-| Starting commit | `26c6b5004c7eab6e067897c8988c85deb3499db2` — published TL-0103 handoff |
-| Candidate commit | `37e912386a3a54f1896c8bd4a9a2919c51e677d0` — published implementation and corrected cleanup accounting |
-| Evidence checkpoint | `e415262e8377b78329ef2fdb38e0401127838cac` — published Targeted review evidence and synchronized bundle state |
-| History handling | Started from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Publication state | Implementation and evidence checkpoints published; completion metadata is verified and published during final handoff |
+| Branch | `codex/tl-0105-provider-contracts` |
+| Starting commit | `b98b03698f9615340ae755796c6abbe2b0456f91` — published TL-0104 completion |
+| Candidate commit | Pending implementation and current-source verification |
+| History handling | Started from fetched TL-0104 local/upstream equality; no reset, rebase, force push, or history rewrite |
+| Publication state | New task branch created locally; first governed checkpoint and upstream remain pending |
 
 The SSH remote rejects unattended authentication here. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
 
@@ -55,6 +56,7 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 
 | Scope | Result | Duration / limitation |
 |---|---|---|
+| Pre-change Inventory baseline | Passed 1/1 | 362 ms reported test duration; 7.724 s command; existing assembly scaffold only |
 | Pre-change Diagnostics baseline | Passed 1/1 | 6.275 s on protected host |
 | Current Diagnostics host suite | Passed 127/127; 0 failed/skipped | 35 s on the protected host after the focused accounting correction |
 | Current Release build | Passed; 0 warnings/errors | 5.15 s direct host; protected host security controls unchanged |
@@ -98,7 +100,10 @@ The superseded `TL-0008 draft 1` procedure remains preserved only as a historica
 
 ## Outstanding and next steps
 
-TL-0104 has no outstanding task-contract, test, human-evidence, or publication blocker. The final handoff verifies the completion commit against upstream. The next implementation session may select `TL-0105`; it must not treat TL-0104 as authorization for export, telemetry, arbitrary logging, non-Windows production use, or release.
+1. Define bounded provider identity, privilege, duration/timeout, network-use, supported-OS, evidence-key, cancellation, and sanitized-error contracts.
+2. Implement deterministic normalization that maps success, unavailable, failure, timeout, and cancellation without inventing a pass or retaining raw exception/provider output.
+3. Add fake-provider contract tests, the independently invokable `FI-001` / `SMC-PROVIDER-UNAVAILABLE` filter, read-only architecture checks, and current-source Targeted evidence.
+4. Synchronize task/status/threat records, publish checkpoints, and mark TL-0105 `done` only after every acceptance criterion and the final governed Quick pass.
 
 ## Upcoming decisions
 
@@ -112,4 +117,4 @@ TL-0104 has no outstanding task-contract, test, human-evidence, or publication b
 
 ## Next dependency-ready task
 
-After TL-0104 is complete and published, the lowest dependency-ready task is `TL-0105` — Define inventory provider contracts and evidence normalization. Do not start it in this session.
+After TL-0105 is complete and published, the lowest dependency-ready task will be `TL-0106` — Implement device identity, CPU, memory, and architecture inventory. Do not start it in this session.
