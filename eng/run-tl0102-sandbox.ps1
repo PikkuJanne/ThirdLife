@@ -5,6 +5,10 @@ param(
     [string] $Phase = "Targeted",
 
     [Parameter(Mandatory = $false)]
+    [ValidateSet("TL-0102", "TL-0103")]
+    [string] $EvidenceTaskId = "TL-0102",
+
+    [Parameter(Mandatory = $false)]
     [switch] $PersistEvidence,
 
     [Parameter(Mandatory = $false)]
@@ -14,7 +18,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$TaskId = "TL-0102"
+$TaskId = $EvidenceTaskId
 $ResultSchemaVersion = 2
 $SandboxMemoryMb = 4096
 $SandboxTimeoutMinutes = 30
@@ -661,7 +665,7 @@ function Persist-StructuredEvidence {
         [Parameter(Mandatory = $true)] $Result,
         [Parameter(Mandatory = $true)][string] $RepositoryRoot
     )
-    $directory = New-VerifiedDirectoryUnderRoot -Root $RepositoryRoot -RelativePath "artifacts\audit\TL-0102"
+    $directory = New-VerifiedDirectoryUnderRoot -Root $RepositoryRoot -RelativePath "artifacts\audit\$TaskId"
     $baseName = "$($Result.phase.ToLowerInvariant())-$($Result.source_digest)-$($Result.run_id)"
     $evidenceName = "$baseName.json"
     $manifestName = "$baseName.manifest.json"
@@ -694,7 +698,7 @@ function Get-ActiveSandboxProcesses {
     return @(Get-Process -Name @("WindowsSandbox", "WindowsSandboxClient", "WindowsSandboxRemoteSession", "WindowsSandboxServer") -ErrorAction SilentlyContinue)
 }
 
-if ($env:OS -ne "Windows_NT") { throw "TL-0102 Sandbox verification requires the active Windows Codex machine." }
+if ($env:OS -ne "Windows_NT") { throw "$TaskId Sandbox verification requires the active Windows Codex machine." }
 
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $sandboxExecutable = Join-Path $env:WINDIR "System32\WindowsSandbox.exe"
@@ -726,7 +730,7 @@ $sandboxProcess = $null
 $completed = $false
 
 try {
-    Write-Host "TL-0102 Windows Sandbox verification"
+    Write-Host "$TaskId Windows Sandbox verification"
     Write-Host "Phase: $Phase"
     Write-Host "No action is required inside the guest."
 
@@ -917,7 +921,7 @@ try {
     if ($PreflightOnly) {
         Remove-VerifiedStagingDirectory -Path $stagingRoot
         $completed = $true
-        Write-Host "PASS: TL-0102 $Phase staging, binding, offline-dependency, and verified-cleanup preflight completed."
+        Write-Host "PASS: $TaskId $Phase staging, binding, offline-dependency, and verified-cleanup preflight completed."
         return
     }
 
@@ -967,9 +971,9 @@ try {
     Write-Host "Source digest: $sourceDigest"
     Write-Host "Result SHA-256: $resultDigest"
     Write-Host "Guest networking: $($result.networking_enabled) ($($result.network_reason))"
-    if ($result.result -ne "passed" -or $result.exit_code -ne 0) { throw "TL-0102 Sandbox phase $Phase failed closed with $($result.failure_code)." }
+    if ($result.result -ne "passed" -or $result.exit_code -ne 0) { throw "$TaskId Sandbox phase $Phase failed closed with $($result.failure_code)." }
     $completed = $true
-    Write-Host "PASS: TL-0102 $Phase completed in Windows Sandbox."
+    Write-Host "PASS: $TaskId $Phase completed in Windows Sandbox."
 }
 finally {
     if ($null -ne $sandboxProcess -and -not $sandboxProcess.HasExited) {
@@ -984,5 +988,5 @@ finally {
         }
         else { Write-Warning "Sandbox staging was retained because the guest may still hold mapped paths." }
     }
-    if (-not $completed) { Write-Host "TL-0102 Sandbox verification stopped without a passing result." }
+    if (-not $completed) { Write-Host "$TaskId Sandbox verification stopped without a passing result." }
 }

@@ -4,7 +4,8 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$TaskId = "TL-0102"
+$AllowedTaskIds = @("TL-0102", "TL-0103")
+$TaskId = "Unavailable"
 $ResultSchemaVersion = 2
 $SandboxMemoryMb = 4096
 $CommandRawOutputLimitBytes = 2097152
@@ -1038,6 +1039,9 @@ try {
     $requestItem = Get-Item -LiteralPath $requestInput -Force
     if ($requestItem.Length -le 0 -or $requestItem.Length -gt 8192) { throw "The run request is outside its bounded size." }
     $request = Get-Content -Raw -LiteralPath $requestInput -Encoding UTF8 | ConvertFrom-Json
+    if ($request.task_id -isnot [string] -or $request.task_id -notin $AllowedTaskIds) { throw "The run request targets an unsupported evidence task." }
+    $TaskId = $request.task_id
+    $result.task_id = $TaskId
     Assert-RunRequest -RunRequest $request
     $phase = $request.phase
 
