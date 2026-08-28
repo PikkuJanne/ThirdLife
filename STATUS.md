@@ -1,16 +1,16 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-28  
-**Snapshot preparation time:** 2026-08-28T00:01:44+02:00  
+**Snapshot preparation time:** 2026-08-28T08:52:00+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
-**Current task:** `TL-0102` — Implement the SQLite job store and migrations — `review`  
-**Action state:** exact candidate and 28-component matrix approved by the named Dependency and Licence Owner; approval-bound validation and completion evidence are in progress
+**Current task:** `TL-0102` — Implement the SQLite job store and migrations — `done`  
+**Action state:** every TL-0102 implementation, security, Targeted, Quick, Full, supply-chain, SBOM, and human-approval gate passes; completion commit and upstream verification are being prepared
 
 ## Executive state
 
-M0 is complete and `TL-0101` is done. `TL-0102` implements the first durable local job-store slice and has passed its complete 72-test Targeted suite both on the host and in a hardened same-machine Windows Sandbox. Exact checkpoint `8a4330afd288f4aead03e01bf95c935c4d342785` passed persisted-evidence Quick and trigger-required Full: 184 governed regressions, locked restore and NuGet audit, format verification, a zero-warning/zero-error Release build, and all 145 solution tests. Two source-bound CycloneDX 1.6 SBOMs are byte-identical. Janne Vuorela has now approved exact review candidate `d6807937f5eff712821c7927ce1953daaa5dfeb8` and matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`; TL-0102 remains `review` only while the approval-bound checks and final repository checkpoint are completed.
+M0 is complete and `TL-0101` and `TL-0102` are done. TL-0102 provides the first durable local job-store slice and passed its complete 72-test Targeted suite both on the host and in a hardened same-machine Windows Sandbox. Exact checkpoint `8a4330afd288f4aead03e01bf95c935c4d342785` passed persisted-evidence Quick and trigger-required Full: 184 governed regressions, locked restore and NuGet audit, format verification, a zero-warning/zero-error Release build, and all 145 solution tests. Janne Vuorela approved exact review candidate `d6807937f5eff712821c7927ce1953daaa5dfeb8` and matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`. Approval-bound regressions passed, two approved-state SBOMs are byte-identical and source-bound to pushed checkpoint `998fa3cd7883d6947aa221c16b5ef77bc8d0a60b`, and final host Quick passed 184/184.
 
 No release, production packaging, retention/deletion, backup/restore, attachment, sibling-integration, cross-hardware, or legal-rights claim is made by this checkpoint.
 
@@ -33,9 +33,9 @@ No release, production packaging, retention/deletion, backup/restore, attachment
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
 | Branch | `codex/tl-0102-sqlite-job-store` |
 | Starting commit | `929f0e34dda02704c32658af9d7b8efc59c44028` — published TL-0101 completion handoff |
-| Current commit | `8a4330afd288f4aead03e01bf95c935c4d342785` — published implementation and Sandbox-fix checkpoint; review-evidence commit is being prepared |
+| Approval checkpoint | `998fa3cd7883d6947aa221c16b5ef77bc8d0a60b` — published exact approval record and source of the approved-state SBOM |
 | History handling | Started from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Publication state | Implementation checkpoint is pushed and equals its upstream; final review candidate is not yet established |
+| Publication state | Review candidate and approval-record checkpoint are pushed; this snapshot prepares the final completion commit, whose exact upstream equality is reported after publication |
 
 The configured SSH remote rejects unattended public-key authentication on this machine. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
 
@@ -58,6 +58,9 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 | Governed Quick | Passed exact checkpoint `8a4330a`; 184/184 | 294.487 s complete / 219.503 s regressions; source SHA-256 `a2bb4d47b1723ef74daf76f68eb9d26fdb88a0ec700ca386baf6e7a83f2b49b6`; result SHA-256 `a5865981761e6fb8a64ce2e1c5d871d7ea0db55a7f83936d5003c3140e3be957`; networking disabled |
 | Trigger-required Full | Passed exact checkpoint `8a4330a`; 145/145 solution tests | 471.959 s complete; locked restore/audit, unchanged format, 42.55 s zero-warning/error build, 31 s persistence tests; result SHA-256 `7f9424e23a59ae757e182eed6fcba4fd9effd268de4d06778bf0b4be34e087c5`; networking enabled only for NuGet audit |
 | Source-bound SBOM | Two byte-identical CycloneDX 1.6 files; 28 components / 29 dependency records | 15.581 s; 136,597 bytes; SHA-256 `47e46fc7e0c61032a8e3bac74206a01ae22da36c70c5b535586a85d8d68d0ab3`; source `8a4330a`; review pending |
+| Approval-bound governance | Passed 27/27 focused regressions; repository and bundle valid; 28 components | 42.168 s focused regressions; review approved for candidate `d680793`; matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418` |
+| Approved source-bound SBOM | Two byte-identical CycloneDX 1.6 files; 28 components / 29 dependency records | 6.848 s longest parallel generation; 136,598 bytes; SHA-256 `c5f35b3a6f54a42f42207ee269c49ba2c274b1e03dea726fac1568ae854f11f4`; source `998fa3c`; review approved |
+| Final governed Quick | Passed 184/184; roadmap bundle and repository controls valid | 102.970 s governed regressions; current matrix review approved; wrapper exit 0 |
 | Extended | Not triggered | TL-0102 declares no Extended trigger; deterministic process-kill/path cases are part of Targeted |
 
 Sandbox Targeted, Quick, and Full used a 4096 MiB same-machine guest, exact lock-derived NuGet packages, bounded source/dependency/history inputs, no host Git configuration/hooks/credentials or broad package cache, a 2 MiB hard in-memory command-output ceiling, an 8 KiB sanitized evidence tail, and a kill-on-close Windows job that verified no descendant remained. Networking was disabled for Targeted and Quick and enabled in Full only for the declared NuGet audit. This evidence is not direct-host policy compatibility, physical power-loss, filesystem-filter coverage, accessibility or modest-hardware certification, or a cross-hardware claim.
@@ -106,9 +109,8 @@ The prior TL-0006 approval remains immutable evidence for its exact 24-component
 
 ## Outstanding and next steps
 
-1. Complete the approval-bound supply-chain/repository checks and deterministic approved-state SBOM comparison.
-2. Record the final automated evidence, set `TL-0102` to `done`, and update this handoff.
-3. Run the final Quick tier, commit/push the completion checkpoint, and verify upstream equality before starting `TL-0103`.
+1. Commit/push this completion checkpoint and verify exact upstream equality.
+2. Begin `TL-0103` only in the next task turn, preserving the completed TL-0102 evidence and frozen sanitization decisions.
 
 ## Upcoming decisions
 
@@ -118,4 +120,4 @@ The prior TL-0006 approval remains immutable evidence for its exact 24-component
 
 ## Next dependency-ready task
 
-After `TL-0102` is fully approved and `done`: `TL-0103` — Implement job lifecycle and sanitization gate services. Do not start it before TL-0102 completion.
+`TL-0103` — Implement job lifecycle and sanitization gate services. Its dependency is now satisfied; do not start it in this TL-0102 completion turn.

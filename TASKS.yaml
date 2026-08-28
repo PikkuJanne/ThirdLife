@@ -1645,7 +1645,7 @@ tasks:
   workstream: persistence
   kind: code
   priority: P0
-  status: review
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -1816,6 +1816,42 @@ tasks:
     limitation: Approval introduces no broader right; the xunit.abstractions evidence limitation, withheld .NET SDK and CPython
       redistribution, synthetic-placeholder limitations, withheld runtime packaging and notice admission, no native SQLite
       redistribution, no blanket redistribution right, and no release authorization remain binding
+  - summary: Approval-bound governance regressions accepted the exact named review, and two offline approved-state SBOMs were
+      byte-identical and source-bound to the pushed approval-record checkpoint.
+    task: TL-0102
+    command_or_review: .venv\Scripts\python.exe -m unittest tools.tests.test_supply_chain
+      tools.tests.test_validate_repository; .venv\Scripts\python.exe tools\supply_chain.py --root .;
+      .venv\Scripts\python.exe tools\validate_repository.py; .venv\Scripts\python.exe tools\validate_bundle.py;
+      .\eng\generate-sbom.ps1 twice with distinct outputs and -SourceRevision
+      998fa3cd7883d6947aa221c16b5ef77bc8d0a60b; SHA-256, size, component, dependency, source, matrix, and review-state comparison
+    tier: targeted supply-chain and governance verification
+    result: passed; 27/27 focused regressions; repository and bundle valid; 28 components with review=approved; two
+      byte-identical CycloneDX 1.6 SBOMs with 29 dependency records
+    environment: Active Windows 11 x64 Codex machine; Python 3.14.7; offline SBOM generation from exact repository inputs
+    date: '2026-08-28'
+    duration: 42.168 s focused regressions; 6.848 s longest parallel SBOM generation; 1.7 s bounded comparison
+    reference: approval-record checkpoint 998fa3cd7883d6947aa221c16b5ef77bc8d0a60b; SBOM
+      sha256:c5f35b3a6f54a42f42207ee269c49ba2c274b1e03dea726fac1568ae854f11f4; 136598 bytes; matrix
+      sha256:e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418; reviewed candidate
+      d6807937f5eff712821c7927ce1953daaa5dfeb8
+    limitation: Development governance evidence only; approval accepts the proposals exactly as written but does not ship a
+      package, supply release notices, admit native SQLite redistribution, grant blanket redistribution rights, settle the final
+      product licence, or authorize a release
+  - summary: Final governed Quick passed after the exact human approval, append-only TL-0006 renewal, approved-state governance
+      checks, and SBOM evidence were synchronized; TL-0102 has no remaining task-contract blocker.
+    task: TL-0102
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick
+    tier: quick
+    result: passed; 184/184 validator regressions; roadmap bundle and repository controls valid; licence review approved
+    environment: Active Windows 11 x64 Codex machine; direct host; protected host security controls unchanged
+    date: '2026-08-28'
+    duration: 102.970 s governed regression phase; overall Quick wrapper completed with exit 0
+    reference: approval-record checkpoint 998fa3cd7883d6947aa221c16b5ef77bc8d0a60b; reviewed candidate
+      d6807937f5eff712821c7927ce1953daaa5dfeb8; matrix
+      sha256:e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418
+    limitation: Direct-host documentation/schema/static Quick evidence; the earlier exact same-machine Sandbox Quick and
+      trigger-required Full evidence remain separately bound to checkpoint 8a4330afd288f4aead03e01bf95c935c4d342785; no Full
+      rerun was triggered by approval-only metadata, and no release or cross-hardware claim is made
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
