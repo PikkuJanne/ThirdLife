@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ThirdLife.Core\ThirdLife.Core.csproj" />
     <ProjectReference Include="..\..\src\ThirdLife.Inventory\ThirdLife.Inventory.csproj" />
   </ItemGroup>
 
