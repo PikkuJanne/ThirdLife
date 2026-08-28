@@ -709,8 +709,8 @@ public sealed class SanitizedLogStore : IAsyncDisposable
         new(
             retention.RemovedRecordCount,
             retention.RemovedBytes,
-            temporaryCleanup.RemovedFileCount,
-            temporaryCleanup.RemovedBytes,
+            retention.RemovedTemporaryFileCount + temporaryCleanup.RemovedFileCount,
+            retention.RemovedTemporaryBytes + temporaryCleanup.RemovedBytes,
             retention.Completed && temporaryCleanup.Completed);
 
     private StoreEnumeration EnumerateStoreFiles(CancellationToken cancellationToken)
