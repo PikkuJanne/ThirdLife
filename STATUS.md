@@ -1,22 +1,22 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-28  
-**Snapshot preparation time:** 2026-08-28T14:57:24+02:00  
+**Snapshot preparation time:** 2026-08-28T15:04:56+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
-**Current task:** `TL-0104` — Implement structured logging and redaction — `review`  
-**Action state:** implementation, independent review, and the exact current-source Targeted gate are complete; synchronized Quick verification and final completion publication remain
+**Current task:** `TL-0104` — Implement structured logging and redaction — `done`  
+**Action state:** implementation, independent review, exact current-source Targeted, and synchronized Quick are complete; `TL-0105` is dependency-ready and has not been started
 
 ## Executive state
 
-M0 is complete. `TL-0101`, `TL-0102`, and `TL-0103` are done. `TL-0104` implementation and task-expected Targeted verification are complete and the task is in final review. The implemented local structured-logging/redaction subset provides a closed typed event schema, explicit sensitive-value wrappers, sanitization before persistence/display, protected bounded local records, deterministic execution of the exact synthetic privacy fixture, and an internal exact 25-field support projection.
+M0 is complete. `TL-0101`, `TL-0102`, `TL-0103`, and `TL-0104` are done. TL-0104's implemented and verified local structured-logging/redaction subset provides a closed typed event schema, explicit sensitive-value wrappers, sanitization before persistence/display, protected bounded local records, deterministic execution of the exact synthetic privacy fixture, and an internal exact 25-field support projection.
 
 The design is intentionally narrower than a conventional logger. Callers cannot provide free-form messages, arbitrary objects/maps, raw provider or command output, ordinary exception text, or caller-selected crash correlations. Secrets, personal content, raw outputs, and sibling-private fields cannot be constructed through the public wrapper. There is no telemetry SDK, uploader, account requirement, new network path, SQLite integration, or privileged service.
 
 Local sanitized logs use canonical whole-record JSON files under the registered current-user application-data root. The store enforces a maximum 14-day retention age and configured byte ceiling, restrictive ACLs, bounded cross-process locking and queues, exact schema/name validation, identity/link/reparse/path checks, and verified narrow cleanup. Append removes verified prior orphan temporaries before staging, then uses a durable `.txn-*` intent before evicting final events. Restart recovery validates and completes an in-window intent, or deletes a verified intent already outside retention, while final `evt-*` records stay within the configured ceiling.
 
-The exact clean and pushed implementation checkpoint `37e912386a3a54f1896c8bd4a9a2919c51e677d0` passed 127/127 Diagnostics tests offline in same-machine Windows Sandbox. The gate bound source SHA-256 `d04b944d790059c8e1e8458491c372f8fc9929a5c69608fe886af9b17ddb197d`, kept networking disabled, retained no raw output, proved source unchanged after execution, and left no Sandbox process or staging directory. Final synchronized Quick remains before `done`.
+The exact clean and pushed implementation checkpoint `37e912386a3a54f1896c8bd4a9a2919c51e677d0` passed 127/127 Diagnostics tests offline in same-machine Windows Sandbox. The synchronized review checkpoint `e415262e8377b78329ef2fdb38e0401127838cac` then passed 187/187 governed Quick regressions plus the bundle and repository validators. Both gates kept networking disabled, retained no raw output, proved source unchanged after execution, and left no Sandbox process or staging directory.
 
 No support preview/archive/export, upload, production digest provenance, database logging, release authorization, cross-platform production claim, or cross-hardware certification is created by TL-0104.
 
@@ -43,8 +43,9 @@ No support preview/archive/export, upload, production digest provenance, databas
 | Branch | `codex/tl-0104-structured-logging` |
 | Starting commit | `26c6b5004c7eab6e067897c8988c85deb3499db2` — published TL-0103 handoff |
 | Candidate commit | `37e912386a3a54f1896c8bd4a9a2919c51e677d0` — published implementation and corrected cleanup accounting |
+| Evidence checkpoint | `e415262e8377b78329ef2fdb38e0401127838cac` — published Targeted review evidence and synchronized bundle state |
 | History handling | Started from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Publication state | Implementation candidate published with local/upstream equality; review/evidence metadata publication remains |
+| Publication state | Implementation and evidence checkpoints published; completion metadata is verified and published during final handoff |
 
 The SSH remote rejects unattended authentication here. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
 
@@ -61,7 +62,7 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 | Bundle contract validator | Passed; 91 tasks, 8 milestones, 66 frozen decisions, valid DAG | Approved TL-0005 contract files remain byte-for-byte unchanged |
 | Sandbox harness regression | Passed 3/3; PowerShell AST parsing passed | TL-0102/TL-0103 compatibility retained |
 | Final current-source Targeted | Passed 127/127; 0 failed/skipped | 59.567 s complete / 30 s tests; result SHA-256 `693e8b9e549f2afe0ad33c5660641aad18d31628e4f6a423cab89bf7d13da568`; offline Sandbox; exact clean/pushed `37e9123` |
-| Final governed Quick | Pending | Run after task/status/manifest synchronization |
+| Final governed Quick | Passed 187/187; bundle and repository validators passed | 214.322 s complete / 161.833 s regressions; result SHA-256 `c8dc8fd248682a48b84402d9a5c49e82d66d4d1d2439e937a881e3f5d3cf4b0a`; exact clean/pushed `e415262` |
 | Full | Not triggered | No dependency, migration, privilege, package/update, installer/lifecycle, backup, release, or broad shared-boundary change |
 | Extended | Not triggered | Crash, concurrency, full-disk, ACL/path, fuzz, and bounds cases are independently invokable within Targeted |
 
@@ -79,7 +80,7 @@ Targeted uses a disposable 4,096 MiB Windows Sandbox on the active physical mach
 8. Verified orphan temporaries are removed before the next append stages bytes; repeated real pre-commit child-process crashes prove residue remains at one latest temporary rather than growing per restart.
 9. Live append and restart recovery revalidate committed intent immediately before retention mutation; same-length canonical live substitution preserves the seed and reports ambiguity. Local current-user/administrator files are not claimed tamper-proof.
 10. The approved TL-0005 privacy files were briefly annotated; validation rejected the exact-commit change, so both were restored byte-for-byte and implementation status remains in non-contract records.
-11. Direct testhost reruns were not blindly repeated after Application Control `0x800711C7`; governed runtime assertions use the approved same-machine Sandbox without weakening host security.
+11. An earlier changed testhost launch hit Application Control `0x800711C7`; no host policy was weakened or bypassed. A later final protected-host suite ran 127/127, while authoritative source-bound runtime evidence remains the governed same-machine Sandbox result.
 12. The first persisted final Targeted attempt passed 126 cases but exposed one cleanup-result composition assertion: successful expired-transaction deletion was performed, but its removed-file count was overwritten when later cleanup results were combined. Commit `37e9123` preserves both counts; the focused case, all 127 host cases, and the exact persisted Sandbox rerun passed. The failed result and manifest remain append-only with SHA-256 `29385cb27281ce29e5709f5096d3df437d0cdafaee3a9bf20d039e6a23d01b9a` and `7ac3b6908159a8b0fac8e2a0245e74bdbf8f01662aa94034b932f1412b6ed5b9`.
 
 ## Boundary and risk impact
@@ -97,18 +98,17 @@ The superseded `TL-0008 draft 1` procedure remains preserved only as a historica
 
 ## Outstanding and next steps
 
-1. Publish this review/evidence synchronization and verify local/upstream equality.
-2. Run final governed Quick against the exact synchronized checkpoint.
-3. Record the Quick evidence, move TL-0104 to `done`, update mapped threat-control status, publish, and verify final equality.
+TL-0104 has no outstanding task-contract, test, human-evidence, or publication blocker. The final handoff verifies the completion commit against upstream. The next implementation session may select `TL-0105`; it must not treat TL-0104 as authorization for export, telemetry, arbitrary logging, non-Windows production use, or release.
 
 ## Upcoming decisions
 
-- **Closed event surface — decided:** diagnostics are an allowlisted contract, not a general logging channel. Future subsystems cannot add free-form fallback text; a missing field/code requires bounded design and privacy/threat review.
-- **Durable retention — decided:** final-record byte limits take priority over publication-before-cleanup. Durable intent enables restart recovery and truthful ambiguity without blind retry, but does not prove physical-power-loss behavior or tamper-proof local evidence.
-- **Crash correlation — decided:** the logger creates a fresh opaque ID per crash. This prevents accidental cross-crash linkage; future attributable linkage would require a separate privacy-minimized proposal.
-- **Support provenance — deferred to TL-0606:** exact synthetic-only construction proves schema/redaction mechanics without treating arbitrary digests as approved export bytes. TL-0606 must bind preview bytes, manifest, approval, destination, and production digests before export exists.
-- **Platform assurance — decided for current scope:** Windows receives handle-bound deletion proof. A non-Windows target would need its own identity, permission, link, atomicity, and deletion-race contract.
-- **Verification tier — pending evidence, not scope:** Targeted contains the relevant scenarios. Full remains untriggered unless a later finding crosses dependency, migration, privilege, package/update, installer/lifecycle, backup, release, or broad shared boundaries.
+- **Closed event surface — decided and binding:** diagnostics are an allowlisted data contract, not a general logging channel. This choice reduces accidental disclosure at the API boundary because callers cannot fall back to free-form text, arbitrary objects, ordinary exception messages, or raw provider output. Its operational implication is that each future diagnostic field or event code must be intentionally designed, bounded, classified, tested, and reviewed; convenience alone is not sufficient reason to broaden the surface.
+- **Durable retention ordering — decided and binding:** the store commits a recoverable intent before it evicts final records, and final-record age/byte ceilings take priority over immediate publication. This permits deterministic restart recovery and truthful `recovery pending` outcomes without blind retry. It does not mean physical-power-loss behavior is fully proven, local administrator changes are tamper-proof, or every filesystem filter behaves identically; those remain explicit assurance limits.
+- **Crash correlation ownership — decided and binding:** the logger creates a fresh opaque correlation for every public crash call rather than accepting a caller-selected identifier. This prevents accidental linkage of separate crashes and blocks callers from smuggling identity through a correlation field. If later support workflows need durable cross-event linkage, they require a separate privacy-minimized design with purpose, retention, access, and disclosure controls.
+- **Support provenance and export — intentionally deferred to `TL-0606`:** TL-0104 proves the exact 25-field schema and redaction mechanics only with registered synthetic values. It does not make arbitrary digests trustworthy, create a preview, package an archive, select a destination, or authorize transfer. TL-0606 must bind the exact preview bytes, manifest, approval, destination, and production digests before any support export can exist.
+- **Platform assurance — Windows-only for the proved deletion race:** Windows uses handle-bound deletion after identity and link checks. The portable fallback is path-bound and is not an equivalent non-Windows production guarantee. Supporting another platform would therefore be a new security decision requiring native permission, identity, link, atomicity, replacement, and deletion-race evidence rather than a simple target-framework change.
+- **Verification scope — decided and evidenced:** task-expected Targeted covers the changed diagnostics privacy, filesystem, recovery, concurrency, and resource risks; synchronized Quick proves the governance bundle still agrees. Full and Extended were not triggered because TL-0104 changed no dependency, migration, privilege, package/update, installer/lifecycle, backup, release, or broad shared boundary. A later change crossing one of those boundaries must select the broader tier at that time.
+- **Next provider-contract decision — upcoming in `TL-0105`:** provider APIs must expose privilege, duration, network use, supported OS, cancellation, timeout, and typed unavailable/error outcomes while retaining source-specific uncertainty. TL-0105 must decide the smallest normalized evidence vocabulary that lets policy consume observations without converting missing, stale, conflicting, or weak evidence into a pass.
 
 ## Next dependency-ready task
 
