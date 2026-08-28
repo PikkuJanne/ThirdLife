@@ -1,18 +1,18 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-28  
-**Snapshot preparation time:** 2026-08-28T08:52:00+02:00  
+**Snapshot preparation time:** 2026-08-28T11:57:34+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
-**Current task:** `TL-0103` — Implement job lifecycle and sanitization gate services — `in_progress`  
-**Action state:** the Core lifecycle/gate candidate and additive schema-v3 decision store build with zero warnings or errors; independent review and same-machine Windows Sandbox Targeted/Full verification remain in progress
+**Current task:** `TL-0103` — Implement job lifecycle and sanitization gate services — `done`  
+**Action state:** the reviewed Core lifecycle/gate service and additive schema-v3 decision store are complete; exact pushed checkpoint `61141d094480383ba1a90fc95a11fa4a66afbc0c` passed governed Quick, Targeted, and migration-triggered Full verification in same-machine Windows Sandbox
 
 ## Executive state
 
-M0 is complete and `TL-0101` and `TL-0102` are done. `TL-0103` is implementing the first governed job-lifecycle service and a fail-closed sanitization gate. The current candidate creates opaque random jobs without recipient input, reopens and reversibly archives/restores them, maps the five frozen sanitization states, and records a bounded append-only decision that references the exact newest evidence ID and policy version. Verified, replacement-storage, and no-donor-storage evidence allow assessment; missing, unknown, failed, stale, and archived states block. “Complete” at this task means completing the intake/sanitization gate, not final handover or whole-job completion, which remains owned by `TL-0607`.
+M0 is complete and `TL-0101`, `TL-0102`, and `TL-0103` are done. TL-0103 provides the first governed job-lifecycle service and a fail-closed sanitization gate: it creates opaque random jobs without recipient input, reopens and reversibly archives/restores them, maps the five frozen sanitization states, and records a bounded append-only decision that references the exact newest evidence ID and policy version. Verified, replacement-storage, and no-donor-storage evidence allow assessment; missing, unknown, failed, stale, and archived states block. “Complete” at this task means completing the intake/sanitization gate, not final handover or whole-job completion, which remains owned by `TL-0607`.
 
-The durable decision record requires additive SQLite migration 3, so the global migration trigger requires a governed Full run even though TL-0103's task-local trigger array is empty. The direct host compiles the complete solution with zero warnings/errors, but its protected Application Control policy blocks unsigned Core test execution with `0x800711C7`; tests will run in the already approved same-machine Windows Sandbox without changing host security. TL-0102's exact completed Targeted, Quick, Full, SBOM, and human licence-approval evidence remains unchanged.
+The additive SQLite migration 3 triggered a governed Full run even though TL-0103's task-local trigger array is empty. At the exact pushed checkpoint, Quick passed 184/184 governance regressions, Targeted passed 78/78 Core and 89/89 persistence tests, and Full passed all 179 solution tests after locked restore/audit, strict formatting, and a zero-warning/error Release build. The direct host also compiles the solution, but its protected Application Control policy blocks unsigned Core testhost launch with `0x800711C7`; the required runtime assertions therefore ran in the approved same-machine Windows Sandbox without changing host security. TL-0102's exact prior evidence and human licence approval remain unchanged.
 
 No release, production packaging, retention/deletion, backup/restore, attachment, sibling-integration, cross-hardware, or legal-rights claim is made by this checkpoint.
 
@@ -29,7 +29,7 @@ No release, production packaging, retention/deletion, backup/restore, attachment
 - First creation builds, migrates, integrity-checks, and closes a restrictive random sibling database; it removes only the verified owned journal and publishes with a no-overwrite same-directory handle rename. Crashes leave either no final database or a complete identified one; concurrent creators adopt the complete winner.
 - The store root, `jobs` root, database, rollback journal, and per-job directories have protected ACLs for the current user, LocalSystem, and local Administrators. Held handles, final-path/object identity, link count, ACL, reparse, junction, symlink, ancestor, hardlink, replacement, and unexpected WAL/SHM checks fail closed.
 - Job directory names are `j-` plus SHA-256 of the validated internal job ID. Recipient/device names never become paths. Directories admit no attachment payload at this task.
-- Hard ceilings are 10,000 jobs, 10,000 evidence records and 10,000 checkpoints per job, 256 evidence records per batch, 64 KiB per normalized JSON payload, 256 MiB each for the database and journal, and 64 matching initialization entries before reconciliation fails closed.
+- Hard ceilings are 10,000 jobs, 10,000 evidence records, 10,000 sanitization-gate decisions, and 10,000 checkpoints per job, 256 evidence records per batch, 64 KiB per normalized JSON payload, 256 MiB each for the database and journal, and 64 matching initialization entries before reconciliation fails closed.
 - Archive/restore preserves evidence and appends alternating lifecycle checkpoints. No deletion or retention enforcement is implemented.
 
 ## Git state
@@ -40,8 +40,9 @@ No release, production packaging, retention/deletion, backup/restore, attachment
 | Branch | `codex/tl-0103-job-lifecycle` |
 | Starting commit | `953df8cd483b714bbf495484fa789924c2af6308` — published TL-0102 completion handoff |
 | Approval checkpoint | `998fa3cd7883d6947aa221c16b5ef77bc8d0a60b` — published exact approval record and source of the approved-state SBOM |
+| Verified TL-0103 checkpoint | `61141d094480383ba1a90fc95a11fa4a66afbc0c` — published source bound to all TL-0103 Sandbox results |
 | History handling | Started from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Publication state | TL-0102 is published with exact upstream equality; the TL-0103 branch has not yet been published because implementation review and governed verification are still running |
+| Publication state | The verified TL-0103 implementation checkpoint is published; the latest branch handoff records completion, and final upstream equality is verified in the session completion report |
 
 The configured SSH remote rejects unattended public-key authentication on this machine. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
 
@@ -54,6 +55,10 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 | TL-0103 direct-host baseline | Build succeeded; testhost blocked before assertions by Application Control `0x800711C7` | Known protected-host constraint; no control was disabled or bypassed |
 | TL-0103 release build | Passed; 0 warnings/errors | Direct host; candidate before final evidence binding |
 | TL-0103 formatter | Passed strict verify-no-changes after line-ending normalization | Direct host; candidate before final evidence binding |
+| TL-0103 governed Targeted | Passed Core 78/78 and persistence 89/89; 0 failed/skipped | 78.914 s; result SHA-256 `07f8459dc8ad76b080c135e7ca630966a9bf5c26c8c9455f267946800d615707`; networking disabled |
+| TL-0103 migration-triggered Full | Passed all 179 solution tests; strict format; Release build 0 warnings/errors | 330.105 s; result SHA-256 `e4d81f8b965fb0a465246477adae302a6710ee6ec115518feedd3740f06c89e1`; network enabled only for governed NuGet audit |
+| TL-0103 final governed Quick | Passed 184/184 validator regressions; bundle/repository controls valid | 210.038 s; result SHA-256 `183358694c1a0998b16e1e9a236e6e79fe1b39a54aa2e6793ad38044cc4e1a35`; networking disabled |
+| TL-0103 completion-sync Quick | Passed 184/184 after task state, exact evidence, and handoff updates | 105.745 s governed regressions; direct host; protected security controls unchanged |
 | Release build | Passed; 0 warnings/errors | 9.94 s, direct host |
 | Formatter | Passed; no changes | 18.956 s, direct host |
 | Complete persistence suite | Passed 72/72 twice by implementation audit and once independently | Latest direct-host test duration 23 s |
@@ -84,6 +89,9 @@ The required reduce–fix–focus–broaden sequence was followed:
 4. Sandbox review removed the broad NuGet cache, raw output persistence, host `.git` exposure, overwrite evidence, reparse-unsafe cleanup, unbounded staging, polling output cap, and wrapper-only termination.
 5. Live Sandbox attempts exposed an empty-output PowerShell 5.1 sum bug, first-use CLIXML version parsing, persistent build-server descendants, and an omitted untracked Core port. Each failed closed, was reduced and corrected, then RoundTrip 1/1 and Targeted 72/72 passed.
 6. The first exact-pushed Sandbox Quick stopped during Git-history preflight after tool-version checks. A bounded host reproduction passed archive, bundle, init, fetch, reference binding, reset, and commit verification 6/6. Stable command-stage classifiers reduced the Sandbox failure to a `ParameterBindingValidationException`: successful `git init --quiet` returned an empty bounded output tail that the diagnostic helper's mandatory string rejected. Explicit empty-string admission fixed that diagnostics-only defect; a focused transient Quick passed, followed by exact persisted Quick 184/184 and Full 145/145 at `8a4330a`.
+7. TL-0103 review separated intake-gate completion from later assessment/final-handover completion, restored the frozen state-only mapping required by governed synthetic fixtures, and tightened gate status to require a matching evidence reference.
+8. Focused regressions corrected the gate-interruption child job identity, validated every 25 prior-to-latest sanitization transition, rejected stale/mismatched/tampered decisions, and proved both ordered cross-instance write outcomes end fail closed. Blocker cleanup is bounded with `finally`.
+9. The task-aware Sandbox evidence contract retained TL-0102 as its default while binding TL-0103 results to the correct task ID, exact clean commit, source digest, dependency closure, and bounded sanitized output. Targeted, Full, and final Quick then passed without a blind rerun.
 
 No blind rerun is accepted as evidence. Raw guest output was never retained; only bounded sanitized tails and structured result hashes were used.
 
@@ -118,9 +126,8 @@ The prior TL-0006 approval remains immutable evidence for its exact 24-component
 
 ## Outstanding and next steps
 
-1. Complete the independent security, contract, and test review; resolve every actionable finding with focused regression coverage.
-2. Run the TL-0103 Core/persistence Targeted cases and the migration-triggered governed Full tier in the approved same-machine Windows Sandbox, preserving host security.
-3. Audit the final diff, update exact task evidence/state and this handoff, then commit/push and verify exact upstream equality.
+1. TL-0103 has no remaining task-contract blocker or required human approval. Preserve the recorded external-truth, host-policy, release, retention/deletion, final-handover, and cross-hardware limitations.
+2. When the user requests continuation, start only one dependency-ready task; the lowest eligible task is `TL-0104`.
 
 ## Upcoming decisions
 
