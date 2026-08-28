@@ -835,6 +835,23 @@ tasks:
     limitation: Approves the governance contract exactly as written; preserves the xunit.abstractions evidence limitation,
       withheld .NET SDK and CPython redistribution, and every synthetic placeholder's NOASSERTION, non-installable,
       no-artifact, not-shipped, and separately withheld-rights state; grants no blanket right or release authorization
+  - summary: Named human Dependency and Licence Owner approved the exact renewed 28-component licence and redistribution
+      proposal contract, preserving every recorded limitation and withheld right rather than granting broader rights.
+    task: TL-0006
+    command_or_review: Explicit renewed approval supplied by Janne Vuorela in the Codex task and authorized for append-only
+      recording without altering any prior TL-0006 evidence
+    tier: human review
+    result: passed
+    environment: Human governance review by Janne Vuorela, Principal Software Architect & Sole Project Owner and Dependency
+      and Licence Owner
+    date: '2026-08-28'
+    duration: Explicit approval recorded on 2026-08-28; not an automated timed test
+    reference: reviewed commit d6807937f5eff712821c7927ce1953daaa5dfeb8; matrix
+      sha256:e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418;
+      docs/supply-chain/dependencies.md; docs/supply-chain/license-matrix.csv
+    limitation: Approves the exact proposal contract only; the xunit.abstractions evidence limitation, withheld .NET SDK and
+      CPython redistribution, synthetic-placeholder limitations, withheld runtime packaging and notice admission, no native
+      SQLite redistribution, no blanket redistribution right, and no release authorization all remain binding
   human_evidence_required:
   - A human reviews licenses and redistribution claims before a release gate.
   expected_test_tier: targeted
@@ -1783,6 +1800,22 @@ tasks:
     limitation: Development evidence only; the named licence/installation/redistribution review remains pending and every
       xunit.abstractions, toolchain, synthetic-placeholder, native-SQLite, packaging, notice, withheld-right, no-blanket-right,
       and no-release limitation remains binding
+  - summary: Named human Dependency and Licence Owner approved the TL-0102 review candidate and exact 28-component licence and
+      redistribution matrix as written, with every recorded limitation and withheld right remaining binding.
+    task: TL-0102
+    command_or_review: Explicit approval supplied by Janne Vuorela in the Codex task for the exact candidate commit and matrix
+    tier: human review
+    result: passed
+    environment: Human governance review by Janne Vuorela, Principal Software Architect & Sole Project Owner and Dependency
+      and Licence Owner
+    date: '2026-08-28'
+    duration: Explicit approval recorded on 2026-08-28; not an automated timed test
+    reference: reviewed commit d6807937f5eff712821c7927ce1953daaa5dfeb8; matrix
+      sha256:e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418;
+      docs/supply-chain/dependencies.md; docs/supply-chain/license-matrix.csv
+    limitation: Approval introduces no broader right; the xunit.abstractions evidence limitation, withheld .NET SDK and CPython
+      redistribution, synthetic-placeholder limitations, withheld runtime packaging and notice admission, no native SQLite
+      redistribution, no blanket redistribution right, and no release authorization remain binding
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

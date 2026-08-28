@@ -8,7 +8,7 @@ The checked-in matrix has exactly these current counts:
 
 | Scope | Count | Distribution |
 |---|---:|---|
-| Runtime NuGet dependencies | 4 | Two direct and two transitive managed packages; all are `not-shipped` pending named licence and redistribution review |
+| Runtime NuGet dependencies | 4 | Two direct and two transitive managed packages; all remain `not-shipped`, with packaging, notice, native-SQLite redistribution, and release admission withheld |
 | Build-only dependencies and toolchains | 6 | Three GitHub actions are `remote-ci-only`; PyYAML and both toolchains are `not-shipped` |
 | Test-only NuGet dependencies | 14 | `not-shipped` |
 | Catalogue application identities | 4 | Project-created synthetic `production_eligible: false` placeholders; non-installable, no artifact or binary, and `not-shipped` |
@@ -75,7 +75,7 @@ Rows are sorted case-insensitively by `(component_type, component_id)`. Every fi
 - A GitHub action's integrity value is the full 40-character Git commit SHA used by the workflow. Its human-readable release tag is descriptive; the SHA is the execution pin.
 - `.NET SDK` and `CPython` use the governed `version-pin` mechanism, referencing `global.json#sdk.version` and `.github/workflows/verify.yml#python-version` respectively. A version pin is not a binary digest: no exact Windows x64 installer hash is currently governed. They are not release payloads; any proposal to redistribute either toolchain must stop until exact binary provenance, hash/signature evidence, applicable licences, and complete third-party notices are recorded and reviewed.
 - `xunit.abstractions` 2.0.3 exposes a legacy `licenseUrl` to a mutable `master` branch rather than a licence expression or immutable licence artifact. Its Apache-2.0 conclusion and both rights statements remain proposals with an explicit immutable-evidence gap.
-- `Microsoft.Data.Sqlite.Core` 10.0.11 declares MIT and explicitly excludes a native SQLite library. `SQLitePCLRaw.bundle_winsqlite3`, `SQLitePCLRaw.core`, and `SQLitePCLRaw.provider.winsqlite3` declare Apache-2.0. Their matrix evidence is bound to immutable upstream revisions and exact NuGet lock `contentHash` values, but those values remain restore metadata rather than independently computed `.nupkg` hashes. All four are `not-shipped`; runtime packaging, applicable licence/NOTICE material, and redistribution remain subject to the named human review below.
+- `Microsoft.Data.Sqlite.Core` 10.0.11 declares MIT and explicitly excludes a native SQLite library. `SQLitePCLRaw.bundle_winsqlite3`, `SQLitePCLRaw.core`, and `SQLitePCLRaw.provider.winsqlite3` declare Apache-2.0. Their matrix evidence is bound to immutable upstream revisions and exact NuGet lock `contentHash` values, but those values remain restore metadata rather than independently computed `.nupkg` hashes. The named owner approved all four proposals exactly as written. Because that approval preserves the recorded limitations, all four remain `not-shipped`; runtime packaging, applicable licence/NOTICE material, native-SQLite redistribution, and release admission remain withheld.
 - The four `catalog-application` rows use `sha256` over the exact bytes of `fixtures/catalog/catalog.yaml`; all four therefore carry the same file digest, `7f80078a24d9fa890738d344d3c705549c45d17d7712ce1f8d543d4ce47f8901`. This proves only which project-created fixture bytes declared the identities. It is not an installer or application-artifact hash. Because matrix `source` and `license_evidence` fields require HTTPS, these no-artifact rows use deliberately non-routable `example.invalid` sentinels and `NOASSERTION`; neither is upstream evidence or a licence conclusion. Installation and redistribution remain separately withheld.
 
 ## Deterministic offline SBOM
@@ -203,7 +203,7 @@ The following NuGet check ran from the active Windows checkout on 2026-08-27 aft
 |---|---|---|---|---:|---|
 | NuGet | `2026-08-27T19:25:05Z` | `dotnet package list --project ThirdLife.sln --vulnerable --include-transitive --configfile NuGet.Config --format json --output-version 1 --no-restore` against the sole configured `nuget.org` audit source | Exit 0; 26 projects and 26 target frameworks inspected; 0 vulnerable top-level and 0 vulnerable transitive package records | 5.923 s | Captured UTF-8 response: `52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316` |
 
-Environment: active Codex machine, Windows 11 x64, .NET SDK 10.0.400. The result covers the exact restored graph only and does not substitute for the pending named licence and redistribution review.
+Environment: active Codex machine, Windows 11 x64, .NET SDK 10.0.400. The result covers the exact restored graph only. It is distinct from the named licence and redistribution approval below, and neither record authorizes a release.
 
 ## Release-interface evidence mapping
 
@@ -211,7 +211,7 @@ Environment: active Codex machine, Windows 11 x64, .NET SDK 10.0.400. The result
 
 | Release-interface evidence | TL-0006 source |
 |---|---|
-| Product licence | The current 28-component matrix is pending named review; the final product licence remains TBD at release freeze |
+| Product licence | The current 28-component matrix is approved for the exact commit/digest below; the final product licence remains TBD at release freeze |
 | Dependency-lock revision | Frozen source commit plus dependency-input digest emitted in the SBOM |
 | SBOM/third-party notices | Generated CycloneDX file, its SHA-256, matrix digest, review record, and later release-specific notices |
 | Source commit | Exact checked-out `HEAD` supplied as `-SourceRevision`, with every governed input verified against that commit |
@@ -230,18 +230,20 @@ This task does not produce a release artifact hash, signature, installer, third-
 
 ## Human licence and rights review
 
-The current 28-component matrix materially extends the previously approved 24-component graph with four runtime packages. The global review is therefore pending for an exact candidate commit and matrix SHA-256. Until a named human approves that exact pair, every new runtime redistribution proposal and release admission remains withheld. A later approval must preserve the existing `xunit.abstractions`, toolchain, synthetic-placeholder, native-SQLite, packaging, and notice limitations; it cannot grant blanket redistribution or release authorization.
+The current 28-component matrix is approved for the exact candidate commit and matrix SHA-256 recorded below. The approval accepts every proposal, limitation, `not-shipped` plan, and withheld right exactly as written. It therefore does not turn a withheld right into an allowed right, admit native SQLite redistribution, or authorize packaging or release.
 
 | Field | Value |
 |---|---|
-| Review status | Pending |
-| Reviewer | Not recorded |
-| Role | Not recorded |
-| Review date | Not recorded |
-| Result | Not recorded |
-| Reviewed commit | Not recorded |
-| Matrix SHA-256 | Not recorded |
+| Review status | Approved |
+| Reviewer | Janne Vuorela |
+| Role | Principal Software Architect & Sole Project Owner and Dependency and Licence Owner |
+| Review date | 2026-08-28 |
+| Result | Approved without conditions |
+| Reviewed commit | d6807937f5eff712821c7927ce1953daaa5dfeb8 |
+| Matrix SHA-256 | e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418 |
 
-The prior TL-0006 review remains immutable historical evidence for its exact 24-component matrix only: Janne Vuorela, acting as Principal Software Architect & Sole Project Owner, approved commit `7afc6c7599523fb56a66774a29e9107e6a9a0aac` and matrix SHA-256 `32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193` without added conditions on 2026-08-21. That approval preserved the mutable licence-evidence limitation for `xunit.abstractions`, withheld redistribution of `.NET SDK` and `CPython`, the four placeholders' `NOASSERTION` and separately withheld rights, and granted no blanket redistribution, production admission, final product-licence decision, or release authorization. It does not approve the four TL-0102 runtime components.
+Janne Vuorela supplied the explicit approval in the Codex task, acting as Principal Software Architect & Sole Project Owner and Dependency and Licence Owner. `Approved without conditions` means that no new unrecorded condition was added; all conditions and limitations already written into the contract remain binding. In particular, the approval preserves the mutable `xunit.abstractions` evidence limitation, withheld `.NET SDK` and `CPython` redistribution, every synthetic placeholder's `NOASSERTION` and separately withheld rights, withheld runtime packaging/notice admission, no native SQLite redistribution, and no blanket redistribution or release authorization.
+
+The prior TL-0006 review remains immutable historical evidence for its exact 24-component matrix only: Janne Vuorela, acting as Principal Software Architect & Sole Project Owner, approved commit `7afc6c7599523fb56a66774a29e9107e6a9a0aac` and matrix SHA-256 `32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193` without added conditions on 2026-08-21. That prior approval preserved the same recorded limitations and granted no blanket redistribution, production admission, final product-licence decision, or release authorization. The renewed approval above extends governance to the exact 28-component proposal without rewriting that historical evidence.
 
 A material version, source, publisher, licence, integrity, purpose, scope, relationship, distribution-plan, or matrix change invalidates this review and requires a new named approval bound to the changed commit and digest.

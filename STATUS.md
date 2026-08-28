@@ -6,11 +6,11 @@
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
 **Current task:** `TL-0102` — Implement the SQLite job store and migrations — `review`  
-**Action state:** implementation and all automated Targeted, Quick, Full, security, supply-chain, and source-bound SBOM evidence complete; preparing the exact pushed human-approval candidate
+**Action state:** exact candidate and 28-component matrix approved by the named Dependency and Licence Owner; approval-bound validation and completion evidence are in progress
 
 ## Executive state
 
-M0 is complete and `TL-0101` is done. `TL-0102` now implements the first durable local job-store slice and has passed its complete 72-test Targeted suite both on the host and in a hardened same-machine Windows Sandbox. Exact checkpoint `8a4330afd288f4aead03e01bf95c935c4d342785` passed persisted-evidence Quick and trigger-required Full: 184 governed regressions, locked restore and NuGet audit, format verification, a zero-warning/zero-error Release build, and all 145 solution tests. Two source-bound CycloneDX 1.6 SBOMs are byte-identical. Automated work is complete; the task remains `review` solely for fresh named human approval of the exact 28-component licence/installation/redistribution matrix at the pushed review candidate.
+M0 is complete and `TL-0101` is done. `TL-0102` implements the first durable local job-store slice and has passed its complete 72-test Targeted suite both on the host and in a hardened same-machine Windows Sandbox. Exact checkpoint `8a4330afd288f4aead03e01bf95c935c4d342785` passed persisted-evidence Quick and trigger-required Full: 184 governed regressions, locked restore and NuGet audit, format verification, a zero-warning/zero-error Release build, and all 145 solution tests. Two source-bound CycloneDX 1.6 SBOMs are byte-identical. Janne Vuorela has now approved exact review candidate `d6807937f5eff712821c7927ce1953daaa5dfeb8` and matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`; TL-0102 remains `review` only while the approval-bound checks and final repository checkpoint are completed.
 
 No release, production packaging, retention/deletion, backup/restore, attachment, sibling-integration, cross-hardware, or legal-rights claim is made by this checkpoint.
 
@@ -92,9 +92,9 @@ The inventory now has 28 components: 18 NuGet, four synthetic catalogue rows, th
 - `SQLitePCLRaw.core` 2.1.12 — transitive, Apache-2.0; and
 - `SQLitePCLRaw.provider.winsqlite3` 2.1.11 — transitive, Apache-2.0.
 
-The provider uses supported Windows `winsqlite3.dll`; no native SQLite binary is included or admitted for redistribution. The exact current matrix SHA-256 is `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`. All four runtime rows remain `not-shipped`, and redistribution/release admission is withheld pending the named review.
+The provider uses supported Windows `winsqlite3.dll`; no native SQLite binary is included or admitted for redistribution. The exact current matrix SHA-256 is `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`. The named owner approved the proposals exactly as written. This is not broader permission: all four runtime rows remain `not-shipped`, native SQLite redistribution remains withheld, packaging and notice admission remain future work, and no release is authorized.
 
-The prior TL-0006 approval remains immutable evidence only for its exact 24-component commit/digest. It does not approve the four TL-0102 runtime components.
+The prior TL-0006 approval remains immutable evidence for its exact 24-component commit/digest. The newly authorized append-only evidence records the separate renewed approval for exact 28-component candidate `d6807937f5eff712821c7927ce1953daaa5dfeb8` without altering that history.
 
 ## Boundary and risk impact
 
@@ -106,13 +106,14 @@ The prior TL-0006 approval remains immutable evidence only for its exact 24-comp
 
 ## Outstanding and next steps
 
-1. Validate this final automated-evidence update, commit/push it, and verify the exact review-candidate commit against upstream.
-2. Obtain Janne Vuorela's named approval of that candidate commit and matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`, preserving every documented limitation and withheld right, plus explicit authorization to append renewed TL-0006 evidence without altering prior evidence.
-3. Record the approval, rerun the approval-bound governance checks and Quick tier, set `TL-0102` to `done`, commit/push, and verify upstream equality.
+1. Complete the approval-bound supply-chain/repository checks and deterministic approved-state SBOM comparison.
+2. Record the final automated evidence, set `TL-0102` to `done`, and update this handoff.
+3. Run the final Quick tier, commit/push the completion checkpoint, and verify upstream equality before starting `TL-0103`.
 
 ## Upcoming decisions
 
-- **Required now:** after the review-candidate push, approve or reject that exact commit and the 28-component licence/installation/redistribution proposal at matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`. Approval is governance of the recorded proposals only; it grants no blanket redistribution, native-SQLite redistribution, release authorization, legal advice, or removal of any limitation.
+- **Resolved for TL-0102:** the exact candidate and 28-component proposal are approved. The decision accepts the documented rows; it does not change a `not-shipped` plan, supply missing packaging/notices, allow native SQLite redistribution, settle the final product licence, or authorize release.
+- **TL-0103:** no new owner decision is currently identified. Implementation must enforce the frozen sanitization semantics: unknown or failed evidence blocks completion rather than offering a bypass.
 - **Later tasks, not TL-0102:** retention/deletion policy enforcement, backup/export and incompatible-migration recovery, typed attachment admission, uninstall cleanup, production packaging/notices, and release signing/lifecycle.
 
 ## Next dependency-ready task
