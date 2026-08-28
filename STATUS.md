@@ -1,22 +1,22 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-28  
-**Snapshot preparation time:** 2026-08-28T14:37:30+02:00  
+**Snapshot preparation time:** 2026-08-28T14:57:24+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
-**Current task:** `TL-0104` — Implement structured logging and redaction — `in_progress`  
-**Action state:** implementation and adversarial hardening are complete; final current-source Sandbox verification, evidence binding, commit, and publication remain
+**Current task:** `TL-0104` — Implement structured logging and redaction — `review`  
+**Action state:** implementation, independent review, and the exact current-source Targeted gate are complete; synchronized Quick verification and final completion publication remain
 
 ## Executive state
 
-M0 is complete. `TL-0101`, `TL-0102`, and `TL-0103` are done. `TL-0104` now has a production diagnostics candidate for the approved local structured-logging/redaction subset: a closed typed event schema, explicit sensitive-value wrappers, sanitization before persistence/display, protected bounded local records, deterministic execution of the exact synthetic privacy fixture, and an internal exact 25-field support projection.
+M0 is complete. `TL-0101`, `TL-0102`, and `TL-0103` are done. `TL-0104` implementation and task-expected Targeted verification are complete and the task is in final review. The implemented local structured-logging/redaction subset provides a closed typed event schema, explicit sensitive-value wrappers, sanitization before persistence/display, protected bounded local records, deterministic execution of the exact synthetic privacy fixture, and an internal exact 25-field support projection.
 
 The design is intentionally narrower than a conventional logger. Callers cannot provide free-form messages, arbitrary objects/maps, raw provider or command output, ordinary exception text, or caller-selected crash correlations. Secrets, personal content, raw outputs, and sibling-private fields cannot be constructed through the public wrapper. There is no telemetry SDK, uploader, account requirement, new network path, SQLite integration, or privileged service.
 
 Local sanitized logs use canonical whole-record JSON files under the registered current-user application-data root. The store enforces a maximum 14-day retention age and configured byte ceiling, restrictive ACLs, bounded cross-process locking and queues, exact schema/name validation, identity/link/reparse/path checks, and verified narrow cleanup. Append removes verified prior orphan temporaries before staging, then uses a durable `.txn-*` intent before evicting final events. Restart recovery validates and completes an in-window intent, or deletes a verified intent already outside retention, while final `evt-*` records stay within the configured ceiling.
 
-The latest completed governed transient Targeted run passed 120/120 Diagnostics tests offline in same-machine Windows Sandbox. Later review hardening added fresh crash-correlation generation, pending-transaction wrong-clock checks, pre-mutation temporary validation, immediate committed-intent digest revalidation, and focused regressions. Current source builds with zero warnings/errors, but its final Sandbox rerun is still required before `done`.
+The exact clean and pushed implementation checkpoint `37e912386a3a54f1896c8bd4a9a2919c51e677d0` passed 127/127 Diagnostics tests offline in same-machine Windows Sandbox. The gate bound source SHA-256 `d04b944d790059c8e1e8458491c372f8fc9929a5c69608fe886af9b17ddb197d`, kept networking disabled, retained no raw output, proved source unchanged after execution, and left no Sandbox process or staging directory. Final synchronized Quick remains before `done`.
 
 No support preview/archive/export, upload, production digest provenance, database logging, release authorization, cross-platform production claim, or cross-hardware certification is created by TL-0104.
 
@@ -42,9 +42,9 @@ No support preview/archive/export, upload, production digest provenance, databas
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
 | Branch | `codex/tl-0104-structured-logging` |
 | Starting commit | `26c6b5004c7eab6e067897c8988c85deb3499db2` — published TL-0103 handoff |
-| Candidate commit | Pending final review and current-source verification |
+| Candidate commit | `37e912386a3a54f1896c8bd4a9a2919c51e677d0` — published implementation and corrected cleanup accounting |
 | History handling | Started from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Publication state | Not yet published; final upstream equality remains required |
+| Publication state | Implementation candidate published with local/upstream equality; review/evidence metadata publication remains |
 
 The SSH remote rejects unattended authentication here. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
 
@@ -55,12 +55,12 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 | Scope | Result | Duration / limitation |
 |---|---|---|
 | Pre-change Diagnostics baseline | Passed 1/1 | 6.275 s on protected host |
-| Current Release build | Passed; 0 warnings/errors | Direct host; changed unsigned testhost runtime remains Application-Control constrained |
+| Current Diagnostics host suite | Passed 127/127; 0 failed/skipped | 35 s on the protected host after the focused accounting correction |
+| Current Release build | Passed; 0 warnings/errors | 5.15 s direct host; protected host security controls unchanged |
 | Current formatter | Passed strict verify-no-changes | Direct host |
 | Bundle contract validator | Passed; 91 tasks, 8 milestones, 66 frozen decisions, valid DAG | Approved TL-0005 contract files remain byte-for-byte unchanged |
 | Sandbox harness regression | Passed 3/3; PowerShell AST parsing passed | TL-0102/TL-0103 compatibility retained |
-| Latest governed transient Targeted | Passed 120/120; 0 failed/skipped | 51.341 s complete / 21 s tests; source SHA-256 `6d96d7613b0481864dd30a7c2ff99636cd8e2c18c5a05f07ca5ec002d6702535`; result SHA-256 `60efca28d0ff6caa86ced4aa69cb1707b185c279e29020d3f473a7dc9516edae`; offline Sandbox |
-| Final current-source Targeted | Pending | Required because final security hardening followed the transient run |
+| Final current-source Targeted | Passed 127/127; 0 failed/skipped | 59.567 s complete / 30 s tests; result SHA-256 `693e8b9e549f2afe0ad33c5660641aad18d31628e4f6a423cab89bf7d13da568`; offline Sandbox; exact clean/pushed `37e9123` |
 | Final governed Quick | Pending | Run after task/status/manifest synchronization |
 | Full | Not triggered | No dependency, migration, privilege, package/update, installer/lifecycle, backup, release, or broad shared-boundary change |
 | Extended | Not triggered | Crash, concurrency, full-disk, ACL/path, fuzz, and bounds cases are independently invokable within Targeted |
@@ -80,6 +80,7 @@ Targeted uses a disposable 4,096 MiB Windows Sandbox on the active physical mach
 9. Live append and restart recovery revalidate committed intent immediately before retention mutation; same-length canonical live substitution preserves the seed and reports ambiguity. Local current-user/administrator files are not claimed tamper-proof.
 10. The approved TL-0005 privacy files were briefly annotated; validation rejected the exact-commit change, so both were restored byte-for-byte and implementation status remains in non-contract records.
 11. Direct testhost reruns were not blindly repeated after Application Control `0x800711C7`; governed runtime assertions use the approved same-machine Sandbox without weakening host security.
+12. The first persisted final Targeted attempt passed 126 cases but exposed one cleanup-result composition assertion: successful expired-transaction deletion was performed, but its removed-file count was overwritten when later cleanup results were combined. Commit `37e9123` preserves both counts; the focused case, all 127 host cases, and the exact persisted Sandbox rerun passed. The failed result and manifest remain append-only with SHA-256 `29385cb27281ce29e5709f5096d3df437d0cdafaee3a9bf20d039e6a23d01b9a` and `7ac3b6908159a8b0fac8e2a0245e74bdbf8f01662aa94034b932f1412b6ed5b9`.
 
 ## Boundary and risk impact
 
@@ -96,10 +97,9 @@ The superseded `TL-0008 draft 1` procedure remains preserved only as a historica
 
 ## Outstanding and next steps
 
-1. Finish independent contract review against the latest committed-intent and crash-correlation changes.
-2. Run the complete Diagnostics Targeted suite against current source in offline same-machine Windows Sandbox.
-3. Synchronize `TASKS.yaml`, this snapshot, and `BUNDLE_MANIFEST.sha256`; run final governed Quick.
-4. Commit, push, verify upstream equality, and mark TL-0104 `done` only if all current-source gates remain green.
+1. Publish this review/evidence synchronization and verify local/upstream equality.
+2. Run final governed Quick against the exact synchronized checkpoint.
+3. Record the Quick evidence, move TL-0104 to `done`, update mapped threat-control status, publish, and verify final equality.
 
 ## Upcoming decisions
 
