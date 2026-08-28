@@ -1940,7 +1940,7 @@ tasks:
   workstream: privacy
   kind: code
   priority: P0
-  status: backlog
+  status: in_progress
   size: L
   executor: codex
   environment: any

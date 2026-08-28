@@ -142,7 +142,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Sensitive domain wrappers, structured allowlists, redact-before-persist, stable error codes, Unicode/control/markup escaping, bounded fields/records/bytes, audience-schema separation, and adversarial fixtures.  
 **Fail-closed response:** Drop/reject unsafe fields, preserve a bounded sanitized diagnostic, fail rendering/export without raw fallback, and keep unknown/limitations visible.  
 **Planned controls/tasks:** D-014, D-036, D-037; `TL-0005`, `TL-0104`, `TL-0115`, `TL-0207`, `TL-0308`, `TL-0407`, `TL-0604`, `TL-0605`, `TL-0606`, `TL-0609`  
-**Control status:** Planned; `TL-0005` supplies the approved classification/logging contract and synthetic adversarial fixtures, while runtime enforcement remains pending  
+**Control status:** Partially implemented; `TL-0005` supplies the approved contract and fixtures, and `TL-0104` enforces the local typed-event, redaction, safe-wrapper, exception-sanitization, protected bounded-file-retention, in-memory support-projection, and telemetry-absence subset. Crash logging creates a fresh internal correlation ID; bounded durable transaction recovery keeps final records within their age/byte ceiling and reports post-commit uncertainty without a blind-retry claim. Database/report/render/export integrations and `TL-0606` preview/archive/destination controls remain planned.  
 **Recovery/manual path:** Correct the source/field contract, regenerate from normalized data, inspect the preview, and securely remove any exposed artifact under incident guidance.  
 **Residual risk:** `RR-006`; exported data can be mishandled after release.
 

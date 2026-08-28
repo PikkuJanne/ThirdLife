@@ -4,7 +4,7 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$AllowedTaskIds = @("TL-0102", "TL-0103")
+$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104")
 $TaskId = "Unavailable"
 $ResultSchemaVersion = 2
 $SandboxMemoryMb = 4096
@@ -832,6 +832,9 @@ function Assert-RunRequest {
     )
     if ($RunRequest.schema_version -ne $ResultSchemaVersion -or $RunRequest.task_id -ne $TaskId -or
         $RunRequest.phase -notin @("RoundTrip", "Integration", "Migration", "PathSecurity", "Interruption", "Targeted", "Quick", "Full")) { throw "The run request targets an invalid task, schema, or phase." }
+    if ($RunRequest.task_id -eq "TL-0104" -and $RunRequest.phase -notin @("Targeted", "Quick", "Full")) {
+        throw "The TL-0104 run request targets a persistence-only phase."
+    }
     if ($RunRequest.run_id -isnot [string] -or $RunRequest.run_id -notmatch "^[0-9a-f]{32}$" -or
         $RunRequest.expected_head_commit -isnot [string] -or $RunRequest.expected_head_commit -notmatch "^[0-9a-f]{40}$") { throw "The run request contains an invalid source identity." }
     foreach ($digestName in @("expected_source_digest", "history_bundle_sha256", "repository_status_sha256", "launcher_sha256", "runner_sha256", "sandbox_config_sha256", "nuget_closure_sha256", "python_packages_sha256")) {
@@ -1157,7 +1160,16 @@ try {
             Invoke-RequiredCommand -Label "python-package-version" -FilePath $venvPython -Arguments @("-c", "import yaml; print(yaml.__version__)") -Failure "python_bootstrap_failed" -SuccessMarker "6.0.3"
         }
 
-        if ($phase -in @("RoundTrip", "Integration", "Migration", "PathSecurity", "Interruption", "Targeted")) {
+        if ($phase -eq "Targeted" -and $TaskId -eq "TL-0104") {
+            $diagnosticsProject = "tests\ThirdLife.Diagnostics.Tests\ThirdLife.Diagnostics.Tests.csproj"
+            Invoke-RequiredCommand -Label "locked-offline-diagnostics-restore" -FilePath $dotnetExecutable -Arguments @(
+                "restore", $diagnosticsProject, "--locked-mode", "--configfile", $nugetConfig, "--nologo", "-p:NuGetAudit=false"
+            ) -Failure "restore_failed"
+            Invoke-RequiredCommand -Label "diagnostics-tests" -FilePath $dotnetExecutable -Arguments @(
+                "test", $diagnosticsProject, "--configuration", "Release", "--no-restore", "--nologo"
+            ) -Failure "test_failed" -SuccessMarker "Passed!"
+        }
+        elseif ($phase -in @("RoundTrip", "Integration", "Migration", "PathSecurity", "Interruption", "Targeted")) {
             $persistenceProject = "tests\ThirdLife.Persistence.Tests\ThirdLife.Persistence.Tests.csproj"
             Invoke-RequiredCommand -Label "locked-offline-restore" -FilePath $dotnetExecutable -Arguments @(
                 "restore", $persistenceProject, "--locked-mode", "--configfile", $nugetConfig, "--nologo", "-p:NuGetAudit=false"

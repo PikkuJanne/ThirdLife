@@ -5,7 +5,7 @@ param(
     [string] $Phase = "Targeted",
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("TL-0102", "TL-0103")]
+    [ValidateSet("TL-0102", "TL-0103", "TL-0104")]
     [string] $EvidenceTaskId = "TL-0102",
 
     [Parameter(Mandatory = $false)]
@@ -356,7 +356,8 @@ function Assert-WorkingTreeSelectionBound {
 function Get-LockedNuGetClosure {
     param(
         [Parameter(Mandatory = $true)][string] $SourceRoot,
-        [Parameter(Mandatory = $true)][string] $SelectedPhase
+        [Parameter(Mandatory = $true)][string] $SelectedPhase,
+        [Parameter(Mandatory = $true)][string] $SelectedTaskId
     )
     if ($SelectedPhase -eq "Quick") { return @() }
     $lockFiles = @()
@@ -366,10 +367,15 @@ function Get-LockedNuGetClosure {
             Sort-Object FullName)
     }
     elseif ($SelectedPhase -eq "Targeted") {
-        $lockFiles = @(
-            Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Core.Tests\packages.lock.json") -Force
-            Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Persistence.Tests\packages.lock.json") -Force
-        )
+        if ($SelectedTaskId -eq "TL-0104") {
+            $lockFiles = @(Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Diagnostics.Tests\packages.lock.json") -Force)
+        }
+        else {
+            $lockFiles = @(
+                Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Core.Tests\packages.lock.json") -Force
+                Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Persistence.Tests\packages.lock.json") -Force
+            )
+        }
     }
     else {
         $lockFiles = @(Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Persistence.Tests\packages.lock.json") -Force)
@@ -699,6 +705,9 @@ function Get-ActiveSandboxProcesses {
 }
 
 if ($env:OS -ne "Windows_NT") { throw "$TaskId Sandbox verification requires the active Windows Codex machine." }
+if ($TaskId -eq "TL-0104" -and $Phase -notin @("Targeted", "Quick", "Full")) {
+    throw "TL-0104 supports only Targeted, Quick, or Full Sandbox verification."
+}
 
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $sandboxExecutable = Join-Path $env:WINDIR "System32\WindowsSandbox.exe"
@@ -775,16 +784,26 @@ try {
 
     $trackedFiles = @(& $gitExecutable -C $repositoryRoot ls-files)
     if ($LASTEXITCODE -ne 0) { throw "Unable to enumerate tracked source files." }
-    $taskUntrackedFiles = @(& $gitExecutable -C $repositoryRoot ls-files --others --exclude-standard -- `
-        "src/ThirdLife.Core/Jobs/IJobStore.cs" `
-        "src/ThirdLife.Core/Jobs/JobService.cs" `
-        "src/ThirdLife.Core/Sanitization/SanitizationGate.cs" `
-        "src/ThirdLife.Persistence" `
-        "tests/ThirdLife.Core.Tests/JobLifecycleTests.cs" `
-        "tests/ThirdLife.Persistence.Tests" `
-        "eng/run-tl0102-sandbox.ps1" `
-        "eng/run-tl0102-sandbox-guest.ps1")
-    if ($LASTEXITCODE -ne 0) { throw "Unable to enumerate TL-0102/TL-0103 working files." }
+    $taskWorkingPaths = @(
+        "src/ThirdLife.Core/Jobs/IJobStore.cs",
+        "src/ThirdLife.Core/Jobs/JobService.cs",
+        "src/ThirdLife.Core/Sanitization/SanitizationGate.cs",
+        "src/ThirdLife.Persistence",
+        "tests/ThirdLife.Core.Tests/JobLifecycleTests.cs",
+        "tests/ThirdLife.Persistence.Tests",
+        "eng/run-tl0102-sandbox.ps1",
+        "eng/run-tl0102-sandbox-guest.ps1"
+    )
+    if ($TaskId -eq "TL-0104") {
+        $taskWorkingPaths += @(
+            "src/ThirdLife.Diagnostics"
+            "tests/ThirdLife.Diagnostics.Tests"
+            "docs/privacy/redaction-test-cases.yaml"
+            "tools/tests/test_sandbox_harness.py"
+        )
+    }
+    $taskUntrackedFiles = @(& $gitExecutable -C $repositoryRoot ls-files --others --exclude-standard -- @taskWorkingPaths)
+    if ($LASTEXITCODE -ne 0) { throw "Unable to enumerate TL-0102/TL-0103/TL-0104 working files." }
     Assert-WorkingTreeSelectionBound -Repository $repositoryRoot -RelativePaths @($trackedFiles + $taskUntrackedFiles)
     foreach ($relative in $trackedFiles) { Copy-WorkingTreeFile -Repository $repositoryRoot -Destination $sourceStage -RelativePath $relative }
     foreach ($relative in $taskUntrackedFiles) { Copy-WorkingTreeFile -Repository $repositoryRoot -Destination $sourceStage -RelativePath $relative }
@@ -799,7 +818,7 @@ try {
     $launcherDigest = (Get-FileHash -LiteralPath (Join-Path $harnessStage "run-tl0102-sandbox.ps1") -Algorithm SHA256).Hash.ToLowerInvariant()
     $runnerDigest = (Get-FileHash -LiteralPath (Join-Path $harnessStage "run-tl0102-sandbox-guest.ps1") -Algorithm SHA256).Hash.ToLowerInvariant()
 
-    $lockedPackages = @(Get-LockedNuGetClosure -SourceRoot $sourceStage -SelectedPhase $Phase)
+    $lockedPackages = @(Get-LockedNuGetClosure -SourceRoot $sourceStage -SelectedPhase $Phase -SelectedTaskId $TaskId)
     Stage-LockedNuGetClosure -Packages $lockedPackages -GlobalPackagesRoot $nugetRoot -Destination $nugetStage
     $nugetClosureDigest = Get-SourceDigest -Root $nugetStage
     Stage-PythonPackages `

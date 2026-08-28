@@ -1,142 +1,115 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-28  
-**Snapshot preparation time:** 2026-08-28T11:57:34+02:00  
+**Snapshot preparation time:** 2026-08-28T14:37:30+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
-**Current task:** `TL-0103` — Implement job lifecycle and sanitization gate services — `done`  
-**Action state:** the reviewed Core lifecycle/gate service and additive schema-v3 decision store are complete; exact pushed checkpoint `61141d094480383ba1a90fc95a11fa4a66afbc0c` passed governed Quick, Targeted, and migration-triggered Full verification in same-machine Windows Sandbox
+**Current task:** `TL-0104` — Implement structured logging and redaction — `in_progress`  
+**Action state:** implementation and adversarial hardening are complete; final current-source Sandbox verification, evidence binding, commit, and publication remain
 
 ## Executive state
 
-M0 is complete and `TL-0101`, `TL-0102`, and `TL-0103` are done. TL-0103 provides the first governed job-lifecycle service and a fail-closed sanitization gate: it creates opaque random jobs without recipient input, reopens and reversibly archives/restores them, maps the five frozen sanitization states, and records a bounded append-only decision that references the exact newest evidence ID and policy version. Verified, replacement-storage, and no-donor-storage evidence allow assessment; missing, unknown, failed, stale, and archived states block. “Complete” at this task means completing the intake/sanitization gate, not final handover or whole-job completion, which remains owned by `TL-0607`.
+M0 is complete. `TL-0101`, `TL-0102`, and `TL-0103` are done. `TL-0104` now has a production diagnostics candidate for the approved local structured-logging/redaction subset: a closed typed event schema, explicit sensitive-value wrappers, sanitization before persistence/display, protected bounded local records, deterministic execution of the exact synthetic privacy fixture, and an internal exact 25-field support projection.
 
-The additive SQLite migration 3 triggered a governed Full run even though TL-0103's task-local trigger array is empty. At the exact pushed checkpoint, Quick passed 184/184 governance regressions, Targeted passed 78/78 Core and 89/89 persistence tests, and Full passed all 179 solution tests after locked restore/audit, strict formatting, and a zero-warning/error Release build. The direct host also compiles the solution, but its protected Application Control policy blocks unsigned Core testhost launch with `0x800711C7`; the required runtime assertions therefore ran in the approved same-machine Windows Sandbox without changing host security. TL-0102's exact prior evidence and human licence approval remain unchanged.
+The design is intentionally narrower than a conventional logger. Callers cannot provide free-form messages, arbitrary objects/maps, raw provider or command output, ordinary exception text, or caller-selected crash correlations. Secrets, personal content, raw outputs, and sibling-private fields cannot be constructed through the public wrapper. There is no telemetry SDK, uploader, account requirement, new network path, SQLite integration, or privileged service.
 
-No release, production packaging, retention/deletion, backup/restore, attachment, sibling-integration, cross-hardware, or legal-rights claim is made by this checkpoint.
+Local sanitized logs use canonical whole-record JSON files under the registered current-user application-data root. The store enforces a maximum 14-day retention age and configured byte ceiling, restrictive ACLs, bounded cross-process locking and queues, exact schema/name validation, identity/link/reparse/path checks, and verified narrow cleanup. Append removes verified prior orphan temporaries before staging, then uses a durable `.txn-*` intent before evicting final events. Restart recovery validates and completes an in-window intent, or deletes a verified intent already outside retention, while final `evt-*` records stay within the configured ceiling.
+
+The latest completed governed transient Targeted run passed 120/120 Diagnostics tests offline in same-machine Windows Sandbox. Later review hardening added fresh crash-correlation generation, pending-transaction wrong-clock checks, pre-mutation temporary validation, immediate committed-intent digest revalidation, and focused regressions. Current source builds with zero warnings/errors, but its final Sandbox rerun is still required before `done`.
+
+No support preview/archive/export, upload, production digest provenance, database logging, release authorization, cross-platform production claim, or cross-hardware certification is created by TL-0104.
 
 ## Implemented behavior
 
-- `JobService` owns create, reopen, archive, restore, gate-completion, and assessment-access operations through the Core-owned `IJobStore` port and `TimeProvider`; it has no SQLite, WPF, shell, network, sibling, or privileged dependency.
-- `SanitizationGate` exhaustively maps `Verified`, `ReplacementStorage`, and `NoDonorStorage` to `allow_assessment`, and `Unknown` and `Failed` to `blocked`, with stable bounded reason codes for missing, stale, and archived state.
-- The caller explicitly selects an evidence ID. Both the service and the immediate SQLite transaction require it to be the newest sanitization record by append sequence, not provider timestamp. A concurrent or later record therefore invalidates an older allow decision without rewriting history.
-- Schema version 3 stores one idempotent decision per job/evidence pair with job/evidence foreign-key binding, exact policy version, outcome, reason, evaluated time, strict JSON, and payload SHA-256. Decisions do not duplicate method, operator, or media values.
-- `ThirdLife.Core.Jobs.IJobStore` owns the pure repository port and typed batch, stored-job, and checkpoint contracts. Core remains independent of SQLite, Windows APIs, WPF, WinGet, shell output, and sibling products.
-- `SqliteJobStore` uses the registered job-store location beneath the current user's local application-data directory through its public API; arbitrary roots are internal test-only inputs.
-- Schema versions 1 and 2 persist jobs, normalized observations, external sanitization evidence, human-test evidence, reversible archive state, and append-only store checkpoints.
-- Embedded migrations are transactional and record migration name, script SHA-256, resulting-schema SHA-256, and application/user versions. Reopen verifies identity, version, ledger, schema, quick integrity, foreign keys, payload hashes, counts, and legal archive history.
-- First creation builds, migrates, integrity-checks, and closes a restrictive random sibling database; it removes only the verified owned journal and publishes with a no-overwrite same-directory handle rename. Crashes leave either no final database or a complete identified one; concurrent creators adopt the complete winner.
-- The store root, `jobs` root, database, rollback journal, and per-job directories have protected ACLs for the current user, LocalSystem, and local Administrators. Held handles, final-path/object identity, link count, ACL, reparse, junction, symlink, ancestor, hardlink, replacement, and unexpected WAL/SHM checks fail closed.
-- Job directory names are `j-` plus SHA-256 of the validated internal job ID. Recipient/device names never become paths. Directories admit no attachment payload at this task.
-- Hard ceilings are 10,000 jobs, 10,000 evidence records, 10,000 sanitization-gate decisions, and 10,000 checkpoints per job, 256 evidence records per batch, 64 KiB per normalized JSON payload, 256 MiB each for the database and journal, and 64 matching initialization entries before reconciliation fails closed.
-- Archive/restore preserves evidence and appends alternating lifecycle checkpoints. No deletion or retention enforcement is implemented.
+- `StructuredDiagnosticEvent` admits only registered event/component/phase/severity envelopes, stable typed fields, and canonical records bounded to 16 KiB.
+- `SensitiveDiagnosticValue` accepts only classified person/device/network/path families and never stringifies or serializes its raw value; excluded classes cannot be constructed.
+- The engine executes all 56 exact synthetic `RDX-001`–`RDX-056` cases, including Unicode, separator, casing, nesting, markup/formula, URL, path, network, identifier, raw-output, secret, and sibling-private adversarial values.
+- Exception handling never reads `Message`, `ToString()`, stack, source, `Data`, or inner exceptions. Each public crash call creates a fresh opaque correlation and returns a stable sanitized result even when writing is cancelled, unavailable because pre-write cleanup cannot complete, or durability-ambiguous after commit.
+- The store rejects expired or more-than-five-minutes-future incoming records before root creation. Bounds are 4,096 non-lock root entries, 64 pending operations, 16 KiB per record, and at most 256 MiB configured final-record bytes.
+- Cross-instance/process writes share one protected bounded lock. Tests cover concurrent child writers, killed lock holders, full disk, cancellation, process death, corrupt/noncanonical data, wrong clocks, invalid names, ACL widening, hard links, reparse points, path replacement, and root exhaustion.
+- Append stages `.tmp-*`, commits one `.txn-*`, revalidates the exact intent immediately before retention mutation, evicts only verified finals, and publishes by no-overwrite rename. Post-commit uncertainty is recovery-pending, never safe to blind-retry.
+- Recovery preflights temporary/reparse objects and validates timestamp, canonical bytes, expected final path, length, and digest before eviction. Detected changes preserve available prior state and the suspicious object for review; an exact expired intent is deleted and reported instead of published or allowed to brick the store.
+- Windows deletion uses the validated open file handle. The portable fallback is path-bound after revalidation and supplies no non-Windows production or equivalent deletion-race assurance.
+- `thirdlife.diagnostics.event.v1` is treated as persisted compatibility; a literal prior-build record is reopened and aged out.
+- The internal support projection contains exactly the approved 25 fields and only exact synthetic registered values. Production preview-byte provenance and export remain assigned to `TL-0606`.
+- The production assembly has no Persistence/SQLite, `System.Net.*`, OpenTelemetry, Application Insights, uploader, or background-worker dependency.
 
 ## Git state
 
 | Field | Verified value |
 |---|---|
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
-| Branch | `codex/tl-0103-job-lifecycle` |
-| Starting commit | `953df8cd483b714bbf495484fa789924c2af6308` — published TL-0102 completion handoff |
-| Approval checkpoint | `998fa3cd7883d6947aa221c16b5ef77bc8d0a60b` — published exact approval record and source of the approved-state SBOM |
-| Verified TL-0103 checkpoint | `61141d094480383ba1a90fc95a11fa4a66afbc0c` — published source bound to all TL-0103 Sandbox results |
+| Branch | `codex/tl-0104-structured-logging` |
+| Starting commit | `26c6b5004c7eab6e067897c8988c85deb3499db2` — published TL-0103 handoff |
+| Candidate commit | Pending final review and current-source verification |
 | History handling | Started from fetched local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Publication state | The verified TL-0103 implementation checkpoint is published; the latest branch handoff records completion, and final upstream equality is verified in the session completion report |
+| Publication state | Not yet published; final upstream equality remains required |
 
-The configured SSH remote rejects unattended public-key authentication on this machine. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
+The SSH remote rejects unattended authentication here. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
 
-The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` predates TL-0103 and remains untouched and unstaged.
+The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` predates TL-0104 and remains untouched and unstaged.
 
 ## Verification evidence
 
 | Scope | Result | Duration / limitation |
 |---|---|---|
-| TL-0103 direct-host baseline | Build succeeded; testhost blocked before assertions by Application Control `0x800711C7` | Known protected-host constraint; no control was disabled or bypassed |
-| TL-0103 release build | Passed; 0 warnings/errors | Direct host; candidate before final evidence binding |
-| TL-0103 formatter | Passed strict verify-no-changes after line-ending normalization | Direct host; candidate before final evidence binding |
-| TL-0103 governed Targeted | Passed Core 78/78 and persistence 89/89; 0 failed/skipped | 78.914 s; result SHA-256 `07f8459dc8ad76b080c135e7ca630966a9bf5c26c8c9455f267946800d615707`; networking disabled |
-| TL-0103 migration-triggered Full | Passed all 179 solution tests; strict format; Release build 0 warnings/errors | 330.105 s; result SHA-256 `e4d81f8b965fb0a465246477adae302a6710ee6ec115518feedd3740f06c89e1`; network enabled only for governed NuGet audit |
-| TL-0103 final governed Quick | Passed 184/184 validator regressions; bundle/repository controls valid | 210.038 s; result SHA-256 `183358694c1a0998b16e1e9a236e6e79fe1b39a54aa2e6793ad38044cc4e1a35`; networking disabled |
-| TL-0103 completion-sync Quick | Passed 184/184 after task state, exact evidence, and handoff updates | 105.745 s governed regressions; direct host; protected security controls unchanged |
-| Release build | Passed; 0 warnings/errors | 9.94 s, direct host |
-| Formatter | Passed; no changes | 18.956 s, direct host |
-| Complete persistence suite | Passed 72/72 twice by implementation audit and once independently | Latest direct-host test duration 23 s |
-| Migration/corruption focus | Passed 28/28 | Includes identity, ledger, schema, bounds, concurrent upgrade, and first-publication cases |
-| First-run process-kill focus | Passed 4/4 | Before migration, during migration 1, before publish, and after publish |
-| Hardened Sandbox RoundTrip | Passed 1/1 | 48.950 s complete / 573 ms tests; networking disabled |
-| Hardened Sandbox Targeted | Passed 72/72; 0 failed/skipped | 81.510 s complete / 30 s tests; result SHA-256 `bc04775fae8d28f8841a0fb66d5167fac77fd385ad0c01e43c3b41e55cbfb190` |
-| Supply-chain and bundle regressions | Passed 159/159 | 120.969 s |
-| Point-in-time NuGet advisory query | Exit 0; 0 vulnerable direct/transitive records | 5.923 s; response SHA-256 `52947476747cce6e5f8919ef06d50ec212c537709525fc3c1c9254460cb38316` |
-| Pending-review SBOM | Two byte-identical CycloneDX 1.6 files; 28 components | SHA-256 `228962193bd56ddd0c21abcc290197ff13d650cee51356c6b3160037d0c65c10`; 136,475 bytes |
-| Governed Quick | Passed exact checkpoint `8a4330a`; 184/184 | 294.487 s complete / 219.503 s regressions; source SHA-256 `a2bb4d47b1723ef74daf76f68eb9d26fdb88a0ec700ca386baf6e7a83f2b49b6`; result SHA-256 `a5865981761e6fb8a64ce2e1c5d871d7ea0db55a7f83936d5003c3140e3be957`; networking disabled |
-| Trigger-required Full | Passed exact checkpoint `8a4330a`; 145/145 solution tests | 471.959 s complete; locked restore/audit, unchanged format, 42.55 s zero-warning/error build, 31 s persistence tests; result SHA-256 `7f9424e23a59ae757e182eed6fcba4fd9effd268de4d06778bf0b4be34e087c5`; networking enabled only for NuGet audit |
-| Source-bound SBOM | Two byte-identical CycloneDX 1.6 files; 28 components / 29 dependency records | 15.581 s; 136,597 bytes; SHA-256 `47e46fc7e0c61032a8e3bac74206a01ae22da36c70c5b535586a85d8d68d0ab3`; source `8a4330a`; review pending |
-| Approval-bound governance | Passed 27/27 focused regressions; repository and bundle valid; 28 components | 42.168 s focused regressions; review approved for candidate `d680793`; matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418` |
-| Approved source-bound SBOM | Two byte-identical CycloneDX 1.6 files; 28 components / 29 dependency records | 6.848 s longest parallel generation; 136,598 bytes; SHA-256 `c5f35b3a6f54a42f42207ee269c49ba2c274b1e03dea726fac1568ae854f11f4`; source `998fa3c`; review approved |
-| Final governed Quick | Passed 184/184; roadmap bundle and repository controls valid | 102.970 s governed regressions; current matrix review approved; wrapper exit 0 |
-| Extended | Not triggered | TL-0103 declares no Extended trigger; deterministic process-kill and concurrent-write cases are part of Targeted |
+| Pre-change Diagnostics baseline | Passed 1/1 | 6.275 s on protected host |
+| Current Release build | Passed; 0 warnings/errors | Direct host; changed unsigned testhost runtime remains Application-Control constrained |
+| Current formatter | Passed strict verify-no-changes | Direct host |
+| Bundle contract validator | Passed; 91 tasks, 8 milestones, 66 frozen decisions, valid DAG | Approved TL-0005 contract files remain byte-for-byte unchanged |
+| Sandbox harness regression | Passed 3/3; PowerShell AST parsing passed | TL-0102/TL-0103 compatibility retained |
+| Latest governed transient Targeted | Passed 120/120; 0 failed/skipped | 51.341 s complete / 21 s tests; source SHA-256 `6d96d7613b0481864dd30a7c2ff99636cd8e2c18c5a05f07ca5ec002d6702535`; result SHA-256 `60efca28d0ff6caa86ced4aa69cb1707b185c279e29020d3f473a7dc9516edae`; offline Sandbox |
+| Final current-source Targeted | Pending | Required because final security hardening followed the transient run |
+| Final governed Quick | Pending | Run after task/status/manifest synchronization |
+| Full | Not triggered | No dependency, migration, privilege, package/update, installer/lifecycle, backup, release, or broad shared-boundary change |
+| Extended | Not triggered | Crash, concurrency, full-disk, ACL/path, fuzz, and bounds cases are independently invokable within Targeted |
 
-Sandbox Targeted, Quick, and Full used a 4096 MiB same-machine guest, exact lock-derived NuGet packages, bounded source/dependency/history inputs, no host Git configuration/hooks/credentials or broad package cache, a 2 MiB hard in-memory command-output ceiling, an 8 KiB sanitized evidence tail, and a kill-on-close Windows job that verified no descendant remained. Networking was disabled for Targeted and Quick and enabled in Full only for the declared NuGet audit. This evidence is not direct-host policy compatibility, physical power-loss, filesystem-filter coverage, accessibility or modest-hardware certification, or a cross-hardware claim.
+Targeted uses a disposable 4,096 MiB Windows Sandbox on the active physical machine, exact .NET SDK 10.0.400 and Git 2.55.0.windows.5, lock-derived offline NuGet inputs, networking disabled, bounded output, and verified descendant/staging cleanup. It is not direct-host policy compatibility, physical power-loss proof, filesystem-filter coverage, cross-platform assurance, modest-hardware certification, or a cross-hardware claim.
 
 ## Defect handling
 
-The required reduce–fix–focus–broaden sequence was followed:
-
-1. Job-count, migration-ledger, full archive-history, concurrent migration, Core dependency direction, file-size, journal identity, and path replacement findings received focused tests before the 72-case suite reran.
-2. First-run zero/partial publication was replaced with complete temporary initialization plus exact-handle atomic publication; four kill points and repeated orphan-journal rejection passed.
-3. An intermittent native rename defect was reduced to missing trailing UTF-16 buffer capacity; the focused 28-case migration set passed, followed by two consecutive 72-case suites.
-4. Sandbox review removed the broad NuGet cache, raw output persistence, host `.git` exposure, overwrite evidence, reparse-unsafe cleanup, unbounded staging, polling output cap, and wrapper-only termination.
-5. Live Sandbox attempts exposed an empty-output PowerShell 5.1 sum bug, first-use CLIXML version parsing, persistent build-server descendants, and an omitted untracked Core port. Each failed closed, was reduced and corrected, then RoundTrip 1/1 and Targeted 72/72 passed.
-6. The first exact-pushed Sandbox Quick stopped during Git-history preflight after tool-version checks. A bounded host reproduction passed archive, bundle, init, fetch, reference binding, reset, and commit verification 6/6. Stable command-stage classifiers reduced the Sandbox failure to a `ParameterBindingValidationException`: successful `git init --quiet` returned an empty bounded output tail that the diagnostic helper's mandatory string rejected. Explicit empty-string admission fixed that diagnostics-only defect; a focused transient Quick passed, followed by exact persisted Quick 184/184 and Full 145/145 at `8a4330a`.
-7. TL-0103 review separated intake-gate completion from later assessment/final-handover completion, restored the frozen state-only mapping required by governed synthetic fixtures, and tightened gate status to require a matching evidence reference.
-8. Focused regressions corrected the gate-interruption child job identity, validated every 25 prior-to-latest sanitization transition, rejected stale/mismatched/tampered decisions, and proved both ordered cross-instance write outcomes end fail closed. Blocker cleanup is bounded with `finally`.
-9. The task-aware Sandbox evidence contract retained TL-0102 as its default while binding TL-0103 results to the correct task ID, exact clean commit, source digest, dependency closure, and bounded sanitized output. Targeted, Full, and final Quick then passed without a blind rerun.
-
-No blind rerun is accepted as evidence. Raw guest output was never retained; only bounded sanitized tails and structured result hashes were used.
-
-Two manually aborted development Sandbox attempts left empty mapped staging-directory shells under the operating-system temporary directory because Windows retained mapping handles after forced shutdown. They contain no result, raw log, package, source, or user payload after verified nonrecursive cleanup of deletable contents. They remain outside the repository for operating-system release/reboot cleanup and are not accepted evidence.
-
-The bounded host history reproduction also left one 4.6 MiB operating-system temporary directory containing only the exact repository source snapshot and Git bundle after this execution environment rejected the verified recursive cleanup command. It contains no package cache, test result, raw command output, credential, personal data, or user payload; it is not task evidence and remains for operating-system temporary-file cleanup.
-
-## Historical TL-0008 transition
-
-The superseded `TL-0008 draft 1` procedure remains preserved only as a historical record at source commit `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, with recorded procedure SHA-256 `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`. No physical hardware walkthrough was performed for that transition, and its former device-pool procedure is not current project evidence.
-
-## Supply-chain review state
-
-The inventory now has 28 components: 18 NuGet, four synthetic catalogue rows, three GitHub actions, one PyPI wheel, and two toolchains. Runtime scope adds:
-
-- `Microsoft.Data.Sqlite.Core` 10.0.11 — direct, MIT;
-- `SQLitePCLRaw.bundle_winsqlite3` 2.1.11 — direct, Apache-2.0;
-- `SQLitePCLRaw.core` 2.1.12 — transitive, Apache-2.0; and
-- `SQLitePCLRaw.provider.winsqlite3` 2.1.11 — transitive, Apache-2.0.
-
-The provider uses supported Windows `winsqlite3.dll`; no native SQLite binary is included or admitted for redistribution. The exact current matrix SHA-256 is `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`. The named owner approved the proposals exactly as written. This is not broader permission: all four runtime rows remain `not-shipped`, native SQLite redistribution remains withheld, packaging and notice admission remain future work, and no release is authorized.
-
-The prior TL-0006 approval remains immutable evidence for its exact 24-component commit/digest. The newly authorized append-only evidence records the separate renewed approval for exact 28-component candidate `d6807937f5eff712821c7927ce1953daaa5dfeb8` without altering that history.
+1. A post-publication one-record byte overage was replaced with recoverable `.tmp` → `.txn` → retention → `evt` semantics and real child-process crash tests before cleanup and after eviction.
+2. Cross-process proof now includes synchronized child writers and process death while holding the lock.
+3. Canonical/identity coverage includes invalid UTF-8, order/whitespace drift, duplicate/unknown keys, message mismatch, filename/timestamp mismatch, ACL widening, links/reparse points, and path replacement.
+4. Deterministic full-disk faults before temporary creation and after writing but before flush prove stable sanitized failure, no partial final, bounded residue, and safe next cleanup.
+5. File/queue/wait bounds are exact and fail closed.
+6. Public crash logging no longer accepts caller correlation; two calls prove fresh distinct IDs.
+7. Invalid temporary and future-clock committed state is rejected before recovery eviction. An exact committed intent already outside retention is safely deleted and reported instead of being published or blocking all later operations.
+8. Verified orphan temporaries are removed before the next append stages bytes; repeated real pre-commit child-process crashes prove residue remains at one latest temporary rather than growing per restart.
+9. Live append and restart recovery revalidate committed intent immediately before retention mutation; same-length canonical live substitution preserves the seed and reports ambiguity. Local current-user/administrator files are not claimed tamper-proof.
+10. The approved TL-0005 privacy files were briefly annotated; validation rejected the exact-commit change, so both were restored byte-for-byte and implementation status remains in non-contract records.
+11. Direct testhost reruns were not blindly repeated after Application Control `0x800711C7`; governed runtime assertions use the approved same-machine Sandbox without weakening host security.
 
 ## Boundary and risk impact
 
-- **Project vacuum / sibling integration:** No sibling repository, source, runtime, data, service, profile, adapter, schema, SDK, framework, dependency, or acceptance test was introduced.
-- **Data / migration:** Extends the registered local SQLite database to schema versions 1–3 with append-only typed evidence/checkpoints, bounded sanitization-gate decisions tied to exact evidence and policy versions, restrictive empty per-job directories, a persistent rollback journal, and reversible archive projection. Deletion, retention enforcement, backup/export, incompatible migration recovery, attachments, and uninstall cleanup remain later work.
-- **Release interface:** No release compatibility promise or guessed release behavior was added to `RELEASE_INTERFACE.md`.
-- **Security / privacy:** Normalized typed Core payloads only; no raw command/provider output, recipient name, username, personal path, credential, recovery material, telemetry, or sibling data is admitted. Assessment access requires the newest evidence/policy-bound gate decision and fails closed for missing, stale, unknown, failed, or archived state. External evidence truth and the verified-journal startup interval remain explicit residuals; no erase, bypass, custom SQLite VFS, or final-handover claim is introduced.
-- **Accessibility / modest hardware:** No UI or accessibility journey changes. Operations are serialized through one connection gate; counts, payloads, files, staging, output, and initialization residue are bounded. No GPU, resident service, background index, performance budget, modest-hardware certification, or cross-hardware claim is added.
+- **Project vacuum / sibling:** no sibling source, data, runtime, adapter, dependency, or test.
+- **Data / migration:** only protected local sanitized-log files; no SQLite/job migration, attachment, report, or export.
+- **Release interface:** unchanged; no compatibility promise.
+- **Dependency / licence:** no package, toolchain, or matrix change.
+- **Security / privacy:** redact before first write, no raw/free payload API, bounded recovery. Current-user/admin tamper resistance and export controls are not claimed.
+- **Accessibility / modest hardware:** no UI change; local serialized work with explicit value/record/byte/file/queue/wait bounds; no GPU, resident service, background indexing/upload, or hardware certification.
+
+## Historical TL-0008 transition
+
+The superseded `TL-0008 draft 1` procedure remains preserved only as a historical record at source commit `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, with procedure SHA-256 `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`. No physical hardware walkthrough was performed for that transition; its former device-pool procedure is not current evidence.
 
 ## Outstanding and next steps
 
-1. TL-0103 has no remaining task-contract blocker or required human approval. Preserve the recorded external-truth, host-policy, release, retention/deletion, final-handover, and cross-hardware limitations.
-2. When the user requests continuation, start only one dependency-ready task; the lowest eligible task is `TL-0104`.
+1. Finish independent contract review against the latest committed-intent and crash-correlation changes.
+2. Run the complete Diagnostics Targeted suite against current source in offline same-machine Windows Sandbox.
+3. Synchronize `TASKS.yaml`, this snapshot, and `BUNDLE_MANIFEST.sha256`; run final governed Quick.
+4. Commit, push, verify upstream equality, and mark TL-0104 `done` only if all current-source gates remain green.
 
 ## Upcoming decisions
 
-- **Resolved for TL-0103:** “complete” means complete the intake/sanitization gate and permit assessment only; it does not create final job/handover completion ahead of `TL-0607`. Decisions remain separate from evidence and are tied to the newest append sequence, so later evidence invalidates a prior pass without erasing it.
-- **No new owner approval is currently required:** TL-0103 implements frozen D-003, D-004, D-007, and D-014 semantics. Any proposal for a bypass, erase function, final-handover state, or policy change would exceed this task and require separate authority.
-- **Future production-admission decision:** TL-0103 deliberately preserves the frozen state-only mapping used by the governed synthetic fixtures. Before any production provider, import, or UI path can submit sanitization evidence, that later task must define and test which provenance is admissible; a synthetic fixture demonstrates deterministic behavior but never proves a real external sanitization act.
-- **Preserved TL-0102 licence decision:** the exact 28-component proposal remains approved with every recorded limitation; no `not-shipped` plan, native SQLite redistribution, blanket right, final product licence, or release authorization is added by TL-0103.
-- **Later tasks, not TL-0103:** retention/deletion policy enforcement, backup/export and incompatible-migration recovery, typed attachment admission, uninstall cleanup, production packaging/notices, and release signing/lifecycle.
+- **Closed event surface — decided:** diagnostics are an allowlisted contract, not a general logging channel. Future subsystems cannot add free-form fallback text; a missing field/code requires bounded design and privacy/threat review.
+- **Durable retention — decided:** final-record byte limits take priority over publication-before-cleanup. Durable intent enables restart recovery and truthful ambiguity without blind retry, but does not prove physical-power-loss behavior or tamper-proof local evidence.
+- **Crash correlation — decided:** the logger creates a fresh opaque ID per crash. This prevents accidental cross-crash linkage; future attributable linkage would require a separate privacy-minimized proposal.
+- **Support provenance — deferred to TL-0606:** exact synthetic-only construction proves schema/redaction mechanics without treating arbitrary digests as approved export bytes. TL-0606 must bind preview bytes, manifest, approval, destination, and production digests before export exists.
+- **Platform assurance — decided for current scope:** Windows receives handle-bound deletion proof. A non-Windows target would need its own identity, permission, link, atomicity, and deletion-race contract.
+- **Verification tier — pending evidence, not scope:** Targeted contains the relevant scenarios. Full remains untriggered unless a later finding crosses dependency, migration, privilege, package/update, installer/lifecycle, backup, release, or broad shared boundaries.
 
 ## Next dependency-ready task
 
-`TL-0104` — Implement structured logging and redaction. Its dependencies are satisfied, but do not start it until TL-0103 reaches a truthful terminal state and the user requests continuation.
+After TL-0104 is complete and published, the lowest dependency-ready task is `TL-0105` — Define inventory provider contracts and evidence normalization. Do not start it in this session.
