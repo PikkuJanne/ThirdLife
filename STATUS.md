@@ -1,41 +1,85 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-28  
-**Snapshot preparation time:** 2026-08-28T20:30:07+02:00  
+**Snapshot preparation time:** 2026-08-28T21:19:40+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
-**Current task:** `TL-0105` — Define inventory provider contracts and evidence normalization — `in_progress`  
-**Action state:** repository synchronization, dependency verification, binding-contract review, and the pre-change Inventory baseline are complete; contract implementation and Targeted verification remain
+**Current task:** `TL-0105` — Define inventory provider contracts and evidence normalization — `done`  
+**Action state:** implementation, independent review, Targeted verification, solution integration, failure-injection registration, task evidence, and the synchronized completion-tree Quick are complete; committing, pushing, fetching, and confirming local/upstream equality are the remaining session-close publication steps
 
-## Executive state
+## Executive project state
 
-M0 is complete. `TL-0101`, `TL-0102`, `TL-0103`, and `TL-0104` are done. `TL-0105` is selected and in progress from the exact published TL-0104 completion. Its scope is a read-only, cancellable, timeout-bounded, platform-independent provider contract and evidence-normalization layer that preserves source-specific uncertainty and converts provider failure into explicit not-available evidence plus a sanitized error rather than a pass.
+M0 is complete. M1 tasks `TL-0101` through `TL-0105` are now complete. ThirdLife Setup Core has the governed persistence foundation, dependency/licence review, evidence model, structured privacy-safe diagnostics, and the common inventory-provider boundary required before any Windows inventory adapter is introduced.
 
-TL-0105 has no Windows provider implementation scope: device, OS, storage, battery, firmware/security, and network adapters remain assigned to `TL-0106`–`TL-0111`. This task defines the common boundary those providers must obey and supplies deterministic fakes and the independently invokable provider-unavailable scenario without querying or modifying the active machine.
+`TL-0105` establishes a closed, read-only, cancellable and timeout-aware contract for collecting evidence. Every provider must state its identity, required privilege, expected duration, declared timeout, network behavior, supported Windows versions, evidence keys, scalar types, units, source-reference limits, and per-key cardinality. The runner bounds the caller's wait after a provider returns asynchronous work; each concrete provider must separately prove that its own API call yields promptly and respects cancellation. Providers return typed bounded results and have no dedicated policy-verdict, raw-output, command-execution, unbounded-map, or mutation-instruction field. Because the typed text value can still contain bounded source text, each concrete provider must also prove allowlisted minimization and sanitization.
 
-The design is intentionally narrower than a conventional logger. Callers cannot provide free-form messages, arbitrary objects/maps, raw provider or command output, ordinary exception text, or caller-selected crash correlations. Secrets, personal content, raw outputs, and sibling-private fields cannot be constructed through the public wrapper. There is no telemetry SDK, uploader, account requirement, new network path, SQLite integration, or privileged service.
+The normalization layer preserves `Observed`, `Inferred`, `Not available`, and `Not applicable` states with explicit provenance and limitations. Provider failure, timeout, cancellation, access denial, invalid data, and incomplete cleanup are not successes. Required missing facts become explicit unknown evidence with a sanitized stable error and recovery action. Valid unrelated partial observations may remain attributable, but an ordinary provider failure cannot retain every declared required fact as available and thereby resemble success.
 
-Local sanitized logs use canonical whole-record JSON files under the registered current-user application-data root. The store enforces a maximum 14-day retention age and configured byte ceiling, restrictive ACLs, bounded cross-process locking and queues, exact schema/name validation, identity/link/reparse/path checks, and verified narrow cleanup. Append removes verified prior orphan temporaries before staging, then uses a durable `.txn-*` intent before evicting final events. Restart recovery validates and completes an in-window intent, or deletes a verified intent already outside retention, while final `evt-*` records stay within the configured ceiling.
+This step does not collect a real machine fact. Device identity, processor, memory, architecture, OS lifecycle, activation, storage, battery, firmware/security, network, and cross-provider snapshot work remain in `TL-0106` through `TL-0112`. The next dependency-ready task is `TL-0106`.
 
-The exact clean and pushed implementation checkpoint `37e912386a3a54f1896c8bd4a9a2919c51e677d0` passed 127/127 Diagnostics tests offline in same-machine Windows Sandbox. The synchronized review checkpoint `e415262e8377b78329ef2fdb38e0401127838cac` then passed 187/187 governed Quick regressions plus the bundle and repository validators. Both gates kept networking disabled, retained no raw output, proved source unchanged after execution, and left no Sandbox process or staging directory.
+## User outcome
 
-No support preview/archive/export, upload, production digest provenance, database logging, release authorization, cross-platform production claim, or cross-hardware certification is created by TL-0104.
+- Future inventory providers share one fakeable contract that is independent of concrete Windows API types.
+- Missing or failed provider evidence cannot silently become a pass.
+- Policy remains separate from observation: normalized inventory contains facts and uncertainty, not readiness decisions.
+- Provider behavior is reviewable before execution because privilege, duration, timeout, network use, OS support, evidence shape, and bounds are declared.
+- The common contract exposes no setting-mutation, generic shell, arbitrary executable, registry-path, URL, or network surface.
+- `FI-001` / `SMC-PROVIDER-UNAVAILABLE` now has an exact independently invokable provider-contract test; network/transfer and concrete-provider variants remain truthfully unrun.
 
 ## Implemented behavior
 
-- `StructuredDiagnosticEvent` admits only registered event/component/phase/severity envelopes, stable typed fields, and canonical records bounded to 16 KiB.
-- `SensitiveDiagnosticValue` accepts only classified person/device/network/path families and never stringifies or serializes its raw value; excluded classes cannot be constructed.
-- The engine executes all 56 exact synthetic `RDX-001`–`RDX-056` cases, including Unicode, separator, casing, nesting, markup/formula, URL, path, network, identifier, raw-output, secret, and sibling-private adversarial values.
-- Exception handling never reads `Message`, `ToString()`, stack, source, `Data`, or inner exceptions. Each public crash call creates a fresh opaque correlation and returns a stable sanitized result even when writing is cancelled, unavailable because pre-write cleanup cannot complete, or durability-ambiguous after commit.
-- The store rejects expired or more-than-five-minutes-future incoming records before root creation. Bounds are 4,096 non-lock root entries, 64 pending operations, 16 KiB per record, and at most 256 MiB configured final-record bytes.
-- Cross-instance/process writes share one protected bounded lock. Tests cover concurrent child writers, killed lock holders, full disk, cancellation, process death, corrupt/noncanonical data, wrong clocks, invalid names, ACL widening, hard links, reparse points, path replacement, and root exhaustion.
-- Append stages `.tmp-*`, commits one `.txn-*`, revalidates the exact intent immediately before retention mutation, evicts only verified finals, and publishes by no-overwrite rename. Post-commit uncertainty is recovery-pending, never safe to blind-retry.
-- Recovery preflights temporary/reparse objects and validates timestamp, canonical bytes, expected final path, length, and digest before eviction. Detected changes preserve available prior state and the suspicious object for review; an exact expired intent is deleted and reported instead of published or allowed to brick the store.
-- Windows deletion uses the validated open file handle. The portable fallback is path-bound after revalidation and supplies no non-Windows production or equivalent deletion-race assurance.
-- `thirdlife.diagnostics.event.v1` is treated as persisted compatibility; a literal prior-build record is reopened and aged out.
-- The internal support projection contains exactly the approved 25 fields and only exact synthetic registered values. Production preview-byte provenance and export remain assigned to `TL-0606`.
-- The production assembly has no Persistence/SQLite, `System.Net.*`, OpenTelemetry, Application Insights, uploader, or background-worker dependency.
+- `IInventoryProvider` exposes an immutable descriptor and `ObserveAsync(CancellationToken)`.
+- `InventoryProviderDescriptor` accepts only closed privilege, network, supported-OS, origin, failure-definition, and evidence-definition types. Inventory network use is fixed to `None` at this boundary.
+- Evidence definitions fix each key, scalar kind, optional invariant unit, bounded source-reference length, and cardinality before collection begins.
+- Provider candidates are constructed only as observed, inferred, not available, or not applicable; source-level limitations are distinct from runner-only timeout, cancellation, contract, cleanup, and execution limitations.
+- `ProviderReadResult` has closed collected, unavailable, access-denied, invalid-data, cleanup-incomplete, and failed statuses and can retain bounded valid partial evidence.
+- The runner validates the descriptor/result agreement, type, key, unit, count, source-reference uniqueness, total bounds, and canonical output ordering.
+- Timeout and cancellation are first-class outcomes. Cancellation before provider invocation is system-generated evidence and never falsely claims provider observation.
+- Exceptions are classified by type only. Normalization never reads exception message, `ToString()`, stack, source, `Data`, or inner-exception text; hostile exception accessors are covered by tests.
+- Later provider-task faults are observed after a timeout race so they do not become unobserved background failures.
+- All normalized observations are `WORKSHOP_RESTRICTED`, including synthetic-origin observations. Synthetic provenance remains visible but cannot downgrade privacy classification.
+- Active-machine, captured-sample, synthetic-fixture, and system-generated provenance remain distinct. Captured-sample provenance does not itself sanitize data; the owning provider task must supply reviewed sanitization.
+- An ordinary failed provider must leave at least one declared requirement unavailable. Cleanup-incomplete may retain all otherwise valid facts while the separate provider-status evidence remains unavailable.
+- Public contracts have no setters, mutator methods, arbitrary command/argument/script/executable/registry-path/URL fields, or concrete Windows API types.
+
+## Decisions and practical implications
+
+### 1. Observation is not policy
+
+The provider boundary records facts, uncertainty, source, and limitations; it does not issue `Pass`, `Fail`, readiness, ownership, compatibility, health, or security verdicts. This keeps evidence history stable when policy later changes and prevents a weak provider from granting approval. The practical consequence is that `TL-0202` and later policy tasks must explicitly map normalized evidence to versioned decisions. A completed provider call means only that collection and normalization completed—it never means the machine passed a requirement.
+
+### 2. Provider behavior is declared before execution
+
+Privilege, expected duration, timeout, network use, supported OS, evidence schema, and failure-status key are immutable descriptor data. This makes a provider's claimed operating envelope reviewable and lets the runner reject invalid metadata or undeclared result facts. It does not inspect whether adapter internals actually elevate, access the network, mutate state, block before returning, or ignore cancellation. Those behaviors require provider-specific architecture checks and runtime tests. The current descriptor can declare only `NetworkUse.None`; any adapter that nevertheless accesses a network is defective and outside the approved contract. Adding a network-dependent inventory source would be a new governed design decision, not an ordinary implementation detail.
+
+### 3. Failure remains visible and cannot resemble success
+
+Failure produces a separate unavailable provider-status observation plus unavailable values for affected required facts. Valid unrelated partial facts may survive with their original source attribution, which avoids throwing away useful evidence, but a non-cleanup failure cannot preserve every requirement as available. This gives downstream policy enough information to stop safely without treating the entire snapshot as empty. It also means each concrete provider must identify its declared requirements accurately; overly broad or overly narrow definitions would distort which evidence becomes unknown.
+
+### 4. Cleanup failure is intentionally distinct
+
+`CleanupIncomplete` is not treated like an acquisition failure. A provider such as the future battery-report adapter may obtain valid bounded facts and then fail to remove a verified temporary artifact. Those facts can remain available while the provider-status evidence records cleanup failure and requires review. The implication is that cleanup integrity remains visible without rewriting successfully acquired facts, but `TL-0109` must prove its temporary-file identity, bounds, deletion, cancellation, and recovery behavior before relying on this outcome.
+
+### 5. Privacy classification cannot be downgraded by provenance
+
+Every normalized observation is Workshop Restricted. Active, captured, synthetic, and system-generated origins answer where evidence came from; they do not answer who may see it. Synthetic evidence therefore remains marked synthetic but is not automatically public. Future logging, persistence, reports, and support exports must use their separately approved projections and may not expose normalized evidence merely because a fixture produced it.
+
+### 6. Timeouts are cooperative, not forcible process termination
+
+The runner bounds an asynchronously returned provider operation and signals cancellation, but an in-process provider can still block synchronously before returning its `ValueTask` or ignore cancellation after it starts. TL-0105 makes this limitation explicit instead of claiming hard preemption. Each Windows provider must yield promptly, honor the token, bound its underlying API call, and prove cleanup. Moving a provider out of process or adding a bounded cleanup/join grace would be a later architecture decision if a concrete API cannot satisfy cooperative behavior.
+
+### 7. Evidence shape is closed and bounded
+
+Keys, scalar types, invariant units, counts, total evidence, and source references are checked against the descriptor, and normalized output is canonically ordered. This prevents arbitrary payload growth and duplicate ambiguity and supplies no dedicated raw-output field. It does not semantically inspect or sanitize a bounded text or enum evidence value; concrete provider tasks must allowlist factual keys and minimize every emitted value so policy-like or raw source content cannot be smuggled through a generic scalar. Multi-instance domains such as disks and processors can still be represented through declared cardinality and distinct source references. Results also contain generated evidence IDs and collection timestamps. `TL-0112` must either inject controlled identity/time sources or define and test a canonical semantic comparison that explicitly excludes generated identity and controlled timestamps; whole result objects are not currently deterministic across reruns.
+
+### 8. Public API neutrality does not prohibit reviewed Windows adapters
+
+The public contract exposes no Windows API types, which makes it deterministic and fakeable. The safety guard is scoped to the contract/normalization surface rather than banning all future use of `System.Management`, fixed process invocation, or verified temporary-file cleanup. This is important because later tasks may need reviewed fixed Windows mechanisms. Each adapter must receive its own no-mutation, fixed-operation, bounded-output, sanitization, and cancellation checks; the common contract is not blanket approval for any Windows API.
+
+### 9. Sanitized errors are deliberately non-diagnostic at the raw-exception level
+
+Only stable error categories and predefined recovery actions cross the sanitized-error boundary. Ordinary exception messages, stacks, sources, data dictionaries, inner-exception text, and local paths from thrown exceptions are not retained. The contract has no dedicated raw-provider-output error channel, but TL-0105 does not prove semantic sanitization of arbitrary bounded text evidence; that remains a provider-specific obligation. If a future provider needs additional operator guidance, it must introduce a reviewed typed error category rather than forwarding source text.
 
 ## Git state
 
@@ -44,77 +88,110 @@ No support preview/archive/export, upload, production digest provenance, databas
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
 | Branch | `codex/tl-0105-provider-contracts` |
 | Starting commit | `b98b03698f9615340ae755796c6abbe2b0456f91` — published TL-0104 completion |
-| Candidate commit | Pending implementation and current-source verification |
-| History handling | Started from fetched TL-0104 local/upstream equality; no reset, rebase, force push, or history rewrite |
-| Publication state | New task branch created locally; first governed checkpoint and upstream remain pending |
+| Task-start checkpoint | `9d7989b` — task selected, baseline recorded, pushed |
+| Implementation checkpoint | `8e284b9283f8ba12fc15b9436d69afc728d87ec1` — provider contracts, normalization, tests, review corrections, pushed |
+| Evidence-hardening checkpoint | `e5e9c7ef26ddfb2674ce08d7ea35b0dd193b9a2c` — exact FI-001 recovery/limitation assertions, pushed |
+| Completion synchronization | This status/task/risk evidence update; final commit and remote equality are reported at handoff |
+| History handling | No reset, rebase, force push, or history rewrite |
 
-The SSH remote rejects unattended authentication here. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
+The configured SSH remote rejects unattended authentication in this environment. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
 
-The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` predates TL-0104 and remains untouched and unstaged.
+The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx` predates this task and remains untouched and unstaged.
 
 ## Verification evidence
 
 | Scope | Result | Duration / limitation |
 |---|---|---|
-| Pre-change Inventory baseline | Passed 1/1 | 362 ms reported test duration; 7.724 s command; existing assembly scaffold only |
-| Pre-change Diagnostics baseline | Passed 1/1 | 6.275 s on protected host |
-| Current Diagnostics host suite | Passed 127/127; 0 failed/skipped | 35 s on the protected host after the focused accounting correction |
-| Current Release build | Passed; 0 warnings/errors | 5.15 s direct host; protected host security controls unchanged |
-| Current formatter | Passed strict verify-no-changes | Direct host |
-| Bundle contract validator | Passed; 91 tasks, 8 milestones, 66 frozen decisions, valid DAG | Approved TL-0005 contract files remain byte-for-byte unchanged |
-| Sandbox harness regression | Passed 3/3; PowerShell AST parsing passed | TL-0102/TL-0103 compatibility retained |
-| Final current-source Targeted | Passed 127/127; 0 failed/skipped | 59.567 s complete / 30 s tests; result SHA-256 `693e8b9e549f2afe0ad33c5660641aad18d31628e4f6a423cab89bf7d13da568`; offline Sandbox; exact clean/pushed `37e9123` |
-| Final governed Quick | Passed 187/187; bundle and repository validators passed | 214.322 s complete / 161.833 s regressions; result SHA-256 `c8dc8fd248682a48b84402d9a5c49e82d66d4d1d2439e937a881e3f5d3cf4b0a`; exact clean/pushed `e415262` |
-| Full | Not triggered | No dependency, migration, privilege, package/update, installer/lifecycle, backup, release, or broad shared-boundary change |
-| Extended | Not triggered | Crash, concurrency, full-disk, ACL/path, fuzz, and bounds cases are independently invokable within Targeted |
+| Pre-change Inventory baseline | Passed 1/1 | 362 ms reported / 7.724 s wall; prior assembly scaffold only |
+| Provider-contract Targeted | Passed 22/22; 0 failed/skipped | Latest evidence-hardening rerun: 272 ms reported / 1.814 s wall; deterministic fakes on direct host |
+| Exact `FI-001` provider-unavailable subset | Passed 1/1; 0 failed/skipped | Final recorded run: 177 ms reported / 1.787 s wall; exact recovery/limitation assertions; no real provider or host mutation |
+| Strict formatting | Passed | `dotnet format ... --verify-no-changes`; unchanged |
+| Inventory production static review | Passed | No write, mutation, network, or generic shell surface in current production source |
+| Release solution build | Passed; 0 warnings/errors | 5.39 s direct host |
+| Implementation-checkpoint governed Quick | Passed 187/187; bundle/repository validators passed | 108.504 s at `8e284b9` |
+| Synchronized completion-tree governed Quick | Passed 187/187; bundle/repository validators passed | 107.775 s tests / 112.654 s complete; 2026-08-28T21:17:33–21:19:26+02:00 |
+| Full | Not triggered | No milestone/release gate, dependency, migration, privilege, package/update, installer/lifecycle, or broad shared-boundary trigger |
+| Extended | Not triggered | No named resource, interruption, hosted-environment, physical, or hardware scenario trigger |
 
-Targeted uses a disposable 4,096 MiB Windows Sandbox on the active physical machine, exact .NET SDK 10.0.400 and Git 2.55.0.windows.5, lock-derived offline NuGet inputs, networking disabled, bounded output, and verified descendant/staging cleanup. It is not direct-host policy compatibility, physical power-loss proof, filesystem-filter coverage, cross-platform assurance, modest-hardware certification, or a cross-hardware claim.
+The synchronized completion tree passed the governed Quick tier before publication. After recording that result, the resulting final manifested tree receives the same exact gate once more before commit/push handoff. This is an additional repository-continuity check; the task-required runtime proof is the Targeted provider-contract suite above.
 
-## Defect handling
+## Defect handling and independent review
 
-1. A post-publication one-record byte overage was replaced with recoverable `.tmp` → `.txn` → retention → `evt` semantics and real child-process crash tests before cleanup and after eviction.
-2. Cross-process proof now includes synchronized child writers and process death while holding the lock.
-3. Canonical/identity coverage includes invalid UTF-8, order/whitespace drift, duplicate/unknown keys, message mismatch, filename/timestamp mismatch, ACL widening, links/reparse points, and path replacement.
-4. Deterministic full-disk faults before temporary creation and after writing but before flush prove stable sanitized failure, no partial final, bounded residue, and safe next cleanup.
-5. File/queue/wait bounds are exact and fail closed.
-6. Public crash logging no longer accepts caller correlation; two calls prove fresh distinct IDs.
-7. Invalid temporary and future-clock committed state is rejected before recovery eviction. An exact committed intent already outside retention is safely deleted and reported instead of being published or blocking all later operations.
-8. Verified orphan temporaries are removed before the next append stages bytes; repeated real pre-commit child-process crashes prove residue remains at one latest temporary rather than growing per restart.
-9. Live append and restart recovery revalidate committed intent immediately before retention mutation; same-length canonical live substitution preserves the seed and reports ambiguity. Local current-user/administrator files are not claimed tamper-proof.
-10. The approved TL-0005 privacy files were briefly annotated; validation rejected the exact-commit change, so both were restored byte-for-byte and implementation status remains in non-contract records.
-11. An earlier changed testhost launch hit Application Control `0x800711C7`; no host policy was weakened or bypassed. A later final protected-host suite ran 127/127, while authoritative source-bound runtime evidence remains the governed same-machine Sandbox result.
-12. The first persisted final Targeted attempt passed 126 cases but exposed one cleanup-result composition assertion: successful expired-transaction deletion was performed, but its removed-file count was overwritten when later cleanup results were combined. Commit `37e9123` preserves both counts; the focused case, all 127 host cases, and the exact persisted Sandbox rerun passed. The failed result and manifest remain append-only with SHA-256 `29385cb27281ce29e5709f5096d3df437d0cdafaee3a9bf20d039e6a23d01b9a` and `7ac3b6908159a8b0fac8e2a0245e74bdbf8f01662aa94034b932f1412b6ed5b9`.
+Three independent read-only reviews examined contract design, downstream provider fit, and security/failure behavior. Their findings were resolved across the implementation and evidence-hardening checkpoints:
+
+1. Synthetic provenance no longer downgrades normalized evidence from Workshop Restricted to Public Reference.
+2. Provider-supplied unavailable candidates cannot mint runner-only timeout, cancellation, contract, cleanup, or execution limitations.
+3. Non-cleanup failure cannot retain every declared requirement as available; a focused regression enforces this.
+4. The static safety guard is scoped to contract/normalization code so it does not block legitimate, task-reviewed fixed Windows adapters or verified cleanup in later tasks.
+5. Pre-cancelled collection uses system-generated provenance because the provider was not invoked.
+6. Faults that complete after a timeout race are observed; hostile exception accessors prove normalization does not read unsafe text.
+7. Public mutation-surface checks cover setters/mutator methods and arbitrary command, argument, script, executable, registry-path, URL, and URI fields.
+8. The exact `FI-001` case now checks error, limitation, recovery, partial-evidence, and fail-closed agreement instead of relying on a disconnected mutation flag.
+9. Test naming now states the proved claim—no Windows types in the public contract—rather than implying a non-Windows runtime that the Windows-targeted projects did not execute.
+
+No open TL-0105 defect remains. The cooperative-timeout limit is a documented assurance boundary for concrete provider tasks, not a hidden pass condition.
 
 ## Boundary and risk impact
 
-- **Project vacuum / sibling:** no sibling source, data, runtime, adapter, dependency, or test.
-- **Data / migration:** only protected local sanitized-log files; no SQLite/job migration, attachment, report, or export.
-- **Release interface:** unchanged; no compatibility promise.
-- **Dependency / licence:** no package, toolchain, or matrix change.
-- **Security / privacy:** redact before first write, no raw/free payload API, bounded recovery. Current-user/admin tamper resistance and export controls are not claimed.
-- **Accessibility / modest hardware:** no UI change; local serialized work with explicit value/record/byte/file/queue/wait bounds; no GPU, resident service, background indexing/upload, or hardware certification.
+- **Project vacuum / sibling:** no sibling source, data, runtime, adapter, dependency, test, or compatibility claim.
+- **Data / migration:** no persistence schema, database, attachment, cache, temporary report, log, or migration change. Tests use in-memory deterministic fakes.
+- **Release interface:** unchanged; no release behavior or compatibility promise is created.
+- **Dependency / licence:** no package, SDK, toolchain, licence matrix, or redistribution-right change.
+- **Security:** the public surface is read-only and closed; failures are bounded and fail closed; raw exception members, dedicated raw-output fields, and arbitrary execution fields are excluded. Bounded typed text still requires provider-specific allowlisting and sanitization. A compromised OS can still lie, so source truth and fresh re-observation remain residual risks.
+- **Privacy:** every normalized observation is Workshop Restricted; no active-machine identifiers or sensitive capture were collected. Later providers still need field-specific minimization and approved persistence/report projections.
+- **Accessibility:** no UI or human workflow changed. Typed stable outcome/error/recovery codes support later plain-language and assistive-technology mapping but do not constitute an accessibility walkthrough.
+- **Modest hardware:** no GPU, service, resident worker, network activity, large fixture, or unbounded collection is introduced. Declared duration/timeout/count/text bounds support later constrained providers, but no resource benchmark, minimum specification, or cross-hardware claim is made.
+
+## Outstanding
+
+There is no remaining TL-0105 blocker or human evidence requirement. The task is complete at its defined contract boundary.
+
+The following are explicit future-work limits, not incomplete TL-0105 acceptance criteria:
+
+- No concrete Windows provider has been implemented or smoke-tested.
+- No real device, CPU, memory, OS, storage, battery, firmware, security, or network fact was collected.
+- No policy verdict, persistence snapshot, UI presentation, report, support export, release authorization, or hardware certification exists from this step.
+- In-process timeouts do not forcibly terminate a provider that blocks before returning or ignores cancellation.
+- `FI-001` network/transfer variants, concrete-provider `SMC-PROVIDER-UNAVAILABLE` variants, and the broad FI/SMC matrix remain unrun until their owning tasks reach their triggers.
+
+## Next steps
+
+1. Start only `TL-0106` after this completion commit is pushed and local/upstream equality is verified.
+2. Implement the first concrete unelevated Windows provider for device identity, processor, architecture, and installed memory against the TL-0105 boundary.
+3. Supply deterministic captured/synthetic inputs covering multiple represented manufacturers and processor/architecture/memory variants, including missing, denied, malformed, duplicate, and bounded multi-instance cases.
+4. Run a bounded read-only active-machine smoke observation and record only the sanitized reference-profile facts authorized by the task; keep active observation separate from synthetic coverage.
+5. Re-run the exact provider-unavailable case for the concrete adapter and add provider-specific fixed-operation, no-mutation, timeout/cancellation, source, unit, cardinality, and privacy tests.
+
+## Upcoming decisions for `TL-0106`
+
+### Windows evidence sources and fallback order
+
+TL-0106 must choose exact structured, read-only Windows sources for manufacturer/model, processor, architecture, and installed memory and define a deterministic fallback/conflict order. The choice determines privilege requirements, localization exposure, cancellation behavior, unit conversion, and how a missing or contradictory source is reported. A fixed reviewed API or fixed helper invocation may be acceptable; generic shell strings, localized table parsing, and caller-supplied commands are not. This decision authorizes only those exact reads and does not grant a general WMI, PowerShell, process, or registry execution surface.
+
+### Device identity and serial privacy
+
+The task permits a full serial only in the approved Workshop Record while ordinary logs expose an approved suffix or no serial. Before implementation, TL-0106 must bind which layer may hold the full value, how deterministic fixtures avoid real serials, how active-machine smoke evidence is sanitized, and how error/source references avoid leaking device or host identity. Approval of the provider does not authorize serials in diagnostics, status files, test output, captures, support exports, or user-facing summaries.
+
+### Normalized keys, units, and cardinality
+
+The provider must define exact stable keys and invariant types/units for device type, manufacturer/model, processor identity/capability, architecture, and installed memory. It must also decide whether processor data is one aggregate observation or bounded per-instance evidence and how source references distinguish instances without embedding sensitive identifiers. These decisions affect later policy and reports, so keys should be minimal and durable rather than mirroring a provider's raw schema.
+
+### Supported Windows range and unelevated behavior
+
+TL-0106 acceptance requires successful unelevated operation on supported Windows 11. The current descriptor can state supported OS families (`Windows10` and/or `Windows11`); TL-0106 must choose the applicable family and define what happens on unsupported/unknown builds or denied data. If finer build-range metadata is necessary, that is an explicit governed contract extension rather than an implied existing capability. An unavailable source must remain unknown; the task may not add elevation, weaken permissions, or use a bypass simply to obtain a value.
+
+### Cooperative cancellation and timeout proof
+
+The concrete API path must return control promptly, honor cancellation where the underlying API permits it, and stay within its declared timeout and evidence bounds. If the API cannot be cancelled, the task must define a bounded wrapper and truthful late-completion/cleanup behavior or escalate an architecture decision. TL-0105 does not pre-authorize a permanent worker, privileged service, or forcible thread termination.
+
+### Evidence scope and claim wording
+
+Captured/synthetic samples prove only represented parser and normalization cases; the active-machine smoke run proves only that exact machine, build, provider, and observation time. TL-0106 must keep those evidence classes separate and explicitly avoid manufacturer coverage, minimum-specification, performance, reliability, compatibility, or cross-hardware certification claims.
 
 ## Historical TL-0008 transition
 
 The superseded `TL-0008 draft 1` procedure remains preserved only as a historical record at source commit `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, with procedure SHA-256 `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`. No physical hardware walkthrough was performed for that transition; its former device-pool procedure is not current evidence.
 
-## Outstanding and next steps
-
-1. Define bounded provider identity, privilege, duration/timeout, network-use, supported-OS, evidence-key, cancellation, and sanitized-error contracts.
-2. Implement deterministic normalization that maps success, unavailable, failure, timeout, and cancellation without inventing a pass or retaining raw exception/provider output.
-3. Add fake-provider contract tests, the independently invokable `FI-001` / `SMC-PROVIDER-UNAVAILABLE` filter, read-only architecture checks, and current-source Targeted evidence.
-4. Synchronize task/status/threat records, publish checkpoints, and mark TL-0105 `done` only after every acceptance criterion and the final governed Quick pass.
-
-## Upcoming decisions
-
-- **Closed event surface — decided and binding:** diagnostics are an allowlisted data contract, not a general logging channel. This choice reduces accidental disclosure at the API boundary because callers cannot fall back to free-form text, arbitrary objects, ordinary exception messages, or raw provider output. Its operational implication is that each future diagnostic field or event code must be intentionally designed, bounded, classified, tested, and reviewed; convenience alone is not sufficient reason to broaden the surface.
-- **Durable retention ordering — decided and binding:** the store commits a recoverable intent before it evicts final records, and final-record age/byte ceilings take priority over immediate publication. This permits deterministic restart recovery and truthful `recovery pending` outcomes without blind retry. It does not mean physical-power-loss behavior is fully proven, local administrator changes are tamper-proof, or every filesystem filter behaves identically; those remain explicit assurance limits.
-- **Crash correlation ownership — decided and binding:** the logger creates a fresh opaque correlation for every public crash call rather than accepting a caller-selected identifier. This prevents accidental linkage of separate crashes and blocks callers from smuggling identity through a correlation field. If later support workflows need durable cross-event linkage, they require a separate privacy-minimized design with purpose, retention, access, and disclosure controls.
-- **Support provenance and export — intentionally deferred to `TL-0606`:** TL-0104 proves the exact 25-field schema and redaction mechanics only with registered synthetic values. It does not make arbitrary digests trustworthy, create a preview, package an archive, select a destination, or authorize transfer. TL-0606 must bind the exact preview bytes, manifest, approval, destination, and production digests before any support export can exist.
-- **Platform assurance — Windows-only for the proved deletion race:** Windows uses handle-bound deletion after identity and link checks. The portable fallback is path-bound and is not an equivalent non-Windows production guarantee. Supporting another platform would therefore be a new security decision requiring native permission, identity, link, atomicity, replacement, and deletion-race evidence rather than a simple target-framework change.
-- **Verification scope — decided and evidenced:** task-expected Targeted covers the changed diagnostics privacy, filesystem, recovery, concurrency, and resource risks; synchronized Quick proves the governance bundle still agrees. Full and Extended were not triggered because TL-0104 changed no dependency, migration, privilege, package/update, installer/lifecycle, backup, release, or broad shared boundary. A later change crossing one of those boundaries must select the broader tier at that time.
-- **Next provider-contract decision — upcoming in `TL-0105`:** provider APIs must expose privilege, duration, network use, supported OS, cancellation, timeout, and typed unavailable/error outcomes while retaining source-specific uncertainty. TL-0105 must decide the smallest normalized evidence vocabulary that lets policy consume observations without converting missing, stale, conflicting, or weak evidence into a pass.
-
 ## Next dependency-ready task
 
-After TL-0105 is complete and published, the lowest dependency-ready task will be `TL-0106` — Implement device identity, CPU, memory, and architecture inventory. Do not start it in this session.
+`TL-0106` — Implement device identity, CPU, memory, and architecture inventory. It is not started in this session.

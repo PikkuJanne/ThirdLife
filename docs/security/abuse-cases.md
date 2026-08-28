@@ -170,7 +170,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Structured API preference, secure parser settings, fixed operations, type/range/count/depth/byte/time bounds, provenance/timestamp, explicit observed/inferred/not-available/human-confirmed classes, conflict policy, fresh verification source.  
 **Fail-closed response:** Record not available/failed/contradictory evidence and sanitized error; never pass a required condition; allow safe provider rerun.  
 **Planned controls/tasks:** D-015, D-018; `TL-0104`, `TL-0105`, `TL-0106`, `TL-0107`, `TL-0108`, `TL-0109`, `TL-0110`, `TL-0111`, `TL-0112`, `TL-0202`, `TL-0506`, `TL-0507`  
-**Control status:** Planned  
+**Control status:** Partially implemented — `TL-0105` verifies the common typed, bounded, read-only normalization boundary and deterministic unavailable/access-denied/invalid/timeout/cancellation/exception handling. Concrete provider acquisition/parsing, stale/conflict policy, persistence, and fresh verification sources remain planned in their owning tasks.  
 **Recovery/manual path:** Retry bounded collection, use a reviewed independent source or attributable human test, and leave unsupported evidence unknown.  
 **Residual risk:** `RR-001`; a compromised OS and incomplete hardware APIs can produce false negatives.
 

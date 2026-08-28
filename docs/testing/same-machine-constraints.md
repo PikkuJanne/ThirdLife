@@ -1,9 +1,9 @@
 # ThirdLife Setup Core — Same-machine constraint procedures
 
-**Status:** Active specification; defined but not executed at revised `TL-0008`  
+**Status:** Active specification; first deterministic provider constraint executed at `TL-0105`  
 **Revision:** TL-0008 same-machine revision 2  
 **Physical hardware scope:** Active Codex machine only  
-**Current execution state:** All `SMC-*` profiles are `Not run`; commands, workloads, numerical budgets, and results remain owning-task placeholders.
+**Current execution state:** The deterministic contract subset of `SMC-PROVIDER-UNAVAILABLE` passed at `TL-0105`; concrete Windows-provider variants and all other profiles remain owning-task work and are `Not run` unless separately recorded.
 
 ## 1. Purpose and claim boundary
 
@@ -11,7 +11,7 @@ These procedures apply safe, bounded, reversible conditions on the active Codex 
 
 A same-machine constraint proves only the recorded build, active reference-machine profile, hosted environment, exact settings, fixture/workload, and observation window. It does not simulate a particular processor, RAM size, storage device, network, GPU, manufacturer, firmware, or minimum specification.
 
-Revised `TL-0008` defines the profiles and later triggers only. It does not apply a constraint, run a resource matrix, disrupt the active machine, or create benchmark evidence.
+At revised `TL-0008`, the profiles and later triggers were definition-only; no constraint or resource matrix ran and no benchmark evidence was created. `TL-0105` later executed only the deterministic fake-provider subset recorded below without changing host permissions or providers.
 
 ## 2. Common safety and invocation contract
 
@@ -129,11 +129,11 @@ The quick tier validates these definitions and safe wording only. Revised `TL-00
 - **Purpose:** Prove unavailable, access-denied, timeout, malformed, and bounded-exception evidence remains unknown/fail-closed.
 - **Prerequisites:** Typed provider interface and deterministic fixture/stub for each represented failure code.
 - **Safe setup:** Inject at the provider boundary; do not change host permissions or disable a real provider merely to manufacture failure.
-- **Invocation state:** Not implemented at TL-0008; the named owning provider task must supply exact failure case/filter before invocation.
-- **Expected invariant:** Required evidence cannot pass; unrelated observations remain; raw output is not retained; next safe action is clear.
+- **Invocation state:** TL-0105 provider-contract subset: `dotnet test .\tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName=ThirdLife.Inventory.Tests.ProviderFailureInjectionTests.FI001SmcProviderUnavailableRemainsFailClosed"`.
+- **Expected invariant:** Required evidence cannot pass; unrelated observations remain; raw source data is admitted only through an owning-task allowlist/minimization contract; raw exception text is not retained; next safe action is clear.
 - **Abort:** The harness would require elevated/broad permission changes, real provider damage, unbounded output, or sensitive capture.
 - **Cleanup/restoration:** Dispose the stub/fixture workspace and verify no host permission/provider change occurred.
-- **Claim limitation/status:** Proves represented error contract only; fixture/command/result not implemented at TL-0008; the named owning task must supply the item before invocation; `Not run`.
+- **Claim limitation/status:** The TL-0105 deterministic fake-provider case passed 1/1 at commit `e5e9c7ef26ddfb2674ce08d7ea35b0dd193b9a2c`. It proves only the represented common error contract: required facts stay unknown, retained unrelated facts remain attributable, exact error/recovery/limitation codes agree, and seeded exception text is absent. The deterministic fake exposes no mutation capability and setup changed no host permission/provider; this is not real-provider no-mutation assurance. The common contract has no dedicated raw-output field but does not semantically sanitize arbitrary bounded text evidence. It does not prove a concrete Windows API, real access-denied state, hardware class, network path, or forcible termination of an uncooperative provider; those variants remain `Not run` until their owning tasks provide exact evidence. The complete fixture, timing, bounds, integrity, cleanup/residue, defect, and limitation record is in `failure-injection.md` under the dual `FI-001` / `SMC-PROVIDER-UNAVAILABLE` result.
 
 ## 12. `SMC-SLOW-DESTINATION`
 
@@ -189,6 +189,8 @@ Evidence must be bounded and sanitized. Do not attach raw hardware/diagnostic lo
 
 | Profile range | Quick definition check | Targeted | Full | Extended | Evidence |
 |---|---|---|---|---|---|
-| `SMC-BASELINE` through `SMC-LARGE-WORKLOAD` | Defined for TL-0008 | `Not run`; no trigger | `Not run`; no trigger | `Not run`; no trigger | None; these items are not implemented at TL-0008, and each named owning task must supply its command, fixture/hash, budget, and expected result before invocation |
+| `SMC-PROVIDER-UNAVAILABLE` — TL-0105 contract subset | Defined for TL-0008 | `Pass`; exact fake-provider case 1/1 | Not triggered | Not triggered | `ProviderFailureInjectionTests.FI001SmcProviderUnavailableRemainsFailClosed`; commit `e5e9c7ef26ddfb2674ce08d7ea35b0dd193b9a2c`; deterministic fake only; no setup-time host permission/provider change; full record in `failure-injection.md` |
+| Concrete `SMC-PROVIDER-UNAVAILABLE` provider variants | Defined for TL-0008 | `Not run`; owning provider tasks not complete | Not triggered | Not triggered | No real provider, permission, hardware, or network evidence at TL-0105 |
+| All other `SMC-*` profiles | Defined for TL-0008 | `Not run` unless separately recorded by an owning task | `Not run` unless triggered | `Not run` unless triggered | Each named owning task must supply its command, fixture/hash, budget, expected result, and narrow claim before invocation |
 
 When a later scenario fails, rerun its single command first and then the related targeted set. Rerun full or extended scope only when its trigger applies or a shared cause is suspected. Release wording may report recorded same-machine results and design intent, never broad modest-hardware certification or unobserved minimum specifications.
