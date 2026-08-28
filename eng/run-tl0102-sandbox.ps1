@@ -361,6 +361,12 @@ function Get-LockedNuGetClosure {
             Where-Object { $_.FullName -notmatch "[\\/](?:bin|obj|\.venv|\.git)[\\/]" } |
             Sort-Object FullName)
     }
+    elseif ($SelectedPhase -eq "Targeted") {
+        $lockFiles = @(
+            Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Core.Tests\packages.lock.json") -Force
+            Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Persistence.Tests\packages.lock.json") -Force
+        )
+    }
     else {
         $lockFiles = @(Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Persistence.Tests\packages.lock.json") -Force)
     }
@@ -767,11 +773,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Unable to enumerate tracked source files." }
     $taskUntrackedFiles = @(& $gitExecutable -C $repositoryRoot ls-files --others --exclude-standard -- `
         "src/ThirdLife.Core/Jobs/IJobStore.cs" `
+        "src/ThirdLife.Core/Jobs/JobService.cs" `
+        "src/ThirdLife.Core/Sanitization/SanitizationGate.cs" `
         "src/ThirdLife.Persistence" `
+        "tests/ThirdLife.Core.Tests/JobLifecycleTests.cs" `
         "tests/ThirdLife.Persistence.Tests" `
         "eng/run-tl0102-sandbox.ps1" `
         "eng/run-tl0102-sandbox-guest.ps1")
-    if ($LASTEXITCODE -ne 0) { throw "Unable to enumerate TL-0102 working files." }
+    if ($LASTEXITCODE -ne 0) { throw "Unable to enumerate TL-0102/TL-0103 working files." }
     Assert-WorkingTreeSelectionBound -Repository $repositoryRoot -RelativePaths @($trackedFiles + $taskUntrackedFiles)
     foreach ($relative in $trackedFiles) { Copy-WorkingTreeFile -Repository $repositoryRoot -Destination $sourceStage -RelativePath $relative }
     foreach ($relative in $taskUntrackedFiles) { Copy-WorkingTreeFile -Repository $repositoryRoot -Destination $sourceStage -RelativePath $relative }

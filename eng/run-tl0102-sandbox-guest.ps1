@@ -1154,10 +1154,19 @@ try {
         }
 
         if ($phase -in @("RoundTrip", "Integration", "Migration", "PathSecurity", "Interruption", "Targeted")) {
-            $project = "tests\ThirdLife.Persistence.Tests\ThirdLife.Persistence.Tests.csproj"
+            $persistenceProject = "tests\ThirdLife.Persistence.Tests\ThirdLife.Persistence.Tests.csproj"
             Invoke-RequiredCommand -Label "locked-offline-restore" -FilePath $dotnetExecutable -Arguments @(
-                "restore", $project, "--locked-mode", "--configfile", $nugetConfig, "--nologo", "-p:NuGetAudit=false"
+                "restore", $persistenceProject, "--locked-mode", "--configfile", $nugetConfig, "--nologo", "-p:NuGetAudit=false"
             ) -Failure "restore_failed"
+            if ($phase -eq "Targeted") {
+                $coreProject = "tests\ThirdLife.Core.Tests\ThirdLife.Core.Tests.csproj"
+                Invoke-RequiredCommand -Label "locked-offline-core-restore" -FilePath $dotnetExecutable -Arguments @(
+                    "restore", $coreProject, "--locked-mode", "--configfile", $nugetConfig, "--nologo", "-p:NuGetAudit=false"
+                ) -Failure "restore_failed"
+                Invoke-RequiredCommand -Label "core-tests" -FilePath $dotnetExecutable -Arguments @(
+                    "test", $coreProject, "--configuration", "Release", "--no-restore", "--nologo"
+                ) -Failure "test_failed" -SuccessMarker "Passed!"
+            }
             $filter = switch ($phase) {
                 "RoundTrip" { "FullyQualifiedName~SqliteJobStoreIntegrationTests.CreateCloseReopenArchiveAndRestorePreserveCommittedState" }
                 "Integration" { "FullyQualifiedName~SqliteJobStoreIntegrationTests" }
@@ -1166,7 +1175,7 @@ try {
                 "Interruption" { "FullyQualifiedName~TransactionInterruptionTests" }
                 default { $null }
             }
-            $testArguments = @("test", $project, "--configuration", "Release", "--no-restore", "--nologo")
+            $testArguments = @("test", $persistenceProject, "--configuration", "Release", "--no-restore", "--nologo")
             if ($null -ne $filter) { $testArguments += @("--filter", $filter) }
             Invoke-RequiredCommand -Label "persistence-tests" -FilePath $dotnetExecutable -Arguments $testArguments -Failure "test_failed" -SuccessMarker "Passed!"
         }

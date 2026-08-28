@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Sanitization;
 
 namespace ThirdLife.Persistence.Tests;
 
@@ -292,5 +293,271 @@ public sealed class SqliteJobStoreIntegrationTests
         Assert.Equal(
             SqliteJobStore.MaximumJobs,
             await SqliteTestControl.ReadJobCountAsync(store.DatabasePath));
+    }
+
+    [Fact]
+    public async Task GateDecisionRoundTripsAndSameEvidenceRetryIsIdempotent()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("gate-roundtrip");
+        var evidence = PersistenceTestData.CreateSanitization("gate-roundtrip");
+        var candidate = SanitizationGate.Evaluate(
+            job.JobId,
+            evidence,
+            PersistenceTestData.Timestamp.AddMinutes(2),
+            new SanitizationGateDecisionId("gate-roundtrip"));
+
+        SanitizationGateDecision accepted;
+        await using (var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+            await store.CreateJobAsync(job);
+            await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [evidence]));
+            accepted = await store.RecordSanitizationGateDecisionAsync(candidate);
+
+            var retryCandidate = SanitizationGate.Evaluate(
+                job.JobId,
+                evidence,
+                PersistenceTestData.Timestamp.AddMinutes(3),
+                new SanitizationGateDecisionId("gate-roundtrip-retry"));
+            Assert.Equal(accepted, await store.RecordSanitizationGateDecisionAsync(retryCandidate));
+            await store.SetArchiveStateAsync(
+                job.JobId,
+                isArchived: true,
+                PersistenceTestData.Timestamp.AddMinutes(4));
+            await store.SetArchiveStateAsync(
+                job.JobId,
+                isArchived: false,
+                PersistenceTestData.Timestamp.AddMinutes(5));
+        }
+
+        await using var reopened = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        var actual = await reopened.LoadJobAsync(job.JobId);
+
+        Assert.NotNull(actual);
+        Assert.False(actual.IsArchived);
+        Assert.Equal(evidence, Assert.Single(actual.SanitizationEvidence));
+        Assert.Equal(accepted, Assert.Single(actual.SanitizationGateDecisions));
+        Assert.True(SanitizationGate.Inspect(actual).AllowsAssessment);
+    }
+
+    [Fact]
+    public async Task LaterFailedEvidenceWithOlderTimestampInvalidatesPriorAllowDecision()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("gate-stale");
+        var verified = PersistenceTestData.CreateSanitization(
+            SanitizationState.Verified,
+            "gate-verified",
+            PersistenceTestData.Timestamp.AddHours(2));
+        var failed = PersistenceTestData.CreateSanitization(
+            SanitizationState.Failed,
+            "gate-failed",
+            PersistenceTestData.Timestamp.AddHours(-2));
+        var verifiedDecision = SanitizationGate.Evaluate(
+            job.JobId,
+            verified,
+            PersistenceTestData.Timestamp.AddMinutes(2));
+
+        await using (var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+            await store.CreateJobAsync(job);
+            await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [verified]));
+            await store.RecordSanitizationGateDecisionAsync(verifiedDecision);
+            await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [failed]));
+
+            var stale = await store.LoadJobAsync(job.JobId);
+            Assert.NotNull(stale);
+            Assert.Equal(SanitizationGateReason.GateDecisionStale, SanitizationGate.Inspect(stale).Reason);
+            await Assert.ThrowsAsync<JobStoreConflictException>(() =>
+                store.RecordSanitizationGateDecisionAsync(verifiedDecision));
+
+            var failedDecision = SanitizationGate.Evaluate(
+                job.JobId,
+                failed,
+                PersistenceTestData.Timestamp.AddMinutes(3));
+            await store.RecordSanitizationGateDecisionAsync(failedDecision);
+        }
+
+        await using var reopened = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        var actual = await reopened.LoadJobAsync(job.JobId);
+
+        Assert.NotNull(actual);
+        Assert.Equal(2, actual.SanitizationEvidence.Count);
+        Assert.Equal(2, actual.SanitizationGateDecisions.Count);
+        var status = SanitizationGate.Inspect(actual);
+        Assert.False(status.AllowsAssessment);
+        Assert.Equal(SanitizationGateReason.SanitizationFailed, status.Reason);
+    }
+
+    [Fact]
+    public async Task GateRecordingRejectsArchivedAndMismatchedCandidatesWithoutWrite()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("gate-reject");
+        var evidence = PersistenceTestData.CreateSanitization("gate-reject");
+
+        await using var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        await store.CreateJobAsync(job);
+        await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [evidence]));
+
+        var wrongPolicy = new SanitizationGateDecision(
+            new SanitizationGateDecisionId("gate-wrong-policy"),
+            job.JobId,
+            evidence.Metadata.EvidenceId,
+            "different-policy@1.0.0",
+            SanitizationGateOutcome.AllowAssessment,
+            SanitizationGateReason.SanitizationVerified,
+            PersistenceTestData.Timestamp.AddMinutes(2));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            store.RecordSanitizationGateDecisionAsync(wrongPolicy));
+
+        await store.SetArchiveStateAsync(
+            job.JobId,
+            isArchived: true,
+            PersistenceTestData.Timestamp.AddMinutes(3));
+        var candidate = SanitizationGate.Evaluate(
+            job.JobId,
+            evidence,
+            PersistenceTestData.Timestamp.AddMinutes(4));
+        await Assert.ThrowsAsync<JobStoreConflictException>(() =>
+            store.RecordSanitizationGateDecisionAsync(candidate));
+
+        var actual = await store.LoadJobAsync(job.JobId);
+        Assert.NotNull(actual);
+        Assert.Empty(actual.SanitizationGateDecisions);
+        Assert.Equal(evidence, Assert.Single(actual.SanitizationEvidence));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task OrderedCrossInstanceEvidenceAndGateWritesAlwaysFinishFailClosed(
+        bool gateWriteStartsFirst)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("gate-race");
+        var verified = PersistenceTestData.CreateSanitization(
+            SanitizationState.Verified,
+            "gate-race-verified",
+            PersistenceTestData.Timestamp.AddMinutes(1));
+        var failed = PersistenceTestData.CreateSanitization(
+            SanitizationState.Failed,
+            "gate-race-failed",
+            PersistenceTestData.Timestamp.AddMinutes(2));
+        var candidate = SanitizationGate.Evaluate(
+            job.JobId,
+            verified,
+            PersistenceTestData.Timestamp.AddMinutes(3));
+
+        await using (var initializer = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+            await initializer.CreateJobAsync(job);
+            await initializer.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [verified]));
+        }
+
+        var blocker = new BlockingFaultInjector(JobStoreFaultPoint.BeforeWriteCommit);
+        await using var blockedStore = await SqliteJobStore.OpenForTestingAsync(
+            workspace.StoreRoot,
+            SqliteJobStore.CurrentSchemaVersion,
+            TimeProvider.System,
+            blocker);
+        await using var competingStore = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        var competingStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<SanitizationGateDecision> gateWrite;
+        Task evidenceWrite;
+
+        try
+        {
+            if (gateWriteStartsFirst)
+            {
+                gateWrite = blockedStore.RecordSanitizationGateDecisionAsync(candidate);
+                await blocker.Reached.WaitAsync(TimeSpan.FromSeconds(10));
+                evidenceWrite = Task.Run(async () =>
+                {
+                    competingStarted.SetResult();
+                    await competingStore.AppendEvidenceAsync(
+                        new JobEvidenceBatch(job.JobId, sanitizationEvidence: [failed]));
+                });
+                await competingStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            }
+            else
+            {
+                evidenceWrite = blockedStore.AppendEvidenceAsync(
+                    new JobEvidenceBatch(job.JobId, sanitizationEvidence: [failed]));
+                await blocker.Reached.WaitAsync(TimeSpan.FromSeconds(10));
+                gateWrite = Task.Run(async () =>
+                {
+                    competingStarted.SetResult();
+                    return await competingStore.RecordSanitizationGateDecisionAsync(candidate);
+                });
+                await competingStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            }
+        }
+        finally
+        {
+            blocker.Release();
+        }
+
+        if (gateWriteStartsFirst)
+        {
+            await gateWrite.WaitAsync(TimeSpan.FromSeconds(10));
+            await evidenceWrite.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+        else
+        {
+            await evidenceWrite.WaitAsync(TimeSpan.FromSeconds(10));
+            await Assert.ThrowsAsync<JobStoreConflictException>(async () =>
+                await gateWrite.WaitAsync(TimeSpan.FromSeconds(10)));
+        }
+
+        var actual = await competingStore.LoadJobAsync(job.JobId);
+
+        Assert.NotNull(actual);
+        Assert.Equal(2, actual.SanitizationEvidence.Count);
+        var status = SanitizationGate.Inspect(actual);
+        Assert.False(status.AllowsAssessment);
+        Assert.Equal(
+            gateWriteStartsFirst
+                ? SanitizationGateReason.GateDecisionStale
+                : SanitizationGateReason.GateDecisionMissing,
+            status.Reason);
+        Assert.Equal(gateWriteStartsFirst ? 1 : 0, actual.SanitizationGateDecisions.Count);
+    }
+
+    [Fact]
+    public async Task CancellationBeforeCommitRollsBackGateDecision()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("gate-cancel");
+        var evidence = PersistenceTestData.CreateSanitization("gate-cancel");
+        await using (var initializer = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+            await initializer.CreateJobAsync(job);
+            await initializer.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [evidence]));
+        }
+
+        var blocker = new BlockingFaultInjector(JobStoreFaultPoint.BeforeWriteCommit);
+        await using var store = await SqliteJobStore.OpenForTestingAsync(
+            workspace.StoreRoot,
+            SqliteJobStore.CurrentSchemaVersion,
+            TimeProvider.System,
+            blocker);
+        using var cancellation = new CancellationTokenSource();
+        var write = store.RecordSanitizationGateDecisionAsync(
+            SanitizationGate.Evaluate(
+                job.JobId,
+                evidence,
+                PersistenceTestData.Timestamp.AddMinutes(2)),
+            cancellation.Token);
+        await blocker.Reached.WaitAsync(TimeSpan.FromSeconds(10));
+        cancellation.Cancel();
+        blocker.Release();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => write);
+        var actual = await store.LoadJobAsync(job.JobId);
+
+        Assert.NotNull(actual);
+        Assert.Empty(actual.SanitizationGateDecisions);
+        Assert.Equal(SanitizationGateReason.GateDecisionMissing, SanitizationGate.Inspect(actual).Reason);
     }
 }

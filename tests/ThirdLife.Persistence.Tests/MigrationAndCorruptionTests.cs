@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using Microsoft.Data.Sqlite;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Sanitization;
 
 namespace ThirdLife.Persistence.Tests;
 
@@ -204,6 +205,74 @@ public sealed class MigrationAndCorruptionTests
         Assert.Equal(job, actual.Job);
         Assert.Empty(actual.Observations);
         Assert.Empty(actual.Checkpoints);
+    }
+
+    [Fact]
+    public async Task VersionTwoStoreMigratesGateSchemaAndPreservesEvidenceArchiveHistory()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("version-two");
+        var evidence = PersistenceTestData.CreateSanitization("version-two");
+        string databasePath;
+
+        await using (var versionTwo = await SqliteJobStore.OpenForTestingAsync(
+                         workspace.StoreRoot,
+                         maximumMigrationVersion: 2,
+                         TimeProvider.System,
+                         faultInjector: null))
+        {
+            databasePath = versionTwo.DatabasePath;
+            await versionTwo.CreateJobAsync(job);
+            await versionTwo.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [evidence]));
+            await versionTwo.SetArchiveStateAsync(
+                job.JobId,
+                isArchived: true,
+                PersistenceTestData.Timestamp.AddMinutes(2));
+        }
+
+        Assert.Equal(2, await SqliteTestControl.ReadUserVersionAsync(databasePath));
+
+        await using var migrated = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        var actual = await migrated.LoadJobAsync(job.JobId);
+
+        Assert.Equal(SqliteJobStore.CurrentSchemaVersion, await SqliteTestControl.ReadUserVersionAsync(databasePath));
+        Assert.NotNull(actual);
+        Assert.True(actual.IsArchived);
+        Assert.Equal(evidence, Assert.Single(actual.SanitizationEvidence));
+        Assert.Empty(actual.SanitizationGateDecisions);
+        Assert.Equal(
+            [JobCheckpointKind.JobCreated, JobCheckpointKind.EvidenceCommitted, JobCheckpointKind.Archived],
+            actual.Checkpoints.Select(checkpoint => checkpoint.Kind));
+    }
+
+    [Fact]
+    public async Task FailedThirdMigrationLeavesCompleteVersionTwoAndLaterRetrySucceeds()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        string databasePath;
+
+        await using (var versionTwo = await SqliteJobStore.OpenForTestingAsync(
+                         workspace.StoreRoot,
+                         maximumMigrationVersion: 2,
+                         TimeProvider.System,
+                         faultInjector: null))
+        {
+            databasePath = versionTwo.DatabasePath;
+        }
+
+        await Assert.ThrowsAsync<InjectedPersistenceException>(() =>
+            SqliteJobStore.OpenForTestingAsync(
+                workspace.StoreRoot,
+                SqliteJobStore.CurrentSchemaVersion,
+                TimeProvider.System,
+                new ThrowingFaultInjector(JobStoreFaultPoint.BeforeMigrationCommit, detail: 3)));
+
+        Assert.Equal(2, await SqliteTestControl.ReadUserVersionAsync(databasePath));
+        await Assert.ThrowsAsync<SqliteException>(() =>
+            SqliteTestControl.ExecuteAsync(databasePath, "SELECT COUNT(*) FROM sanitization_gate_decisions;"));
+
+        await using var recovered = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        Assert.Equal(SqliteJobStore.CurrentSchemaVersion, await SqliteTestControl.ReadUserVersionAsync(databasePath));
     }
 
     [Fact]
@@ -538,13 +607,13 @@ public sealed class MigrationAndCorruptionTests
                 schema_sha256,
                 applied_at_utc)
             SELECT
-                3,
-                '003_unapproved.sql',
+                4,
+                '004_unapproved.sql',
                 script_sha256,
                 schema_sha256,
                 applied_at_utc
             FROM schema_migrations
-            WHERE version = 2;
+            WHERE version = 3;
             """);
         var before = SqliteTestControl.HashFile(databasePath);
 
@@ -572,6 +641,62 @@ public sealed class MigrationAndCorruptionTests
         Assert.Equal("store_payload_mismatch", exception.ResultCode);
         Assert.DoesNotContain("2", exception.Message, StringComparison.Ordinal);
         Assert.DoesNotContain(workspace.StoreRoot, exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("UPDATE sanitization_gate_decisions SET policy_version = 'tampered-policy@1.0.0';")]
+    [InlineData("UPDATE sanitization_gate_decisions SET outcome = 'blocked', reason_code = 'sanitization_failed';")]
+    [InlineData("UPDATE sanitization_gate_decisions SET payload_sha256 = lower(hex(zeroblob(32)));")]
+    [InlineData("UPDATE sanitization_gate_decisions SET evidence_id = 'evidence-orphan';")]
+    public async Task GateDecisionTamperingFailsClosedWithoutRewritingHistory(string mutation)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("gate-tamper");
+        var evidence = PersistenceTestData.CreateSanitization("gate-tamper");
+
+        await using var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        await store.CreateJobAsync(job);
+        await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [evidence]));
+        await store.RecordSanitizationGateDecisionAsync(SanitizationGate.Evaluate(
+            job.JobId,
+            evidence,
+            PersistenceTestData.Timestamp.AddMinutes(2)));
+
+        await SqliteTestControl.ExecuteAsync(store.DatabasePath, mutation);
+        var before = SqliteTestControl.HashFile(store.DatabasePath);
+        var exception = await Assert.ThrowsAsync<JobStoreCorruptionException>(() =>
+            store.LoadJobAsync(job.JobId));
+
+        Assert.Equal("store_payload_mismatch", exception.ResultCode);
+        Assert.Equal(before, SqliteTestControl.HashFile(store.DatabasePath));
+        Assert.DoesNotContain("tampered", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(workspace.StoreRoot, exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CorruptSanitizationIndexIsRejectedBeforeGateDecisionWrite()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("gate-source-corrupt");
+        var evidence = PersistenceTestData.CreateSanitization("gate-source-corrupt");
+
+        await using var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        await store.CreateJobAsync(job);
+        await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [evidence]));
+        await SqliteTestControl.ExecuteAsync(
+            store.DatabasePath,
+            "UPDATE evidence_records SET domain_record_id = 'evidence-different';");
+        var before = SqliteTestControl.HashFile(store.DatabasePath);
+
+        var exception = await Assert.ThrowsAsync<JobStoreCorruptionException>(() =>
+            store.RecordSanitizationGateDecisionAsync(SanitizationGate.Evaluate(
+                job.JobId,
+                evidence,
+                PersistenceTestData.Timestamp.AddMinutes(2))));
+
+        Assert.Equal("store_payload_mismatch", exception.ResultCode);
+        Assert.Equal(before, SqliteTestControl.HashFile(store.DatabasePath));
+        Assert.Equal(0, await SqliteTestControl.ReadGateDecisionCountAsync(store.DatabasePath));
     }
 
     [Fact]

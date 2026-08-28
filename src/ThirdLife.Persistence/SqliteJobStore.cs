@@ -15,6 +15,7 @@ namespace ThirdLife.Persistence;
 public sealed class SqliteJobStore : IJobStore
 {
     public const int MaximumCheckpointsPerJob = 10_000;
+    public const int MaximumGateDecisionsPerJob = 10_000;
     public const long MaximumDatabaseBytes = 256L * 1024 * 1024;
     public const int MaximumJobs = 10_000;
     public const int MaximumPayloadBytes = 65_536;
@@ -260,6 +261,85 @@ public sealed class SqliteJobStore : IJobStore
             cancellationToken);
     }
 
+    public async Task<SanitizationGateDecision> RecordSanitizationGateDecisionAsync(
+        SanitizationGateDecision candidate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ThrowIfDisposed();
+        _layout.ValidateJobDirectory(candidate.JobId);
+
+        SanitizationGateDecision? accepted = null;
+        await ExecuteWriteAsync(
+            async (connection, transaction, token) =>
+            {
+                if (await ReadArchiveStateAsync(
+                        connection,
+                        transaction,
+                        candidate.JobId,
+                        token).ConfigureAwait(false))
+                {
+                    throw new JobStoreConflictException();
+                }
+
+                var evidence = await ReadLatestSanitizationEvidenceAsync(
+                    connection,
+                    transaction,
+                    candidate.JobId,
+                    token).ConfigureAwait(false);
+                if (evidence is null || evidence.Metadata.EvidenceId != candidate.EvidenceId)
+                {
+                    throw new JobStoreConflictException();
+                }
+
+                if (!SanitizationGate.IsConsistent(candidate, evidence))
+                {
+                    throw new ArgumentException(
+                        "The proposed gate decision does not match its sanitization evidence.",
+                        nameof(candidate));
+                }
+
+                var existing = await ReadGateDecisionForEvidenceAsync(
+                    connection,
+                    transaction,
+                    candidate.JobId,
+                    candidate.EvidenceId,
+                    token).ConfigureAwait(false);
+                if (existing is not null)
+                {
+                    if (!SanitizationGate.IsConsistent(existing, evidence))
+                    {
+                        throw new JobStoreCorruptionException("store_payload_mismatch");
+                    }
+
+                    accepted = existing;
+                    return;
+                }
+
+                var currentCount = await ReadGateDecisionCountAsync(
+                    connection,
+                    transaction,
+                    candidate.JobId,
+                    token).ConfigureAwait(false);
+                if (currentCount >= MaximumGateDecisionsPerJob)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(candidate),
+                        "The bounded per-job sanitization-decision limit would be exceeded.");
+                }
+
+                await InsertGateDecisionAsync(
+                    connection,
+                    transaction,
+                    candidate,
+                    token).ConfigureAwait(false);
+                accepted = candidate;
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        return accepted ?? throw new JobStoreUnavailableException();
+    }
+
     public async Task<StoredJob?> LoadJobAsync(JobId jobId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(jobId);
@@ -273,7 +353,7 @@ public sealed class SqliteJobStore : IJobStore
                 {
                     _layout.ValidateStoreGuards(_databaseGuard, _journalGuard);
                     ValidateStoreFileBounds(_databaseGuard, _journalGuard);
-                    // The first SELECT anchors one deferred read snapshot across the three bounded
+                    // The first SELECT anchors one deferred read snapshot across the bounded
                     // projection queries without unnecessarily reserving the database for writing.
                     await using var transaction = _connection.BeginTransaction(deferred: true);
                     var storedJob = await ReadStoredJobAsync(
@@ -889,6 +969,49 @@ public sealed class SqliteJobStore : IJobStore
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    private async Task InsertGateDecisionAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        SanitizationGateDecision decision,
+        CancellationToken cancellationToken)
+    {
+        var payload = SerializePayload(decision);
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO sanitization_gate_decisions (
+                decision_id,
+                job_id,
+                evidence_id,
+                policy_version,
+                outcome,
+                reason_code,
+                evaluated_at_utc,
+                payload_json,
+                payload_sha256)
+            VALUES (
+                $decision_id,
+                $job_id,
+                $evidence_id,
+                $policy_version,
+                $outcome,
+                $reason_code,
+                $evaluated_at_utc,
+                $payload_json,
+                $payload_sha256);
+            """;
+        command.Parameters.AddWithValue("$decision_id", decision.DecisionId.Value);
+        command.Parameters.AddWithValue("$job_id", decision.JobId.Value);
+        command.Parameters.AddWithValue("$evidence_id", decision.EvidenceId.Value);
+        command.Parameters.AddWithValue("$policy_version", decision.PolicyVersion);
+        command.Parameters.AddWithValue("$outcome", ToWireName(decision.Outcome));
+        command.Parameters.AddWithValue("$reason_code", ToWireName(decision.Reason));
+        command.Parameters.AddWithValue("$evaluated_at_utc", FormatTimestamp(decision.EvaluatedAtUtc));
+        command.Parameters.AddWithValue("$payload_json", payload.Json);
+        command.Parameters.AddWithValue("$payload_sha256", payload.Sha256);
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     private static async Task InsertCheckpointAsync(
         SqliteConnection connection,
         SqliteTransaction transaction,
@@ -995,11 +1118,25 @@ public sealed class SqliteJobStore : IJobStore
             sanitization,
             humanTests,
             cancellationToken).ConfigureAwait(false);
+        var gateDecisions = await ReadGateDecisionsAsync(
+            connection,
+            transaction,
+            job,
+            sanitization,
+            cancellationToken).ConfigureAwait(false);
         var checkpoints = await ReadCheckpointsAsync(connection, transaction, jobId, cancellationToken)
             .ConfigureAwait(false);
         ValidateArchiveHistory(isArchived, archivedAtUtc, checkpoints);
 
-        return new StoredJob(job, isArchived, archivedAtUtc, observations, sanitization, humanTests, checkpoints);
+        return new StoredJob(
+            job,
+            isArchived,
+            archivedAtUtc,
+            observations,
+            sanitization,
+            humanTests,
+            gateDecisions,
+            checkpoints);
     }
 
     private async Task ReadEvidenceAsync(
@@ -1085,6 +1222,163 @@ public sealed class SqliteJobStore : IJobStore
         }
     }
 
+    private async Task<IReadOnlyList<SanitizationGateDecision>> ReadGateDecisionsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        Job job,
+        List<SanitizationEvidence> sanitizationEvidence,
+        CancellationToken cancellationToken)
+    {
+        var decisions = new List<SanitizationGateDecision>();
+        var evidencePositions = sanitizationEvidence
+            .Select((evidence, index) => (evidence.Metadata.EvidenceId, Index: index))
+            .ToDictionary(item => item.EvidenceId, item => item.Index);
+        var previousEvidencePosition = -1;
+
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT
+                decision_id,
+                evidence_id,
+                policy_version,
+                outcome,
+                reason_code,
+                evaluated_at_utc,
+                payload_json,
+                payload_sha256
+            FROM sanitization_gate_decisions
+            WHERE job_id = $job_id
+            ORDER BY decision_sequence
+            LIMIT $limit;
+            """;
+        command.Parameters.AddWithValue("$job_id", job.JobId.Value);
+        command.Parameters.AddWithValue("$limit", MaximumGateDecisionsPerJob + 1);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            if (decisions.Count >= MaximumGateDecisionsPerJob)
+            {
+                throw new JobStoreCorruptionException("store_record_limit_exceeded");
+            }
+
+            var decision = ReadIndexedGateDecision(reader, job.JobId);
+            if (!evidencePositions.TryGetValue(decision.EvidenceId, out var evidencePosition) ||
+                evidencePosition <= previousEvidencePosition ||
+                !SanitizationGate.IsConsistent(decision, sanitizationEvidence[evidencePosition]))
+            {
+                throw new JobStoreCorruptionException("store_payload_mismatch");
+            }
+
+            previousEvidencePosition = evidencePosition;
+            decisions.Add(decision);
+        }
+
+        return decisions.AsReadOnly();
+    }
+
+    private async Task<SanitizationGateDecision?> ReadGateDecisionForEvidenceAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        JobId jobId,
+        EvidenceId evidenceId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT
+                decision_id,
+                evidence_id,
+                policy_version,
+                outcome,
+                reason_code,
+                evaluated_at_utc,
+                payload_json,
+                payload_sha256
+            FROM sanitization_gate_decisions
+            WHERE job_id = $job_id AND evidence_id = $evidence_id;
+            """;
+        command.Parameters.AddWithValue("$job_id", jobId.Value);
+        command.Parameters.AddWithValue("$evidence_id", evidenceId.Value);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        var decision = ReadIndexedGateDecision(reader, jobId);
+        if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            throw new JobStoreCorruptionException("store_payload_mismatch");
+        }
+
+        return decision;
+    }
+
+    private SanitizationGateDecision ReadIndexedGateDecision(
+        SqliteDataReader reader,
+        JobId expectedJobId)
+    {
+        var indexedDecisionId = reader.GetString(0);
+        var indexedEvidenceId = reader.GetString(1);
+        var indexedPolicyVersion = reader.GetString(2);
+        var indexedOutcome = ParseGateOutcome(reader.GetString(3));
+        var indexedReason = ParseGateReason(reader.GetString(4));
+        var indexedEvaluatedAtUtc = ParseTimestamp(reader.GetString(5));
+        var decision = DeserializePayload<SanitizationGateDecision>(
+            reader.GetString(6),
+            reader.GetString(7));
+
+        if (decision.JobId != expectedJobId ||
+            !string.Equals(decision.DecisionId.Value, indexedDecisionId, StringComparison.Ordinal) ||
+            !string.Equals(decision.EvidenceId.Value, indexedEvidenceId, StringComparison.Ordinal) ||
+            !string.Equals(decision.PolicyVersion, indexedPolicyVersion, StringComparison.Ordinal) ||
+            decision.Outcome != indexedOutcome ||
+            decision.Reason != indexedReason ||
+            decision.EvaluatedAtUtc != indexedEvaluatedAtUtc)
+        {
+            throw new JobStoreCorruptionException("store_payload_mismatch");
+        }
+
+        return decision;
+    }
+
+    private async Task<SanitizationEvidence?> ReadLatestSanitizationEvidenceAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        JobId jobId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT evidence_id, domain_record_id, collected_at_utc, payload_json, payload_sha256
+            FROM evidence_records
+            WHERE job_id = $job_id AND evidence_kind = 'sanitization'
+            ORDER BY evidence_sequence DESC
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$job_id", jobId.Value);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        var evidenceId = reader.GetString(0);
+        var domainRecordId = reader.GetString(1);
+        var collectedAtUtc = ParseTimestamp(reader.GetString(2));
+        var evidence = DeserializePayload<SanitizationEvidence>(reader.GetString(3), reader.GetString(4));
+        ValidateEvidenceMetadata(evidence.Metadata, evidenceId, collectedAtUtc);
+        if (!string.Equals(domainRecordId, evidenceId, StringComparison.Ordinal))
+        {
+            throw new JobStoreCorruptionException("store_payload_mismatch");
+        }
+
+        return evidence;
+    }
+
     private static async Task<IReadOnlyList<JobCheckpoint>> ReadCheckpointsAsync(
         SqliteConnection connection,
         SqliteTransaction transaction,
@@ -1156,6 +1450,45 @@ public sealed class SqliteJobStore : IJobStore
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = "SELECT COUNT(*) FROM evidence_records WHERE job_id = $job_id;";
+        command.Parameters.AddWithValue("$job_id", jobId.Value);
+        return Convert.ToInt32(
+            await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false),
+            CultureInfo.InvariantCulture);
+    }
+
+    private static async Task<bool> ReadArchiveStateAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        JobId jobId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT is_archived FROM jobs WHERE job_id = $job_id;";
+        command.Parameters.AddWithValue("$job_id", jobId.Value);
+        var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        if (value is not long archiveValue || archiveValue is not 0 and not 1)
+        {
+            if (value is null)
+            {
+                throw new JobStoreConflictException();
+            }
+
+            throw new JobStoreCorruptionException("store_payload_mismatch");
+        }
+
+        return archiveValue == 1;
+    }
+
+    private static async Task<int> ReadGateDecisionCountAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        JobId jobId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT COUNT(*) FROM sanitization_gate_decisions WHERE job_id = $job_id;";
         command.Parameters.AddWithValue("$job_id", jobId.Value);
         return Convert.ToInt32(
             await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false),
@@ -1298,6 +1631,40 @@ public sealed class SqliteJobStore : IJobStore
         "evidence_committed" => JobCheckpointKind.EvidenceCommitted,
         "archived" => JobCheckpointKind.Archived,
         "restored" => JobCheckpointKind.Restored,
+        _ => throw new JobStoreCorruptionException("store_payload_mismatch"),
+    };
+
+    private static string ToWireName(SanitizationGateOutcome outcome) => outcome switch
+    {
+        SanitizationGateOutcome.AllowAssessment => "allow_assessment",
+        SanitizationGateOutcome.Blocked => "blocked",
+        _ => throw new ArgumentOutOfRangeException(nameof(outcome)),
+    };
+
+    private static SanitizationGateOutcome ParseGateOutcome(string value) => value switch
+    {
+        "allow_assessment" => SanitizationGateOutcome.AllowAssessment,
+        "blocked" => SanitizationGateOutcome.Blocked,
+        _ => throw new JobStoreCorruptionException("store_payload_mismatch"),
+    };
+
+    private static string ToWireName(SanitizationGateReason reason) => reason switch
+    {
+        SanitizationGateReason.SanitizationVerified => "sanitization_verified",
+        SanitizationGateReason.ReplacementStorageVerified => "replacement_storage_verified",
+        SanitizationGateReason.NoDonorStorageVerified => "no_donor_storage_verified",
+        SanitizationGateReason.SanitizationUnknown => "sanitization_unknown",
+        SanitizationGateReason.SanitizationFailed => "sanitization_failed",
+        _ => throw new ArgumentOutOfRangeException(nameof(reason)),
+    };
+
+    private static SanitizationGateReason ParseGateReason(string value) => value switch
+    {
+        "sanitization_verified" => SanitizationGateReason.SanitizationVerified,
+        "replacement_storage_verified" => SanitizationGateReason.ReplacementStorageVerified,
+        "no_donor_storage_verified" => SanitizationGateReason.NoDonorStorageVerified,
+        "sanitization_unknown" => SanitizationGateReason.SanitizationUnknown,
+        "sanitization_failed" => SanitizationGateReason.SanitizationFailed,
         _ => throw new JobStoreCorruptionException("store_payload_mismatch"),
     };
 

@@ -184,7 +184,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Restrictive ACL, schema/migration version and content identity, transaction/integrity checks, single-writer/concurrency policy, allowed state-transition table, append/history links, corruption/newer-schema detection, attachment reconciliation.  
 **Fail-closed response:** Refuse unsafe open/migration/transition, preserve original files, create no new “passed” record, and surface export/recovery/manual-review guidance.  
 **Planned controls/tasks:** D-028, D-032; `TL-0102`, `TL-0103`, `TL-0205`, `TL-0308`, `TL-0309`, `TL-0313`, `TL-0408`, `TL-0510`  
-**Control status:** Planned  
+**Control status:** `TL-0102` implements and verifies the bounded protected SQLite store, transactional migrations, identity/integrity checks, append-only evidence/checkpoints, and reversible archive projection. The `TL-0103` candidate adds a transactionally validated, append-only sanitization-gate decision tied to the newest committed evidence and exact policy version; cancellation, process interruption, tamper, restart, stale-evidence, and ordered cross-instance write cases are designed to fail closed without rewriting history, with the required Targeted and Full verification pending. Approval/action journals, attachment reconciliation, broader resume semantics, retention, and recovery remain planned.  
 **Recovery/manual path:** Work from a verified backup/export or reviewed recovery copy; never rewrite historical evidence to match current policy.  
 **Residual risk:** `RR-001`; a local administrator can alter both primary and local backup records.
 
@@ -212,7 +212,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Attributable sanitization evidence and policy version, explicit unknown/failed classes, read-only ownership/management indicators, mandatory finalization rules, named human confirmations/exceptions, fresh verification, gate evaluator outside UI navigation.  
 **Fail-closed response:** Block preparation, ready disposition, sign-off, or handover; route to repair/human review/do-not-deploy. Never offer erase, unlock, activation, firmware, MDM, Autopilot, anti-theft, or ownership bypass.  
 **Planned controls/tasks:** D-007, D-009, D-035; `TL-0103`, `TL-0107`, `TL-0110`, `TL-0112`, `TL-0506`, `TL-0601`, `TL-0602`, `TL-0607`, `TL-0609`  
-**Control status:** Planned  
+**Control status:** The `TL-0103` candidate implements the fail-closed sanitization-gate subset, with required Targeted and Full verification pending: decisions bind the newest committed sanitization evidence ID and its exact policy version, and missing, stale, unknown, failed, or archived state cannot authorize assessment. Ownership/management detection, finalization, handover, and the remaining external-truth mitigations are still planned; Core does not independently prove external sanitization or legal ownership.  
 **Recovery/manual path:** Obtain valid external evidence or authorized ownership resolution outside ThirdLife; otherwise stop deployment.  
 **Residual risk:** `RR-005`; Core cannot independently prove the truth of external sanitization/legal ownership.
 

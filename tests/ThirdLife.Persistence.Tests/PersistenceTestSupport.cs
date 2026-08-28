@@ -148,19 +148,37 @@ internal static class PersistenceTestData
             limitationCode: null);
 
     public static SanitizationEvidence CreateSanitization(string suffix = "001") =>
-        new(
-            CreateMetadata(
-                string.Concat("evidence-sanitization-", suffix),
-                EvidenceClassification.Observed,
-                ProvenanceKind.ProviderObservation,
-                ValueAvailability.Available),
-            SanitizationState.Verified,
-            "external_sanitization",
-            new OperatorId("operator-synthetic-001"),
-            Timestamp.AddMinutes(-30),
-            new MediaIdentifier(string.Concat("SYNTHETIC-MEDIA-", suffix)),
-            SanitizationVerificationState.Verified,
+        CreateSanitization(SanitizationState.Verified, suffix, Timestamp.AddMinutes(1));
+
+    public static SanitizationEvidence CreateSanitization(
+        SanitizationState state,
+        string suffix,
+        DateTimeOffset collectedAtUtc)
+    {
+        var unknown = state == SanitizationState.Unknown;
+        var hasMedia = state is SanitizationState.Verified or SanitizationState.ReplacementStorage or SanitizationState.Failed;
+        return new SanitizationEvidence(
+            new EvidenceMetadata(
+                new EvidenceId(string.Concat("evidence-sanitization-", suffix)),
+                PrivacyClassification.WorkshopRestricted,
+                unknown ? EvidenceClassification.NotAvailable : EvidenceClassification.Observed,
+                new ProviderId("provider-synthetic-001"),
+                collectedAtUtc,
+                new EvidenceProvenance(ProvenanceKind.SyntheticFixture, string.Concat("source-synthetic-", suffix)),
+                unknown ? ValueAvailability.Unknown : ValueAvailability.Available),
+            state,
+            unknown ? "not_available" : "external_sanitization",
+            unknown ? null : new OperatorId("operator-synthetic-001"),
+            unknown ? null : Timestamp.AddMinutes(-30),
+            hasMedia ? new MediaIdentifier(string.Concat("SYNTHETIC-MEDIA-", suffix)) : null,
+            state switch
+            {
+                SanitizationState.Unknown => SanitizationVerificationState.NotAvailable,
+                SanitizationState.Failed => SanitizationVerificationState.Failed,
+                _ => SanitizationVerificationState.Verified,
+            },
             "community-policy@1.0.0");
+    }
 
     public static HumanTestEvidence CreateHumanTest(Job job, string suffix = "001") =>
         new(
@@ -215,6 +233,16 @@ internal static class SqliteTestControl
         await using var connection = await OpenAsync(databasePath).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM jobs;";
+        return Convert.ToInt32(
+            await command.ExecuteScalarAsync().ConfigureAwait(false),
+            CultureInfo.InvariantCulture);
+    }
+
+    public static async Task<int> ReadGateDecisionCountAsync(string databasePath)
+    {
+        await using var connection = await OpenAsync(databasePath).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM sanitization_gate_decisions;";
         return Convert.ToInt32(
             await command.ExecuteScalarAsync().ConfigureAwait(false),
             CultureInfo.InvariantCulture);

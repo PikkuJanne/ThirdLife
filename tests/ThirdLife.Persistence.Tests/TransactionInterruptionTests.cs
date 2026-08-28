@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Runtime.Versioning;
 using System.Text;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Sanitization;
 
 namespace ThirdLife.Persistence.Tests;
 
@@ -73,6 +74,66 @@ public sealed class TransactionInterruptionTests
             Assert.Empty(actual.Observations);
             Assert.Single(actual.Checkpoints);
         }
+    }
+
+    [Theory]
+    [InlineData("job_before_commit", false)]
+    [InlineData("job_after_commit", true)]
+    public async Task ProcessKillAroundJobCreationReopensAsAbsentOrComplete(
+        string mode,
+        bool expectedCommitted)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("job-crash");
+        await using (var initializer = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+        }
+
+        await RunAndKillChildAsync(workspace, mode);
+
+        await using var reopened = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        var actual = await reopened.LoadJobAsync(job.JobId);
+        Assert.Equal(expectedCommitted, actual is not null);
+        if (actual is not null)
+        {
+            Assert.Equal(job, actual.Job);
+            Assert.Single(actual.Checkpoints);
+        }
+        else
+        {
+            await reopened.CreateJobAsync(job);
+            Assert.NotNull(await reopened.LoadJobAsync(job.JobId));
+        }
+    }
+
+    [Theory]
+    [InlineData("gate_before_commit", false)]
+    [InlineData("gate_after_commit", true)]
+    public async Task ProcessKillAroundGateRecordingLeavesNoPartialDecision(
+        string mode,
+        bool expectedCommitted)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("gate-crash");
+        var evidence = PersistenceTestData.CreateSanitization("gate-crash");
+
+        await using (var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+            await store.CreateJobAsync(job);
+            await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [evidence]));
+        }
+
+        await RunAndKillChildAsync(workspace, mode);
+
+        await using var reopened = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        var actual = await reopened.LoadJobAsync(job.JobId);
+        Assert.NotNull(actual);
+        Assert.Equal(expectedCommitted ? 1 : 0, actual.SanitizationGateDecisions.Count);
+        Assert.Equal(
+            expectedCommitted
+                ? SanitizationGateReason.SanitizationVerified
+                : SanitizationGateReason.GateDecisionMissing,
+            SanitizationGate.Inspect(actual).Reason);
     }
 
     [Fact]
@@ -222,6 +283,10 @@ public sealed class TransactionCrashChildTests
             "after_first_insert" => (JobStoreFaultPoint.AfterFirstEvidenceInsert, (int?)null),
             "before_commit" => (JobStoreFaultPoint.BeforeWriteCommit, (int?)null),
             "after_commit" => (JobStoreFaultPoint.AfterWriteCommit, (int?)null),
+            "job_before_commit" => (JobStoreFaultPoint.BeforeWriteCommit, (int?)null),
+            "job_after_commit" => (JobStoreFaultPoint.AfterWriteCommit, (int?)null),
+            "gate_before_commit" => (JobStoreFaultPoint.BeforeWriteCommit, (int?)null),
+            "gate_after_commit" => (JobStoreFaultPoint.AfterWriteCommit, (int?)null),
             "migration_before_commit" => (JobStoreFaultPoint.BeforeMigrationCommit, (int?)2),
             _ => throw new InvalidOperationException("The child interruption mode is unknown."),
         };
@@ -244,6 +309,23 @@ public sealed class TransactionCrashChildTests
             SqliteJobStore.CurrentSchemaVersion,
             TimeProvider.System,
             injector);
+        if (mode.StartsWith("job_", StringComparison.Ordinal))
+        {
+            await store.CreateJobAsync(PersistenceTestData.CreateJob("job-crash"));
+            return;
+        }
+
+        if (mode.StartsWith("gate_", StringComparison.Ordinal))
+        {
+            var gateJob = PersistenceTestData.CreateJob("gate-crash");
+            var evidence = PersistenceTestData.CreateSanitization("gate-crash");
+            await store.RecordSanitizationGateDecisionAsync(SanitizationGate.Evaluate(
+                gateJob.JobId,
+                evidence,
+                PersistenceTestData.Timestamp.AddMinutes(2)));
+            return;
+        }
+
         await store.AppendEvidenceAsync(new JobEvidenceBatch(
             job.JobId,
             [

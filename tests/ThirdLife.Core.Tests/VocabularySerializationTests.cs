@@ -102,6 +102,23 @@ public sealed class VocabularySerializationTests
             [SanitizationVerificationState.Failed] = "failed",
             [SanitizationVerificationState.NotAvailable] = "not_available",
         });
+        AssertWireNames(new Dictionary<SanitizationGateOutcome, string>
+        {
+            [SanitizationGateOutcome.AllowAssessment] = "allow_assessment",
+            [SanitizationGateOutcome.Blocked] = "blocked",
+        });
+        AssertWireNames(new Dictionary<SanitizationGateReason, string>
+        {
+            [SanitizationGateReason.SanitizationVerified] = "sanitization_verified",
+            [SanitizationGateReason.ReplacementStorageVerified] = "replacement_storage_verified",
+            [SanitizationGateReason.NoDonorStorageVerified] = "no_donor_storage_verified",
+            [SanitizationGateReason.SanitizationUnknown] = "sanitization_unknown",
+            [SanitizationGateReason.SanitizationFailed] = "sanitization_failed",
+            [SanitizationGateReason.SanitizationEvidenceMissing] = "sanitization_evidence_missing",
+            [SanitizationGateReason.GateDecisionMissing] = "gate_decision_missing",
+            [SanitizationGateReason.GateDecisionStale] = "gate_decision_stale",
+            [SanitizationGateReason.JobArchived] = "job_archived",
+        });
     }
 
     [Fact]
@@ -114,6 +131,7 @@ public sealed class VocabularySerializationTests
         Assert.Equal("\"provider-001\"", JsonSerializer.Serialize(new ProviderId("provider-001")));
         Assert.Equal("\"operator-001\"", JsonSerializer.Serialize(new OperatorId("operator-001")));
         Assert.Equal("\"human-test-001\"", JsonSerializer.Serialize(new HumanTestId("human-test-001")));
+        Assert.Equal("\"gate-001\"", JsonSerializer.Serialize(new SanitizationGateDecisionId("gate-001")));
         Assert.Equal("\"POL-MEM-001\"", JsonSerializer.Serialize(new RequirementId("POL-MEM-001")));
         Assert.Equal("\"memory.installed_bytes\"", JsonSerializer.Serialize(new EvidenceKey("memory.installed_bytes")));
     }

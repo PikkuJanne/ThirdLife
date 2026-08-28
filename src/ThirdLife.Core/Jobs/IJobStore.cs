@@ -20,6 +20,10 @@ public interface IJobStore : IAsyncDisposable
         DateTimeOffset changedAtUtc,
         CancellationToken cancellationToken = default);
 
+    Task<SanitizationGateDecision> RecordSanitizationGateDecisionAsync(
+        SanitizationGateDecision candidate,
+        CancellationToken cancellationToken = default);
+
     Task<StoredJob?> LoadJobAsync(
         JobId jobId,
         CancellationToken cancellationToken = default);
@@ -175,6 +179,7 @@ public sealed class StoredJob
         IEnumerable<Observation> observations,
         IEnumerable<SanitizationEvidence> sanitizationEvidence,
         IEnumerable<HumanTestEvidence> humanTests,
+        IEnumerable<SanitizationGateDecision> sanitizationGateDecisions,
         IEnumerable<JobCheckpoint> checkpoints)
     {
         Job = job ?? throw new ArgumentNullException(nameof(job));
@@ -197,6 +202,9 @@ public sealed class StoredJob
             throw new ArgumentNullException(nameof(sanitizationEvidence)));
         HumanTests = Array.AsReadOnly(
             humanTests?.ToArray() ?? throw new ArgumentNullException(nameof(humanTests)));
+        SanitizationGateDecisions = Array.AsReadOnly(
+            sanitizationGateDecisions?.ToArray() ??
+            throw new ArgumentNullException(nameof(sanitizationGateDecisions)));
         Checkpoints = Array.AsReadOnly(
             checkpoints?.ToArray() ?? throw new ArgumentNullException(nameof(checkpoints)));
     }
@@ -212,6 +220,8 @@ public sealed class StoredJob
     public IReadOnlyList<SanitizationEvidence> SanitizationEvidence { get; }
 
     public IReadOnlyList<HumanTestEvidence> HumanTests { get; }
+
+    public IReadOnlyList<SanitizationGateDecision> SanitizationGateDecisions { get; }
 
     public IReadOnlyList<JobCheckpoint> Checkpoints { get; }
 }
