@@ -1,22 +1,26 @@
 # ThirdLife Setup Core — Current Handoff Status
 
-**Snapshot date:** 2026-08-28  
-**Snapshot preparation time:** 2026-08-28T21:19:40+02:00  
+**Snapshot date:** 2026-08-29  
+**Snapshot preparation time:** 2026-08-29T08:12:04+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
-**Current task:** `TL-0105` — Define inventory provider contracts and evidence normalization — `done`  
-**Action state:** implementation, independent review, Targeted verification, solution integration, failure-injection registration, task evidence, and the synchronized completion-tree Quick are complete; committing, pushing, fetching, and confirming local/upstream equality are the remaining session-close publication steps
+**Current task:** `TL-0106` — Implement device identity, CPU, memory, and architecture inventory — `in_progress`  
+**Action state:** dependency and repository safety checks, authority/task review, source selection, privacy boundary review, the 22-test Inventory baseline, and the governed task-start Quick are complete; implementation and Targeted verification are next
 
 ## Executive project state
 
-M0 is complete. M1 tasks `TL-0101` through `TL-0105` are now complete. ThirdLife Setup Core has the governed persistence foundation, dependency/licence review, evidence model, structured privacy-safe diagnostics, and the common inventory-provider boundary required before any Windows inventory adapter is introduced.
+M0 is complete. M1 tasks `TL-0101` through `TL-0105` are complete, and `TL-0106` is now the only selected task. ThirdLife Setup Core has the governed persistence foundation, dependency/licence review, evidence model, structured privacy-safe diagnostics, and common inventory-provider boundary required for the first concrete Windows inventory adapter.
+
+The approved TL-0106 design uses fixed, local, read-only Windows APIs: bounded raw SMBIOS for device and processor facts, the native installed-memory API, and the runtime operating-system architecture value. It adds no package, shell, WMI, registry, network, service, elevation, or mutation surface. This keeps the approved 28-component dependency/licence matrix unchanged and leaves the task at its required Targeted tier rather than triggering a Full dependency gate.
+
+Full device serial data is permitted only in the normalized Workshop Restricted observation. The current approved logging and support schemas authorize neither full nor truncated serial output, so TL-0106 will emit no serial to ordinary diagnostics or support projections. Synthetic fixtures will use unmistakably fictional values and synthetic provenance; the active-machine smoke will assert only bounded state, types, classification, and provenance without printing identity values.
 
 `TL-0105` establishes a closed, read-only, cancellable and timeout-aware contract for collecting evidence. Every provider must state its identity, required privilege, expected duration, declared timeout, network behavior, supported Windows versions, evidence keys, scalar types, units, source-reference limits, and per-key cardinality. The runner bounds the caller's wait after a provider returns asynchronous work; each concrete provider must separately prove that its own API call yields promptly and respects cancellation. Providers return typed bounded results and have no dedicated policy-verdict, raw-output, command-execution, unbounded-map, or mutation-instruction field. Because the typed text value can still contain bounded source text, each concrete provider must also prove allowlisted minimization and sanitization.
 
 The normalization layer preserves `Observed`, `Inferred`, `Not available`, and `Not applicable` states with explicit provenance and limitations. Provider failure, timeout, cancellation, access denial, invalid data, and incomplete cleanup are not successes. Required missing facts become explicit unknown evidence with a sanitized stable error and recovery action. Valid unrelated partial observations may remain attributable, but an ordinary provider failure cannot retain every declared required fact as available and thereby resemble success.
 
-This step does not collect a real machine fact. Device identity, processor, memory, architecture, OS lifecycle, activation, storage, battery, firmware/security, network, and cross-provider snapshot work remain in `TL-0106` through `TL-0112`. The next dependency-ready task is `TL-0106`.
+No TL-0106 production file has been added yet. The selected source and evidence schema are ready for implementation. OS lifecycle, activation, storage, battery, firmware/security, network, and cross-provider snapshot work remain separately owned by `TL-0107` through `TL-0112`.
 
 ## User outcome
 
@@ -86,12 +90,11 @@ Only stable error categories and predefined recovery actions cross the sanitized
 | Field | Verified value |
 |---|---|
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
-| Branch | `codex/tl-0105-provider-contracts` |
-| Starting commit | `b98b03698f9615340ae755796c6abbe2b0456f91` — published TL-0104 completion |
-| Task-start checkpoint | `9d7989b` — task selected, baseline recorded, pushed |
-| Implementation checkpoint | `8e284b9283f8ba12fc15b9436d69afc728d87ec1` — provider contracts, normalization, tests, review corrections, pushed |
-| Evidence-hardening checkpoint | `e5e9c7ef26ddfb2674ce08d7ea35b0dd193b9a2c` — exact FI-001 recovery/limitation assertions, pushed |
-| Completion synchronization | This status/task/risk evidence update; final commit and remote equality are reported at handoff |
+| Branch | `codex/tl-0106-system-inventory` |
+| Starting commit | `6bfbbe8f51024065370c61cad9745a4f12db2e36` — published TL-0105 completion |
+| Task-start checkpoint | This task-selection, design-decision, baseline, and governed-Quick update; commit and publication are reported after the checkpoint is created |
+| Implementation checkpoint | Pending |
+| Completion synchronization | Pending |
 | History handling | No reset, rebase, force push, or history rewrite |
 
 The configured SSH remote rejects unattended authentication in this environment. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
@@ -102,6 +105,8 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 
 | Scope | Result | Duration / limitation |
 |---|---|---|
+| Pre-change TL-0106 Inventory baseline | Passed 22/22; 0 failed/skipped | 268 ms reported / 1.945 s wall; direct active machine; no provider invocation or host mutation |
+| TL-0106 task-start governed Quick | Passed 187/187; bundle/repository validators passed | 107.125 s tests; process-scoped execution-policy bypass used after the host rejected the first script launch; no system policy changed |
 | Pre-change Inventory baseline | Passed 1/1 | 362 ms reported / 7.724 s wall; prior assembly scaffold only |
 | Provider-contract Targeted | Passed 22/22; 0 failed/skipped | Latest evidence-hardening rerun: 272 ms reported / 1.814 s wall; deterministic fakes on direct host |
 | Exact `FI-001` provider-unavailable subset | Passed 1/1; 0 failed/skipped | Final recorded run: 177 ms reported / 1.787 s wall; exact recovery/limitation assertions; no real provider or host mutation |
@@ -144,49 +149,35 @@ No open TL-0105 defect remains. The cooperative-timeout limit is a documented as
 
 ## Outstanding
 
-There is no remaining TL-0105 blocker or human evidence requirement. The task is complete at its defined contract boundary.
+TL-0106 has no human-evidence requirement or approval blocker. Implementation, deterministic malformed/failure coverage, the bounded unelevated active-machine smoke, Targeted verification, and publication remain to be completed.
 
-The following are explicit future-work limits, not incomplete TL-0105 acceptance criteria:
-
-- No concrete Windows provider has been implemented or smoke-tested.
-- No real device, CPU, memory, OS, storage, battery, firmware, security, or network fact was collected.
-- No policy verdict, persistence snapshot, UI presentation, report, support export, release authorization, or hardware certification exists from this step.
-- In-process timeouts do not forcibly terminate a provider that blocks before returning or ignores cancellation.
-- `FI-001` network/transfer variants, concrete-provider `SMC-PROVIDER-UNAVAILABLE` variants, and the broad FI/SMC matrix remain unrun until their owning tasks reach their triggers.
+The selected native APIs are synchronous and cannot be forcibly pre-empted while a kernel call is in flight. The provider will yield before native work, execute off the UI thread, check cancellation between every bounded read and parser step, and retain the existing cooperative-timeout limitation. No permanent worker, service, process termination, or elevated fallback is authorized.
 
 ## Next steps
 
-1. Start only `TL-0106` after this completion commit is pushed and local/upstream equality is verified.
-2. Implement the first concrete unelevated Windows provider for device identity, processor, architecture, and installed memory against the TL-0105 boundary.
-3. Supply deterministic captured/synthetic inputs covering multiple represented manufacturers and processor/architecture/memory variants, including missing, denied, malformed, duplicate, and bounded multi-instance cases.
-4. Run a bounded read-only active-machine smoke observation and record only the sanitized reference-profile facts authorized by the task; keep active observation separate from synthetic coverage.
-5. Re-run the exact provider-unavailable case for the concrete adapter and add provider-specific fixed-operation, no-mutation, timeout/cancellation, source, unit, cardinality, and privacy tests.
+1. Add the fixed-operation Windows source, private zeroed SMBIOS buffer, strict bounded parser, and `SystemInventoryProvider` normalization.
+2. Add wholly synthetic provider fixtures and focused tests for multiple represented manufacturers, CPU instances, x64/Arm64, memory sizes, missing placeholders, access denial, malformed structures, conflicts, bounds, cancellation, serialization, privacy, and source attribution.
+3. Run the exact concrete provider-unavailable case and the complete Inventory Targeted suite.
+4. Run the separately filtered active-machine smoke only under the confirmed unelevated token, recording no manufacturer, model, serial, hostname, path, or raw provider output.
+5. Update the narrow CRM/SMC/FI/threat status, task evidence, reference profile, and this handoff; then run Quick, commit, push, fetch, and verify local/upstream equality.
 
-## Upcoming decisions for `TL-0106`
+## Upcoming decisions and implications
 
-### Windows evidence sources and fallback order
+### Processor evidence granularity
 
-TL-0106 must choose exact structured, read-only Windows sources for manufacturer/model, processor, architecture, and installed memory and define a deterministic fallback/conflict order. The choice determines privilege requirements, localization exposure, cancellation behavior, unit conversion, and how a missing or contradictory source is reported. A fixed reviewed API or fixed helper invocation may be acceptable; generic shell strings, localized table parsing, and caller-supplied commands are not. This decision authorizes only those exact reads and does not grant a general WMI, PowerShell, process, or registry execution surface.
+The current candidate schema records bounded per-socket processor manufacturer/model observations and one logical-processor count. Per-socket source references use generated ordinals rather than SMBIOS handles or socket labels, preventing an internal firmware identifier from becoming durable evidence. The implementation review must confirm whether the extra processor manufacturer/count facts materially help later policy; unnecessary fields will be removed rather than retained speculatively.
 
-### Device identity and serial privacy
+### Captured-sample provenance
 
-The task permits a full serial only in the approved Workshop Record while ordinary logs expose an approved suffix or no serial. Before implementation, TL-0106 must bind which layer may hold the full value, how deterministic fixtures avoid real serials, how active-machine smoke evidence is sanitized, and how error/source references avoid leaking device or host identity. Approval of the provider does not authorize serials in diagnostics, status files, test output, captures, support exports, or user-facing summaries.
+Synthetic replacement identity values cannot truthfully be labelled as a captured sample because TL-0105 assigns one provenance class to the complete provider run. A captured artifact will be added only if its identity fields are physically omitted and every retained value is genuinely observed with a recorded sanitization transform and digest. Otherwise TL-0106 will rely on wholly synthetic parser coverage plus a separate active-machine observation; it will not invent captured provenance to satisfy wording.
 
-### Normalized keys, units, and cardinality
+### Native-call assurance boundary
 
-The provider must define exact stable keys and invariant types/units for device type, manufacturer/model, processor identity/capability, architecture, and installed memory. It must also decide whether processor data is one aggregate observation or bounded per-instance evidence and how source references distinguish instances without embedding sensitive identifiers. These decisions affect later policy and reports, so keys should be minimal and durable rather than mirroring a provider's raw schema.
+The no-dependency design avoids WMI/package/licence work and provides a very small fixed read surface, but it makes the project responsible for a security-sensitive SMBIOS parser. Completion therefore depends on strict length, record-count, string-count, encoding, terminator, duplicate, cardinality, overflow, and cancellation tests. If the active firmware cannot satisfy the bounded parser without weakening those checks, the result will remain unavailable or require a documented follow-up; the parser will not accept a permissive fallback simply to obtain a green smoke result.
 
-### Supported Windows range and unelevated behavior
+### Evidence claim boundary
 
-TL-0106 acceptance requires successful unelevated operation on supported Windows 11. The current descriptor can state supported OS families (`Windows10` and/or `Windows11`); TL-0106 must choose the applicable family and define what happens on unsupported/unknown builds or denied data. If finer build-range metadata is necessary, that is an explicit governed contract extension rather than an implied existing capability. An unavailable source must remain unknown; the task may not add elevation, weaken permissions, or use a bypass simply to obtain a value.
-
-### Cooperative cancellation and timeout proof
-
-The concrete API path must return control promptly, honor cancellation where the underlying API permits it, and stay within its declared timeout and evidence bounds. If the API cannot be cancelled, the task must define a bounded wrapper and truthful late-completion/cleanup behavior or escalate an architecture decision. TL-0105 does not pre-authorize a permanent worker, privileged service, or forcible thread termination.
-
-### Evidence scope and claim wording
-
-Captured/synthetic samples prove only represented parser and normalization cases; the active-machine smoke run proves only that exact machine, build, provider, and observation time. TL-0106 must keep those evidence classes separate and explicitly avoid manufacturer coverage, minimum-specification, performance, reliability, compatibility, or cross-hardware certification claims.
+Firmware and operating-system values remain self-reported observations. A completed run will not prove legal ownership, authentic manufacturer identity, Windows 11 processor eligibility, hardware reliability, a minimum specification, or manufacturer coverage. Those implications remain policy, human, later-provider, or release-gate decisions rather than TL-0106 facts.
 
 ## Historical TL-0008 transition
 
@@ -194,4 +185,4 @@ The superseded `TL-0008 draft 1` procedure remains preserved only as a historica
 
 ## Next dependency-ready task
 
-`TL-0106` — Implement device identity, CPU, memory, and architecture inventory. It is not started in this session.
+None while `TL-0106` is in progress. `TL-0107` is dependency-ready from TL-0105 but is not selected and must not be started in parallel with the current task.
