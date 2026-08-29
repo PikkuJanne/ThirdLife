@@ -3,7 +3,7 @@
 **Status:** Active specification; first deterministic provider constraint executed at `TL-0105`  
 **Revision:** TL-0008 same-machine revision 2  
 **Physical hardware scope:** Active Codex machine only  
-**Current execution state:** The deterministic contract subset of `SMC-PROVIDER-UNAVAILABLE` passed at `TL-0105`; concrete Windows-provider variants and all other profiles remain owning-task work and are `Not run` unless separately recorded.
+**Current execution state:** The deterministic contract subset of `SMC-PROVIDER-UNAVAILABLE` passed at `TL-0105`; the first concrete Windows system-inventory unavailable/access-denied/malformed subset and bounded active smoke passed at `TL-0106`. Other concrete provider variants and all other profiles remain owning-task work and are `Not run` unless separately recorded.
 
 ## 1. Purpose and claim boundary
 
@@ -11,7 +11,7 @@ These procedures apply safe, bounded, reversible conditions on the active Codex 
 
 A same-machine constraint proves only the recorded build, active reference-machine profile, hosted environment, exact settings, fixture/workload, and observation window. It does not simulate a particular processor, RAM size, storage device, network, GPU, manufacturer, firmware, or minimum specification.
 
-At revised `TL-0008`, the profiles and later triggers were definition-only; no constraint or resource matrix ran and no benchmark evidence was created. `TL-0105` later executed only the deterministic fake-provider subset recorded below without changing host permissions or providers.
+At revised `TL-0008`, the profiles and later triggers were definition-only; no constraint or resource matrix ran and no benchmark evidence was created. `TL-0105` later executed the deterministic fake-provider subset recorded below. `TL-0106` then executed a concrete system-inventory failure subset through injected synthetic source states and a separate unelevated active-machine observation. Neither task changed host permissions, disabled a provider, or mutated the host.
 
 ## 2. Common safety and invocation contract
 
@@ -129,11 +129,11 @@ The quick tier validates these definitions and safe wording only. Revised `TL-00
 - **Purpose:** Prove unavailable, access-denied, timeout, malformed, and bounded-exception evidence remains unknown/fail-closed.
 - **Prerequisites:** Typed provider interface and deterministic fixture/stub for each represented failure code.
 - **Safe setup:** Inject at the provider boundary; do not change host permissions or disable a real provider merely to manufacture failure.
-- **Invocation state:** TL-0105 provider-contract subset: `dotnet test .\tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName=ThirdLife.Inventory.Tests.ProviderFailureInjectionTests.FI001SmcProviderUnavailableRemainsFailClosed"`.
+- **Invocation state:** TL-0105 provider-contract subset: `dotnet test .\tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName=ThirdLife.Inventory.Tests.ProviderFailureInjectionTests.FI001SmcProviderUnavailableRemainsFailClosed"`. TL-0106 concrete deterministic subset: the same project with filter `FullyQualifiedName=ThirdLife.Inventory.Tests.SystemInventoryProviderTests.FI001SmcSystemInventoryFailuresRemainFailClosed`. The separate active smoke uses filter `FullyQualifiedName=ThirdLife.Inventory.Tests.SystemInventoryProviderTests.ActiveMachineSmokeIsUnelevatedBoundedAndIdentitySilent`.
 - **Expected invariant:** Required evidence cannot pass; unrelated observations remain; raw source data is admitted only through an owning-task allowlist/minimization contract; raw exception text is not retained; next safe action is clear.
 - **Abort:** The harness would require elevated/broad permission changes, real provider damage, unbounded output, or sensitive capture.
 - **Cleanup/restoration:** Dispose the stub/fixture workspace and verify no host permission/provider change occurred.
-- **Claim limitation/status:** The TL-0105 deterministic fake-provider case passed 1/1 at commit `e5e9c7ef26ddfb2674ce08d7ea35b0dd193b9a2c`. It proves only the represented common error contract: required facts stay unknown, retained unrelated facts remain attributable, exact error/recovery/limitation codes agree, and seeded exception text is absent. The deterministic fake exposes no mutation capability and setup changed no host permission/provider; this is not real-provider no-mutation assurance. The common contract has no dedicated raw-output field but does not semantically sanitize arbitrary bounded text evidence. It does not prove a concrete Windows API, real access-denied state, hardware class, network path, or forcible termination of an uncooperative provider; those variants remain `Not run` until their owning tasks provide exact evidence. The complete fixture, timing, bounds, integrity, cleanup/residue, defect, and limitation record is in `failure-injection.md` under the dual `FI-001` / `SMC-PROVIDER-UNAVAILABLE` result.
+- **Claim limitation/status:** The TL-0105 deterministic fake-provider case passed 1/1 at commit `e5e9c7ef26ddfb2674ce08d7ea35b0dd193b9a2c`. The TL-0106 concrete source-state case passed 1/1 for injected firmware unavailable, access denied, and malformed-table conditions while retaining independent architecture evidence, preserving serial as unknown, returning exact sanitized error codes, and clearing the malformed buffer. Its active smoke passed separately under a standard-user token. These tests prove the code paths and exact active host only; they do not manufacture or prove a real Windows access-denied condition, another firmware implementation, another manufacturer, forcible termination of an uncooperative native call, or a network path. The complete fixture, timing, bounds, integrity, cleanup/residue, defect, and limitation records are in `failure-injection.md` and TL-0106 task evidence.
 
 ## 12. `SMC-SLOW-DESTINATION`
 
@@ -190,7 +190,8 @@ Evidence must be bounded and sanitized. Do not attach raw hardware/diagnostic lo
 | Profile range | Quick definition check | Targeted | Full | Extended | Evidence |
 |---|---|---|---|---|---|
 | `SMC-PROVIDER-UNAVAILABLE` — TL-0105 contract subset | Defined for TL-0008 | `Pass`; exact fake-provider case 1/1 | Not triggered | Not triggered | `ProviderFailureInjectionTests.FI001SmcProviderUnavailableRemainsFailClosed`; commit `e5e9c7ef26ddfb2674ce08d7ea35b0dd193b9a2c`; deterministic fake only; no setup-time host permission/provider change; full record in `failure-injection.md` |
-| Concrete `SMC-PROVIDER-UNAVAILABLE` provider variants | Defined for TL-0008 | `Not run`; owning provider tasks not complete | Not triggered | Not triggered | No real provider, permission, hardware, or network evidence at TL-0105 |
+| `SMC-PROVIDER-UNAVAILABLE` — TL-0106 system-inventory subset | Defined for TL-0008 | `Pass`; exact deterministic concrete-provider case 1/1 and separate active smoke 1/1 | Not triggered | Not triggered | `SystemInventoryProviderTests.FI001SmcSystemInventoryFailuresRemainFailClosed` plus identity-silent standard-user active smoke; no setup-time host permission/provider change; exact hashes/commit/timing in TL-0106 evidence |
+| Remaining concrete `SMC-PROVIDER-UNAVAILABLE` variants | Defined for TL-0008 | `Not run`; owning provider tasks not complete | Not triggered | Not triggered | No real access-denied injection, provider disablement, other hardware, or network evidence at TL-0106 |
 | All other `SMC-*` profiles | Defined for TL-0008 | `Not run` unless separately recorded by an owning task | `Not run` unless triggered | `Not run` unless triggered | Each named owning task must supply its command, fixture/hash, budget, expected result, and narrow claim before invocation |
 
 When a later scenario fails, rerun its single command first and then the related targeted set. Rerun full or extended scope only when its trigger applies or a shared cause is suspected. Release wording may report recorded same-machine results and design intent, never broad modest-hardware certification or unobserved minimum specifications.

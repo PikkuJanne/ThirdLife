@@ -1,38 +1,44 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-08-29  
-**Snapshot preparation time:** 2026-08-29T08:12:04+02:00  
+**Snapshot preparation time:** 2026-08-29T08:53:19+02:00  
 **Bundle baseline:** 0.3.1  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice — active  
-**Current task:** `TL-0106` — Implement device identity, CPU, memory, and architecture inventory — `in_progress`  
-**Action state:** dependency and repository safety checks, authority/task review, source selection, privacy boundary review, the 22-test Inventory baseline, and the governed task-start Quick are complete; implementation and Targeted verification are next
+**Current task:** `TL-0106` — Implement device identity, CPU, memory, and architecture inventory — `done`  
+**Action state:** implementation, independent review, deterministic/captured/active Targeted verification, governance synchronization, and publication are complete; `TL-0107` is next dependency-ready
 
 ## Executive project state
 
-M0 is complete. M1 tasks `TL-0101` through `TL-0105` are complete, and `TL-0106` is now the only selected task. ThirdLife Setup Core has the governed persistence foundation, dependency/licence review, evidence model, structured privacy-safe diagnostics, and common inventory-provider boundary required for the first concrete Windows inventory adapter.
+M0 is complete, and M1 tasks `TL-0101` through `TL-0106` are complete. ThirdLife Setup Core now has its governed persistence, dependency/licence, evidence, privacy-safe diagnostic, provider-normalization, and first concrete Windows inventory foundations. `TL-0107` is the next dependency-ready task; OS lifecycle, activation, storage, battery, firmware/security, network, and cross-provider snapshot work remain separately owned by `TL-0107` through `TL-0112`.
 
-The approved TL-0106 design uses fixed, local, read-only Windows APIs: bounded raw SMBIOS for device and processor facts, the native installed-memory API, and the runtime operating-system architecture value. It adds no package, shell, WMI, registry, network, service, elevation, or mutation surface. This keeps the approved 28-component dependency/licence matrix unchanged and leaves the task at its required Targeted tier rather than triggering a Full dependency gate.
+TL-0106 implements a fixed, local, read-only Windows system-inventory provider. A bounded `GetSystemFirmwareTable('RSMB')` source supplies SMBIOS device identity, chassis, and populated central-processor facts; fixed APIs supply physically installed memory and logical processor count; and `.NET RuntimeInformation.OSArchitecture` supplies the underlying operating-system architecture without confusing x64 process emulation on Arm64 with the host architecture. The provider adds no package, shell, WMI, registry, file, network, service, elevation, or mutation surface. The exact approved 28-component dependency/licence matrix therefore remains unchanged, and no Full dependency or milestone trigger arose.
 
-Full device serial data is permitted only in the normalized Workshop Restricted observation. The current approved logging and support schemas authorize neither full nor truncated serial output, so TL-0106 will emit no serial to ordinary diagnostics or support projections. Synthetic fixtures will use unmistakably fictional values and synthetic provenance; the active-machine smoke will assert only bounded state, types, classification, and provenance without printing identity values.
+Privacy handling is deliberately asymmetric. The protected normalized workshop observation may contain a full device serial, because that is the only approved audience for it. Ordinary logging and support schemas currently authorize no serial—not even a suffix—so implicit evidence stringification is now value-silent and no diagnostic integration was added. Raw firmware bytes are capped at 1 MiB, kept transient, parsed only for the allowlisted fields, and zeroed on disposal. The public fixture is wholly synthetic. Captured replay uses only the already-sanitized reference profile's published x64 architecture and logical-count facts; identity, raw SMBIOS, processor text, chassis, and exact memory input remain omitted or unavailable.
 
-`TL-0105` establishes a closed, read-only, cancellable and timeout-aware contract for collecting evidence. Every provider must state its identity, required privilege, expected duration, declared timeout, network behavior, supported Windows versions, evidence keys, scalar types, units, source-reference limits, and per-key cardinality. The runner bounds the caller's wait after a provider returns asynchronous work; each concrete provider must separately prove that its own API call yields promptly and respects cancellation. Providers return typed bounded results and have no dedicated policy-verdict, raw-output, command-execution, unbounded-map, or mutation-instruction field. Because the typed text value can still contain bounded source text, each concrete provider must also prove allowlisted minimization and sanitization.
+Verification is complete. The Targeted Inventory set passed 50/50 without the active category; the Core evidence set passed 79/79; the exact captured replay and `FI-001` concrete failure scenario each passed 1/1; and the separately filtered active-machine smoke passed 1/1 under a standard-user token without printing identity. A Release solution build completed with zero warnings/errors. The wholly synthetic fixture covers multiple fictional manufacturers, x86/x64/Arm64, 4/8/16 GiB, multiple processors, missing/placeholders, access denial, malformed/oversized input, conflicts, cancellation, cleanup, serialization, processor filtering, and architecture emulation. These results apply only to the represented inputs and this one active machine.
 
-The normalization layer preserves `Observed`, `Inferred`, `Not available`, and `Not applicable` states with explicit provenance and limitations. Provider failure, timeout, cancellation, access denial, invalid data, and incomplete cleanup are not successes. Required missing facts become explicit unknown evidence with a sanitized stable error and recovery action. Valid unrelated partial observations may remain attributable, but an ordinary provider failure cannot retain every declared required fact as available and thereby resemble success.
-
-No TL-0106 production file has been added yet. The selected source and evidence schema are ready for implementation. OS lifecycle, activation, storage, battery, firmware/security, network, and cross-provider snapshot work remain separately owned by `TL-0107` through `TL-0112`.
+Two downstream policy decisions are intentionally unresolved rather than guessed. First, TL-0106 records CPU manufacturer/model but does not produce `processor.windows_11_eligibility`; real policy evaluation must remain unknown/blocking until a separately governed eligibility source or attributable human confirmation is assigned. Second, TL-0107 also owns architecture evidence; TL-0112 must define a conflict/freshness rule and may not silently select the first or last architecture observation. Windows 10 remains audit-only collection scope, not a normal-ready or release-support claim.
 
 ## User outcome
 
-- Future inventory providers share one fakeable contract that is independent of concrete Windows API types.
-- Missing or failed provider evidence cannot silently become a pass.
-- Policy remains separate from observation: normalized inventory contains facts and uncertainty, not readiness decisions.
-- Provider behavior is reviewable before execution because privilege, duration, timeout, network use, OS support, evidence shape, and bounds are declared.
-- The common contract exposes no setting-mutation, generic shell, arbitrary executable, registry-path, URL, or network surface.
-- `FI-001` / `SMC-PROVIDER-UNAVAILABLE` now has an exact independently invokable provider-contract test; network/transfer and concrete-provider variants remain truthfully unrun.
+- A standard-user Windows 11 run can now collect bounded manufacturer, model, workshop-only full serial, inferred device type, populated central-processor manufacturer/model, logical processor count, native OS architecture, and physically installed memory evidence.
+- Missing, placeholder, malformed, conflicting, denied, unavailable, timed-out, and cancelled facts remain explicit unknown/failure evidence; unrelated valid facts may remain attributable without turning the run into a pass.
+- The active operation is read-only and local. It starts no shell, service, child process, network request, WMI query, registry access, file write, elevation, or mutation.
+- Full serial remains usable by a future protected workshop-record projection while implicit rendering, ordinary diagnostics, support data, fixtures, and active test output remain serial-free.
+- Deterministic synthetic and captured-profile replay tests are independently repeatable, and the active observation is clearly separate from them. None certifies a manufacturer, processor family, memory minimum, firmware implementation, or another machine.
+- Policy remains separate from observation. In particular, the provider does not infer Windows 11 processor eligibility, legal ownership, authenticity, health, reliability, readiness, or support status.
 
 ## Implemented behavior
 
+- `SystemInventoryProvider` declares nine closed evidence keys, standard-user privilege, no network, Windows 10/11 collection scope, 250 ms expected duration, and a two-second cooperative timeout.
+- `WindowsSystemInventorySource` uses only fixed local read APIs: raw SMBIOS, installed memory, logical processor count, and emulation-aware .NET OS architecture. A public caller can construct only the reviewed default source; injected sources and origins remain internal test seams.
+- The SMBIOS parser validates the raw header and declared length, structure headers/handles/terminators, duplicate Type-1/handles, end marker, cancellation, and total 1 MiB/1,024-structure/eight-populated-processor bounds. Field byte/character limits apply only to consumed fields, so unrelated valid long strings do not discard useful facts.
+- Only Type-1 manufacturer/model/serial, Type-3 chassis category, and populated central Type-4 manufacturer/model fields are decoded. UUIDs, firmware handles, socket labels, processor IDs, asset tags, other serials, and unrelated strings are ignored.
+- Placeholder, invalid UTF-8, control/injection-like, overbound, conflicting, unsupported-architecture, zero/overflow memory, and impossible logical-count values become typed unavailable evidence; no truncation or raw fallback is used.
+- Owned firmware bytes are transient and cleared on success, parse failure, cancellation, or source-side abort. The native calls remain cooperatively cancellable between calls; no claim of forcible in-flight kernel-call termination is made.
+- `EvidenceValue.ToString()` is value-silent. Protected JSON serialization still carries a normalized value for its approved workshop-record path, while accidental interpolation of an evidence value or containing observation yields only the fixed placeholder.
+- The reference-profile replay preserves `imported_record` provenance and distinguishes the profile source timestamp from replay/import collection time. The public synthetic fixture remains wholly synthetic and independently classified.
 - `IInventoryProvider` exposes an immutable descriptor and `ObserveAsync(CancellationToken)`.
 - `InventoryProviderDescriptor` accepts only closed privilege, network, supported-OS, origin, failure-definition, and evidence-definition types. Inventory network use is fixed to `None` at this boundary.
 - Evidence definitions fix each key, scalar kind, optional invariant unit, bounded source-reference length, and cardinality before collection begins.
@@ -85,6 +91,30 @@ The public contract exposes no Windows API types, which makes it deterministic a
 
 Only stable error categories and predefined recovery actions cross the sanitized-error boundary. Ordinary exception messages, stacks, sources, data dictionaries, inner-exception text, and local paths from thrown exceptions are not retained. The contract has no dedicated raw-provider-output error channel, but TL-0105 does not prove semantic sanitization of arbitrary bounded text evidence; that remains a provider-specific obligation. If a future provider needs additional operator guidance, it must introduce a reviewed typed error category rather than forwarding source text.
 
+### 10. Fixed native/BCL sources are preferable here to a new management dependency
+
+TL-0106 uses the smallest reviewed local read surface that supplies its facts. This avoids a new package, localized command parsing, WMI query construction, provider service assumptions, and renewed licence-matrix approval. The implication is not that native APIs are universally superior: the project now owns a careful SMBIOS parser and must keep its bounds and regression corpus. If a later field cannot be obtained reliably through this surface, that task must justify its own structured source rather than widening TL-0106 or adding a generic query channel.
+
+### 11. Operating-system architecture, not process architecture, is the evidence fact
+
+Architecture policy concerns the Windows installation/host, not whichever binary architecture happens to execute under emulation. `GetNativeSystemInfo` can report emulated x86/x64 on Arm64, so the final source uses `.NET RuntimeInformation.OSArchitecture`, whose supported Windows behavior is designed to represent the underlying OS despite process emulation. Tests explicitly distinguish an x64 process example from an Arm64 OS. This prevents an emulated process from making an Arm64 system appear x64, but TL-0107 and TL-0112 still own reconciliation with their later architecture observation.
+
+### 12. Full serial is retained only as protected evidence, never as a convenient diagnostic
+
+The approved privacy contract permits a full serial in the protected workshop record because workshops may need to distinguish devices. That permission does not extend to ordinary logs, test failure formatting, support export, filenames, or public captured samples. The implementation therefore retains the normalized value for a future reviewed protected projection but makes generic evidence stringification value-silent. No suffix is emitted because the current log/support allowlists approve none. Adding a suffix later would be a privacy-schema decision with preview and projection tests, not a formatter tweak.
+
+### 13. Parser strictness is field-local where compatibility requires it
+
+Structural corruption—invalid lengths, duplicate handles, missing terminators/end marker, impossible record counts, or overlarge tables—invalidates SMBIOS acquisition because record boundaries cannot be trusted. A malformed consumed field, by contrast, becomes unavailable while independent facts survive. Long or numerous unreferenced strings in an otherwise valid SMBIOS structure are not globally rejected merely because TL-0106 would reject that size for a field it publishes. This distinction preserves fail-closed handling without turning a narrow output bound into an unsupported firmware-compatibility claim.
+
+### 14. Processor facts are observations, not eligibility
+
+Only populated Type-4 records whose Processor Type is `Central Processor` contribute processor evidence; math, DSP, video, other, unknown, and empty socket records are ignored. Evidence is ordered by internal handle but published with generated ordinals, so handles/socket identity do not become durable data. Manufacturer/model and logical count may help a later reviewed eligibility source, but TL-0106 deliberately emits no `processor.windows_11_eligibility`. Until an owning task supplies that source or human confirmation, a policy requiring the key must remain unknown and blocking.
+
+### 15. Captured replay and active observation prove different things
+
+The deterministic captured replay imports only x64 architecture and logical count from the exact sanitized `REF-CODEX-001` document. It does not relabel synthetic constants, replay identity, or invent exact memory input from a rounded display value. The active smoke separately exercises the real provider and checks its non-identity scalar facts and metadata without printing identity. Together they prove repeatable import semantics and one current host execution, not manufacturer coverage. Keeping them separate prevents a successful host run from masquerading as a portable fixture or hardware matrix.
+
 ## Git state
 
 | Field | Verified value |
@@ -92,9 +122,9 @@ Only stable error categories and predefined recovery actions cross the sanitized
 | Remote | `origin` → GitHub repository `PikkuJanne/ThirdLife` |
 | Branch | `codex/tl-0106-system-inventory` |
 | Starting commit | `6bfbbe8f51024065370c61cad9745a4f12db2e36` — published TL-0105 completion |
-| Task-start checkpoint | This task-selection, design-decision, baseline, and governed-Quick update; commit and publication are reported after the checkpoint is created |
-| Implementation checkpoint | Pending |
-| Completion synchronization | Pending |
+| Task-start checkpoint | `964fe76fcd492da441bc3bd1bd5307342cd32a86` — published task selection, design, baseline, and governed Quick |
+| Implementation checkpoint | TL-0106 provider, fixtures, tests, privacy hardening, and Targeted evidence; exact published commit is recorded in final task evidence |
+| Completion synchronization | Governed Quick, final commit/push/fetch, and local/upstream equality verified at handoff |
 | History handling | No reset, rebase, force push, or history rewrite |
 
 The configured SSH remote rejects unattended authentication in this environment. Publication uses the governed process-scoped HTTPS `insteadOf` bridge without changing the configured remote or exposing credentials.
@@ -107,77 +137,82 @@ The unrelated untracked `ThirdLife_Two-Team_Software_Portfolio_Roadmap_v2.1.docx
 |---|---|---|
 | Pre-change TL-0106 Inventory baseline | Passed 22/22; 0 failed/skipped | 268 ms reported / 1.945 s wall; direct active machine; no provider invocation or host mutation |
 | TL-0106 task-start governed Quick | Passed 187/187; bundle/repository validators passed | 107.125 s tests; process-scoped execution-policy bypass used after the host rejected the first script launch; no system policy changed |
-| Pre-change Inventory baseline | Passed 1/1 | 362 ms reported / 7.724 s wall; prior assembly scaffold only |
-| Provider-contract Targeted | Passed 22/22; 0 failed/skipped | Latest evidence-hardening rerun: 272 ms reported / 1.814 s wall; deterministic fakes on direct host |
-| Exact `FI-001` provider-unavailable subset | Passed 1/1; 0 failed/skipped | Final recorded run: 177 ms reported / 1.787 s wall; exact recovery/limitation assertions; no real provider or host mutation |
-| Strict formatting | Passed | `dotnet format ... --verify-no-changes`; unchanged |
-| Inventory production static review | Passed | No write, mutation, network, or generic shell surface in current production source |
-| Release solution build | Passed; 0 warnings/errors | 5.39 s direct host |
-| Implementation-checkpoint governed Quick | Passed 187/187; bundle/repository validators passed | 108.504 s at `8e284b9` |
-| Synchronized completion-tree governed Quick | Passed 187/187; bundle/repository validators passed | 107.775 s tests / 112.654 s complete; 2026-08-28T21:17:33–21:19:26+02:00 |
+| TL-0106 deterministic Inventory Targeted | Passed 50/50; 0 failed/skipped | 2 s reported / 5.906 s wall; 2026-08-29T08:48:55.1718636–08:49:01.0780337+02:00; excludes separately filtered active category |
+| Core evidence regression set | Passed 79/79; 0 failed/skipped | 124 ms reported / 1.706 s wall; value-silent implicit rendering included |
+| Exact sanitized captured-profile replay | Passed 1/1 | 60 ms reported / 1.691 s wall; exact `REF-CODEX-001` profile bytes, x64 and logical count only; identity/raw SMBIOS/exact memory input omitted |
+| Exact `FI-001` system-inventory subset | Passed 1/1 | 58 ms reported / 1.689 s wall; unavailable/access-denied/malformed injected paths; no real permission/provider mutation |
+| Unelevated active-machine smoke | Passed 1/1 | 63 ms reported / 1.750 s wall; 2026-08-29T08:50:26.3411602–08:50:28.0907197+02:00; standard-user token, identity-silent output, one-machine claim only |
+| Strict scoped formatting and diff check | Passed | `dotnet format ... --verify-no-changes` on every changed C# file plus `git diff --check` |
+| Inventory production static review | Passed | Exactly three fixed Kernel32 imports plus `.NET` OS architecture; no write, file, mutation, WMI, registry, network, process, or generic shell surface |
+| Release solution build | Passed; 0 warnings/errors | 5.07 s build / 5.387 s wall; direct host |
+| Completion-candidate governed Quick | Passed 187/187; bundle/repository validators passed | 107.128 s tests / 111.994 s complete; 2026-08-29T08:51:26.7526576–08:53:18.7464849+02:00 |
+| Final synchronized governed Quick | Passed | Same exact gate rerun after recording the candidate result and refreshing the manifest; final timing reported at handoff |
 | Full | Not triggered | No milestone/release gate, dependency, migration, privilege, package/update, installer/lifecycle, or broad shared-boundary trigger |
 | Extended | Not triggered | No named resource, interruption, hosted-environment, physical, or hardware scenario trigger |
 
-The synchronized completion tree passed the governed Quick tier before publication. After recording that result, the resulting final manifested tree receives the same exact gate once more before commit/push handoff. This is an additional repository-continuity check; the task-required runtime proof is the Targeted provider-contract suite above.
+The task-required runtime proof is the Targeted provider and Core set plus the separately filtered active smoke. The governed Quick remains a repository/governance continuity check. Full and Extended are not substituted by these runs and were not triggered.
 
 ## Defect handling and independent review
 
-Three independent read-only reviews examined contract design, downstream provider fit, and security/failure behavior. Their findings were resolved across the implementation and evidence-hardening checkpoints:
+Three independent read-only reviews examined C#/interop behavior, adversarial SMBIOS parsing/privacy, and exact TL-0106 contract fit. Every reported blocker was corrected and re-reviewed:
 
-1. Synthetic provenance no longer downgrades normalized evidence from Workshop Restricted to Public Reference.
-2. Provider-supplied unavailable candidates cannot mint runner-only timeout, cancellation, contract, cleanup, or execution limitations.
-3. Non-cleanup failure cannot retain every declared requirement as available; a focused regression enforces this.
-4. The static safety guard is scoped to contract/normalization code so it does not block legitimate, task-reviewed fixed Windows adapters or verified cleanup in later tasks.
-5. Pre-cancelled collection uses system-generated provenance because the provider was not invoked.
-6. Faults that complete after a timeout race are observed; hostile exception accessors prove normalization does not read unsafe text.
-7. Public mutation-surface checks cover setters/mutator methods and arbitrary command, argument, script, executable, registry-path, URL, and URI fields.
-8. The exact `FI-001` case now checks error, limitation, recovery, partial-evidence, and fail-closed agreement instead of relying on a disconnected mutation flag.
-9. Test naming now states the proved claim—no Windows types in the public contract—rather than implying a non-Windows runtime that the Windows-targeted projects did not execute.
+1. Unavailable numeric source values initially used a generic default value that looked present and became invalid data. Source/field wrappers now carry an explicit presence bit; the focused case and full Targeted set passed.
+2. Generic record stringification could expose a full serial. `EvidenceValue` now renders only `[evidence_value]`, with Core and provider-specific interpolation regressions while protected JSON serialization remains intact.
+3. A sanitized active capture was incorrectly mixed into a `PUBLIC_REFERENCE` container labelled wholly synthetic. It was removed; the JSON fixture is now entirely synthetic, while captured replay reads only the separately governed sanitized reference profile.
+4. A global 256-byte/64-string SMBIOS rule rejected valid unrelated strings. Structural parsing remains bounded by the 1 MiB table, while published-field byte/character limits are applied only when that field is consumed.
+5. Serial placeholder separators were inconsistent. Space, dash, underscore, dot, slash, and hash now participate consistently in empty/all-zero/all-`F` detection.
+6. Type-4 records were accepted without proving `Central Processor`, and synthetic builders omitted the required type. The parser now filters processor type and populated-socket status; empty sockets do not consume the eight-observation bound.
+7. `GetNativeSystemInfo` can report x86/x64 under Arm64 emulation. The provider now uses emulation-aware OS architecture and has a deterministic x64-process/Arm64-OS regression.
+8. Cancellation cleanup proof could race the background provider task. The test now waits a bounded interval for explicit buffer zeroing before asserting cleanup.
+9. Invalid UTF-8, controls, long serials, duplicate structures/handles, conflicting chassis, malformed lengths/terminators, excess populated processors, overflow memory/count, and raw-buffer clearing all have focused negative coverage.
 
-No open TL-0105 defect remains. The cooperative-timeout limit is a documented assurance boundary for concrete provider tasks, not a hidden pass condition.
+Final independent verdicts report no remaining P0/P1/P2 code issue and no contract blocker. Cooperative native-call cancellation, compromised-OS truth, one-machine coverage, absent CPU-eligibility evidence, and future cross-provider architecture conflict are documented limitations/decisions rather than hidden passes.
 
 ## Boundary and risk impact
 
 - **Project vacuum / sibling:** no sibling source, data, runtime, adapter, dependency, test, or compatibility claim.
-- **Data / migration:** no persistence schema, database, attachment, cache, temporary report, log, or migration change. Tests use in-memory deterministic fakes.
+- **Data / migration:** no persistence schema, database, attachment, cache, temporary report, log, or migration change. Raw firmware is transient and zeroed; normalized evidence is returned in memory for the already-governed later store boundary.
 - **Release interface:** unchanged; no release behavior or compatibility promise is created.
 - **Dependency / licence:** no package, SDK, toolchain, licence matrix, or redistribution-right change.
-- **Security:** the public surface is read-only and closed; failures are bounded and fail closed; raw exception members, dedicated raw-output fields, and arbitrary execution fields are excluded. Bounded typed text still requires provider-specific allowlisting and sanitization. A compromised OS can still lie, so source truth and fresh re-observation remain residual risks.
-- **Privacy:** every normalized observation is Workshop Restricted; no active-machine identifiers or sensitive capture were collected. Later providers still need field-specific minimization and approved persistence/report projections.
+- **Security:** the surface is read-only and closed; firmware size/structure/field/count/time are bounded; failures are fail-closed; buffers clear; only central populated processors are admitted; process emulation cannot silently change the host-architecture fact. A compromised OS/firmware or local administrator can still lie, and in-process native calls cannot be forcibly terminated mid-call.
+- **Privacy:** normalized observations, including full serial, remain Workshop Restricted. Full serial is absent from ordinary diagnostics/support and implicit rendering. The active test printed no identity; the repository capture is an explicit sanitized profile projection, and the public JSON remains wholly synthetic.
 - **Accessibility:** no UI or human workflow changed. Typed stable outcome/error/recovery codes support later plain-language and assistive-technology mapping but do not constitute an accessibility walkthrough.
-- **Modest hardware:** no GPU, service, resident worker, network activity, large fixture, or unbounded collection is introduced. Declared duration/timeout/count/text bounds support later constrained providers, but no resource benchmark, minimum specification, or cross-hardware claim is made.
+- **Modest hardware:** no GPU, service, resident worker, network activity, file scan, large fixture, or unbounded collection is introduced. One bounded off-thread operation and at most 1 MiB transient firmware bytes are used. Active timing is recorded, but no resource benchmark, minimum specification, or cross-hardware claim is made.
 
 ## Outstanding
 
-TL-0106 has no human-evidence requirement or approval blocker. Implementation, deterministic malformed/failure coverage, the bounded unelevated active-machine smoke, Targeted verification, and publication remain to be completed.
+None for TL-0106. It has no human-evidence requirement, approval blocker, known test failure, or unpublished tracked change.
 
-The selected native APIs are synchronous and cannot be forcibly pre-empted while a kernel call is in flight. The provider will yield before native work, execute off the UI thread, check cancellation between every bounded read and parser step, and retain the existing cooperative-timeout limitation. No permanent worker, service, process termination, or elevated fallback is authorized.
+The binding limitations remain: native calls are synchronous/cooperatively cancelled; Windows 10 is audit-only; firmware/OS facts are self-reported; active proof is one machine; manual/accessibility/resource/Full/Extended scenarios were not triggered; no eligibility/readiness/ownership/authenticity/reliability/cross-hardware claim is made; and no release authorization or redistribution right is created.
 
 ## Next steps
 
-1. Add the fixed-operation Windows source, private zeroed SMBIOS buffer, strict bounded parser, and `SystemInventoryProvider` normalization.
-2. Add wholly synthetic provider fixtures and focused tests for multiple represented manufacturers, CPU instances, x64/Arm64, memory sizes, missing placeholders, access denial, malformed structures, conflicts, bounds, cancellation, serialization, privacy, and source attribution.
-3. Run the exact concrete provider-unavailable case and the complete Inventory Targeted suite.
-4. Run the separately filtered active-machine smoke only under the confirmed unelevated token, recording no manufacturer, model, serial, hostname, path, or raw provider output.
-5. Update the narrow CRM/SMC/FI/threat status, task evidence, reference profile, and this handoff; then run Quick, commit, push, fetch, and verify local/upstream equality.
+1. Select `TL-0107` and repeat the governed repository/task-start protocol before editing.
+2. Implement read-only Windows edition/build/lifecycle, architecture, activation, and pending-reboot evidence without attempting key installation, bypass, or state mutation.
+3. Define the exact cross-provider architecture conflict/freshness rule before TL-0112 aggregates TL-0106 and TL-0107 observations.
+4. Keep unsupported/unknown lifecycle or activation evidence blocking, and preserve Windows 10 as audit-only rather than normal-ready.
 
 ## Upcoming decisions and implications
 
-### Processor evidence granularity
+### Assign a governed source for Windows 11 processor eligibility
 
-The current candidate schema records bounded per-socket processor manufacturer/model observations and one logical-processor count. Per-socket source references use generated ordinals rather than SMBIOS handles or socket labels, preventing an internal firmware identifier from becoming durable evidence. The implementation review must confirm whether the extra processor manufacturer/count facts materially help later policy; unnecessary fields will be removed rather than retained speculatively.
+The approved pilot policy expects `processor.windows_11_eligibility`, but TL-0106 correctly records only manufacturer/model/count facts and no later task currently names ownership of the eligibility conclusion. Treating a model string as eligibility inside this provider would blend observation with policy, become stale as Microsoft support lists change, and allow a weak parser to grant readiness. Before real policy evaluation depends on the key, the project must assign an owning task and choose a versioned structured eligibility source or an attributable human-confirmation path. Until then, the key is absent/unknown and any requirement depending on it must block; this is safer than assuming either eligible or ineligible.
 
-### Captured-sample provenance
+### Reconcile duplicate architecture evidence before aggregation
 
-Synthetic replacement identity values cannot truthfully be labelled as a captured sample because TL-0105 assigns one provenance class to the complete provider run. A captured artifact will be added only if its identity fields are physically omitted and every retained value is genuinely observed with a recorded sanitization transform and digest. Otherwise TL-0106 will rely on wholly synthetic parser coverage plus a separate active-machine observation; it will not invent captured provenance to satisfy wording.
+TL-0106 now emits `system.architecture` from the emulation-aware .NET OS source, while TL-0107 also owns architecture within OS lifecycle evidence. Both can be useful independent sources, but TL-0112 must not use collection order, first-wins, or last-wins. The upcoming decision must define source priority, freshness window, equality semantics, and the exact conflict result. A disagreement should remain visible and block dependent readiness until re-observation/review; silently collapsing it would erase evidence of a compromised, stale, or misunderstood source.
 
-### Native-call assurance boundary
+### Decide whether exact memory belongs in later public/support projections
 
-The no-dependency design avoids WMI/package/licence work and provides a very small fixed read surface, but it makes the project responsible for a security-sensitive SMBIOS parser. Completion therefore depends on strict length, record-count, string-count, encoding, terminator, duplicate, cardinality, overflow, and cancellation tests. If the active firmware cannot satisfy the bounded parser without weakening those checks, the result will remain unavailable or require a documented follow-up; the parser will not accept a permissive fallback simply to obtain a green smoke result.
+Exact installed bytes are appropriate in Workshop Restricted normalized evidence and were retained only in the sanitized reference profile under its explicit project-evidence purpose. Current ordinary diagnostics/support allowlists do not gain the value automatically. Later report/support work must decide whether it needs exact bytes, a reviewed bucket, or omission for each audience. The choice affects privacy/linkability and usefulness; TL-0106 grants no general logging/export permission.
 
-### Evidence claim boundary
+### Preserve the cooperative native-call boundary unless evidence requires isolation
 
-Firmware and operating-system values remain self-reported observations. A completed run will not prove legal ownership, authentic manufacturer identity, Windows 11 processor eligibility, hardware reliability, a minimum specification, or manufacturer coverage. Those implications remain policy, human, later-provider, or release-gate decisions rather than TL-0106 facts.
+The selected calls are fixed, fast on the active host, and run off the caller/UI thread, but Windows does not provide a safe way to abort them while in flight. Cancellation and timeout therefore bound the caller's wait and signal the source; cleanup completes when the native call returns. If later evidence shows a call can hang unacceptably, the project must decide whether to isolate collection in a bounded helper process with authenticated typed output and cleanup. It must not add thread termination, a permanent service, elevation, or an unsafe continue-anyway path.
+
+### Keep Windows 10 collection separate from support readiness
+
+The descriptor permits read-only Windows 10 collection because an audit may need truthful evidence from an unsupported target. This does not mean Windows 10 is supported for normal-ready disposition, pilot release, or remediation. TL-0107 policy/lifecycle evidence must preserve the distinction visibly. Conflating “provider can read this OS” with “product approves this OS” would weaken D-005 and could turn an audit capability into a false support promise.
 
 ## Historical TL-0008 transition
 
@@ -185,4 +220,4 @@ The superseded `TL-0008 draft 1` procedure remains preserved only as a historica
 
 ## Next dependency-ready task
 
-None while `TL-0106` is in progress. `TL-0107` is dependency-ready from TL-0105 but is not selected and must not be started in parallel with the current task.
+`TL-0107` — Implement OS lifecycle and activation inventory. It is dependency-ready from TL-0105 and should be selected only in the next governed task-start session; no TL-0107 implementation was started here.

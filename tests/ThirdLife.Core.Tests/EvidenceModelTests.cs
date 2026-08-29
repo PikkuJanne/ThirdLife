@@ -244,6 +244,16 @@ public sealed class EvidenceModelTests
         Assert.Equal(json, roundTripJson);
     }
 
+    [Fact]
+    public void EvidenceValuesDoNotImplicitlyRenderContainedData()
+    {
+        const string restrictedValue = "TEST-ONLY-DEVICE-SERIAL-0001";
+        var value = EvidenceValue.FromString(restrictedValue);
+
+        Assert.Equal("[evidence_value]", value.ToString());
+        Assert.DoesNotContain(restrictedValue, $"{value}", StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("{\"type\":\"integer\",\"data\":true}")]
     [InlineData("{\"type\":\"boolean\",\"data\":1}")]

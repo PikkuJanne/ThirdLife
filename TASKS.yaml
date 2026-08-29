@@ -2125,7 +2125,7 @@ tasks:
   workstream: inventory
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: M
   executor: codex
   environment: windows
@@ -2158,7 +2158,121 @@ tasks:
   - Test captured and synthetic provider data for multiple manufacturers, processor/architecture/memory variants, missing
     values, access denial, and malformed results.
   - Run a bounded smoke test on the active Codex machine and record its sanitized reference-machine profile.
-  evidence: []
+  evidence:
+  - summary: Implemented the first concrete fixed-operation Windows system-inventory provider with bounded transient SMBIOS
+      parsing, emulation-aware operating-system architecture, installed-memory and logical-processor APIs, typed normalization,
+      full-serial Workshop Restricted handling, and no package, shell, WMI, registry, file, network, service, elevation, or
+      mutation surface.
+    task: TL-0106
+    command_or_review: Three independent read-only code, adversarial parser/privacy, and task-contract reviews; scoped dotnet
+      format verification; SystemInventoryProviderTests.ConcreteWindowsSourceUsesOnlyTheReviewedReadApis
+    tier: targeted architecture, security, privacy, and static review
+    result: passed; all reported P0/P1/P2 and contract blockers were corrected and final re-review found none remaining
+    environment: Active Codex machine repository tree; fixed local Windows sources; standard-user production descriptor; no
+      sibling access or external runtime
+    date: '2026-08-29'
+    duration: Review window ran during the bounded implementation/verification session; individual reviewer execution time was
+      not separately instrumented
+    reference: SystemInventoryProvider.cs SHA-256 6b20acd9d9187ae3d0b5d83c3b4343a8f5fd4d1dd877be025e23db4646472db6;
+      SystemInventorySource.cs a2c319b1a4c4035b5ecda411e9dc6442e836a86d5fef89662e2f7756cb820813; SmbiosInventoryParser.cs
+      4a3499cc899d20f9ef4b619408723fd8daaa58633def691feed9c24db845336e; final completion commit reported at handoff
+    limitation: Native calls are synchronous and only cooperatively cancellable; firmware/OS values are self-reported; no
+      authenticity, ownership, processor-eligibility, readiness, reliability, Windows 10 normal-support, or cross-hardware
+      conclusion follows
+  - summary: The complete deterministic Inventory Targeted set passed synthetic multi-manufacturer, CPU, architecture, memory,
+      missing, access-denied, malformed, conflict, bounds, cancellation, cleanup, invariant-serialization, privacy, captured-profile
+      replay, processor-filter, and architecture-emulation cases.
+    task: TL-0106
+    command_or_review: dotnet test .\tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj -c Release --no-restore
+      --no-build --filter "Category!=ActiveMachine" --logger "console;verbosity=minimal"
+    tier: targeted deterministic provider and subsystem
+    result: passed 50/50; 0 failed; 0 skipped
+    environment: Direct active Codex machine; Windows 11 x64; .NET SDK 10.0.400; deterministic in-memory sources; active category
+      excluded for separate attribution
+    date: '2026-08-29'
+    duration: 2 s reported / 5.906 s wall; start 2026-08-29T08:48:55.1718636+02:00; end 2026-08-29T08:49:01.0780337+02:00
+    reference: tests/ThirdLife.Inventory.Tests/TestData/system-inventory-cases.v1.json v1 SHA-256 f53f2cf20d4beaabee945f3fadb13ba93fe5adb68eb99889b81abfbcf3cb6a6f;
+      SystemInventoryProviderTests.cs SHA-256 50ffae2801e9ad7ab2c9c08ddc34545bddac47e5e616538f3237a168a88247e5
+    limitation: Synthetic identities and represented variants prove parser/normalization behavior only; they do not establish a
+      real manufacturer, firmware implementation, minimum memory, processor family, or another machine
+  - summary: Deterministic captured-data replay used the existing sanitized reference-machine profile rather than relabelling
+      synthetic constants; it imported only the published x64 architecture and logical processor count with Imported Record
+      provenance and kept identity, raw SMBIOS, processor text, chassis, and exact memory input unavailable.
+    task: TL-0106
+    command_or_review: dotnet test .\tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj -c Release --no-restore
+      --filter "FullyQualifiedName=ThirdLife.Inventory.Tests.SystemInventoryProviderTests.SanitizedReferenceProfileReplaysCapturedNonIdentityFacts"
+      --logger "console;verbosity=minimal"
+    tier: targeted captured-sample replay
+    result: passed 1/1; normalized replay remained WORKSHOP_RESTRICTED; profile source time and import collection time stayed distinct
+    environment: REF-CODEX-001 sanitized repository profile revision 2026-08-29.1, source timestamp 2026-08-29T08:39:21+02:00;
+      direct active machine test runner
+    date: '2026-08-29'
+    duration: 60 ms reported / 1.691 s wall; start 2026-08-29T08:50:50.3515774+02:00; end 2026-08-29T08:50:52.0421851+02:00
+    reference: docs/testing/reference-machine-profile.md SHA-256 e9863c3ca84a46d14843fd7d1bbd8a83d63f4ba2ead250951e14735affede7a9
+    limitation: Proves deterministic replay only for the two published non-identity scalar facts; no manufacturer, identity,
+      exact-memory, processor-eligibility, or cross-hardware coverage
+  - summary: The exact FI-001 and SMC-PROVIDER-UNAVAILABLE concrete system-inventory subset preserved serial as unknown, retained
+      independent x64 evidence, returned exact unavailable/access-denied/invalid-data codes, invoked the source once, and cleared
+      malformed firmware bytes.
+    task: TL-0106
+    command_or_review: dotnet test .\tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj -c Release --no-restore
+      --no-build --filter "FullyQualifiedName=ThirdLife.Inventory.Tests.SystemInventoryProviderTests.FI001SmcSystemInventoryFailuresRemainFailClosed"
+      --logger "console;verbosity=minimal"
+    tier: targeted FI-001 / SMC-PROVIDER-UNAVAILABLE concrete-provider subset
+    result: passed 1/1; 0 failed/skipped; no raw or synthetic serial leaked through unrelated observations
+    environment: Direct active machine with injected wholly synthetic source states; no real permission/provider/network/host change
+    date: '2026-08-29'
+    duration: 58 ms reported / 1.689 s wall; start 2026-08-29T08:50:58.2541357+02:00; end 2026-08-29T08:50:59.9432087+02:00
+    reference: SystemInventoryProviderTests.FI001SmcSystemInventoryFailuresRemainFailClosed; docs/testing/failure-injection.md
+    limitation: Proves injected code paths, not a real access denial, disabled provider, different firmware/hardware, network fault,
+      or forcibly pre-empted native call
+  - summary: The separately filtered active-machine smoke completed through the public provider under a standard-user token,
+      confirmed bounded attributed architecture/memory/logical-count evidence and identity-safe rendering, and updated the sanitized
+      one-machine reference profile without printing manufacturer, model, serial, processor text, hostname, path, or raw SMBIOS.
+    task: TL-0106
+    command_or_review: dotnet test .\tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj -c Release --no-restore
+      --no-build --filter "FullyQualifiedName=ThirdLife.Inventory.Tests.SystemInventoryProviderTests.ActiveMachineSmokeIsUnelevatedBoundedAndIdentitySilent"
+      --logger "console;verbosity=minimal"
+    tier: targeted active-machine smoke
+    result: passed 1/1; 0 failed/skipped; completed without elevation or identity-bearing test output
+    environment: REF-CODEX-001 revision 2026-08-29.1; Windows 11 x64; current token not Administrator; direct active Codex machine;
+      five-second test cancellation bound
+    date: '2026-08-29'
+    duration: 63 ms reported / 1.750 s wall; start 2026-08-29T08:50:26.3411602+02:00; end 2026-08-29T08:50:28.0907197+02:00
+    reference: docs/testing/reference-machine-profile.md SHA-256 e9863c3ca84a46d14843fd7d1bbd8a83d63f4ba2ead250951e14735affede7a9;
+      SystemInventoryProviderTests.ActiveMachineSmokeIsUnelevatedBoundedAndIdentitySilent
+    limitation: One exact host observation only; no manufacturer, cross-hardware, performance, minimum-specification, manual,
+      accessibility, health, reliability, ownership, eligibility, or release claim
+  - summary: Shared Core evidence privacy behavior, the complete Release solution build, scoped formatting, and changed-source diff
+      checks passed after the provider fixes.
+    task: TL-0106
+    command_or_review: dotnet test .\tests\ThirdLife.Core.Tests\ThirdLife.Core.Tests.csproj -c Release --no-restore --no-build;
+      dotnet build .\ThirdLife.sln -c Release --no-restore; scoped dotnet format --verify-no-changes; git diff --check
+    tier: targeted shared-domain regression and build/static verification
+    result: Core 79/79 passed; Release build succeeded with 0 warnings/errors; scoped formatting and diff check passed
+    environment: Direct active Codex machine; locked existing dependencies; no package/source/toolchain change
+    date: '2026-08-29'
+    duration: Core 124 ms reported / 1.706 s wall; Release build 5.07 s reported / 5.387 s wall; formatting verification
+      11.903 s before final documentation-only synchronization
+    reference: src/ThirdLife.Core/Evidence/EvidenceValue.cs; tests/ThirdLife.Core.Tests/EvidenceModelTests.cs; final completion
+      commit reported at handoff
+    limitation: Full and Extended were not triggered; no UI/accessibility/manual/resource/release matrix was run or claimed
+  - summary: The completion-candidate governed Quick gate passed the complete validator regression set plus live roadmap-bundle,
+      task-DAG, manifest, repository-boundary, package-lock, supply-chain, licence, and CI-control validation.
+    task: TL-0106
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\verify.ps1 -Tier Quick
+    tier: quick completion governance gate
+    result: passed 187/187 validator regressions; bundle reported 91 tasks, 8 milestones, 66 frozen decisions; repository reported
+      26 projects, 26 lock files, and 28 governed supply-chain components
+    environment: Direct active Codex machine; process-scoped execution-policy bypass only; repository working tree; no system
+      policy, dependency, licence, or host-security change
+    date: '2026-08-29'
+    duration: 107.128 s validator tests / 111.994 s complete; start 2026-08-29T08:51:26.7526576+02:00; end
+      2026-08-29T08:53:18.7464849+02:00
+    reference: task-start checkpoint 964fe76fcd492da441bc3bd1bd5307342cd32a86; synchronized completion commit reported
+      at handoff
+    limitation: Quick is documentation/schema/static governance evidence; Targeted entries supply runtime proof; Full and Extended
+      were not triggered
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

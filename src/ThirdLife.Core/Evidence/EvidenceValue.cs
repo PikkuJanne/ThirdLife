@@ -73,6 +73,8 @@ public sealed record EvidenceValue
             integerValue: null,
             decimalValue: null,
             DomainValue.RequireCode(value, nameof(value)));
+
+    public override string ToString() => "[evidence_value]";
 }
 
 internal sealed class EvidenceValueJsonConverter : JsonConverter<EvidenceValue>
