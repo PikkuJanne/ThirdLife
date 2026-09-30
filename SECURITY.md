@@ -118,6 +118,14 @@ The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md)
 
 ## 10. Filesystem and persistence
 
+`TL-0108` adds a [read-only storage source and normalization contract](docs/inventory/storage.md).
+Fixed local WMI projections and their explicit physical-disk/counter association collect
+bounded numeric facts. Routing identifiers are transient and excluded from normalized
+snapshots, logs and exports. System-volume metadata uses only the Windows-provided local
+volume; no caller path or disk-content read is admitted. The provider exposes no repair,
+optimization, counter reset, write test or general WMI method surface. Unknown data and source
+errors remain explicit, and reported health is not a diagnosis or certification.
+
 `TL-0107` adds read-only OS, activation, and pending-reboot providers. Their
 [source and privacy contract](docs/inventory/os-activation-reboot.md) records the closed native
 API set, numeric activation-only projection, metadata-only reboot checks, bounded workers,

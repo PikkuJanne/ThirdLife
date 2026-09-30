@@ -102,6 +102,15 @@ A slower result may be acceptable. The following are not acceptable for a suppor
 
 ## 6. Hardware and provider coverage
 
+`TL-0108` bounds normalized storage evidence to four physical disks and a separate system
+volume within the existing 64-observation contract. An oversized enumeration fails closed
+instead of silently publishing a partial inventory. Its five-second caller timeout and
+per-instance single-flight guard retain the worker until native cleanup finishes. WMI has
+its own allocation and connection behavior; bounded copying does not claim a Windows-wide
+memory or native-call execution bound. There is no polling, file write, GPU, new package or
+permanent background worker. Task evidence records the actual machine observation and
+synthetic variants; details are in `docs/inventory/storage.md`.
+
 `TL-0107` uses one worker per provider instance with two-second OS/reboot and five-second
 activation caller timeouts. A timed-out native read retains its slot until cleanup returns;
 there is no retry loop, polling, GPU use, cache, or provider file write. Lifecycle rows,

@@ -1,0 +1,116 @@
+{
+  "task": "TL-0108",
+  "date": "2026-09-30",
+  "branch": "codex/tl-0108-storage-reliability",
+  "base_commit": "c960e03bc17bc90287f2ab8d8b4f865bce4e0298",
+  "environment": "Active Codex Windows machine; REF-CODEX-001 revision 2026-08-29.1; no host resource or security mutation",
+  "runs": [
+    {
+      "id": "baseline",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter 'FullyQualifiedName~ProviderContractTests' --logger 'console;verbosity=minimal'",
+      "duration_seconds": 10.4564576,
+      "passed_tests": 20,
+      "result": "passed; no failed or skipped tests"
+    },
+    {
+      "id": "focused-initial-build",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter '(FullyQualifiedName~StorageProviderTests|FullyQualifiedName~InventoryReadOnlyBoundaryTests)&Category!=ActiveMachine' --logger 'console;verbosity=minimal'",
+      "duration_seconds": 4.9091656,
+      "result": "build failed before test execution; CA1068 cancellation parameter order, CA2219 exception from finally, CA1838 StringBuilder interop buffers, CA1859 field-array type; no analyzer suppression"
+    },
+    {
+      "id": "focused-storage",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter '(FullyQualifiedName~StorageProviderTests|FullyQualifiedName~StorageSourceTests|FullyQualifiedName~InventoryReadOnlyBoundaryTests)&Category!=ActiveMachine' --logger 'console;verbosity=minimal'",
+      "duration_seconds": 11.2910875,
+      "passed_tests": 108,
+      "result": "passed; no failed or skipped tests"
+    },
+    {
+      "id": "active-smoke-initial",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~StorageProviderTests&Category=ActiveMachine' --logger 'console;verbosity=normal'",
+      "duration_seconds": 1.8887813,
+      "passed_tests": 1,
+      "result": "passed; normal logger omitted successful-test metrics, so one detailed evidence capture followed"
+    },
+    {
+      "id": "active-smoke-evidence",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~StorageProviderTests&Category=ActiveMachine' --logger 'console;verbosity=detailed'",
+      "duration_seconds": 1.8775509,
+      "passed_tests": 1,
+      "result": "passed; provider outcome AccessDenied with independently collected system-volume facts",
+      "metrics": {
+        "elapsed_ms": 62.581,
+        "cpu_ms": 62.5,
+        "private_growth_bytes": 86016,
+        "handle_growth": 47,
+        "observation_count": 22
+      },
+      "limitation": "Physical disk count, capacity, media, health, status and reliability counters unavailable under unelevated active-machine permissions; no real disk reliability value was verified. Metrics end at caller return."
+    },
+    {
+      "id": "windows-powershell-launch",
+      "tier": "targeted",
+      "command": "powershell -NoProfile -File eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj",
+      "duration_seconds": 0.4891777,
+      "result": "blocked before script execution by Windows PowerShell execution policy; no policy changed; used installed PowerShell7 pwsh permitted by existing configuration"
+    },
+    {
+      "id": "targeted-format-check",
+      "tier": "targeted",
+      "command": "pwsh -NoProfile -File eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj",
+      "duration_seconds": 21.683,
+      "result": "bundle/repository controls passed; formatting failed on new code whitespace/end-of-line; stopped before build/tests"
+    },
+    {
+      "id": "focused-final",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter '(FullyQualifiedName~StorageProviderTests|FullyQualifiedName~StorageSourceTests|FullyQualifiedName~InventoryReadOnlyBoundaryTests)&Category!=ActiveMachine' --logger 'console;verbosity=minimal'",
+      "duration_seconds": 11.0465579,
+      "passed_tests": 109,
+      "result": "passed after formatting, per-property deadline checks and exact SAFEARRAY element-size regression; no failed or skipped tests"
+    },
+    {
+      "id": "targeted-final",
+      "tier": "targeted including Quick",
+      "command": "pwsh -NoProfile -File eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj",
+      "duration_seconds": 43.281,
+      "passed_tests_by_project": {
+        "Core": 79,
+        "Inventory": 329
+      },
+      "result": "passed bundle/repository controls, formatting, warnings-as-errors solution build, Quick selection and selected Inventory set; no failed/skipped tests; Inventory runs twice as defined by tier"
+    },
+    {
+      "id": "active-smoke-final",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~StorageProviderTests&Category=ActiveMachine' --logger 'console;verbosity=detailed'",
+      "duration_seconds": 1.8806471,
+      "passed_tests": 1,
+      "result": "passed against final source; AccessDenied physical scope with system-volume facts available",
+      "metrics": {
+        "elapsed_ms": 108.826,
+        "cpu_ms": 62.5,
+        "private_growth_bytes": 77824,
+        "handle_growth": 47,
+        "observation_count": 22
+      },
+      "limitation": "Only availability and resource metrics retained; no real physical-disk reliability data verified; metrics end at caller return"
+    },
+    {
+      "id": "quick-final",
+      "tier": "quick",
+      "command": "pwsh -NoProfile -File eng/verify.ps1 -Tier Quick",
+      "duration_seconds": 35.117,
+      "passed_tests_by_project": {
+        "Core": 79,
+        "Inventory": 329
+      },
+      "result": "passed bundle/repository validation, format, warnings-as-errors build and deterministic Quick selection; no failed/skipped tests"
+    }
+  ]
+}
