@@ -2,7 +2,7 @@
 
 **Activity:** `AMD-2026-09-12-REPOSITORY-STABILIZATION`  
 **Execution date:** 30 September 2026 (Europe/Berlin)  
-**State:** implementation in progress; owner merge review required  
+**State:** review; implementation and required verification complete; owner merge review required  
 **Branch:** `codex/repository-stabilization-v0.4.0`  
 **Reviewed/base commit:** `89303ab15ed749754290b7c17e5f6cdb27719a00`  
 **Default branch at start:** `1bb776f710bfa76f485bbee8d4b182b7a5284cd9`
@@ -65,7 +65,7 @@ Its text was compared with the base Git blob and matched exactly.
 
 | Review item | Implemented result / remaining owner boundary |
 |---|---|
-| P0.1 cumulative integration | Advanced lineage preserved; cumulative PR pending publication, merge reserved for owner |
+| P0.1 cumulative integration | Advanced lineage preserved; one cumulative PR prepared, merge reserved for owner |
 | P0.2 stale branches/PRs | Complete ancestry/content/disposition record; references retained for owner decision |
 | P0.3 CI terminology | Workflow and current guidance say supplementary; historical run clarified additively |
 | P0.4 real Quick | Governance, formatting, warnings-as-errors build, deterministic Core/Inventory tests, duration/budget |
@@ -118,6 +118,8 @@ Durations are elapsed wall time unless identified as the test framework's durati
 | Corrected clean Quick | Exact `bfd963c`: locked restore, mandatory checks and 129 tests passed | 42.269 s wall / 40.606 s runner |
 | Corrected clean Full | Exact `bfd963c`: 231 governance regressions passed; locked restore, format and build passed; Application Control blocked test assemblies; broad run stopped | 137.213 s governance; overall duration unavailable after interruption |
 | Focused policy reproduction | Reports test with `--no-build --no-restore` — same `0x800711C7` | 1.786 s wall |
+| Sandbox adapter | Seven focused invocation regressions passed; exact staging/dependency/binding/cleanup preflight passed | 8.810 s tests / 11.445 s preflight |
+| Governed Sandbox Full | Exact `861bb14`: shared Full passed, all 355 .NET tests passed, source unchanged, Sandbox closed and staging cleaned | 342.486 s Full / 401.073 s guest / 456.452 s host wrapper |
 
 The initial direct bundle validator passed. Overlay integration exposed expected old
 version/decision/workflow checks, a missing release-interface revision update, and a
@@ -173,7 +175,7 @@ It blocked Actions.Tests, Reports, Verification.Tests and Diagnostics assemblies
 CodeIntegrity events 3033/3077 directly matched Diagnostics under
 `VerifiedAndReputableDesktop` (`0xc0e90002`); the other assemblies are evidenced by test
 output. No Zone.Identifier stream was present on those four unsigned assemblies.
-The broad run was stopped; no Full pass or complete .NET count is claimed. Host policy
+The direct-host broad run was stopped; it supplies no Full pass or complete .NET count. Host policy
 remains unchanged. A reviewed adaptation of the existing same-machine Sandbox route
 has passed independent review and seven focused invocation regressions (8.810 s).
 The adapter Quick passed in 41.439 s (39.670 s runner). Initial staging preflight
@@ -181,7 +183,24 @@ failed before launch because the measurement wrapper inherited PowerShell7 modul
 into Windows PowerShell. A focused command lookup reproduced the problem; resetting
 only the child process module path restored its standard Get-FileHash command. The
 corrected preflight passed staging, exact bindings, dependency preparation and cleanup.
-No host configuration was changed. Exact committed Sandbox Full remains pending.
+No host configuration was changed. Exact committed Sandbox Full then passed at
+`861bb1497255b5599b6770c20254345a3e7c9355`, with all 355 .NET tests represented in its
+bounded tail. The full governance regression stage is proven by the shared runner success;
+its count/timing is not retained in the bounded tail, so no separate guest count is inferred.
+The source digest was `36416ae70981c8002f90bdef4b89225c924650a3846de3a7d72b1cc807a19e53`;
+structured result SHA-256 is `974a32be229783147fee790449841ec7d8a9069447e34177def4494a12dc93a8`.
+The [sanitized Sandbox result](full-36416ae70981c8002f90bdef4b89225c924650a3846de3a7d72b1cc807a19e53-09cdd7a52b851169f0a2abe39931fc1f.json) and
+[bound manifest](full-36416ae70981c8002f90bdef4b89225c924650a3846de3a7d72b1cc807a19e53-09cdd7a52b851169f0a2abe39931fc1f.manifest.json)
+are copied unchanged beside this report. Host and
+guest cleanup passed. A fresh 28-component SBOM for this checkpoint has output SHA-256
+`9728d7555ab227e0af413df3a064c33a79cccd6fe88887e9ef737d811dcd8541`; source and input
+provenance are recorded separately in runs.json. This is no new licence or release sign-off.
+
+The final evidence checkpoint changes only documentation, evidence and their manifest.
+The runner, adapters, tests and package locks remain identical to the successful Full
+checkpoint. Another Full is not triggered by recording results. Final evidence Quick passed in 40.083 s wall / 38.330 s runner
+with 129 deterministic tests. Bundle/repository validation is repeated after inserting the
+result metadata. The managed validation worktree was archived after preserving evidence.
 
 ## Risk and outstanding work
 
@@ -199,11 +218,13 @@ No host configuration was changed. Exact committed Sandbox Full remains pending.
   locked staged-cache restore. It retains 4 GiB memory, read-only inputs, the sole bounded
   writable result mapping, enabled governed NuGet audit, and verified cleanup. Only the
   combined shared Full command gets a 1,200-second timeout; host limit remains 30 minutes.
-  This profile must pass focused tests and clean staging preflight before execution.
+  The profile passed focused tests, staging preflight and exact-commit execution.
 - Owner: review cumulative PR, then decide merge and later legacy PR/branch disposition.
 - Deferred P2: signed release identity stays with named release tasks; an evidence schema
   and duration-trend policy can be scoped after integration. No task graph or release gate
   is weakened to implement those follow-ups.
 
 After an owner-approved merge, the next product task is TL-0107 in a new session from updated
-`main`. This session stops at a reviewable pushed cumulative PR.
+`main`. This session stops at a reviewable pushed cumulative PR. The direct-host Application
+Control limitation remains documented; Sandbox success does not claim direct-host policy
+compatibility or cross-hardware certification.

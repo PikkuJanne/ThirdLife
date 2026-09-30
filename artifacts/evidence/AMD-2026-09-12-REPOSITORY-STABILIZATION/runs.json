@@ -336,13 +336,74 @@
       "result": "passed",
       "cleanup": "verified staging cleanup; no guest launched",
       "environment_detail": "measurement wrapper clears only inherited PSModulePath in child process so Windows PowerShell uses its own standard module path; no host settings changed"
+    },
+    {
+      "name": "sandbox-full",
+      "command": [
+        "powershell.exe",
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "eng/run-tl0102-sandbox.ps1",
+        "-Phase",
+        "Full",
+        "-EvidenceTaskId",
+        "AMD-2026-09-12-REPOSITORY-STABILIZATION",
+        "-PersistEvidence"
+      ],
+      "started_at_utc": "2026-09-30T13:30:45.966366+00:00",
+      "ended_at_utc": "2026-09-30T13:38:22.418518+00:00",
+      "duration_seconds": 456.452,
+      "exit_code": 0,
+      "commit": "861bb1497255b5599b6770c20254345a3e7c9355",
+      "branch": "codex/repository-stabilization-v0.4.0",
+      "record_id": "sandbox-full",
+      "source_state": "exact committed checkpoint; tracked tree unchanged",
+      "environment": "active Codex physical machine; Windows Sandbox4096MiB; exact history/source and pinned tools/packages",
+      "environment_detail": "measurement child uses Windows PowerShell default module path; no host/guest security settings changed",
+      "result": "passed: shared Full plus exact bindings, Sandbox closure and staging cleanup",
+      "runner_duration_seconds": 342.486,
+      "guest_duration_seconds": 401.073,
+      "dotnet_test_count": 355,
+      "evidence_file": "full-36416ae70981c8002f90bdef4b89225c924650a3846de3a7d72b1cc807a19e53-09cdd7a52b851169f0a2abe39931fc1f.json",
+      "evidence_sha256": "974a32be229783147fee790449841ec7d8a9069447e34177def4494a12dc93a8",
+      "cleanup": "Sandbox closed; bounded staging cleanup verified; sanitized result/manifest copied unchanged into durable evidence"
+    },
+    {
+      "name": "quick",
+      "command": [
+        "pwsh",
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "eng/verify.ps1",
+        "-Tier",
+        "Quick"
+      ],
+      "started_at_utc": "2026-09-30T13:39:48.686036+00:00",
+      "ended_at_utc": "2026-09-30T13:40:28.768904+00:00",
+      "duration_seconds": 40.083,
+      "exit_code": 0,
+      "commit": "861bb1497255b5599b6770c20254345a3e7c9355",
+      "branch": "codex/repository-stabilization-v0.4.0",
+      "record_id": "final-evidence-quick",
+      "source_state": "861bb14 plus final documentation/evidence working changes; test code and runtime inputs unchanged",
+      "environment": "active Codex physical machine; direct host standard user",
+      "result": "passed: validators, format, Release build and129 deterministic tests",
+      "runner_duration_seconds": 38.33,
+      "cleanup": "test data cleaned by tests; validation worktree archived after evidence preservation; Sandbox already closed/cleaned"
     }
   ],
   "limitations": [
     "One active machine only; no cross-hardware certification.",
     "Active Targeted overlapped isolated governance regressions; timings are not benchmarks.",
     "Full default excludes the separately recorded active-machine smoke; no Extended trigger.",
-    "Corrected clean Quick overlapped offline SBOM generation; neither timing is a benchmark. The blocked Full ran separately from other test suites."
+    "Corrected clean Quick overlapped offline SBOM generation; neither timing is a benchmark. The blocked Full ran separately from other test suites.",
+    "Sandbox Full overlapped only read-only review and offline host SBOM generation, not another test suite. Timings are execution evidence, not benchmarks."
   ],
   "input_snapshot": "Initial stabilization implementation committed as 70c7da0cfef2d550ce9d32584ac11fc812f105a4; later corrective runs have separate input hashes.",
   "corrected_input_sha256": {
@@ -436,6 +497,32 @@
       "eng/run-tl0102-sandbox.ps1": "63fb98bdff8a210bbbbd37c403a1feb69384267561a4f3c0ff9cf0515fed2d9d",
       "eng/run-tl0102-sandbox-guest.ps1": "9733ef31114904db6a71c23a7ad362d5f1d81479f011e75cb80f5d18e6a7170e",
       "tools/tests/test_sandbox_harness.py": "572458db2677b735859249f1c2597ed6fe9c80843872ee3daabf5017c44d8616"
-    }
-  }
+    },
+    "executed_commit": "861bb1497255b5599b6770c20254345a3e7c9355"
+  },
+  "verification_sbom": {
+    "source_revision": "861bb1497255b5599b6770c20254345a3e7c9355",
+    "product_version": "0.4.0-dev",
+    "component_count": 28,
+    "output_sha256": "9728d7555ab227e0af413df3a064c33a79cccd6fe88887e9ef737d811dcd8541",
+    "dependency_input_sha256": "6cfd228dec02ef90925184cdc4c4e4dae38e7b817114014816a9bf12ca6efd41",
+    "license_matrix_sha256": "e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418",
+    "command": [
+      "pwsh",
+      "-NoLogo",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "eng/generate-sbom.ps1",
+      "-OutputPath",
+      "artifacts/sbom/stabilization-861bb14.cdx.json",
+      "-ProductVersion",
+      "0.4.0-dev",
+      "-SourceRevision",
+      "861bb1497255b5599b6770c20254345a3e7c9355"
+    ],
+    "result": "passed; generated from exact committed inputs; no new licence/release approval"
+  },
+  "validation_worktree": "Archived through Codex managed-worktree tool after root evidence preservation; recorded failed/successful host runs remain available."
 }
