@@ -3,14 +3,15 @@
 **Snapshot date:** 2026-09-30  
 **Bundle baseline:** 0.4.0  
 **Current milestone:** M1 — Audit-only vertical slice  
-**Current task:** `TL-0107` — OS lifecycle and activation inventory; review
+**Current task:** `TL-0107` — OS lifecycle and activation inventory; done, integration pending
 
 ## Continuity
 
 - Cumulative PR #7 merged at `74b6c8cbc7b4426eebf38139ed3374f66e3ff8be`; updated main contains all prior completed work.
 - Current branch: `codex/tl-0107-os-lifecycle-activation`, created from that updated main.
 - Implementation checkpoint `c144221b2010592ebf5635182396ee6cf80e5b1e` is pushed; local and upstream matched after publication.
-- Normal PR #8 is open against main; TL-0107 is not yet integrated. The verification/handoff follow-up is reported in the session handoff.
+- Verification checkpoint `dd4f1d06b8f67a91afa0e0392bef54095adfe81f` is pushed and bound to passing committed-source Sandbox evidence.
+- Normal PR #8 is open against main; TL-0107 is not yet integrated. The final evidence/handoff commit is reported in the session handoff.
 - Legacy PR/branch disposition is unchanged; no closure, deletion, or history rewrite performed.
 - The documented unrelated Word roadmap reference remains untouched and excluded.
 - Git synchronization uses the documented process-scoped HTTPS bridge; configured SSH origin is unchanged.
@@ -30,11 +31,14 @@ never prove that no reboot is pending. No UI, dependency, migration, privilege, 
 - Targeted, including Quick: passed in 38.786 s; 79 Core + 222 Inventory tests, format,
   validators, and Release solution build with zero warnings/errors.
 - Completion Quick passed in 29.580 s; three separate unelevated active-machine smoke tests passed (activation, OS, reboot).
-- Final handoff Quick is blocked by host Application Control (0x800711C7) loading Core tests; focused no-build reproduction confirmed the same block.
-- Same-machine Sandbox Quick passed (79 Core + 222 Inventory; 90.883 s shared tier); exact committed-source evidence is pending. Host security is unchanged.
+- Direct-host handoff Quick hit Application Control (0x800711C7) loading Core tests; focused no-build reproduction confirmed the block. Host security is unchanged.
+- Final committed-source Sandbox Quick passed: 79 Core + 222 Inventory; zero warnings/errors;
+  90.707 s shared tier, 148.017 s guest, 201.530 s total. Source bindings and cleanup verified.
+- Runner/manifest regressions: 23 passed in 27.415 s; staging preflight and transient Quick passed.
 - Full and Extended: no trigger. Remote CI is not used as task evidence.
 - Detailed results, input digests, resource observation, acceptance mapping, and limitations:
-  `artifacts/evidence/TL-0107/report.md`, `runs.json`, and `inputs.sha256`.
+  `artifacts/evidence/TL-0107/report.md`, `runs.json`, `inputs.sha256`, and the bounded
+  result/manifest pair in `artifacts/audit/TL-0107/`.
 
 ## Limits and next action
 
@@ -42,6 +46,8 @@ Native calls cannot be forcibly aborted; one worker per instance stays occupied 
 Lifecycle revision `thirdlife.windows-lifecycle.2026-09-30.v1` expires after 2026-10-30.
 Specialized/unlisted editions and builds remain unknown. Reboot indicators are incomplete.
 No patch-currency, hardware, licence-ownership, complete-readiness, or cross-hardware claim.
+Direct-host Application Control compatibility remains unverified; the final Quick used the
+governed same-machine 4 GiB Sandbox profile. No required task verification remains outstanding.
 
 Review PR #8, then integrate TL-0107 into main. The next dependency-ready task is
 `TL-0108` — storage inventory and reliability evidence, only after integration. It is not started.

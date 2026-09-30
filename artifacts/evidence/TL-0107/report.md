@@ -1,7 +1,7 @@
 # TL-0107 — OS lifecycle and activation inventory
 
 **Date:** 2026-09-30  
-**Task state:** Review; Sandbox Quick passed, committed-source evidence pending  
+**Task state:** Done; main integration pending  
 **Branch:** `codex/tl-0107-os-lifecycle-activation`  
 **Base:** `74b6c8cbc7b4426eebf38139ed3374f66e3ff8be`  
 **Environment:** active Codex machine only; standard-user Windows 11 x64  
@@ -12,8 +12,9 @@
 Implementation checkpoint `c144221b2010592ebf5635182396ee6cf80e5b1e` was committed, pushed,
 and verified equal to its upstream. Normal [PR #8](https://github.com/PikkuJanne/ThirdLife/pull/8)
 is open against main. Main has all prior completed work; TL-0107 integration remains pending.
-The follow-up adapts the existing governed Sandbox runner for this task's final Quick
-verification; its commit is reported in the final session handoff. The documented Word
+Verification checkpoint `dd4f1d06b8f67a91afa0e0392bef54095adfe81f` is also pushed and
+bound to the durable Sandbox result. The final follow-up adds evidence and handoff updates
+only; its commit is reported in the final session handoff. The documented Word
 reference remains excluded. No later product task was started.
 
 ## Continuity and scope
@@ -192,5 +193,16 @@ transient guest Quick then passed 79 Core and 222 Inventory tests, zero warnings
 are retained in `runs.json`. Two read-only reviews found no remaining implementation issue.
 This narrow profile addition triggers focused infrastructure checks, not a new Full gate.
 
-The exact committed-source execution will persist its bounded structured result before task
-completion. Same-machine guest success does not prove direct-host policy compatibility.
+The committed-source run passed at `dd4f1d06b8f67a91afa0e0392bef54095adfe81f`: 79 Core and
+222 Inventory tests, zero failed/skipped tests, zero build warnings/errors. Shared Quick took
+90.707 s; the guest took 148.017 s and the complete command 201.530 s. The host verified source
+bindings and cleanup. The unchanged tracked worktree, 18 locked packages, enabled audit,
+pinned tools, source/history/runner/configuration digests and bounded sanitized tail are in:
+
+- `artifacts/audit/TL-0107/quick-3615142d876327d477668313942c52e39afc6ac4a1f774b4efb56e8e858ed40b-ec14749e6b115f38dcf41696725ed6d5.json`
+- `artifacts/audit/TL-0107/quick-3615142d876327d477668313942c52e39afc6ac4a1f774b4efb56e8e858ed40b-ec14749e6b115f38dcf41696725ed6d5.manifest.json`
+
+Result SHA-256: `bb0b013f951d1476f08c5268e75a98e09f210ce6837f418b62aa03d02462875f`.
+The following evidence-only commit does not change product, tests, runner or profile inputs.
+The result remains bound to the verified commit above. Same-machine guest success does not
+prove direct-host policy compatibility. No required task verification remains outstanding.

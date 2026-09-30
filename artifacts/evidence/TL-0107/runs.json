@@ -3,7 +3,7 @@
   "date": "2026-09-30",
   "branch": "codex/tl-0107-os-lifecycle-activation",
   "base_commit": "74b6c8cbc7b4426eebf38139ed3374f66e3ff8be",
-  "environment": "Active Codex machine, unelevated Windows 11 10.0.26200.0 x64; .NET SDK 10.0.400; reference REF-CODEX-001 revision 2026-08-29.1; no host constraints or security changes",
+  "environment": "Active Codex machine, unelevated Windows 11 10.0.26200.0 x64; .NET SDK 10.0.400; reference REF-CODEX-001 revision 2026-08-29.1; no host constraints or security changes; final Quick in same-machine disposable Windows Sandbox with 4096 MiB and governed NuGet audit networking",
   "runs": [
     {
       "id": "baseline",
@@ -16,7 +16,7 @@
     {
       "id": "initial-compile",
       "tier": "targeted",
-      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter \"FullyQualifiedName~WindowsLifecycleCatalogTests\" --logger \"console;verbosity=minimal\"",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --filter FullyQualifiedName~WindowsLifecycleCatalogTests --no-restore --verbosity minimal",
       "duration_seconds": 2.81,
       "passed_tests": 0,
       "result": "compile blocked: new test syntax/analyzer errors; corrected before executable focused tests"
@@ -135,6 +135,21 @@
       "result": "passed; 79 Core + 222 Inventory; zero skipped; warnings-as-errors Release solution build; source and cleanup verified; tracked overlay before checkpoint",
       "source_sha256": "6ce78d6bc850f0d49f5a8a250bbeeef463585b46a362d94d10531c99d9d60ca5",
       "result_sha256": "cd95f774d67403f150d91747462d1545b237c28e6e59e2d1442a2383748ccd3d"
+    },
+    {
+      "id": "sandbox-quick-committed",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Quick -EvidenceTaskId TL-0107 -PersistEvidence",
+      "duration_seconds": 201.53032,
+      "guest_duration_seconds": 148.017,
+      "shared_quick_duration_seconds": 90.707,
+      "passed_tests": 301,
+      "result": "passed; 79 Core + 222 Inventory, no failed/skipped tests; zero warnings/errors; exact committed clean tracked source and verified cleanup",
+      "commit": "dd4f1d06b8f67a91afa0e0392bef54095adfe81f",
+      "source_sha256": "3615142d876327d477668313942c52e39afc6ac4a1f774b4efb56e8e858ed40b",
+      "result_sha256": "bb0b013f951d1476f08c5268e75a98e09f210ce6837f418b62aa03d02462875f",
+      "artifact": "artifacts/audit/TL-0107/quick-3615142d876327d477668313942c52e39afc6ac4a1f774b4efb56e8e858ed40b-ec14749e6b115f38dcf41696725ed6d5.json",
+      "manifest": "artifacts/audit/TL-0107/quick-3615142d876327d477668313942c52e39afc6ac4a1f774b4efb56e8e858ed40b-ec14749e6b115f38dcf41696725ed6d5.manifest.json"
     }
   ],
   "os_resource_observation": {
@@ -150,7 +165,6 @@
   "not_run": {
     "full": "No milestone/release/protected merge, major refactor, migration, dependency/engine change, or named task trigger. Prior cumulative gate belongs to PR7.",
     "extended": "No named task trigger, large workload, endurance, or host-resource mutation risk. Focused bounded hostile/failure cases are Targeted.",
-    "clean_environment": "Final Quick passed in same-machine disposable 4 GiB Windows Sandbox; exact committed evidence run follows.",
-    "remote_ci": "Supplementary PR8 check passed for c144221; not used as active-machine evidence."
+    "remote_ci": "Remote runtime is not task evidence. Supplementary PR8 check passed for c144221; later checkpoint status is reported separately."
   }
 }
