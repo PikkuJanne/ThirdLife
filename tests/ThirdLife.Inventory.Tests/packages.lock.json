@@ -99,8 +99,14 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
-      "thirdlife.inventory": {
+      "thirdlife.core": {
         "type": "Project"
+      },
+      "thirdlife.inventory": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Core": "[1.0.0, )"
+        }
       }
     }
   }

@@ -5,6 +5,8 @@
 **Draft date:** 2026-08-14  
 **Authority:** Supporting analysis for [`threat-model.md`](threat-model.md) and [`data-flow.md`](data-flow.md)
 
+**Post-approval maintenance:** 2026-08-21 — `TL-0005` traceability/status annotation only. The approved base remains commit `917b5ebd5f5e4cf273a087a05dd381da54324235`; threats, residual decisions, and security approval were not changed or re-approved.
+
 These cases turn the threat register into reviewable misuse and failure stories. Attack paths are intentionally abstract: the repository does not need executable payloads, real secrets, private paths, or exploit scripts to test rejection and recovery semantics.
 
 All mapped product controls are **planned** unless their owning task has separately reached done with the required evidence. A roadmap reference does not claim implementation. The named security owner recorded a treatment for every residual risk; this is not release authorization.
@@ -140,7 +142,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Sensitive domain wrappers, structured allowlists, redact-before-persist, stable error codes, Unicode/control/markup escaping, bounded fields/records/bytes, audience-schema separation, and adversarial fixtures.  
 **Fail-closed response:** Drop/reject unsafe fields, preserve a bounded sanitized diagnostic, fail rendering/export without raw fallback, and keep unknown/limitations visible.  
 **Planned controls/tasks:** D-014, D-036, D-037; `TL-0005`, `TL-0104`, `TL-0115`, `TL-0207`, `TL-0308`, `TL-0407`, `TL-0604`, `TL-0605`, `TL-0606`, `TL-0609`  
-**Control status:** Planned  
+**Control status:** Partially implemented; `TL-0005` supplies the approved contract and fixtures, and `TL-0104` enforces the local typed-event, redaction, safe-wrapper, exception-sanitization, protected bounded-file-retention, in-memory support-projection, and telemetry-absence subset. Crash logging creates a fresh internal correlation ID; bounded durable transaction recovery keeps final records within their age/byte ceiling and reports post-commit uncertainty without a blind-retry claim. Database/report/render/export integrations and `TL-0606` preview/archive/destination controls remain planned.  
 **Recovery/manual path:** Correct the source/field contract, regenerate from normalized data, inspect the preview, and securely remove any exposed artifact under incident guidance.  
 **Residual risk:** `RR-006`; exported data can be mishandled after release.
 
@@ -168,7 +170,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Structured API preference, secure parser settings, fixed operations, type/range/count/depth/byte/time bounds, provenance/timestamp, explicit observed/inferred/not-available/human-confirmed classes, conflict policy, fresh verification source.  
 **Fail-closed response:** Record not available/failed/contradictory evidence and sanitized error; never pass a required condition; allow safe provider rerun.  
 **Planned controls/tasks:** D-015, D-018; `TL-0104`, `TL-0105`, `TL-0106`, `TL-0107`, `TL-0108`, `TL-0109`, `TL-0110`, `TL-0111`, `TL-0112`, `TL-0202`, `TL-0506`, `TL-0507`  
-**Control status:** Planned  
+**Control status:** Partially implemented — `TL-0105` verifies the common typed, bounded, read-only normalization boundary and deterministic unavailable/access-denied/invalid/timeout/cancellation/exception handling. `TL-0106` implements one concrete acquisition/parser subset with fixed local read-only Windows APIs, a bounded transient SMBIOS buffer, strict structure and text validation, explicit missing/conflict handling, central/populated-processor filtering, emulation-aware OS architecture, invariant memory/count units, buffer clearing, and stable sanitized failures. It never uses raw fallback, shell, WMI, registry, network, elevation, or mutation. Stale cross-run/cross-provider conflict policy, persistence, fresh verification sources, and every other concrete provider remain planned.  
 **Recovery/manual path:** Retry bounded collection, use a reviewed independent source or attributable human test, and leave unsupported evidence unknown.  
 **Residual risk:** `RR-001`; a compromised OS and incomplete hardware APIs can produce false negatives.
 
@@ -182,7 +184,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Restrictive ACL, schema/migration version and content identity, transaction/integrity checks, single-writer/concurrency policy, allowed state-transition table, append/history links, corruption/newer-schema detection, attachment reconciliation.  
 **Fail-closed response:** Refuse unsafe open/migration/transition, preserve original files, create no new “passed” record, and surface export/recovery/manual-review guidance.  
 **Planned controls/tasks:** D-028, D-032; `TL-0102`, `TL-0103`, `TL-0205`, `TL-0308`, `TL-0309`, `TL-0313`, `TL-0408`, `TL-0510`  
-**Control status:** Planned  
+**Control status:** `TL-0102` implements and verifies the bounded protected SQLite store, transactional migrations, identity/integrity checks, append-only evidence/checkpoints, and reversible archive projection. `TL-0103` adds and verifies a transactionally validated, append-only sanitization-gate decision tied to the newest committed evidence and exact policy version; cancellation, process interruption, tamper, restart, stale-evidence, and ordered cross-instance write cases fail closed without rewriting history. Approval/action journals, attachment reconciliation, broader resume semantics, retention, and recovery remain planned.  
 **Recovery/manual path:** Work from a verified backup/export or reviewed recovery copy; never rewrite historical evidence to match current policy.  
 **Residual risk:** `RR-001`; a local administrator can alter both primary and local backup records.
 
@@ -210,7 +212,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Attributable sanitization evidence and policy version, explicit unknown/failed classes, read-only ownership/management indicators, mandatory finalization rules, named human confirmations/exceptions, fresh verification, gate evaluator outside UI navigation.  
 **Fail-closed response:** Block preparation, ready disposition, sign-off, or handover; route to repair/human review/do-not-deploy. Never offer erase, unlock, activation, firmware, MDM, Autopilot, anti-theft, or ownership bypass.  
 **Planned controls/tasks:** D-007, D-009, D-035; `TL-0103`, `TL-0107`, `TL-0110`, `TL-0112`, `TL-0506`, `TL-0601`, `TL-0602`, `TL-0607`, `TL-0609`  
-**Control status:** Planned  
+**Control status:** `TL-0103` implements and verifies the fail-closed sanitization-gate subset: decisions bind the newest committed sanitization evidence ID and its exact policy version, and missing, stale, unknown, failed, or archived state cannot authorize assessment. Ownership/management detection, finalization, handover, and the remaining external-truth mitigations are still planned; Core does not independently prove external sanitization or legal ownership.  
 **Recovery/manual path:** Obtain valid external evidence or authorized ownership resolution outside ThirdLife; otherwise stop deployment.  
 **Residual risk:** `RR-005`; Core cannot independently prove the truth of external sanitization/legal ownership.
 
@@ -280,7 +282,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Frozen preview manifest/content digest, audience field/file allowlist, revalidation immediately before final write, final-object/type/reparse/ACL/capacity/overwrite checks, archive byte/file/count bounds, atomic placement and partial cleanup.  
 **Fail-closed response:** Abort export and leave existing target unchanged; remove or clearly identify an owned partial file; keep the exact preview for retry; persist only sanitized export metadata.  
 **Planned controls/tasks:** D-036, D-037; `TL-0005`, `TL-0604`, `TL-0605`, `TL-0606`, `TL-0607`, `TL-0609`, `TL-0703`  
-**Control status:** Planned  
+**Control status:** Planned; `TL-0005` supplies the approved support allowlist and preview/redaction contract, while runtime export controls remain pending  
 **Recovery/manual path:** Re-preview after any data change and select a safe reviewed destination or manual transfer process.  
 **Residual risk:** `RR-006`; subsequent handling of a valid export is outside product control.
 
@@ -294,7 +296,7 @@ All mapped product controls are **planned** unless their owning task has separat
 **Detection:** Exact SDK/tool/direct/transitive resolution, source mapping and locks, change review, owner/licence/redistribution record, SBOM and vulnerability review, clean-build provenance, exact source revision, artifact hashes/signature or explicit development labeling, and gate comparison of reviewed bytes.  
 **Fail-closed response:** Reject restore/build/package/release or quarantine the candidate; never silently fetch “latest,” weaken a lock/trust check, substitute a source, or publish mismatched evidence.  
 **Planned controls/tasks:** D-043; `TL-0002`, `TL-0006`, `TL-0610`, `TL-0704`, `TL-0706`, `TL-0708`, `TL-0709`, `TL-0710`  
-**Control status:** `TL-0002` verified the pinned SDK, central direct-package versions, locked restore, and Windows CI baseline. Ownership/licence/SBOM, packaging provenance, lifecycle, and freeze checks remain planned.  
+**Control status:** `TL-0002` verified the pinned SDK, central direct-package versions, locked restore, and the then-current optional Windows workflow configuration. Under D-063, authoritative runtime evidence is produced on the active Codex machine; remote workflow results are non-authoritative convenience signals. Ownership/licence/SBOM, packaging provenance, lifecycle, and freeze checks remain planned.  
 **Recovery/manual path:** Restore the reviewed source/lock/toolchain, investigate the changed input, regenerate every affected artifact/evidence item, and repeat independent verification before a new candidate.  
 **Residual risk:** `RR-002`; an approved upstream or build environment may itself be compromised.
 

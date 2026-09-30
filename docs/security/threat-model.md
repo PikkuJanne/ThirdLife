@@ -9,6 +9,8 @@
 **Approval reference:** reviewed commit 917b5ebd5f5e4cf273a087a05dd381da54324235  
 **Authority:** Derived analysis under `DECISIONS.md`, `ROADMAP.md`, `PROJECT_BOUNDARY.md`, and `SECURITY.md`
 
+**Post-approval maintenance:** 2026-08-21 — `TL-0005` traceability/status annotation only. The approved base remains commit `917b5ebd5f5e4cf273a087a05dd381da54324235`; threats, residual decisions, and security approval were not changed or re-approved.
+
 This document identifies security risks in the planned ThirdLife Setup Core architecture. It is not a new authority tier, a certification, or evidence that a planned control has been implemented. Frozen decisions and the canonical **Owns / Does not own** boundary prevail.
 
 ## Purpose and review posture
@@ -161,7 +163,7 @@ The boundaries are intentionally separate; “local machine” is not a single t
 **Abuse cases:** `AC-010`, `AC-014`  
 **Decisions:** D-007, D-015, D-018  
 **Planned controls/tasks:** `TL-0101`, `TL-0104`, `TL-0105`, `TL-0106`, `TL-0107`, `TL-0108`, `TL-0109`, `TL-0110`, `TL-0111`, `TL-0112`, `TL-0202`, `TL-0507`  
-**Control status:** Planned  
+**Control status:** Partially implemented — `TL-0105` supplies and verifies the closed typed provider/normalization boundary, provenance, value/count/source bounds, cancellation/timeout outcomes, and fail-closed unavailable/error mapping. `TL-0106` adds the first concrete Windows provider: fixed local read-only SMBIOS, installed-memory, logical-processor, and emulation-aware operating-system-architecture sources; a 1 MiB firmware-table ceiling; strict structural parsing; field-local text/range/cardinality rules; central/populated-processor filtering; transient buffer clearing; identity-silent implicit rendering; and deterministic unavailable/access-denied/malformed/cancellation/timeout coverage. Later Windows providers, cross-provider conflict/freshness policy, persistence, policy evaluation, and fresh re-observation remain planned in their owning tasks.  
 **Target residual risk:** Medium — typed normalization, provenance, bounds, timeouts, explicit unavailable state, and fresh re-observation cannot make a compromised OS truthful.  
 **Review trigger:** New provider/API, parser, temporary report, localized fallback, or claim based on a single weak source.
 
@@ -174,7 +176,7 @@ The boundaries are intentionally separate; “local machine” is not a single t
 **Abuse cases:** `AC-003`, `AC-009`, `AC-011`  
 **Decisions:** D-028, D-032, D-033  
 **Planned controls/tasks:** `TL-0102`, `TL-0103`, `TL-0205`, `TL-0308`, `TL-0309`, `TL-0313`, `TL-0408`, `TL-0409`, `TL-0505`  
-**Control status:** Planned  
+**Control status:** `TL-0102` implements and verifies the bounded protected SQLite store, transactional migrations, integrity/identity checks, append-only evidence/checkpoints, and reversible archive projection. `TL-0103` adds and verifies an append-only sanitization-gate decision bound transactionally to the newest committed evidence and exact policy version; cancellation, process interruption, tamper, restart, stale-evidence, and ordered cross-instance write cases fail closed without rewriting history. Later approval/action journals, attachment handling, broader resume semantics, retention, and recovery controls remain planned.  
 **Target residual risk:** Medium — restrictive ACLs, explicit migrations, transactional monotonic transitions, authenticated job/action-bound checkpoints, and re-observation limit ordinary corruption but do not make local records tamper-proof against an administrator.  
 **Review trigger:** Schema migration, multi-process writer, attachment format, checkpoint format, retention change, or rollback feature.
 
@@ -200,7 +202,7 @@ The boundaries are intentionally separate; “local machine” is not a single t
 **Abuse cases:** `AC-008`, `AC-018`  
 **Decisions:** D-014, D-036, D-037, D-053  
 **Planned controls/tasks:** `TL-0005`, `TL-0104`, `TL-0115`, `TL-0207`, `TL-0308`, `TL-0407`, `TL-0604`, `TL-0605`, `TL-0606`, `TL-0609`  
-**Control status:** Planned  
+**Control status:** `TL-0005` supplies the named-owner-approved contract, and `TL-0104` implements and verifies the local diagnostics subset: safe sensitive-value representations, exception sanitization before the first sink, canonical protected files, ACL/root/link/reparse/path-replacement checks, cross-process locking, exact fixture execution, a fixture-only 25-field support projection, telemetry absence, bounded transaction-before-eviction recovery, and explicit post-commit ambiguity. The overall threat remains partially implemented: database/provider logging integration, report rendering, production digest provenance, support preview/archive/destination/export controls, and later subsystem-specific logging integrations remain planned.  
 **Target residual risk:** Medium — allowlisted schemas and redaction before persistence reduce leakage; an operator can still export to an unsafe destination or forward an approved artifact.  
 **Review trigger:** New logged field, raw backend/provider capture, crash reporting, export field, report audience, or telemetry proposal.
 
@@ -239,7 +241,7 @@ The boundaries are intentionally separate; “local machine” is not a single t
 **Abuse cases:** `AC-013`  
 **Decisions:** D-007, D-009, D-035  
 **Planned controls/tasks:** `TL-0103`, `TL-0107`, `TL-0110`, `TL-0112`, `TL-0506`, `TL-0601`, `TL-0602`, `TL-0607`, `TL-0609`  
-**Control status:** Planned  
+**Control status:** `TL-0103` implements and verifies the fail-closed sanitization-gate subset: decisions bind the newest committed sanitization evidence ID and its exact policy version, and missing, stale, unknown, failed, or archived state cannot authorize assessment. Ownership/management detection, finalization, handover, and the remaining external-truth mitigations are still planned; Core does not independently prove an external sanitization act or legal ownership.  
 **Target residual risk:** Medium — attributable evidence, explicit unknown/failed states, ownership/management blockers, and human review cannot independently prove an external sanitization act or legal ownership.  
 **Review trigger:** Any proposal to erase media, remove management/ownership controls, install keys, or convert external confirmation into an automated guarantee.
 
@@ -265,7 +267,7 @@ The boundaries are intentionally separate; “local machine” is not a single t
 **Abuse cases:** `AC-002`, `AC-008`, `AC-010`, `AC-014`  
 **Decisions:** D-030, D-037  
 **Planned controls/tasks:** `TL-0104`, `TL-0105`, `TL-0112`, `TL-0310`, `TL-0312`, `TL-0510`, `TL-0604`, `TL-0606`, `TL-0707`  
-**Control status:** Planned  
+**Control status:** `TL-0104` implements and verifies the diagnostics resource-bound subset: diagnostic values, event fields, serialized records, final-record age/bytes, every non-lock root entry, pending operations, and cross-instance/process concurrency are bounded; tests cover pre-commit residue cleanup, committed recovery, age cutoffs, degraded capacity, corrupt/wrong-clock input, full-disk injection, and Windows handle-bound deletion. The overall threat remains partially implemented. The portable fallback is path-bound and supplies no non-Windows production/deletion-race assurance; provider parsing, UI rendering, archives, broader workload measurements, and the remaining task-specific resource controls remain planned.  
 **Target residual risk:** Low — when enforced, depth/count/byte/time/concurrency bounds, streaming, cancellation, escaping, and partial-output cleanup reduce resource exhaustion and fail closed before false completion; workloads beyond measured and published bounds remain `RR-008`.  
 **Review trigger:** New parser, renderer, archive, raw attachment, or large fixture class.
 

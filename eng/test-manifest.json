@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "authority": {
+    "runtime": "active_codex_machine",
+    "remote_ci": "supplementary_only",
+    "cross_hardware_certification": false
+  },
+  "tiers": {
+    "quick": {
+      "target_seconds": 120,
+      "purpose": "format, build, governance contracts, and fast deterministic code feedback",
+      "test_projects": [
+        {
+          "path": "tests/ThirdLife.Core.Tests/ThirdLife.Core.Tests.csproj",
+          "filter": "Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly"
+        },
+        {
+          "path": "tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj",
+          "filter": "Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly"
+        }
+      ],
+      "excludes": [
+        "active-machine observation",
+        "broad sandbox or VM matrix",
+        "destructive or host-mutating tests",
+        "extended resource/failure scenarios",
+        "complete validator mutation suite"
+      ]
+    },
+    "targeted": {
+      "target_seconds": 600,
+      "selection": "explicit -TestProject and optional -Filter",
+      "default_filter": "Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly",
+      "includes_quick": true
+    },
+    "full": {
+      "filter": "Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly",
+      "separate_checks": "Active-machine observation and named Extended/SandboxOnly scenarios require explicit project/filter selection in their approved environment.",
+      "trigger": [
+        "milestone, preview, pilot, or stable gate",
+        "protected or cumulative default-branch integration",
+        "major refactor",
+        "data migration",
+        "dependency or engine change",
+        "explicit TASKS.yaml trigger"
+      ],
+      "includes": [
+        "all Python governance regression tests",
+        "locked restore",
+        "format",
+        "warnings-as-errors Release build",
+        "complete supported .NET test suite"
+      ]
+    },
+    "extended": {
+      "entry_point": "named scenario/profile, not a generic default command",
+      "requirements": [
+        "independently invokable",
+        "durable scenario result",
+        "checkpointed when long-running",
+        "run only for the named risk or gate"
+      ]
+    }
+  }
+}

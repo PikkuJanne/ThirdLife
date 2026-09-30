@@ -1,1 +1,6 @@
-PyYAML==6.0.3
+--index-url=https://pypi.org/simple
+--only-binary=:all:
+--require-hashes
+
+PyYAML==6.0.3 \
+    --hash=sha256:4a2e8cebe2ff6ab7d1050ecd59c25d4c8bd7e6f400f5f82b96557ac0abafd0ac

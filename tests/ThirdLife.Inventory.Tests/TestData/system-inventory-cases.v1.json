@@ -1,0 +1,73 @@
+{
+  "schema_version": "thirdlife.system-inventory-fixtures.v1",
+  "fixture_id": "SYNTHETIC-SYSTEM-INVENTORY-CASES-001",
+  "synthetic_data": true,
+  "classification": "PUBLIC_REFERENCE",
+  "cases": [
+    {
+      "case_id": "synthetic-desktop-x64",
+      "manufacturer": "Example Devices Alpha",
+      "model": "Synthetic Workstation A1",
+      "serial_number": "TEST-ONLY-ALPHA-0001",
+      "chassis_type": 3,
+      "processors": [
+        {
+          "handle": 1024,
+          "manufacturer": "Example Silicon Alpha",
+          "model": "Synthetic Core 6 @ 2.60GHz"
+        }
+      ],
+      "native_architecture": 9,
+      "installed_memory_kib": 16777216,
+      "logical_processor_count": 12,
+      "expected_device_type": "desktop",
+      "expected_architecture": "x64",
+      "expected_memory_bytes": 17179869184
+    },
+    {
+      "case_id": "synthetic-laptop-arm64",
+      "manufacturer": "Example Devices Beta",
+      "model": "Synthetic Notebook B2",
+      "serial_number": "TEST-ONLY-BETA-0002",
+      "chassis_type": 10,
+      "processors": [
+        {
+          "handle": 1026,
+          "manufacturer": "Example Silicon Beta",
+          "model": "Synthetic Mobile 8"
+        },
+        {
+          "handle": 1025,
+          "manufacturer": "Example Silicon Beta",
+          "model": "Synthetic Mobile 8"
+        }
+      ],
+      "native_architecture": 12,
+      "installed_memory_kib": 8388608,
+      "logical_processor_count": 8,
+      "expected_device_type": "laptop",
+      "expected_architecture": "arm64",
+      "expected_memory_bytes": 8589934592
+    },
+    {
+      "case_id": "synthetic-tablet-x86",
+      "manufacturer": "Example Devices Gamma",
+      "model": "Synthetic Tablet C3",
+      "serial_number": "TEST-ONLY-GAMMA-0003",
+      "chassis_type": 30,
+      "processors": [
+        {
+          "handle": 1024,
+          "manufacturer": "Example Silicon Gamma",
+          "model": "Synthetic Compact 4"
+        }
+      ],
+      "native_architecture": 0,
+      "installed_memory_kib": 4194304,
+      "logical_processor_count": 4,
+      "expected_device_type": "tablet",
+      "expected_architecture": "x86",
+      "expected_memory_bytes": 4294967296
+    }
+  ]
+}

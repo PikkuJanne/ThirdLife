@@ -14,6 +14,7 @@ from typing import Any
 
 import yaml
 
+import supply_chain
 from validate_bundle import REQUIRED_FILES
 
 
@@ -65,9 +66,81 @@ EXPECTED_ACTIONS = {
     "actions/setup-dotnet": "a98b56852c35b8e3190ac28c8c2271da59106c68",
     "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
 }
+DETERMINISTIC_TEST_FILTER = "Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly"
+EXPECTED_TEST_MANIFEST = {
+    "schema_version": 1,
+    "authority": {
+        "runtime": "active_codex_machine",
+        "remote_ci": "supplementary_only",
+        "cross_hardware_certification": False,
+    },
+    "tiers": {
+        "quick": {
+            "target_seconds": 120,
+            "purpose": "format, build, governance contracts, and fast deterministic code feedback",
+            "test_projects": [
+                {
+                    "path": f"tests/{name}/{name}.csproj",
+                    "filter": DETERMINISTIC_TEST_FILTER,
+                }
+                for name in ("ThirdLife.Core.Tests", "ThirdLife.Inventory.Tests")
+            ],
+            "excludes": [
+                "active-machine observation",
+                "broad sandbox or VM matrix",
+                "destructive or host-mutating tests",
+                "extended resource/failure scenarios",
+                "complete validator mutation suite",
+            ],
+        },
+        "targeted": {
+            "target_seconds": 600,
+            "selection": "explicit -TestProject and optional -Filter",
+            "default_filter": DETERMINISTIC_TEST_FILTER,
+            "includes_quick": True,
+        },
+        "full": {
+            "filter": DETERMINISTIC_TEST_FILTER,
+            "separate_checks": "Active-machine observation and named Extended/SandboxOnly scenarios require explicit project/filter selection in their approved environment.",
+            "trigger": [
+                "milestone, preview, pilot, or stable gate",
+                "protected or cumulative default-branch integration",
+                "major refactor",
+                "data migration",
+                "dependency or engine change",
+                "explicit TASKS.yaml trigger",
+            ],
+            "includes": [
+                "all Python governance regression tests",
+                "locked restore",
+                "format",
+                "warnings-as-errors Release build",
+                "complete supported .NET test suite",
+            ],
+        },
+        "extended": {
+            "entry_point": "named scenario/profile, not a generic default command",
+            "requirements": [
+                "independently invokable",
+                "durable scenario result",
+                "checkpointed when long-running",
+                "run only for the named risk or gate",
+            ],
+        },
+    },
+}
 MACHINE_PATH_RE = re.compile(
     r"(?i)(?:\b[a-z]:[\\/]|\\\\[^\\/\s]+[\\/][^\\/\s]+|"
     r"file:/+(?:[a-z]:|/)|/(?:home|users)/[^/\s]+/)"
+)
+LICENCE_APPROVAL_EVIDENCE_RE = re.compile(
+    r"(?:licen[cs]e|redistribution|rights).{0,80}approved|"
+    r"approved.{0,80}(?:licen[cs]e|redistribution|rights)",
+    re.IGNORECASE,
+)
+MATRIX_DIGEST_REFERENCE_RE = re.compile(
+    r"\bmatrix\s+(?:sha-?256|digest)\s*[:=]\s*([0-9a-f]{64})\b",
+    re.IGNORECASE,
 )
 
 
@@ -268,6 +341,103 @@ def property_text(root: ET.Element, name: str) -> str | None:
     return None if element is None or element.text is None else element.text.strip()
 
 
+def validate_project_reference_locks(
+    project_paths: list[Path], validation: Validation
+) -> None:
+    """Check the repository's literal, unconditional project graph before restore.
+
+    This complements NuGet locked restore; it does not evaluate arbitrary MSBuild
+    conditions, imports, or asset-selection metadata.
+    """
+
+    paths = {path.resolve(): path for path in project_paths}
+    identities: dict[Path, str] = {}
+    edges: dict[Path, set[Path]] = {}
+    for resolved, project_path in paths.items():
+        document = load_xml(project_path, validation)
+        if document is None:
+            continue
+        identity = property_text(document, "PackageId") or project_path.stem
+        if "$" in identity or identity.casefold() in identities.values():
+            validation.error(f"{relative(project_path)}: project lock identity must be unique and literal")
+            continue
+        identities[resolved] = identity.casefold()
+        edges[resolved] = set()
+        parents = {child: parent for parent in document.iter() for child in parent}
+        for reference in document.findall(".//ProjectReference"):
+            include = reference.get("Include", "")
+            ancestor = parents.get(reference)
+            conditional = False
+            while ancestor is not None:
+                conditional |= "Condition" in ancestor.attrib
+                ancestor = parents.get(ancestor)
+            if (
+                set(reference.attrib) != {"Include"}
+                or len(reference) != 0
+                or conditional
+                or not include
+                or any(marker in include for marker in ("$", "*", "?", ";"))
+            ):
+                validation.error(
+                    f"{relative(project_path)}: project lock validation requires literal unconditional ProjectReference entries"
+                )
+                continue
+            target = (project_path.parent / include.replace("\\", "/")).resolve()
+            if target not in paths:
+                validation.error(f"{relative(project_path)}: project lock reference leaves the solution")
+                continue
+            edges[resolved].add(target)
+
+    known_identities = set(identities.values())
+    for resolved, project_path in paths.items():
+        reachable: set[Path] = set()
+        pending = list(edges.get(resolved, ()))
+        while pending:
+            target = pending.pop()
+            if target in reachable:
+                continue
+            reachable.add(target)
+            pending.extend(edges.get(target, ()))
+        expected_projects = {identities[target] for target in reachable if target in identities}
+        lock_path = project_path.with_name("packages.lock.json")
+        lock = load_json(lock_path, validation)
+        frameworks = lock.get("dependencies")
+        if not isinstance(frameworks, dict) or not frameworks:
+            validation.error(f"{relative(lock_path)}: project lock dependencies must contain a target framework")
+            continue
+        for framework, dependencies in frameworks.items():
+            if not isinstance(dependencies, dict):
+                validation.error(f"{relative(lock_path)}: {framework} project lock entries must be an object")
+                continue
+            project_entries = {
+                key.casefold(): value for key, value in dependencies.items()
+                if isinstance(value, dict) and value.get("type") == "Project"
+            }
+            if set(project_entries) != expected_projects:
+                validation.error(
+                    f"{relative(lock_path)}: {framework} Project entries differ from ProjectReference closure; "
+                    f"missing={sorted(expected_projects - set(project_entries))}, "
+                    f"unexpected={sorted(set(project_entries) - expected_projects)}"
+                )
+            for target in reachable:
+                identity = identities.get(target)
+                entry = project_entries.get(identity, {})
+                nested = entry.get("dependencies", {})
+                if not isinstance(nested, dict):
+                    validation.error(f"{relative(lock_path)}: Project {identity} dependencies must be an object")
+                    continue
+                nested_projects = {
+                    key.casefold() for key in nested if key.casefold() in known_identities
+                }
+                expected_nested = {
+                    identities[child] for child in edges.get(target, ()) if child in identities
+                }
+                if nested_projects != expected_nested:
+                    validation.error(
+                        f"{relative(lock_path)}: Project {identity} dependencies differ from its direct ProjectReference entries"
+                    )
+
+
 def validate_central_packages(
     project_paths: list[Path], validation: Validation
 ) -> None:
@@ -278,9 +448,29 @@ def validate_central_packages(
     if build_props is None or package_props is None:
         return
 
-    if property_text(build_props, "RestorePackagesWithLockFile") != "true":
+    expected_build_properties = {
+        "RestorePackagesWithLockFile": "true",
+        "NuGetAudit": "true",
+        "NuGetAuditMode": "all",
+        "NuGetAuditLevel": "low",
+    }
+    for name, expected in expected_build_properties.items():
+        if property_text(build_props, name) != expected:
+            validation.error(
+                f"Directory.Build.props: {name} must equal {expected}"
+            )
+    for element in build_props.iter():
+        local_name = element.tag.rsplit("}", 1)[-1]
+        value = (element.text or "").upper()
+        if local_name in {"NoWarn", "WarningsNotAsErrors"} and re.search(
+            r"\bNU190[0-5]\b", value
+        ):
+            validation.error(
+                f"Directory.Build.props: {local_name} cannot suppress NuGet audit warnings"
+            )
+    if build_props.findall(".//NuGetAuditSuppress"):
         validation.error(
-            "Directory.Build.props: RestorePackagesWithLockFile must equal true"
+            "Directory.Build.props: NuGetAuditSuppress entries require a governed security decision"
         )
     expected_central_properties = {
         "ManagePackageVersionsCentrally": "true",
@@ -329,6 +519,24 @@ def validate_central_packages(
         root = load_xml(project_path, validation)
         if root is None:
             continue
+        for property_name in ("NuGetAudit", "NuGetAuditMode", "NuGetAuditLevel"):
+            if root.find(f".//{property_name}") is not None:
+                validation.error(
+                    f"{relative(project_path)}: {property_name} cannot override repository audit policy"
+                )
+        if root.findall(".//NuGetAuditSuppress"):
+            validation.error(
+                f"{relative(project_path)}: NuGetAuditSuppress requires a governed security decision"
+            )
+        for element in root.iter():
+            local_name = element.tag.rsplit("}", 1)[-1]
+            value = (element.text or "").upper()
+            if local_name in {"NoWarn", "WarningsNotAsErrors"} and re.search(
+                r"\bNU190[0-5]\b", value
+            ):
+                validation.error(
+                    f"{relative(project_path)}: {local_name} cannot suppress NuGet audit warnings"
+                )
         references: list[str] = []
         for reference in root.findall(".//PackageReference"):
             package_id = reference.get("Include")
@@ -455,6 +663,51 @@ def validate_tool_and_source_configuration(validation: Validation) -> None:
             validation.error("NuGet.Config: package source credentials are prohibited")
 
 
+def validate_test_manifest(validation: Validation) -> None:
+    """Bind the declarative runner input to the approved safety and coverage contract."""
+
+    relative_path = "eng/test-manifest.json"
+    path = ROOT / relative_path
+
+    def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate object key")
+            result[key] = value
+        return result
+
+    try:
+        if path.stat().st_size > 65536:
+            validation.error(f"{relative_path}: must not exceed 64 KiB")
+            return
+        manifest = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+    except (OSError, UnicodeError, ValueError, RecursionError):
+        validation.error(f"{relative_path}: must be valid UTF-8 JSON with unique object keys")
+        return
+
+    def compare(actual: Any, expected: Any, field: str) -> None:
+        # Exact types prevent JSON true from satisfying a numeric schema/budget,
+        # or numeric 1 from satisfying a required boolean.
+        if type(actual) is not type(expected):
+            validation.error(f"{relative_path}: {field} has an invalid type")
+        elif isinstance(expected, dict):
+            if actual.keys() != expected.keys():
+                validation.error(f"{relative_path}: {field} must contain exactly the governed fields")
+            for key, value in expected.items():
+                if key in actual:
+                    compare(actual[key], value, f"{field}.{key}")
+        elif isinstance(expected, list):
+            if len(actual) != len(expected):
+                validation.error(f"{relative_path}: {field} must retain every governed entry exactly once")
+            for index, (actual_item, expected_item) in enumerate(zip(actual, expected)):
+                compare(actual_item, expected_item, f"{field}[{index}]")
+        elif actual != expected:
+            validation.error(f"{relative_path}: {field} differs from the governed contract")
+
+    compare(manifest, EXPECTED_TEST_MANIFEST, "manifest")
+
+
 def validate_workflow(validation: Validation) -> None:
     workflow_path = ROOT / ".github" / "workflows" / "verify.yml"
     try:
@@ -469,7 +722,7 @@ def validate_workflow(validation: Validation) -> None:
         return
 
     expected_workflow = {
-        "name": "Verify",
+        "name": "Supplementary Repository Check",
         "on": {
             "push": {"branches": ["main"]},
             "pull_request": {"branches": ["main"]},
@@ -477,12 +730,12 @@ def validate_workflow(validation: Validation) -> None:
         },
         "permissions": {"contents": "read"},
         "concurrency": {
-            "group": "verify-${{ github.workflow }}-${{ github.ref }}",
+            "group": "supplementary-${{ github.workflow }}-${{ github.ref }}",
             "cancel-in-progress": "true",
         },
         "jobs": {
-            "verify": {
-                "name": "Windows authoritative verification",
+            "supplementary-windows-check": {
+                "name": "Supplementary Windows clean-checkout check",
                 "runs-on": "windows-2025",
                 "timeout-minutes": "30",
                 "defaults": {"run": {"shell": "pwsh"}},
@@ -500,7 +753,10 @@ def validate_workflow(validation: Validation) -> None:
                             "actions/checkout@"
                             + EXPECTED_ACTIONS["actions/checkout"]
                         ),
-                        "with": {"persist-credentials": "false"},
+                        "with": {
+                            "persist-credentials": "false",
+                            "fetch-depth": "0",
+                        },
                     },
                     {
                         "name": "Set up .NET",
@@ -525,13 +781,16 @@ def validate_workflow(validation: Validation) -> None:
                         },
                     },
                     {
-                        "name": "Install validator dependency",
+                        "name": "Install pinned validator dependency",
                         "run": (
-                            "python -m pip install --no-deps "
+                            "python -m pip --isolated install --no-deps "
                             "--requirement tools/requirements.txt"
                         ),
                     },
-                    {"name": "Verify", "run": "./eng/verify.ps1"},
+                    {
+                        "name": "Run supplementary Quick tier",
+                        "run": "./eng/verify.ps1 -Tier Quick -Restore -SupplementaryCi",
+                    },
                 ],
             }
         },
@@ -561,22 +820,23 @@ def validate_workflow(validation: Validation) -> None:
             ".github/workflows/verify.yml: workflow permissions must be contents: read only"
         )
     jobs = workflow.get("jobs")
-    job = jobs.get("verify") if isinstance(jobs, dict) else None
+    job_id = "supplementary-windows-check"
+    job = jobs.get(job_id) if isinstance(jobs, dict) else None
     if not isinstance(job, dict):
-        validation.error(".github/workflows/verify.yml: jobs.verify is required")
+        validation.error(f".github/workflows/verify.yml: jobs.{job_id} is required")
         return
     if job.get("runs-on") != "windows-2025":
         validation.error(
-            ".github/workflows/verify.yml: jobs.verify must run on windows-2025"
+            f".github/workflows/verify.yml: jobs.{job_id} must run on windows-2025"
         )
     if job.get("timeout-minutes") != "30":
         validation.error(
-            ".github/workflows/verify.yml: jobs.verify timeout-minutes must equal 30"
+            f".github/workflows/verify.yml: jobs.{job_id} timeout-minutes must equal 30"
         )
 
     steps = job.get("steps")
     if not isinstance(steps, list):
-        validation.error(".github/workflows/verify.yml: jobs.verify.steps must be a list")
+        validation.error(f".github/workflows/verify.yml: jobs.{job_id}.steps must be a list")
         return
     found_actions: dict[str, str] = {}
     runs: list[str] = []
@@ -618,10 +878,11 @@ def validate_workflow(validation: Validation) -> None:
         None,
     )
     if not isinstance(checkout, dict) or checkout.get("with") != {
-        "persist-credentials": "false"
+        "persist-credentials": "false",
+        "fetch-depth": "0",
     }:
         validation.error(
-            ".github/workflows/verify.yml: checkout must disable persisted credentials"
+            ".github/workflows/verify.yml: checkout must disable persisted credentials and fetch full history"
         )
     setup_dotnet = next(
         (
@@ -661,15 +922,15 @@ def validate_workflow(validation: Validation) -> None:
             ".github/workflows/verify.yml: job command shell must be pwsh"
         )
     if (
-        "python -m pip install --no-deps --requirement tools/requirements.txt"
+        "python -m pip --isolated install --no-deps --requirement tools/requirements.txt"
         not in runs
     ):
         validation.error(
             ".github/workflows/verify.yml: CI must install the pinned validator dependency"
         )
-    if "./eng/verify.ps1" not in runs:
+    if "./eng/verify.ps1 -Tier Quick -Restore -SupplementaryCi" not in runs:
         validation.error(
-            ".github/workflows/verify.yml: CI must invoke ./eng/verify.ps1"
+            ".github/workflows/verify.yml: CI must invoke the restored supplementary Quick tier"
         )
 
     workflow_text = workflow_path.read_text(encoding="utf-8")
@@ -677,6 +938,95 @@ def validate_workflow(validation: Validation) -> None:
         validation.error(
             ".github/workflows/verify.yml: verification must not consume repository secrets"
         )
+
+
+def validate_supply_chain_contract(
+    validation: Validation,
+) -> supply_chain.SupplyChainResult:
+    result = supply_chain.validate_supply_chain(ROOT)
+    for error in result.errors:
+        validation.error(f"supply-chain: {error}")
+
+    try:
+        task_document = yaml.safe_load(
+            (ROOT / "TASKS.yaml").read_text(encoding="utf-8")
+        )
+    except (OSError, yaml.YAMLError) as exc:
+        validation.error(f"TASKS.yaml: cannot inspect TL-0006 approval state: {exc}")
+        return result
+    tasks = task_document.get("tasks") if isinstance(task_document, dict) else None
+    task = next(
+        (
+            item
+            for item in tasks or []
+            if isinstance(item, dict) and item.get("id") == "TL-0006"
+        ),
+        None,
+    )
+    if not isinstance(task, dict):
+        validation.error("TASKS.yaml: TL-0006 is required for supply-chain governance")
+        return result
+
+    evidence = task.get("evidence")
+    evidence_items = evidence if isinstance(evidence, list) else []
+    approval_evidence = [
+        item
+        for item in evidence_items
+        if isinstance(item, dict)
+        and str(item.get("result", "")).casefold() == "passed"
+        and LICENCE_APPROVAL_EVIDENCE_RE.search(str(item.get("summary", "")))
+        is not None
+    ]
+    evidence_with_digests = [
+        (
+            item,
+            {
+                match.casefold()
+                for match in MATRIX_DIGEST_REFERENCE_RE.findall(
+                    str(item.get("reference", ""))
+                )
+            },
+        )
+        for item in approval_evidence
+    ]
+    unbound_approval_evidence = [
+        item for item, matrix_digests in evidence_with_digests if not matrix_digests
+    ]
+    current_approval_evidence = [
+        item
+        for item, matrix_digests in evidence_with_digests
+        if result.matrix_digest.casefold() in matrix_digests
+    ]
+    historical_approval_evidence = [
+        item
+        for item, matrix_digests in evidence_with_digests
+        if matrix_digests
+        and result.matrix_digest.casefold() not in matrix_digests
+    ]
+
+    if unbound_approval_evidence:
+        validation.error(
+            "TL-0006 licence/rights approval evidence must bind an exact matrix SHA-256"
+        )
+    if result.approval_state == "approved":
+        if not current_approval_evidence:
+            validation.error(
+                "TL-0006 approved review evidence must bind named human licence/rights approval to the current matrix digest"
+            )
+    elif current_approval_evidence:
+        validation.error(
+            "TL-0006 evidence cannot claim licence/rights approval for the current matrix while the governed review is Pending"
+        )
+
+    if (
+        task.get("status") == "done"
+        and result.approval_state != "approved"
+        and not historical_approval_evidence
+    ):
+        validation.error(
+            "TL-0006 done with a Pending current matrix requires prior named human licence/rights approval bound to an earlier matrix digest"
+        )
+    return result
 
 
 def validate_no_machine_paths(validation: Validation) -> None:
@@ -687,6 +1037,10 @@ def validate_no_machine_paths(validation: Validation) -> None:
         ROOT / "global.json",
         ROOT / "eng" / "verify.ps1",
         ROOT / "eng" / "verify.sh",
+        ROOT / "eng" / "generate-sbom.ps1",
+        ROOT / "tools" / "requirements.txt",
+        ROOT / "docs" / "supply-chain" / "dependencies.md",
+        ROOT / "docs" / "supply-chain" / "license-matrix.csv",
         ROOT / ".github" / "workflows" / "verify.yml",
     ]
     paths.extend((ROOT / "src").rglob("packages.lock.json"))
@@ -706,8 +1060,11 @@ def validate() -> int:
     validate_bundle_manifest(validation)
     project_paths = validate_project_graph(validation)
     validate_central_packages(project_paths, validation)
+    validate_project_reference_locks(project_paths, validation)
     validate_tool_and_source_configuration(validation)
     validate_workflow(validation)
+    validate_test_manifest(validation)
+    supply_chain_result = validate_supply_chain_contract(validation)
     validate_no_machine_paths(validation)
 
     if validation.errors:
@@ -718,7 +1075,9 @@ def validate() -> int:
     print(
         "OK: repository controls valid; "
         f"{len(project_paths)} projects, {len(project_paths)} lock files, "
-        "central packages and pinned Windows CI verified"
+        f"{len(supply_chain_result.inventory)} governed supply-chain components, "
+        f"licence review {supply_chain_result.approval_state}; "
+        "central packages and optional Windows workflow configuration verified"
     )
     return 0
 

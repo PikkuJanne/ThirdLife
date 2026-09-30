@@ -1,5 +1,21 @@
 [CmdletBinding()]
-param()
+param(
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("Quick", "Targeted", "Full")]
+    [string] $Tier = "Quick",
+
+    [Parameter(Mandatory = $false)]
+    [string[]] $TestProject = @(),
+
+    [Parameter(Mandatory = $false)]
+    [string] $Filter = "",
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Restore,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $SupplementaryCi
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -23,14 +39,49 @@ function Invoke-CheckedCommand {
     }
 }
 
-if ($env:OS -ne "Windows_NT") {
-    throw "ThirdLife's authoritative verification requires Windows. Run eng/verify.sh from Git Bash on Windows or use eng/verify.ps1 directly."
+function Invoke-TestProject {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Dotnet,
+
+        [Parameter(Mandatory = $true)]
+        [string] $Project,
+
+        [Parameter(Mandatory = $false)]
+        [string] $TestFilter = ""
+    )
+
+    $arguments = @(
+        "test",
+        $Project,
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "--nologo"
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($TestFilter)) {
+        $arguments += @("--filter", $TestFilter)
+    }
+    $arguments += @("--", "RunConfiguration.TreatNoTestsAsError=true")
+
+    Invoke-CheckedCommand `
+        -Label "Test $Project" `
+        -Command $Dotnet `
+        -CommandArguments $arguments
 }
 
+if ($env:OS -ne "Windows_NT") {
+    throw "ThirdLife verification runs on the active Windows Codex machine. Use eng/verify.sh only as its Windows Git Bash wrapper."
+}
+
+$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $solutionPath = Join-Path $repositoryRoot "ThirdLife.sln"
 $nugetConfigPath = Join-Path $repositoryRoot "NuGet.Config"
 $globalJsonPath = Join-Path $repositoryRoot "global.json"
+$manifestPath = Join-Path $repositoryRoot "eng\test-manifest.json"
 $venvPythonPath = Join-Path $repositoryRoot ".venv\Scripts\python.exe"
 
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = "1"
@@ -41,9 +92,29 @@ $env:PIP_NO_INPUT = "1"
 
 Push-Location $repositoryRoot
 try {
+    if ($Tier -eq "Targeted" -and $TestProject.Count -eq 0) {
+        throw "Targeted requires at least one -TestProject. Use an optional -Filter to narrow the subsystem."
+    }
+    if ($Tier -ne "Targeted" -and ($TestProject.Count -ne 0 -or -not [string]::IsNullOrWhiteSpace($Filter))) {
+        throw "-TestProject and -Filter are supported only with -Tier Targeted."
+    }
+    if ($SupplementaryCi -and $Tier -ne "Quick") {
+        throw "Supplementary CI runs only the deterministic Quick selection."
+    }
+    foreach ($project in $TestProject) {
+        if ([string]::IsNullOrWhiteSpace($project) -or
+            [System.IO.Path]::GetExtension($project) -ne ".csproj" -or
+            -not (Test-Path -LiteralPath $project -PathType Leaf)) {
+            throw "Each -TestProject must identify an existing test .csproj. Pass multiple projects as a PowerShell array."
+        }
+    }
+    if ($SupplementaryCi) {
+        Write-Warning "This hosted run is supplementary only. It is not authoritative ThirdLife runtime, hardware, accessibility, milestone, pilot, or release evidence."
+    }
+
     $dotnetCommand = Get-Command dotnet -ErrorAction SilentlyContinue
     if ($null -eq $dotnetCommand) {
-        throw "The .NET SDK is required. Install the exact SDK from global.json before running verification."
+        throw "The exact .NET SDK from global.json is required."
     }
 
     $expectedSdk = (Get-Content -Raw -LiteralPath $globalJsonPath | ConvertFrom-Json).sdk.version
@@ -51,6 +122,7 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "Unable to resolve the .NET SDK selected by global.json."
     }
+
     $actualSdk = ($actualSdkOutput | Select-Object -Last 1).Trim()
     if ($actualSdk -ne $expectedSdk) {
         throw "ThirdLife requires .NET SDK $expectedSdk; selected SDK was $actualSdk."
@@ -62,44 +134,61 @@ try {
     else {
         $systemPython = Get-Command python -ErrorAction SilentlyContinue
         if ($null -eq $systemPython) {
-            throw "Python 3.14.7 and tools/requirements.txt are required. Create the documented .venv before running verification."
+            throw "Python 3.14.7 and tools/requirements.txt are required."
         }
         $pythonCommand = $systemPython.Source
     }
 
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+        throw "Missing eng/test-manifest.json."
+    }
+    $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+
     Invoke-CheckedCommand `
-        -Label "Validate the pinned Python toolchain" `
+        -Label "Validate pinned Python toolchain" `
         -Command $pythonCommand `
         -CommandArguments @(
             "-c",
-            "import sys, yaml; expected=(3, 14, 7); actual=sys.version_info[:3]; actual == expected or sys.exit(f'Python {expected} required; found {actual}'); yaml.__version__ == '6.0.3' or sys.exit(f'PyYAML 6.0.3 required; found {yaml.__version__}')"
+            "import sys, yaml; expected=(3,14,7); actual=sys.version_info[:3]; actual == expected or sys.exit(f'Python {expected} required; found {actual}'); yaml.__version__ == '6.0.3' or sys.exit(f'PyYAML 6.0.3 required; found {yaml.__version__}')"
         )
 
-    Invoke-CheckedCommand `
-        -Label "Run governance validator regression tests" `
-        -Command $pythonCommand `
-        -CommandArguments @("tools/tests/test_validate_bundle.py")
+    if ($Tier -eq "Full") {
+        Invoke-CheckedCommand `
+            -Label "Run complete governed validator regression tests" `
+            -Command $pythonCommand `
+            -CommandArguments @(
+                "-m",
+                "unittest",
+                "discover",
+                "-s",
+                "tools/tests",
+                "-p",
+                "test_*.py"
+            )
+    }
 
     Invoke-CheckedCommand `
-        -Label "Validate the governed roadmap bundle and portfolio metadata" `
+        -Label "Validate governed roadmap bundle" `
         -Command $pythonCommand `
         -CommandArguments @("tools/validate_bundle.py")
 
     Invoke-CheckedCommand `
-        -Label "Validate repository boundaries, package locks, and CI controls" `
+        -Label "Validate repository boundaries, locks, and controls" `
         -Command $pythonCommand `
         -CommandArguments @("tools/validate_repository.py")
 
-    Invoke-CheckedCommand `
-        -Label "Restore the locked dependency graph" `
-        -Command $dotnetCommand.Source `
-        -CommandArguments @(
-            "restore",
-            $solutionPath,
-            "--configfile",
-            $nugetConfigPath,
-            "--locked-mode"
-        )
+    if ($Restore -or $Tier -eq "Full") {
+        Invoke-CheckedCommand `
+            -Label "Restore locked dependency graph" `
+            -Command $dotnetCommand.Source `
+            -CommandArguments @(
+                "restore",
+                $solutionPath,
+                "--configfile",
+                $nugetConfigPath,
+                "--locked-mode"
+            )
+    }
 
     Invoke-CheckedCommand `
         -Label "Verify formatting" `
@@ -112,7 +201,7 @@ try {
         )
 
     Invoke-CheckedCommand `
-        -Label "Build Release with compiler warnings treated as errors" `
+        -Label "Build Release with warnings as errors" `
         -Command $dotnetCommand.Source `
         -CommandArguments @(
             "build",
@@ -120,23 +209,55 @@ try {
             "--configuration",
             "Release",
             "--no-restore",
-            "--warnaserror"
+            "--warnaserror",
+            "--nologo"
         )
 
-    Invoke-CheckedCommand `
-        -Label "Run the Release test suite" `
-        -Command $dotnetCommand.Source `
-        -CommandArguments @(
-            "test",
-            $solutionPath,
-            "--configuration",
-            "Release",
-            "--no-build",
-            "--no-restore"
-        )
+    if ($Tier -in @("Quick", "Targeted")) {
+        foreach ($entry in $manifest.tiers.quick.test_projects) {
+            Invoke-TestProject `
+                -Dotnet $dotnetCommand.Source `
+                -Project ([string]$entry.path) `
+                -TestFilter ([string]$entry.filter)
+        }
+    }
+    if ($Tier -eq "Targeted") {
+        $selectedFilter = if ([string]::IsNullOrWhiteSpace($Filter)) {
+            [string]$manifest.tiers.targeted.default_filter
+        }
+        else { $Filter }
+        foreach ($project in $TestProject) {
+            Invoke-TestProject `
+                -Dotnet $dotnetCommand.Source `
+                -Project $project `
+                -TestFilter $selectedFilter
+        }
+    }
+    elseif ($Tier -eq "Full") {
+        Invoke-TestProject `
+            -Dotnet $dotnetCommand.Source `
+            -Project $solutionPath `
+            -TestFilter ([string]$manifest.tiers.full.filter)
+    }
 
-    Write-Host "OK: ThirdLife verification passed."
+    $stopwatch.Stop()
+    $elapsedSeconds = [Math]::Round($stopwatch.Elapsed.TotalSeconds, 3)
+
+    if ($Tier -in @("Quick", "Targeted")) {
+        $targetSeconds = [double]$manifest.tiers.($Tier.ToLowerInvariant()).target_seconds
+        if ($elapsedSeconds -gt $targetSeconds) {
+            Write-Warning "$Tier completed but exceeded the $targetSeconds second target: $elapsedSeconds seconds. Record and investigate the regression."
+        }
+    }
+
+    $classification = if ($SupplementaryCi) { "supplementary" } else { "active-machine" }
+    Write-Host "OK: ThirdLife $Tier verification passed in $elapsedSeconds seconds ($classification evidence context)."
 }
 finally {
+    if ($stopwatch.IsRunning) {
+        $stopwatch.Stop()
+    }
+    $duration = [Math]::Round($stopwatch.Elapsed.TotalSeconds, 3)
+    Write-Host "Duration: $Tier verification ran for $duration seconds."
     Pop-Location
 }

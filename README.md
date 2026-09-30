@@ -3,24 +3,44 @@
 This repository develops ThirdLife Setup Core: a local-first, auditable Windows refurbishment workflow for volunteer and staff refurbishers. Development follows the frozen decisions, standalone Team B/B1 boundary, and dependency-ordered task graph checked into this repository.
 
 **Current project:** Team B / B1 — ThirdLife Setup Core  
+**Roadmap bundle:** 0.4.0 / ThirdLife Software Portfolio v2.1  
+**Physical validation scope:** active Codex machine only  
 **Pilot gate:** `TL-0611` — controlled v0.1 partner pilot  
 **Standalone release gate:** `TL-0710` — ThirdLife Setup Core 1.0  
 **Next Team B project after stable:** Scam Explainer  
 **Future integration project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
 
-The governed roadmap contains **91 tasks**, **8 milestone gates**, and **57 frozen decisions**. Current implementation progress and the next dependency-ready work are recorded in `TASKS.yaml`; do not infer them from this README.
+The governed roadmap contains **91 tasks**, **8 milestone gates**, and **66 frozen decisions**. Current implementation progress and the next dependency-ready work are recorded in `TASKS.yaml` and `STATUS.md`; do not infer them from this README.
 
-## What changed in portfolio-aligned bundle 0.2.0
+## What changed in governed bundle 0.4.0
 
-- Recast the repository explicitly as **ThirdLife Setup Core**, Team B/B1, while retaining `ThirdLife.*` code identity.
-- Froze the project-vacuum rule: no sibling repository, branch, database, service, schema, or active release dependency.
-- Deferred all sibling-specific catalogue/profile/adapter/compatibility work to the future B4 suite project.
-- Added the binding `PROJECT_BOUNDARY.md` and non-binding `FUTURE_ASSEMBLY_NOTES.md` deferral log.
-- Added the required project baselines `SECURITY.md`, `ACCESSIBILITY.md`, and `LOW_SPEC.md`.
-- Added `RELEASE_INTERFACE.md`, completed only from verified preview/stable behavior rather than speculative APIs.
-- Split controlled-pilot authorization (`TL-0611`) from the independently releasable Core 1.0 gate (`TL-0710`).
-- Added M7 work for recipient-controlled accessibility, basic operating-system backup onboarding, installer/update/uninstall hardening, black-box samples/interface documentation, stable release evidence, and portfolio-boundary review.
-- Set the post-release transition to **Scam Explainer**; B4 integration remains later.
+- Consolidates completed work into one default-branch integration path before TL-0107.
+- Reclassifies GitHub Actions as supplementary, never authoritative runtime evidence.
+- Makes Quick include formatting, build, and fast code tests and adds an explicit Targeted
+  entry point.
+- Keeps `STATUS.md` concise and moves detailed evidence to durable task/gate artifacts.
+- Requires reusable runners/declarative profiles instead of continued task-specific harness
+  growth.
+- Removes the completed TL-0008 transition from normal prompt selection while preserving its
+  audit history.
+- Clarifies architecture-evidence ownership and versioned/stale-safe lifecycle data for
+  TL-0107/TL-0112.
+
+## What changed in governed bundle 0.3.1
+
+- Preserved the completed ephemeral-broker decision as ADR 0004 and reserved the next unoccupied identifier, ADR 0009, for the future TL-0401 WinGet backend decision.
+- Synchronized the TL-0401 deliverable path and its separate maintainer-approval wording without changing the task graph, execution history, package/security requirements, or backend-selection outcome.
+- Recorded Janne Vuorela's 2026-08-22 approval and the complete impact, alternatives, rollout, rollback, and historical-evidence treatment in the governed amendment record.
+- Added validator regression coverage so the superseded future `ADR-004` path, reuse of ADR 0004 by TL-0401, or a second ADR 0009 task reservation cannot silently return.
+
+## What changed in portfolio-aligned bundle 0.3.0
+
+- Made GitHub the continuity record while keeping runtime test evidence local to the active Codex machine.
+- Replaced active hardware-lab, second-PC, lower-performance-device, volunteer-pool, and authoritative remote-runner requirements with deterministic fixtures, sanitized samples, safe same-machine constraints, bounded host observation, and explicit limitations.
+- Added quick, targeted, full, and extended test tiers with task-level triggers and focused deterministic regressions.
+- Recast modest-hardware readiness as continuous bounded-resource engineering; one-machine evidence is not cross-hardware certification.
+- Superseded `TL-0008 draft 1` and its immediate `MHT-001`–`MHT-021` device-pool walkthrough while preserving the historical commit and digest.
+- Retained the manual functional-test feature as a product-workflow specification for later named implementation and review tasks.
 
 See `CHANGELOG.md` for the file-level change record.
 
@@ -33,23 +53,46 @@ See `CHANGELOG.md` for the file-level change record.
 | `PROJECT_BOUNDARY.md` | Canonical **Owns / Does not own**, data boundary, project-vacuum rules, and future B4 late-integration contract. |
 | `SECURITY.md` | Threat baseline, privilege/package/data/update controls, reporting placeholder, and release security obligations. |
 | `ACCESSIBILITY.md` | Operator and recipient accessibility requirements, test evidence, and limitation policy. |
-| `LOW_SPEC.md` | Resource budgets, constrained-test method, benchmark evidence, and graceful-degradation rules. |
-| `TASKS.yaml` | Machine-readable DAG with 91 tasks, dependencies, deliverables, acceptance, verification, executor, environment, and evidence. |
+| `LOW_SPEC.md` | Modest-hardware engineering, sanitized reference profile, same-machine constraints, resource evidence, and claim boundaries. |
+| `DEVELOPMENT_WORKFLOW.md` | Git synchronization, divergence safety, checkpoint, push, clean-clone, and handoff rules. |
+| `TESTING.md` | Quick, targeted, full, and extended tiers; fixtures, environments, defect workflow, and evidence rules. |
+| `TASKS.yaml` | Machine-readable DAG with 91 tasks, dependencies, deliverables, acceptance, verification, mutable history, and test-tier triggers. |
+| `STATUS.md` | Factual current branch/commit/test/handoff state; it cannot weaken higher authority. |
 | `AGENTS.md` | Codex operating contract: read order, task selection, allowed edits, project-vacuum rules, architecture, testing, and reporting. |
 | [`docs/product-contract.md`](docs/product-contract.md) | Concise product identity, outcome, delivery cuts, Team B queue, standalone rules, and quality-baseline map. |
 | [`docs/non-goals.md`](docs/non-goals.md) | Explicit existing-PC, bypass, optimizer, sibling-domain, shared-infrastructure, and early-B4 exclusions. |
 | [`docs/glossary.md`](docs/glossary.md) | Governed meanings for evidence, requirements, blockers, dispositions, action state, and frozen-release integration terms. |
 | [`docs/change-control.md`](docs/change-control.md) | Exact authority order, task-state limits, governed-amendment process, contradiction stop rule, and review checklist. |
+| [`docs/amendments/2026-08-22-adr-0009-reservation.md`](docs/amendments/2026-08-22-adr-0009-reservation.md) | Janne Vuorela's approved bundle 0.3.1 reservation of ADR 0009 for TL-0401 while preserving ADR 0004 and completed evidence. |
 | [`docs/security/threat-model.md`](docs/security/threat-model.md) | Assets, actors, threats, control/task mappings, residual-risk decisions, and named-owner approval state tracked by `TL-0004`. |
 | [`docs/security/data-flow.md`](docs/security/data-flow.md) | Accessible diagram and textual inventory of processes, stores, flows, validation, recovery, and distinct trust boundaries. |
 | [`docs/security/abuse-cases.md`](docs/security/abuse-cases.md) | Stable adversarial scenarios with detection, fail-closed behavior, recovery, task traceability, and residual risks. |
+| [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md) | Privacy classes, Core data map, audience separation, approved default retention guidance, exclusions, and exact-commit owner-approval record. |
+| [`docs/privacy/logging-standard.md`](docs/privacy/logging-standard.md) | Typed logging envelope, prohibited fields, raw-input rules, exact support allowlist, preview-bound export, and verification contract. |
+| [`docs/privacy/redaction-test-cases.yaml`](docs/privacy/redaction-test-cases.yaml) | Wholly synthetic exact redaction/omission/support projections and truthful privacy-review metadata. |
+| [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) | Dependency classes, provenance and integrity rules, SBOM/audit procedure, release-evidence mapping, and human-review state. |
+| [`docs/supply-chain/license-matrix.csv`](docs/supply-chain/license-matrix.csv) | Exact dependency owner, version, source, purpose, declared licence, proposed rights, integrity, provenance, and limitation records. |
+| [`fixtures/README.md`](fixtures/README.md) | Non-personal pilot job, candidate policy, profile, and synthetic catalogue fixture contract. |
+| [`docs/testing/reference-machine-profile.md`](docs/testing/reference-machine-profile.md) | Sanitized active-machine and toolchain facts for reproducible evidence. |
+| [`docs/testing/capability-risk-matrix.md`](docs/testing/capability-risk-matrix.md) | Hardware/provider variants mapped to deterministic coverage or explicit limitations; not device inventory. |
+| [`docs/testing/same-machine-constraints.md`](docs/testing/same-machine-constraints.md) | Safe, reversible, independently invokable constraint profiles and claim limits. |
+| [`docs/testing/manual-hardware-tests.md`](docs/testing/manual-hardware-tests.md) | Detailed manual-test product-workflow specification; no TL-0008 physical walkthrough. |
+| [`docs/testing/failure-injection.md`](docs/testing/failure-injection.md) | Individually addressable interruption scenarios with later task/gate triggers. |
+| [`docs/testing/accessibility-matrix.md`](docs/testing/accessibility-matrix.md) | Automated and later human accessibility coverage on the active machine. |
+| [`docs/history/TL-0008-draft-1-superseded.md`](docs/history/TL-0008-draft-1-superseded.md) | Full audit-preserved draft-1 procedure with a do-not-execute banner. |
 | `CODEX_START_PROMPT.md` | First-session prompt and reusable execution, review, gate, security, accessibility, recovery, deferral, release-interface, and handoff prompts. |
+| `TL-0008_TRANSITION.md` | Historical record of the completed device-pool-to-same-machine transition. |
+| `CODEX_TL0008_TRANSITION_PROMPT.md` | Historical one-time transition prompt; not a normal current entry point. |
 | `RELEASE_INTERFACE.md` | Human-readable black-box release sheet, populated as a preview draft at `TL-0610`, completed at `TL-0706`, and frozen before `TL-0710`; not a shared API. |
 | `FUTURE_ASSEMBLY_NOTES.md` | Non-binding B4 backlog for cross-project ideas; nothing here can block or expand B1. |
-| `CHANGELOG.md` | Bundle 0.2.0 modification record. |
-| `TASKS.schema.json` | JSON Schema for the task graph and portfolio metadata. |
+| `CHANGELOG.md` | Bundle version and migration history. |
+| `TASKS.schema.json` | JSON Schema for the task graph, single-machine metadata, and test-tier fields. |
 | `tools/validate_bundle.py` | Structural/semantic validator for files, schema, decisions, DAG, gates, authority, naming, and portfolio-boundary markers. |
-| `tools/requirements.txt` | Pinned validator dependencies. |
+| `tools/supply_chain.py` | Standard-library dependency-contract validator and deterministic CycloneDX 1.6 generator. |
+| `tools/merge_task_contracts.py` | Reviewed merger that updates canonical contracts while preserving live task execution history. |
+| `tools/requirements.txt` | Source-, binary-, version-, and hash-pinned validator dependencies. |
+| `eng/test-manifest.json` | Machine-readable test-tier budgets, fast test selection, and evidence authority. |
+| `eng/generate-sbom.ps1` | Clean-checkout SBOM entry point; writes only the requested generated artifact. |
 | `BUNDLE_MANIFEST.sha256` | SHA-256 manifest generated after validation; excludes itself. |
 
 ## Implementation scaffold
@@ -62,6 +105,21 @@ See `CHANGELOG.md` for the file-level change record.
 
 Production projects live under `src/`; their focused xUnit projects live under `tests/`. Only `ThirdLife.UI` enables WPF. Production-to-production references are added only when a selected implementation task introduces an approved contract, keeping the initial dependency graph acyclic and avoiding speculative coupling.
 
+### Initial architecture decision records
+
+The initial ADR set records existing frozen choices as planned constraints; it does not amend the higher-authority decisions or claim that later runtime behavior is implemented:
+
+- [`0001-windows-wpf-stack.md`](docs/adr/0001-windows-wpf-stack.md) — Windows/.NET/WPF selection and inward assembly dependency direction.
+- [`0002-evidence-policy-separation.md`](docs/adr/0002-evidence-policy-separation.md) — immutable evidence, versioned policy, reproducible decisions, and separate verification.
+- [`0003-sqlite-job-store.md`](docs/adr/0003-sqlite-job-store.md) — local SQLite persistence, bounded attachments, migrations, history, and split-state recovery.
+- [`0004-ephemeral-broker.md`](docs/adr/0004-ephemeral-broker.md) — unelevated UI, authenticated typed IPC, and short-lived allowlisted elevation.
+- [`0005-package-adapter.md`](docs/adr/0005-package-adapter.md) — replaceable structured package backend pending the governed WinGet spike.
+- [`0006-report-privacy-classes.md`](docs/adr/0006-report-privacy-classes.md) — independent workshop, recipient, and sanitized-support projections.
+- [`0007-standalone-late-binding-boundary.md`](docs/adr/0007-standalone-late-binding-boundary.md) — standalone project vacuum and future frozen-release B4 boundary.
+- [`0008-minimal-release-interface-envelope.md`](docs/adr/0008-minimal-release-interface-envelope.md) — verified human-readable black-box release facts without a shared API.
+
+ADR 0009 is reserved for the dependency-gated TL-0401 WinGet comparison at `docs/adr/0009-winget-backend.md`. That file does not exist until TL-0401 executes; the reservation is not a backend decision or maintainer approval.
+
 ## Authority order
 
 Apply files in this order:
@@ -72,10 +130,13 @@ Apply files in this order:
 4. `SECURITY.md`
 5. `ACCESSIBILITY.md`
 6. `LOW_SPEC.md`
-7. `AGENTS.md`
-8. `TASKS.yaml`
-9. `CODEX_START_PROMPT.md`
-10. `README.md`
+7. `DEVELOPMENT_WORKFLOW.md`
+8. `TESTING.md`
+9. `AGENTS.md`
+10. `TASKS.yaml`
+11. `STATUS.md`
+12. `CODEX_START_PROMPT.md`
+13. `README.md`
 
 `RELEASE_INTERFACE.md` records verified release facts. `FUTURE_ASSEMBLY_NOTES.md` is explicitly non-binding. A lower document cannot weaken a higher one.
 
@@ -92,16 +153,18 @@ Install the exact .NET SDK and Python versions named under **Repository verifica
 
 ```powershell
 py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --no-deps --requirement tools\requirements.txt
+.\.venv\Scripts\python.exe -m pip --isolated install --no-deps --requirement tools\requirements.txt
 ```
 
-Run the complete clean-checkout gate:
+Run Quick for governance, formatting, build, and fast code feedback. Add `-Restore` in a clean checkout:
 
 ```powershell
-.\eng\verify.ps1
+.\eng\verify.ps1 -Tier Quick -Restore
 ```
 
-For development, read the authority files in the required authority order and use the default selection rule in `AGENTS.md`. The validator prints the currently Codex-ready task IDs from live `TASKS.yaml` state. Work on exactly one selected task and publish its verified result before choosing another.
+Run `.\eng\verify.ps1 -Tier Full -Restore` when a task or gate triggers the complete suite.
+
+For development, read the authority files in the required authority order and use the default selection rule in `AGENTS.md`. The validator lists dependency-ready task IDs from live `TASKS.yaml`; default-branch integration must also be verified before selection. Work on exactly one selected task and publish its verified result before choosing another.
 
 ## Milestone chain
 
@@ -145,6 +208,11 @@ M4 proves the architecture. M6 authorizes only a controlled pilot. M7 is the Tea
 
 B4 will consume exact frozen releases and public release information. It will not consume active branches, internal databases, or private classes.
 
+
+### Branch integration rule
+
+A completed roadmap task is merged into `main` before the next task begins. Temporary stacked branches are exceptional, named, and accompanied by a collapse plan. Remote workflow output is supplementary and never replaces active-machine task or release evidence.
+
 ## Task selection and state
 
 Unless the user names a valid task, Codex follows `AGENTS.md`:
@@ -161,9 +229,11 @@ Normal implementation sessions may update only:
 status: review
 evidence:
   - summary: "Unit and integration tests passed"
+    tier: targeted
     result: passed
     environment: "Windows 11, .NET 10"
     date: "YYYY-MM-DD"
+    duration: "00:02:34"
     reference: "artifacts/tests/TL-XXXX.txt"
 blocked_reason: "Only when status is blocked"
 ```
@@ -184,7 +254,7 @@ Do not weaken dependencies, decision references, executor, acceptance criteria, 
 
 Codex cannot manufacture:
 
-- physical-device or cold-boot results;
+- an unperformed active-machine manual walkthrough or cold-boot result;
 - workshop volunteer, recipient, or proxy observations;
 - NVDA/Narrator/accessibility sign-off;
 - security/privacy, licence, release, or portfolio-boundary approvals;
@@ -199,24 +269,42 @@ The verification toolchain is pinned to .NET SDK `10.0.400` by `global.json`, Py
 
 ```powershell
 py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --no-deps --requirement tools\requirements.txt
+.\.venv\Scripts\python.exe -m pip --isolated install --no-deps --requirement tools\requirements.txt
 ```
 
-Then run the complete repository gate from the repository root:
+Run Quick and the relevant Targeted selection from the repository root:
 
 ```powershell
-.\eng\verify.ps1
+.\eng\verify.ps1 -Tier Quick
+.\eng\verify.ps1 -Tier Targeted `
+  -TestProject tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj `
+  -Filter "FullyQualifiedName~ProviderContractTests"
+.\.venv\Scripts\python.exe -m unittest discover -s tools/tests -p "test_*.py"
 ```
 
-The scripts resolve repository paths relative to themselves, so an absolute script path also works from another directory. Git Bash on Windows may run `./eng/verify.sh`. Non-Windows hosts fail clearly because the authoritative solution includes WPF and Windows-targeted projects.
+For a named Full trigger, run `.\eng\verify.ps1 -Tier Full -Restore`. Quick is the default when `-Tier` is omitted. The scripts resolve repository paths relative to themselves, so an absolute script path also works from another directory. Git Bash on Windows forwards the same arguments through `./eng/verify.sh`. Runtime evidence comes from the active Windows Codex machine; optional remote checks are supplementary.
 
-The verifier runs governance-validator regression probes, then checks the governed bundle and machine-readable portfolio metadata, the bundle hash manifest, solution and WPF boundaries, exact SDK and central package policy, project-local NuGet lock files, the hardened Windows workflow, formatting, the Release build with warnings as errors, and all Release tests. Restore uses only `NuGet.Config` and `--locked-mode`; it does not rewrite the dependency graph.
+Quick checks the pinned toolchain, bundle/schema/manifest, repository boundaries, formatting,
+a warnings-as-errors Release build, and fast deterministic Core/Inventory tests. Targeted
+includes Quick and the selected projects/filter. The explicit Python command above is the
+Targeted governance regression set; Full includes it and the complete supported deterministic
+.NET suite. Active-machine and Extended scenarios are selected separately in their approved
+environment. Restore uses only `NuGet.Config` and `--locked-mode`; it does not rewrite the
+dependency graph. Tier budgets and filters are declared in `eng/test-manifest.json`.
 
-When an intentional package-version change is approved, update `Directory.Packages.props`, run `dotnet restore ThirdLife.sln --configfile NuGet.Config --force-evaluate`, inspect every lock-file change, and rerun the full verifier. Environment-specific checks must be reported truthfully. Do not disable security, accessibility, low-spec, provenance, analyzer, or failing-test gates.
+Generate the dependency SBOM without a restore, network request, package cache, or external SBOM tool:
+
+```powershell
+.\eng\generate-sbom.ps1
+```
+
+The default output is the ignored `artifacts/sbom/thirdlife-setup-core.cdx.json`. Supply `-ProductVersion` and the lowercase `git rev-parse HEAD` value as `-SourceRevision` when preparing release evidence; the generator rejects any revision or governed input bytes that do not match that checkout. The generator validates the exact matrix against every lock file, the hash-pinned Python requirement, the pinned CI actions, the toolchain pins, and all current or future catalogue identities before it writes a canonical CycloneDX 1.6 document. See [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) for the separate licence/rights review and time-sensitive vulnerability-audit procedure.
+
+When an intentional package-version change is approved, update `Directory.Packages.props`, run `dotnet restore ThirdLife.sln --configfile NuGet.Config --force-evaluate`, inspect every lock-file change, and rerun the triggered full verifier. Environment-specific checks must be reported truthfully. Do not disable security, accessibility, modest-hardware, provenance, analyzer, or failing-test gates.
 
 ## Stable Core 1.0 handoff
 
-`TL-0710` requires exact release artifacts, hashes, source revision, dependency lock, SBOM/licence evidence, known limitations, samples, installer/update/repair/uninstall/data-preservation evidence, security/privacy/accessibility/low-spec/offline results, sanitized support evidence, and completed `RELEASE_INTERFACE.md`.
+`TL-0710` requires exact release artifacts, hashes, source revision, dependency lock, SBOM/licence evidence, known limitations, samples, installer/update/repair/uninstall/data-preservation evidence, security/privacy/accessibility/offline and same-machine modest-hardware results, sanitized support evidence, and completed `RELEASE_INTERFACE.md`. Those results do not imply cross-hardware certification.
 
 After human approval:
 

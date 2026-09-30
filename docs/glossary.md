@@ -65,6 +65,22 @@ A **plan** is the deterministic ordered set of proposed compiled actions, reason
 
 A policy-authorized, attributable decision to proceed despite a rule outcome. It records operator identity, reason, authorization, time, and visible report history. An exception cannot override a prohibited rule or erase the original evidence.
 
+### Ordinary diagnostics
+
+Allowlisted local operational events used to understand product state and failures. They are not the authoritative workshop journal, do not require recipient/operator identity, contain no raw provider/backend/installer/command output, and are redacted before persistence under `docs/privacy/logging-standard.md`.
+
+### Workshop record, recipient guide, and sanitized support output
+
+The **workshop record** is the restricted technical output and the only output class permitted to contain full internal device identity such as the full serial. The **recipient guide** is an independent plain-language projection with no workshop secrets or unnecessary identity. **Sanitized support output** is a third independent allowlisted projection whose exact fields/files are previewed and digest-bound before explicit export; it is never a copy of the workshop database or log directory.
+
+### Redaction and omission
+
+**Redaction** replaces a detected prohibited value with its exact fixed non-sensitive marker before persistence. **Omission** excludes the field entirely from a target schema. Neither makes arbitrary collection acceptable: unknown fields fail closed, secrets/personal content are not retained, and support output begins from an allowlist.
+
+### Pseudonymous internal identifier
+
+A fresh opaque random job, action, correlation, or support identifier that does not encode or derive from a person, account, device serial, hostname, network identifier, or other stable external value. It remains controlled operational/workshop metadata; hashing an external identifier does not automatically create a safe pseudonymous identifier.
+
 ### Project vacuum
 
 The B1 development posture in which ThirdLife Setup Core has no source, binary, runtime, test, data, schema, service, branch, or release-schedule dependency on a sibling portfolio project.

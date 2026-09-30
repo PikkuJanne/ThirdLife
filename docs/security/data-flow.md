@@ -5,6 +5,8 @@
 **Draft date:** 2026-08-14  
 **Authority:** Supporting analysis for [`threat-model.md`](threat-model.md); binding boundaries remain in the root authority files
 
+**Post-approval maintenance:** 2026-08-21 — `TL-0005` traceability/status annotation only. The approved base remains commit `917b5ebd5f5e4cf273a087a05dd381da54324235`; threats, residual decisions, and security approval were not changed or re-approved.
+
 This document decomposes the planned v0.1 system into external entities, processes, stores, trust boundaries, and numbered flows. It describes intended security properties, not implemented or verified behavior. The tables are the accessible textual equivalent of the diagram.
 
 ## Context and non-flows
@@ -82,7 +84,7 @@ The diagram does not show a B4 process because no B1 runtime edge exists. A futu
 |---|---|---|---|
 | `DS-01` | SQLite job store | Job IDs, normalized evidence, policy/profile/catalogue snapshots, decisions, plans, approvals, action/verification/finalization history. | Restrictive ACL; parameterized access; explicit transactional migrations; corruption/newer-schema detection; monotonic transitions; not tamper-proof against admin. |
 | `DS-02` | Per-job attachment directory | Bounded raw attachments explicitly permitted by a provider/report contract. | Internal-ID path, restrictive ACL, size/type/count bounds, reparse defense, atomic creation; DB commit and file creation require reconciliation. |
-| `DS-03` | Application logs and temporary files | Allowlisted structured diagnostics and short-lived bounded working artifacts. | Redact before persistence; no unbounded raw output; internal random names; restrictive creation; cleanup success/failure recorded. |
+| `DS-03` | Application logs and temporary files | Allowlisted structured diagnostics and short-lived bounded working artifacts. | Redact before persistence; no unbounded raw output; internal random names; restrictive ACL and object-identity checks; bounded cross-process serialization; durable `.txn-*` recovery before final-record eviction; explicit incomplete/ambiguous outcomes; verified narrow cleanup only. |
 | `DS-04` | Approved configuration snapshots | Exact reviewed catalogue/policy/profile metadata, resolved package identities, plans, approval content, and provenance. | Immutable job-bound snapshots with version/source/size bounds; no runtime “latest”; material change invalidates approval. |
 | `DS-05` | Downloaded package/update cache | Executable or update bytes and bounded retrieval metadata required by later tasks. | Untrusted until execution-time source/identity/publisher/version/architecture and available signature/hash comparison passes; restrictive ACL, size/lifetime bounds, and no B4 offline-suite cache. |
 | `DS-06` | Exported report/support artifact | Deliberately selected audience-specific bytes and manifest/digest. | Leaves ThirdLife control after atomic export; no personal destination path in ordinary diagnostics; operator controls subsequent handling. |
@@ -142,7 +144,7 @@ There is deliberately no direct `P-01` → arbitrary command/backend flow and no
 
 ## Data classes and minimization handoff
 
-This task does not define the final privacy/retention schema owned by `TL-0005`. It establishes the security separation that model must preserve:
+This approved security model established the separation that the approved [`privacy-model.md`](../privacy/privacy-model.md), [`logging-standard.md`](../privacy/logging-standard.md), and synthetic [`redaction-test-cases.yaml`](../privacy/redaction-test-cases.yaml) now specify for `TL-0005`:
 
 - workshop-confidential job evidence and full internal device identity;
 - recipient-facing guidance with no workshop secrets;
@@ -151,7 +153,7 @@ This task does not define the final privacy/retention schema owned by `TL-0005`.
 - transient untrusted raw provider/backend content that is bounded, sanitized, and not copied wholesale; and
 - public frozen release documentation/samples with no job or sibling-private content.
 
-Retention, deletion periods, and exact redacted forms remain pending `TL-0005`; this DFD does not pre-approve them.
+Those files contain approved retention guidance and exact synthetic redacted forms. The named privacy-owner approval for `TL-0005` is recorded against the exact reviewed commit. `TL-0104` implements and verifies the `DS-03` local typed-logging/redaction subset and an internal allowlisted support projection; provider-specific integrations, report rendering, support preview/archive/export, destination controls, and later audience flows remain assigned to their named tasks. This DFD does not expand the approval or authorize an exporter, upload path, raw attachment, new field, or telemetry.
 
 ## Interruption and split-state rules
 
