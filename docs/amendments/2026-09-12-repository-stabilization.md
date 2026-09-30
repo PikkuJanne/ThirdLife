@@ -74,6 +74,9 @@ Semantic amendments:
 - existing governance validators and focused regressions that encode bundle version,
   decision IDs, workflow shape, and current-versus-historical prompt requirements
 - README and change-control verification examples and durable stabilization evidence
+- two Inventory package-lock records and a focused project-reference validator regression,
+  after clean locked restore reproduced NU1004 for already-declared Core references;
+  external package metadata and the approved licence matrix remain unchanged
 
 The supplied helper required a completely empty porcelain status. The repository's prior
 handoff already documents one unrelated untracked portfolio Word reference. Its origin and

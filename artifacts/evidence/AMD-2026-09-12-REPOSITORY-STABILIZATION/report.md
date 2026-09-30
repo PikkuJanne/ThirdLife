@@ -1,4 +1,4 @@
-# Repository stabilization 0.4.0 — execution evidence
+# Repository stabilization 0.4.0 â€” execution evidence
 
 **Activity:** `AMD-2026-09-12-REPOSITORY-STABILIZATION`  
 **Execution date:** 30 September 2026 (Europe/Berlin)  
@@ -37,7 +37,7 @@ At start, local/upstream were equal and the advanced branch was 42 commits ahead
 zero behind. The reviewed commit remains an ancestor of the stabilization branch.
 
 The [branch and PR audit](../../../docs/reviews/2026-09-30-branch-disposition.md) inventories
-17 remote heads and PRs #4–#6. Three unique legacy privacy/supply-chain commits remain on
+17 remote heads and PRs #4â€“#6. Three unique legacy privacy/supply-chain commits remain on
 their original references. The retained candidate uses the current approved contracts;
 it does not claim the legacy alternatives are patch-equivalent or fully included.
 Owner disposition is required before their later retirement. No existing PR was closed and
@@ -52,8 +52,10 @@ evidence entries unchanged. Only these task fields changed:
 | TL-0107 | D-071/D-072 references and ownership/lifecycle/activation/reboot criteria and tests |
 | TL-0112 | D-071/D-072 references and reconciliation/snapshot criteria and tests |
 
-TL-0107 and TL-0112 remain backlog. No product source, C# tests, package lock, licence matrix,
-database migration, or completed gate record is changed.
+TL-0107 and TL-0112 remain backlog. No product source, C# tests, licence matrix,
+database migration, or completed gate record is changed. Two Inventory package locks are
+corrected to record their already-declared internal Core project references. All external
+package versions, hashes, and dependency metadata remain identical.
 
 Prior status is archived at
 [`STATUS-pre-v0.4.0-20260930T125339Z-89303ab15ed7.md`](../../handoffs/STATUS-pre-v0.4.0-20260930T125339Z-89303ab15ed7.md).
@@ -93,21 +95,26 @@ Durations are elapsed wall time unless identified as the test framework's durati
 
 | Check | Command / result | Duration |
 |---|---|---:|
-| Pre-edit baseline | `.venv/Scripts/python.exe tools/validate_bundle.py` — passed, 91 tasks/66 decisions | 2.932 s |
-| Delivery bundle | Supplied `tools/validate_review_update.py` — passed | Not measured |
-| Host policy probe | `dotnet test tests/ThirdLife.Verification.Tests/ThirdLife.Verification.Tests.csproj --configuration Release --no-restore --verbosity minimal` — 1/1 | 10.409 s |
-| Host policy probe | Same command for `ThirdLife.Reports.Tests` — 1/1 | 4.383 s |
-| Runner regressions | `.venv/Scripts/python.exe -m unittest tools.tests.test_verify_runner` — 8/8 | 13.968 s framework |
-| Runner focused case | Project-array/filter forwarding — 1/1 | 1.885 s framework |
-| Actual no-match probe | VSTest with `RunConfiguration.TreatNoTestsAsError=true` — expected exit 1 | 4.037 s |
-| Governance focused set | Stabilization, testing-document, M0 historical-evidence, and repository validator tests — 71/71 | 7.225 s framework / 8.061 s wall |
+| Pre-edit baseline | `.venv/Scripts/python.exe tools/validate_bundle.py` â€” passed, 91 tasks/66 decisions | 2.932 s |
+| Delivery bundle | Supplied `tools/validate_review_update.py` â€” passed | Not measured |
+| Host policy probe | `dotnet test tests/ThirdLife.Verification.Tests/ThirdLife.Verification.Tests.csproj --configuration Release --no-restore --verbosity minimal` â€” 1/1 | 10.409 s |
+| Host policy probe | Same command for `ThirdLife.Reports.Tests` â€” 1/1 | 4.383 s |
+| Runner regressions | `.venv/Scripts/python.exe -m unittest tools.tests.test_verify_runner` â€” 8/8 | 13.968 s framework |
+| Runner focused case | Project-array/filter forwarding â€” 1/1 | 1.885 s framework |
+| Actual no-match probe | VSTest with `RunConfiguration.TreatNoTestsAsError=true` â€” expected exit 1 | 4.037 s |
+| Governance focused set | Stabilization, testing-document, M0 historical-evidence, and repository validator tests â€” 71/71 | 7.225 s framework / 8.061 s wall |
 | Initial Quick | Failed closed at formatting: pre-existing checkout EOL drift in ten Inventory C# files | 26.098 s wall |
-| Focused EOL check | `dotnet format whitespace ThirdLife.sln --verify-no-changes --no-restore --include src/ThirdLife.Inventory tests/ThirdLife.Inventory.Tests` — passed | 6.513 s wall |
-| Corrected Quick | `eng/verify.ps1 -Tier Quick` — passed; Core 79/79, Inventory 50/50 | 41.517 s wall / 39.820 s runner |
-| Subsystem Targeted | `eng/verify.ps1 -Tier Targeted -TestProject @('tests/ThirdLife.Diagnostics.Tests/ThirdLife.Diagnostics.Tests.csproj','tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj')` — passed; 79 Core + 50 Inventory + 127 Diagnostics + 89 Persistence | 88.772 s wall / 87.077 s runner |
-| Active Targeted | Inventory `-Filter 'Category=ActiveMachine'` after mandatory Quick tests — 1/1 active smoke, identity-silent and unelevated | 34.424 s wall / 32.655 s runner |
-| Governance Targeted | `.venv/Scripts/python.exe -m unittest discover -s tools/tests -p "test_*.py"` — 223/223 passed | 143.552 s wall / 142.491 s framework |
-| Clean Quick / Full | Pending exact-commit clean worktree | — |
+| Focused EOL check | `dotnet format whitespace ThirdLife.sln --verify-no-changes --no-restore --include src/ThirdLife.Inventory tests/ThirdLife.Inventory.Tests` â€” passed | 6.513 s wall |
+| Corrected Quick | `eng/verify.ps1 -Tier Quick` â€” passed; Core 79/79, Inventory 50/50 | 41.517 s wall / 39.820 s runner |
+| Subsystem Targeted | `eng/verify.ps1 -Tier Targeted -TestProject @('tests/ThirdLife.Diagnostics.Tests/ThirdLife.Diagnostics.Tests.csproj','tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj')` â€” passed; 79 Core + 50 Inventory + 127 Diagnostics + 89 Persistence | 88.772 s wall / 87.077 s runner |
+| Active Targeted | Inventory `-Filter 'Category=ActiveMachine'` after mandatory Quick tests â€” 1/1 active smoke, identity-silent and unelevated | 34.424 s wall / 32.655 s runner |
+| Governance Targeted | `.venv/Scripts/python.exe -m unittest discover -s tools/tests -p "test_*.py"` â€” 223/223 passed | 143.552 s wall / 142.491 s framework |
+| Initial clean Quick | Exact checkpoint `70c7da0`: failed at locked restore with NU1004; stale Inventory project-reference locks | 7.728 s wall |
+| Focused lock reproduction | Clean worktree: locked restore of Inventory â€” expected NU1004 failure | 1.046 s wall |
+| Focused corrected restore | Locked restore of Inventory.Tests â€” passed after correcting the two internal project-reference locks | 1.230 s wall |
+| Project-lock regressions | Eight focused cases passed; repository-validator module 31/31 passed | 0.065 s / 0.552 s framework |
+| Corrective Quick | Mandatory checks and 129 deterministic tests passed; related repository-validator tests 31/31 passed in 0.578 s | 39.806 s wall / 38.190 s runner |
+| Corrected clean Quick / Full | Pending corrected exact-commit clean worktree | â€” |
 
 The initial direct bundle validator passed. Overlay integration exposed expected old
 version/decision/workflow checks, a missing release-interface revision update, and a
@@ -126,6 +133,18 @@ stage in that initial Quick attempt.
 Active Targeted overlapped the isolated governance regression process. Its timing is
 execution evidence, not a benchmark. The successful Quick and subsystem Targeted runs were
 not overlapped with another test suite.
+
+The first separate worktree run stopped at locked restore because both Inventory locks
+omitted the existing Core project reference. The host's earlier restored assets had hidden
+this continuity defect. A focused clean-worktree restore reproduced NU1004 before repair.
+Regeneration changed only internal `Project` records; the external package graph and licence
+matrix stayed byte-for-byte equivalent. The matrix digest remains
+`e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`.
+The validator now checks literal, unconditional project-reference closure and nested edges,
+with a regression for the stale Inventory shape. Unsupported dynamic or conditional
+references fail closed; NuGet locked restore remains the authoritative graph check.
+The failed clean Quick ran no formatting, build, or .NET tests. Corrected-commit clean
+verification and fresh SBOM provenance are required before review readiness.
 
 Exact command arrays, UTC start/end times, results, and input hashes are in [runs.json](runs.json). Pre-checkpoint runs identify the base commit plus the working implementation; clean runs will identify an exact commit.
 

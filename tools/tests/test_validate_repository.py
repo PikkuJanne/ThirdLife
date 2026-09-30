@@ -155,6 +155,92 @@ class SupplyChainApprovalGovernanceTests(unittest.TestCase):
         self.assertEqual(validation.errors, [])
 
 
+class ProjectReferenceLockTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.projects = []
+        for name, references in (
+            ("Core", []),
+            ("Inventory", ["Core"]),
+            ("Tests", ["Core", "Inventory"]),
+        ):
+            path = self.root / name / f"{name}.csproj"
+            path.parent.mkdir()
+            items = "".join(
+                f'<ProjectReference Include="../{target}/{target}.csproj" />'
+                for target in references
+            )
+            path.write_text(
+                '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>'
+                '<TargetFramework>net10.0</TargetFramework></PropertyGroup>'
+                f'<ItemGroup>{items}</ItemGroup></Project>', encoding="utf-8"
+            )
+            self.projects.append(path)
+        self.locks = {
+            "Core": {},
+            "Inventory": {"core": {"type": "Project"}},
+            "Tests": {
+                "core": {"type": "Project"},
+                "inventory": {"type": "Project", "dependencies": {"Core": "[1.0.0, )"}},
+            },
+        }
+
+    def validate(self) -> validate_repository.Validation:
+        for name, dependencies in self.locks.items():
+            (self.root / name / "packages.lock.json").write_text(
+                json.dumps({"version": 2, "dependencies": {"net10.0": dependencies}}),
+                encoding="utf-8",
+            )
+        validation = validate_repository.Validation()
+        with patch.object(validate_repository, "ROOT", self.root):
+            validate_repository.validate_project_reference_locks(self.projects, validation)
+        return validation
+
+    def test_current_direct_and_transitive_project_graph_is_accepted(self) -> None:
+        self.assertEqual(self.validate().errors, [])
+
+    def test_missing_direct_project_entry_is_rejected(self) -> None:
+        self.locks["Inventory"].clear()
+        errors = self.validate().errors
+        self.assertTrue(any("Inventory/packages.lock.json" in error and "missing=['core']" in error for error in errors), errors)
+
+    def test_missing_transitive_project_entry_is_rejected(self) -> None:
+        path = self.projects[-1]
+        path.write_text(path.read_text().replace('<ProjectReference Include="../Core/Core.csproj" />', ""))
+        self.locks["Tests"].pop("core")
+        errors = self.validate().errors
+        self.assertTrue(any("Tests/packages.lock.json" in error and "missing=['core']" in error for error in errors), errors)
+
+    def test_missing_nested_project_dependency_is_rejected(self) -> None:
+        self.locks["Tests"]["inventory"].pop("dependencies")
+        errors = self.validate().errors
+        self.assertTrue(any("Project inventory dependencies differ" in error for error in errors), errors)
+
+    def test_stale_or_misclassified_project_entry_is_rejected(self) -> None:
+        self.locks["Tests"]["orphan"] = {"type": "Project"}
+        self.locks["Inventory"]["core"] = {"type": "Transitive", "contentHash": "synthetic"}
+        errors = self.validate().errors
+        self.assertTrue(any("unexpected=['orphan']" in error for error in errors), errors)
+        self.assertTrue(any("missing=['core']" in error for error in errors), errors)
+
+    def test_nested_package_dependencies_are_not_treated_as_project_references(self) -> None:
+        self.locks["Tests"]["inventory"]["dependencies"]["Example.Package"] = "[1.0.0, )"
+        self.assertEqual(self.validate().errors, [])
+
+    def test_conditional_project_reference_requires_explicit_validator_support(self) -> None:
+        path = self.projects[1]
+        path.write_text(path.read_text().replace('<ItemGroup>', '<ItemGroup Condition="synthetic">'))
+        errors = self.validate().errors
+        self.assertTrue(any("literal unconditional" in error for error in errors), errors)
+
+    def test_malformed_nested_dependency_is_reported_without_crashing(self) -> None:
+        self.locks["Tests"]["inventory"]["dependencies"] = []
+        errors = self.validate().errors
+        self.assertTrue(any("dependencies must be an object" in error for error in errors), errors)
+
+
 class TestManifestContractTests(unittest.TestCase):
     def read_manifest(self) -> dict[str, object]:
         return json.loads((REPOSITORY_ROOT / "eng/test-manifest.json").read_text(encoding="utf-8"))

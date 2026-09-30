@@ -17,7 +17,7 @@
 | Reviewed and starting commit | `89303ab15ed749754290b7c17e5f6cdb27719a00` |
 | `main` at session start | `1bb776f710bfa76f485bbee8d4b182b7a5284cd9` |
 | Ancestry | Starting advanced line contains `main`, 42 ahead / 0 behind |
-| Upstream | New stabilization branch; first push pending |
+| Upstream | `origin/codex/repository-stabilization-v0.4.0`; checkpoint `70c7da0` verified pushed |
 | Worktree | Stabilization edits in progress; one explained unrelated untracked Word reference preserved |
 | Runtime authority | active Codex machine only; remote CI is supplementary |
 | Integration | Cumulative PR preparation; no merge authorized in this session |
@@ -45,6 +45,11 @@ privacy and supply-chain implementations are preserved for that disposition revi
 | Full | Required by cumulative integration; clean same-machine run pending |
 | Extended | No new product/resource/interruption risk trigger; not run |
 | Supplementary CI | Optional; not used as task/gate evidence |
+
+The first clean Quick at `70c7da0` failed locked restore (NU1004). The two Inventory locks
+omitted existing internal Core references. A focused reproduction and regression caught
+the defect; corrected locks leave all external packages and the licence matrix unchanged.
+Clean Quick and Full will run against the corrective checkpoint before review readiness.
 
 ## Durable records
 

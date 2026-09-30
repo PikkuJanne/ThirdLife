@@ -341,6 +341,103 @@ def property_text(root: ET.Element, name: str) -> str | None:
     return None if element is None or element.text is None else element.text.strip()
 
 
+def validate_project_reference_locks(
+    project_paths: list[Path], validation: Validation
+) -> None:
+    """Check the repository's literal, unconditional project graph before restore.
+
+    This complements NuGet locked restore; it does not evaluate arbitrary MSBuild
+    conditions, imports, or asset-selection metadata.
+    """
+
+    paths = {path.resolve(): path for path in project_paths}
+    identities: dict[Path, str] = {}
+    edges: dict[Path, set[Path]] = {}
+    for resolved, project_path in paths.items():
+        document = load_xml(project_path, validation)
+        if document is None:
+            continue
+        identity = property_text(document, "PackageId") or project_path.stem
+        if "$" in identity or identity.casefold() in identities.values():
+            validation.error(f"{relative(project_path)}: project lock identity must be unique and literal")
+            continue
+        identities[resolved] = identity.casefold()
+        edges[resolved] = set()
+        parents = {child: parent for parent in document.iter() for child in parent}
+        for reference in document.findall(".//ProjectReference"):
+            include = reference.get("Include", "")
+            ancestor = parents.get(reference)
+            conditional = False
+            while ancestor is not None:
+                conditional |= "Condition" in ancestor.attrib
+                ancestor = parents.get(ancestor)
+            if (
+                set(reference.attrib) != {"Include"}
+                or len(reference) != 0
+                or conditional
+                or not include
+                or any(marker in include for marker in ("$", "*", "?", ";"))
+            ):
+                validation.error(
+                    f"{relative(project_path)}: project lock validation requires literal unconditional ProjectReference entries"
+                )
+                continue
+            target = (project_path.parent / include.replace("\\", "/")).resolve()
+            if target not in paths:
+                validation.error(f"{relative(project_path)}: project lock reference leaves the solution")
+                continue
+            edges[resolved].add(target)
+
+    known_identities = set(identities.values())
+    for resolved, project_path in paths.items():
+        reachable: set[Path] = set()
+        pending = list(edges.get(resolved, ()))
+        while pending:
+            target = pending.pop()
+            if target in reachable:
+                continue
+            reachable.add(target)
+            pending.extend(edges.get(target, ()))
+        expected_projects = {identities[target] for target in reachable if target in identities}
+        lock_path = project_path.with_name("packages.lock.json")
+        lock = load_json(lock_path, validation)
+        frameworks = lock.get("dependencies")
+        if not isinstance(frameworks, dict) or not frameworks:
+            validation.error(f"{relative(lock_path)}: project lock dependencies must contain a target framework")
+            continue
+        for framework, dependencies in frameworks.items():
+            if not isinstance(dependencies, dict):
+                validation.error(f"{relative(lock_path)}: {framework} project lock entries must be an object")
+                continue
+            project_entries = {
+                key.casefold(): value for key, value in dependencies.items()
+                if isinstance(value, dict) and value.get("type") == "Project"
+            }
+            if set(project_entries) != expected_projects:
+                validation.error(
+                    f"{relative(lock_path)}: {framework} Project entries differ from ProjectReference closure; "
+                    f"missing={sorted(expected_projects - set(project_entries))}, "
+                    f"unexpected={sorted(set(project_entries) - expected_projects)}"
+                )
+            for target in reachable:
+                identity = identities.get(target)
+                entry = project_entries.get(identity, {})
+                nested = entry.get("dependencies", {})
+                if not isinstance(nested, dict):
+                    validation.error(f"{relative(lock_path)}: Project {identity} dependencies must be an object")
+                    continue
+                nested_projects = {
+                    key.casefold() for key in nested if key.casefold() in known_identities
+                }
+                expected_nested = {
+                    identities[child] for child in edges.get(target, ()) if child in identities
+                }
+                if nested_projects != expected_nested:
+                    validation.error(
+                        f"{relative(lock_path)}: Project {identity} dependencies differ from its direct ProjectReference entries"
+                    )
+
+
 def validate_central_packages(
     project_paths: list[Path], validation: Validation
 ) -> None:
@@ -963,6 +1060,7 @@ def validate() -> int:
     validate_bundle_manifest(validation)
     project_paths = validate_project_graph(validation)
     validate_central_packages(project_paths, validation)
+    validate_project_reference_locks(project_paths, validation)
     validate_tool_and_source_configuration(validation)
     validate_workflow(validation)
     validate_test_manifest(validation)
