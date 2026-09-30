@@ -1,0 +1,155 @@
+{
+  "task": "TL-0108",
+  "schema_version": 1,
+  "date": "2026-09-30",
+  "profile": "REF-CODEX-001 revision 2026-08-29.1",
+  "provenance": "unelevated active-machine StorageProvider smoke; minimized availability projection",
+  "outcome": "AccessDenied",
+  "metrics": {
+    "elapsed_ms": 108.826,
+    "cpu_ms": 62.5,
+    "private_growth_bytes": 77824,
+    "handle_growth": 47,
+    "observation_count": 22
+  },
+  "observations": [
+    {
+      "key": "storage.physical_disk.bus_type",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.capacity_bytes",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.collection_status",
+      "source": "storage.msft.physical_disk",
+      "available": true,
+      "limitation": null
+    },
+    {
+      "key": "storage.physical_disk.media_type",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.native_error_code",
+      "source": "storage.msft.physical_disk",
+      "available": true,
+      "limitation": null
+    },
+    {
+      "key": "storage.physical_disk.operational_status_codes",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.power_on_hours",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.read_errors_total",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.read_errors_uncorrected",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.reliability_collection_status",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.reliability_native_error_code",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.reported_health",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.temperature",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.wear",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.write_errors_total",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk.write_errors_uncorrected",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.physical_disk_count",
+      "source": "storage.msft.physical_disk",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.provider_status",
+      "source": "storage.provider.status",
+      "available": false,
+      "limitation": "provider_access_denied"
+    },
+    {
+      "key": "storage.system_volume.caller_capacity_bytes",
+      "source": "storage.kernel32.system_volume",
+      "available": true,
+      "limitation": null
+    },
+    {
+      "key": "storage.system_volume.caller_free_bytes",
+      "source": "storage.kernel32.system_volume",
+      "available": true,
+      "limitation": null
+    },
+    {
+      "key": "storage.system_volume.native_error_code",
+      "source": "storage.kernel32.system_volume",
+      "available": false,
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "storage.system_volume.total_free_bytes",
+      "source": "storage.kernel32.system_volume",
+      "available": true,
+      "limitation": null
+    }
+  ],
+  "limitations": [
+    "No physical disk or reliability counter was available under this unelevated process.",
+    "System-volume capacity/free values were available but deliberately omitted from this public projection.",
+    "No identifiers, volume paths, raw provider values, exception text, files or disk content were retained.",
+    "Metrics stop at runner return and do not certify worst-case native cleanup duration or other hardware."
+  ]
+}

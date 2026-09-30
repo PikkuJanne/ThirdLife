@@ -2349,7 +2349,7 @@ tasks:
   workstream: inventory
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -2379,7 +2379,17 @@ tasks:
   verification:
   - Test deterministic HDD, SATA SSD, NVMe, multiple-disk, missing-counter, access-denied, malformed, and provider-error fixtures.
   - Run a read-only smoke test against storage exposed by the active Codex machine; record unavailable fields truthfully.
-  evidence: []
+  evidence:
+  - summary: Bounded read-only physical-disk and separate system-volume observations preserve explicit units, unknowns, critical counters and scoped numeric errors.
+    task: TL-0108
+    command_or_review: pwsh -NoProfile -File eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj; separate storage ActiveMachine smoke; independent COM/privacy/acceptance review
+    tier: targeted including Quick and focused regressions
+    result: passed; 109 focused tests, 79 Core and 329 Inventory tests, one unelevated active-machine smoke; no failed/skipped tests or analyzer suppression
+    environment: Active Codex Windows 11 x64 machine; REF-CODEX-001 revision 2026-08-29.1; HDD/SATA SSD/NVMe and failure variants synthetic; no host security/resource mutation
+    date: '2026-09-30'
+    duration: Quick 35.117 s; Targeted 43.281 s; focused 11.047 s; active smoke command 1.881 s, provider 108.826 ms
+    reference: artifacts/evidence/TL-0108/report.md; runs.json; active-storage.json; inputs.sha256; docs/inventory/storage.md
+    limitation: Active physical-disk WMI access denied; volume capacity/free facts available; no hardware reliability claim. Native work may outlive the five-second caller deadline. Full/Extended not triggered.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
