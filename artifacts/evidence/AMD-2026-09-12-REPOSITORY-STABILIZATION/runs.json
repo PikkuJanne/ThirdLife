@@ -34,7 +34,7 @@
       "environment": "active Codex machine, direct host, standard user",
       "reference_profile": "REF-CODEX-001 / 2026-08-29.1; session tool versions in report",
       "result": "failed: pre-existing checkout EOL drift; resolved with focused format check",
-      "cleanup": "temporary test data cleaned by tests; generated build/cache/raw logs remain ignored"
+      "cleanup": "no test data created because formatting failed before tests; generated verification output remains ignored"
     },
     {
       "name": "quick",
@@ -191,12 +191,158 @@
       "environment": "active Codex machine; direct host; standard user",
       "result": "passed: mandatory governance, formatting, Release build and 129 deterministic tests",
       "runner_duration_seconds": 38.19
+    },
+    {
+      "name": "clean-quick",
+      "command": [
+        "pwsh",
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "eng/verify.ps1",
+        "-Tier",
+        "Quick",
+        "-Restore"
+      ],
+      "started_at_utc": "2026-09-30T13:17:34.570782+00:00",
+      "ended_at_utc": "2026-09-30T13:18:16.839641+00:00",
+      "duration_seconds": 42.269,
+      "exit_code": 0,
+      "commit": "bfd963c94fd08b09db8656c37d3985ddf691fe99",
+      "branch": "",
+      "record_id": "corrected-clean-quick",
+      "source_state": "exact corrective checkpoint; detached clean tracked worktree",
+      "environment": "active Codex machine; managed worktree bootstrapped with Python 3.14.7 and hash-pinned PyYAML 6.0.3; reused partial restore outputs from failed run, no source copied",
+      "result": "passed: locked restore, governance, formatting, Release build, Core 79 and Inventory 50",
+      "runner_duration_seconds": 40.606,
+      "cleanup": "test data cleaned by tests; generated output and bootstrap ignored; worktree retirement pending"
+    },
+    {
+      "name": "full",
+      "record_id": "clean-full-host-policy-blocked",
+      "command": [
+        "pwsh",
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "eng/verify.ps1",
+        "-Tier",
+        "Full",
+        "-Restore"
+      ],
+      "commit": "bfd963c94fd08b09db8656c37d3985ddf691fe99",
+      "branch": "",
+      "source_state": "exact corrective commit; detached clean tracked worktree",
+      "environment": "same active Codex physical machine; managed worktree; unchanged host security policy",
+      "result": "blocked; broad run stopped by agent after focused cause was apparent; no Full pass",
+      "interrupted": true,
+      "exit_code": null,
+      "duration_seconds": null,
+      "timing_limitation": "Measurement wrapper interrupted with the broad run; exact end/duration unavailable. Filesystem log timestamps are observations, not substituted command timestamps.",
+      "log_created_at_utc": "2026-09-30T13:18:35.862070+00:00",
+      "last_log_write_at_utc": "2026-09-30T13:22:04.737209+00:00",
+      "completed_checks": [
+        "231 governance regressions in137.213 framework seconds",
+        "bundle/repository validators",
+        "locked restore",
+        "formatting",
+        "Release build with zero warnings/errors"
+      ],
+      "failure": "Windows Application Control blocked unsigned test/application assemblies (0x800711C7)",
+      "cleanup": "broad process tree interrupted; partial test results not counted as Full evidence; raw log remains ignored"
+    },
+    {
+      "name": "quick",
+      "command": [
+        "pwsh",
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "eng/verify.ps1",
+        "-Tier",
+        "Quick"
+      ],
+      "started_at_utc": "2026-09-30T13:28:07.184469+00:00",
+      "ended_at_utc": "2026-09-30T13:28:48.623886+00:00",
+      "duration_seconds": 41.439,
+      "exit_code": 0,
+      "commit": "bfd963c94fd08b09db8656c37d3985ddf691fe99",
+      "branch": "codex/repository-stabilization-v0.4.0",
+      "record_id": "sandbox-adapter-quick",
+      "source_state": "bfd963c plus narrow Sandbox adapter and evidence working changes",
+      "environment": "active Codex physical machine; standard-user host",
+      "result": "passed",
+      "cleanup": "test data cleaned by tests; generated output ignored"
+    },
+    {
+      "name": "sandbox-preflight",
+      "command": [
+        "powershell.exe",
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "eng/run-tl0102-sandbox.ps1",
+        "-Phase",
+        "Full",
+        "-EvidenceTaskId",
+        "AMD-2026-09-12-REPOSITORY-STABILIZATION",
+        "-PreflightOnly"
+      ],
+      "started_at_utc": "2026-09-30T13:28:27.680130+00:00",
+      "ended_at_utc": "2026-09-30T13:28:41.413131+00:00",
+      "duration_seconds": 13.733,
+      "exit_code": 1,
+      "commit": "bfd963c94fd08b09db8656c37d3985ddf691fe99",
+      "branch": "codex/repository-stabilization-v0.4.0",
+      "record_id": "sandbox-preflight-initial-module-path-failure",
+      "source_state": "bfd963c plus narrow Sandbox adapter and evidence working changes",
+      "environment": "active Codex physical machine; standard-user host",
+      "result": "failed before guest launch: inherited PowerShell7 module path hides Windows PowerShell Get-FileHash",
+      "cleanup": "verified staging cleanup; no guest launched"
+    },
+    {
+      "name": "sandbox-preflight",
+      "command": [
+        "powershell.exe",
+        "-NoLogo",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "eng/run-tl0102-sandbox.ps1",
+        "-Phase",
+        "Full",
+        "-EvidenceTaskId",
+        "AMD-2026-09-12-REPOSITORY-STABILIZATION",
+        "-PreflightOnly"
+      ],
+      "started_at_utc": "2026-09-30T13:29:53.043678+00:00",
+      "ended_at_utc": "2026-09-30T13:30:04.488749+00:00",
+      "duration_seconds": 11.445,
+      "exit_code": 0,
+      "commit": "bfd963c94fd08b09db8656c37d3985ddf691fe99",
+      "branch": "codex/repository-stabilization-v0.4.0",
+      "record_id": "sandbox-adapter-preflight",
+      "source_state": "bfd963c plus narrow Sandbox adapter and evidence working changes",
+      "environment": "active Codex physical machine; standard-user host",
+      "result": "passed",
+      "cleanup": "verified staging cleanup; no guest launched",
+      "environment_detail": "measurement wrapper clears only inherited PSModulePath in child process so Windows PowerShell uses its own standard module path; no host settings changed"
     }
   ],
   "limitations": [
     "One active machine only; no cross-hardware certification.",
     "Active Targeted overlapped isolated governance regressions; timings are not benchmarks.",
-    "Full default excludes the separately recorded active-machine smoke; no Extended trigger."
+    "Full default excludes the separately recorded active-machine smoke; no Extended trigger.",
+    "Corrected clean Quick overlapped offline SBOM generation; neither timing is a benchmark. The blocked Full ran separately from other test suites."
   ],
   "input_snapshot": "Initial stabilization implementation committed as 70c7da0cfef2d550ce9d32584ac11fc812f105a4; later corrective runs have separate input hashes.",
   "corrected_input_sha256": {
@@ -209,5 +355,87 @@
     "src/ThirdLife.Inventory/packages.lock.json": "6e1482b0d3cd3262d3046249c631bd8a8f0237deb71ff00a425265527f68b43c",
     "tests/ThirdLife.Inventory.Tests/packages.lock.json": "bee4945ef94479d8c1a62b84a862d1acdb9fc61e77095e4f0cd6c4fe8f6d4f3d",
     "tools/tests/test_validate_repository.py": "1490f619646a975305863f263efbc2e6eeeb2195a6ebc059d45d332b292549e1"
+  },
+  "sbom": {
+    "command": [
+      "pwsh",
+      "-NoLogo",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "eng/generate-sbom.ps1",
+      "-OutputPath",
+      "<ignored-artifacts>/stabilization-bfd963c.cdx.json",
+      "-ProductVersion",
+      "0.4.0-dev",
+      "-SourceRevision",
+      "bfd963c94fd08b09db8656c37d3985ddf691fe99"
+    ],
+    "source_revision": "bfd963c94fd08b09db8656c37d3985ddf691fe99",
+    "components": 28,
+    "output_sha256": "3b150c83f9e1e2904113426ad73c13a073c04867e7d177837b13006c6e23d4d4",
+    "dependency_input_sha256": "93b1307b2e4f2bef677ab4953d03717dbb6b68bae41bd36aeb33599a07379193",
+    "license_matrix_sha256": "e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418",
+    "result": "passed; inventory evidence, not a new legal or release approval",
+    "artifact_retention": "full reproducible SBOM kept in ignored artifacts/sbom; bounded metadata committed here",
+    "command_path_redaction": "OutputPath replaces the original checkout absolute artifacts/sbom path with <ignored-artifacts>; all other arguments are exact."
+  },
+  "policy_probe": {
+    "command": [
+      "dotnet",
+      "test",
+      "tests/ThirdLife.Reports.Tests/ThirdLife.Reports.Tests.csproj",
+      "--configuration",
+      "Release",
+      "--no-build",
+      "--no-restore",
+      "--verbosity",
+      "minimal",
+      "--",
+      "RunConfiguration.TreatNoTestsAsError=true"
+    ],
+    "commit": "bfd963c94fd08b09db8656c37d3985ddf691fe99",
+    "duration_seconds": 1.786,
+    "exit_code": 1,
+    "result": "same Reports.dll Application Control0x800711C7; no rebuild or policy change"
+  },
+  "policy_observation": {
+    "event_ids": [
+      3033,
+      3077
+    ],
+    "observed_utc_range": [
+      "2026-09-30T13:21:40Z",
+      "2026-09-30T13:22:09Z"
+    ],
+    "policy": "VerifiedAndReputableDesktop",
+    "status": "0xc0e90002",
+    "event_bound_assembly": "ThirdLife.Diagnostics.dll",
+    "assembly_sha256": "82e0a10d773f7361bc89697f37763ee6d4f7dc02bf09e6d1b7d27f86966682da",
+    "other_blocked_assemblies_from_test_output": [
+      "ThirdLife.Actions.Tests.dll",
+      "ThirdLife.Reports.dll",
+      "ThirdLife.Verification.Tests.dll"
+    ],
+    "security_changes": "none",
+    "limitation": "Recent matching policy events retrieved only for Diagnostics; other assemblies are evidenced by test output."
+  },
+  "sandbox_adapter": {
+    "focused_tests": 7,
+    "focused_framework_seconds": 8.81,
+    "focused_wall_seconds": 9.264,
+    "powershell_parse": "both scripts passed",
+    "independent_review": "no blocking findings; source/package/config/output/timeout/cleanup controls retained",
+    "source_files": [
+      "eng/run-tl0102-sandbox.ps1",
+      "eng/run-tl0102-sandbox-guest.ps1",
+      "tools/tests/test_sandbox_harness.py"
+    ],
+    "source_sha256": {
+      "eng/run-tl0102-sandbox.ps1": "63fb98bdff8a210bbbbd37c403a1feb69384267561a4f3c0ff9cf0515fed2d9d",
+      "eng/run-tl0102-sandbox-guest.ps1": "9733ef31114904db6a71c23a7ad362d5f1d81479f011e75cb80f5d18e6a7170e",
+      "tools/tests/test_sandbox_harness.py": "572458db2677b735859249f1c2597ed6fe9c80843872ee3daabf5017c44d8616"
+    }
   }
 }

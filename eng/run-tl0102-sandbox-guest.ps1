@@ -4,7 +4,8 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104")
+$RepositoryStabilizationTaskId = "AMD-2026-09-12-REPOSITORY-STABILIZATION"
+$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104", $RepositoryStabilizationTaskId)
 $TaskId = "Unavailable"
 $ResultSchemaVersion = 2
 $SandboxMemoryMb = 4096
@@ -699,6 +700,17 @@ function Add-DiagnosticTail {
     }
 }
 
+function Get-CommandTimeoutSeconds {
+    param(
+        [Parameter(Mandatory = $true)][string] $Label,
+        [Parameter(Mandatory = $true)][string] $EvidenceTaskId,
+        [Parameter(Mandatory = $true)][string] $SelectedPhase
+    )
+    if ($EvidenceTaskId -eq $RepositoryStabilizationTaskId -and $SelectedPhase -eq "Full" -and
+        $Label -eq "repository-stabilization-full") { return 1200 }
+    return $CommandTimeoutSeconds
+}
+
 function Invoke-BoundedCommand {
     param(
         [Parameter(Mandatory = $true)][string] $Label,
@@ -733,7 +745,7 @@ exit [int]$code
                 (Join-Path $PSHOME "powershell.exe"),
                 "-NoLogo -NoProfile -NonInteractive -OutputFormat Text -ExecutionPolicy Bypass -EncodedCommand $encoded",
                 (Get-Location).ProviderPath,
-                ($CommandTimeoutSeconds * 1000),
+                ((Get-CommandTimeoutSeconds -Label $Label -EvidenceTaskId $TaskId -SelectedPhase $phase) * 1000),
                 $CommandRawOutputLimitBytes,
                 $CommandTailReadBytes
             )
@@ -834,6 +846,9 @@ function Assert-RunRequest {
         $RunRequest.phase -notin @("RoundTrip", "Integration", "Migration", "PathSecurity", "Interruption", "Targeted", "Quick", "Full")) { throw "The run request targets an invalid task, schema, or phase." }
     if ($RunRequest.task_id -eq "TL-0104" -and $RunRequest.phase -notin @("Targeted", "Quick", "Full")) {
         throw "The TL-0104 run request targets a persistence-only phase."
+    }
+    if ($RunRequest.task_id -eq $RepositoryStabilizationTaskId -and $RunRequest.phase -ne "Full") {
+        throw "The repository stabilization run request requires the shared Full profile."
     }
     if ($RunRequest.run_id -isnot [string] -or $RunRequest.run_id -notmatch "^[0-9a-f]{32}$" -or
         $RunRequest.expected_head_commit -isnot [string] -or $RunRequest.expected_head_commit -notmatch "^[0-9a-f]{40}$") { throw "The run request contains an invalid source identity." }
@@ -950,6 +965,23 @@ function Assert-PythonPackages {
     $admitted = @([regex]::Matches($requirements, "(?im)--hash=sha256:([0-9a-f]{64})") | ForEach-Object { $_.Groups[1].Value })
     $actual = (Get-FileHash -LiteralPath $items[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actual -notin $admitted) { throw "The offline Python wheel is not admitted by the exact requirements file." }
+}
+
+function Invoke-RepositoryStabilizationFull {
+    param(
+        [Parameter(Mandatory = $true)][string] $DotnetExecutable,
+        [Parameter(Mandatory = $true)][string] $NuGetConfigPath
+    )
+    # Populate the guest-private cache from the verified staged closure first.
+    # The shared Full tier then repeats locked restore and audit using the unchanged
+    # repository NuGet.Config; every external package is pinned by its lock hash.
+    Invoke-RequiredCommand -Label "locked-full-restore-and-audit" -FilePath $DotnetExecutable -Arguments @(
+        "restore", "ThirdLife.sln", "--locked-mode", "--configfile", $NuGetConfigPath, "--nologo",
+        "-p:NuGetAudit=true", "-p:NuGetAuditMode=all"
+    ) -Failure "restore_failed"
+    Invoke-RequiredCommand -Label "repository-stabilization-full" -FilePath "powershell.exe" -Arguments @(
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "eng\verify.ps1", "-Tier", "Full", "-Restore"
+    ) -Failure "verification_failed" -SuccessMarker "OK: ThirdLife Full verification passed in "
 }
 
 function Write-SandboxNuGetConfig {
@@ -1194,6 +1226,9 @@ try {
             $testArguments = @("test", $persistenceProject, "--configuration", "Release", "--no-restore", "--nologo")
             if ($null -ne $filter) { $testArguments += @("--filter", $filter) }
             Invoke-RequiredCommand -Label "persistence-tests" -FilePath $dotnetExecutable -Arguments $testArguments -Failure "test_failed" -SuccessMarker "Passed!"
+        }
+        elseif ($TaskId -eq $RepositoryStabilizationTaskId) {
+            Invoke-RepositoryStabilizationFull -DotnetExecutable $dotnetExecutable -NuGetConfigPath $nugetConfig
         }
         elseif ($phase -eq "Quick") {
             Invoke-RequiredCommand -Label "governed-quick" -FilePath "powershell.exe" -Arguments @(

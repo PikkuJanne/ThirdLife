@@ -77,6 +77,10 @@ Semantic amendments:
 - two Inventory package-lock records and a focused project-reference validator regression,
   after clean locked restore reproduced NU1004 for already-declared Core references;
   external package metadata and the approved licence matrix remain unchanged
+- a narrow Full profile in the existing Sandbox compatibility harness, with focused
+  invocation tests, after unchanged host Application Control blocked clean test assemblies;
+  it calls the shared verifier under this amendment's evidence identity and retains source,
+  package, output, security, and cleanup controls
 
 The supplied helper required a completely empty porcelain status. The repository's prior
 handoff already documents one unrelated untracked portfolio Word reference. Its origin and

@@ -160,14 +160,29 @@ be independently invokable and produce a durable scenario-level result.
 Future clean-environment execution should use reusable host/guest runners with declarative
 profiles. Existing task-named scripts remain historical evidence or compatibility wrappers.
 
-The v0.4.0 cumulative gate uses a separate clean worktree on this physical machine and the
-shared `eng/verify.ps1` runner with its declarative test manifest. Bootstrap Python from the
-pinned README procedure, then run Quick with `-Restore` and Full. Existing task-specific
-Sandbox scripts remain bound to their historical source revisions: their old restore order
-and success markers are incompatible with the new Quick contract. Do not invoke those
-unchanged scripts against v0.4.0 or count their historical results as a new run. If host
-policy requires Sandbox again, adapt the shared execution profile and compatibility entry
-points with focused tests before collecting evidence; never change host security policy.
+The v0.4.0 cumulative gate starts in a separate clean worktree on this physical machine with
+the shared `eng/verify.ps1` runner and declarative test manifest. Bootstrap Python from the
+pinned README procedure, then run Quick with `-Restore` and Full. If host policy blocks the
+test assemblies, the existing Sandbox harness has one allowlisted Full profile for this
+amendment:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 `
+  -Phase Full -EvidenceTaskId AMD-2026-09-12-REPOSITORY-STABILIZATION -PersistEvidence
+```
+
+The filename is retained for compatibility. The profile stages exact source/history and
+hash-checked locked packages, restores the guest-private cache, then invokes the shared
+`eng/verify.ps1 -Tier Full -Restore`. It keeps the checked-in NuGet configuration and enabled
+Full audit, a 4 GiB disposable guest, read-only input mappings, bounded output, exact source
+binding, and verified cleanup. Only this combined Full command has a 1,200-second timeout;
+the host retains its 30-minute limit. Use `-PreflightOnly` without `-PersistEvidence` to verify
+staging and cleanup first. No host or guest security policy is changed.
+
+Other task-specific Sandbox phases remain bound to their historical source revisions.
+Their old Quick restore order and success markers are incompatible with v0.4.0; do not use
+those legacy phases for this gate or count their historical results as a new run. Future
+profiles must reuse the shared verifier and retain focused invocation and safety checks.
 
 A new large task-specific runner requires:
 

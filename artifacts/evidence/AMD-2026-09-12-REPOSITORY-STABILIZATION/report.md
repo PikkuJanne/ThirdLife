@@ -1,4 +1,4 @@
-# Repository stabilization 0.4.0 â€” execution evidence
+# Repository stabilization 0.4.0 — execution evidence
 
 **Activity:** `AMD-2026-09-12-REPOSITORY-STABILIZATION`  
 **Execution date:** 30 September 2026 (Europe/Berlin)  
@@ -37,7 +37,7 @@ At start, local/upstream were equal and the advanced branch was 42 commits ahead
 zero behind. The reviewed commit remains an ancestor of the stabilization branch.
 
 The [branch and PR audit](../../../docs/reviews/2026-09-30-branch-disposition.md) inventories
-17 remote heads and PRs #4â€“#6. Three unique legacy privacy/supply-chain commits remain on
+17 remote heads and PRs #4–#6. Three unique legacy privacy/supply-chain commits remain on
 their original references. The retained candidate uses the current approved contracts;
 it does not claim the legacy alternatives are patch-equivalent or fully included.
 Owner disposition is required before their later retirement. No existing PR was closed and
@@ -86,8 +86,9 @@ No fresh CPU/memory/storage/GPU inventory or resource benchmark is claimed.
 All runtime work is on the active physical Codex machine. The clean-environment method is a
 separate worktree with documented pinned bootstrap. No host security policy is disabled;
 PowerShell execution-policy bypass is confined to the verification process, matching the
-existing documented script-launch method. No VM, Sandbox, second physical PC, cloud runtime,
-or hardware certification is required for these runs.
+existing documented script-launch method. Direct host Quick passed; direct host Full
+requires the governed same-machine Sandbox fallback because Application Control blocked
+test assemblies. No second physical PC, cloud runtime, or hardware certification is used.
 
 ## Verification and defect handling
 
@@ -95,26 +96,28 @@ Durations are elapsed wall time unless identified as the test framework's durati
 
 | Check | Command / result | Duration |
 |---|---|---:|
-| Pre-edit baseline | `.venv/Scripts/python.exe tools/validate_bundle.py` â€” passed, 91 tasks/66 decisions | 2.932 s |
-| Delivery bundle | Supplied `tools/validate_review_update.py` â€” passed | Not measured |
-| Host policy probe | `dotnet test tests/ThirdLife.Verification.Tests/ThirdLife.Verification.Tests.csproj --configuration Release --no-restore --verbosity minimal` â€” 1/1 | 10.409 s |
-| Host policy probe | Same command for `ThirdLife.Reports.Tests` â€” 1/1 | 4.383 s |
-| Runner regressions | `.venv/Scripts/python.exe -m unittest tools.tests.test_verify_runner` â€” 8/8 | 13.968 s framework |
-| Runner focused case | Project-array/filter forwarding â€” 1/1 | 1.885 s framework |
-| Actual no-match probe | VSTest with `RunConfiguration.TreatNoTestsAsError=true` â€” expected exit 1 | 4.037 s |
-| Governance focused set | Stabilization, testing-document, M0 historical-evidence, and repository validator tests â€” 71/71 | 7.225 s framework / 8.061 s wall |
+| Pre-edit baseline | `.venv/Scripts/python.exe tools/validate_bundle.py` — passed, 91 tasks/66 decisions | 2.932 s |
+| Delivery bundle | Supplied `tools/validate_review_update.py` — passed | Not measured |
+| Host policy probe | `dotnet test tests/ThirdLife.Verification.Tests/ThirdLife.Verification.Tests.csproj --configuration Release --no-restore --verbosity minimal` — 1/1 | 10.409 s |
+| Host policy probe | Same command for `ThirdLife.Reports.Tests` — 1/1 | 4.383 s |
+| Runner regressions | `.venv/Scripts/python.exe -m unittest tools.tests.test_verify_runner` — 8/8 | 13.968 s framework |
+| Runner focused case | Project-array/filter forwarding — 1/1 | 1.885 s framework |
+| Actual no-match probe | VSTest with `RunConfiguration.TreatNoTestsAsError=true` — expected exit 1 | 4.037 s |
+| Governance focused set | Stabilization, testing-document, M0 historical-evidence, and repository validator tests — 71/71 | 7.225 s framework / 8.061 s wall |
 | Initial Quick | Failed closed at formatting: pre-existing checkout EOL drift in ten Inventory C# files | 26.098 s wall |
-| Focused EOL check | `dotnet format whitespace ThirdLife.sln --verify-no-changes --no-restore --include src/ThirdLife.Inventory tests/ThirdLife.Inventory.Tests` â€” passed | 6.513 s wall |
-| Corrected Quick | `eng/verify.ps1 -Tier Quick` â€” passed; Core 79/79, Inventory 50/50 | 41.517 s wall / 39.820 s runner |
-| Subsystem Targeted | `eng/verify.ps1 -Tier Targeted -TestProject @('tests/ThirdLife.Diagnostics.Tests/ThirdLife.Diagnostics.Tests.csproj','tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj')` â€” passed; 79 Core + 50 Inventory + 127 Diagnostics + 89 Persistence | 88.772 s wall / 87.077 s runner |
-| Active Targeted | Inventory `-Filter 'Category=ActiveMachine'` after mandatory Quick tests â€” 1/1 active smoke, identity-silent and unelevated | 34.424 s wall / 32.655 s runner |
-| Governance Targeted | `.venv/Scripts/python.exe -m unittest discover -s tools/tests -p "test_*.py"` â€” 223/223 passed | 143.552 s wall / 142.491 s framework |
+| Focused EOL check | `dotnet format whitespace ThirdLife.sln --verify-no-changes --no-restore --include src/ThirdLife.Inventory tests/ThirdLife.Inventory.Tests` — passed | 6.513 s wall |
+| Corrected Quick | `eng/verify.ps1 -Tier Quick` — passed; Core 79/79, Inventory 50/50 | 41.517 s wall / 39.820 s runner |
+| Subsystem Targeted | `eng/verify.ps1 -Tier Targeted -TestProject @('tests/ThirdLife.Diagnostics.Tests/ThirdLife.Diagnostics.Tests.csproj','tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj')` — passed; 79 Core + 50 Inventory + 127 Diagnostics + 89 Persistence | 88.772 s wall / 87.077 s runner |
+| Active Targeted | Inventory `-Filter 'Category=ActiveMachine'` after mandatory Quick tests — 1/1 active smoke, identity-silent and unelevated | 34.424 s wall / 32.655 s runner |
+| Governance Targeted | `.venv/Scripts/python.exe -m unittest discover -s tools/tests -p "test_*.py"` — 223/223 passed | 143.552 s wall / 142.491 s framework |
 | Initial clean Quick | Exact checkpoint `70c7da0`: failed at locked restore with NU1004; stale Inventory project-reference locks | 7.728 s wall |
-| Focused lock reproduction | Clean worktree: locked restore of Inventory â€” expected NU1004 failure | 1.046 s wall |
-| Focused corrected restore | Locked restore of Inventory.Tests â€” passed after correcting the two internal project-reference locks | 1.230 s wall |
+| Focused lock reproduction | Clean worktree: locked restore of Inventory — expected NU1004 failure | 1.046 s wall |
+| Focused corrected restore | Locked restore of Inventory.Tests — passed after correcting the two internal project-reference locks | 1.230 s wall |
 | Project-lock regressions | Eight focused cases passed; repository-validator module 31/31 passed | 0.065 s / 0.552 s framework |
 | Corrective Quick | Mandatory checks and 129 deterministic tests passed; related repository-validator tests 31/31 passed in 0.578 s | 39.806 s wall / 38.190 s runner |
-| Corrected clean Quick / Full | Pending corrected exact-commit clean worktree | â€” |
+| Corrected clean Quick | Exact `bfd963c`: locked restore, mandatory checks and 129 tests passed | 42.269 s wall / 40.606 s runner |
+| Corrected clean Full | Exact `bfd963c`: 231 governance regressions passed; locked restore, format and build passed; Application Control blocked test assemblies; broad run stopped | 137.213 s governance; overall duration unavailable after interruption |
+| Focused policy reproduction | Reports test with `--no-build --no-restore` — same `0x800711C7` | 1.786 s wall |
 
 The initial direct bundle validator passed. Overlay integration exposed expected old
 version/decision/workflow checks, a missing release-interface revision update, and a
@@ -144,12 +147,41 @@ The validator now checks literal, unconditional project-reference closure and ne
 with a regression for the stale Inventory shape. Unsupported dynamic or conditional
 references fail closed; NuGet locked restore remains the authoritative graph check.
 The failed clean Quick ran no formatting, build, or .NET tests. Corrected-commit clean
-verification and fresh SBOM provenance are required before review readiness.
+Quick passed at `bfd963c94fd08b09db8656c37d3985ddf691fe99`; direct-host Full is blocked by Application Control.
+The exact corrective commit generated a fresh offline CycloneDX 1.6 SBOM with 28 components,
+dependency-input digest `93b1307b2e4f2bef677ab4953d03717dbb6b68bae41bd36aeb33599a07379193`
+and output SHA-256 `3b150c83f9e1e2904113426ad73c13a073c04867e7d177837b13006c6e23d4d4`.
+The full reproducible output remains in ignored local SBOM artifacts; bounded provenance
+is retained in runs.json. This adds no licence or release approval. The clean worktree
+started at `70c7da0` and advanced to `bfd963c` with a clean tracked tree; pinned bootstrap
+and partial restore output were retained. No product source or build output was copied
+from the original checkout. Corrected clean Quick overlapped offline SBOM generation;
+neither duration is a benchmark.
 
-Exact command arrays, UTC start/end times, results, and input hashes are in [runs.json](runs.json). Pre-checkpoint runs identify the base commit plus the working implementation; clean runs will identify an exact commit.
+Selected main-tier command arrays, UTC start/end times, results, and input hashes are in
+[runs.json](runs.json). Auxiliary focused checks are summarized in the table above; no
+missing timestamps are inferred. The SBOM output path is explicitly redacted.
+Pre-checkpoint runs identify the base commit plus the working implementation; clean runs
+identify the exact committed checkpoint.
 
 Raw command logs and absolute workspace paths stay in ignored local output. Committed
 records contain bounded commands, timestamps, counts, hashes, results, and limitations.
+
+The host Full run hit the previously documented Application Control constraint.
+It blocked Actions.Tests, Reports, Verification.Tests and Diagnostics assemblies with
+`0x800711C7`. A no-build Reports invocation reproduced the same failure. Recent
+CodeIntegrity events 3033/3077 directly matched Diagnostics under
+`VerifiedAndReputableDesktop` (`0xc0e90002`); the other assemblies are evidenced by test
+output. No Zone.Identifier stream was present on those four unsigned assemblies.
+The broad run was stopped; no Full pass or complete .NET count is claimed. Host policy
+remains unchanged. A reviewed adaptation of the existing same-machine Sandbox route
+has passed independent review and seven focused invocation regressions (8.810 s).
+The adapter Quick passed in 41.439 s (39.670 s runner). Initial staging preflight
+failed before launch because the measurement wrapper inherited PowerShell7 module paths
+into Windows PowerShell. A focused command lookup reproduced the problem; resetting
+only the child process module path restored its standard Get-FileHash command. The
+corrected preflight passed staging, exact bindings, dependency preparation and cleanup.
+No host configuration was changed. Exact committed Sandbox Full remains pending.
 
 ## Risk and outstanding work
 
@@ -162,9 +194,12 @@ records contain bounded commands, timestamps, counts, hashes, results, and limit
   only; no supported release behavior or redistribution permission is added.
 - Extended: not triggered; no new product risk requiring resource, cold-boot, endurance,
   host-network disruption, or broad failure injection. Active inventory smoke is separate.
-- Historical task-named Sandbox runners use their historical revisions. Their old restore
-  order and success markers are incompatible with the new Quick. A future use needs a
-  reviewed shared-profile adaptation; this session does not invoke them.
+- Historical task-specific Sandbox phases remain version-bound. The existing compatibility
+  harness now has a narrow Full-only amendment profile calling the shared verifier after
+  locked staged-cache restore. It retains 4 GiB memory, read-only inputs, the sole bounded
+  writable result mapping, enabled governed NuGet audit, and verified cleanup. Only the
+  combined shared Full command gets a 1,200-second timeout; host limit remains 30 minutes.
+  This profile must pass focused tests and clean staging preflight before execution.
 - Owner: review cumulative PR, then decide merge and later legacy PR/branch disposition.
 - Deferred P2: signed release identity stays with named release tasks; an evidence schema
   and duration-trend policy can be scoped after integration. No task graph or release gate

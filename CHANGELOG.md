@@ -10,6 +10,10 @@ Prepared 12 September; approved for application 30 September 2026. Merge remains
 - Reclassified remote CI as supplementary and preserved active-machine authority.
 - Reworked the local verification entry point into Quick, Targeted, and Full modes.
 - Added `eng/test-manifest.json` for budgets and fast-project selection.
+- Corrected stale internal Inventory project-reference locks found by clean locked restore;
+  added a focused graph regression while preserving all external package metadata.
+- Adapted the existing Sandbox compatibility harness with a bounded Full profile for this
+  amendment, forwarding to the shared verifier when host Application Control blocks tests.
 - Replaced the live status document with a concise handoff snapshot while archiving the prior
   detailed status.
 - Established compact task evidence with durable artifact references.

@@ -5,7 +5,7 @@ param(
     [string] $Phase = "Targeted",
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("TL-0102", "TL-0103", "TL-0104")]
+    [ValidateSet("TL-0102", "TL-0103", "TL-0104", "AMD-2026-09-12-REPOSITORY-STABILIZATION")]
     [string] $EvidenceTaskId = "TL-0102",
 
     [Parameter(Mandatory = $false)]
@@ -19,6 +19,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $TaskId = $EvidenceTaskId
+$RepositoryStabilizationTaskId = "AMD-2026-09-12-REPOSITORY-STABILIZATION"
 $ResultSchemaVersion = 2
 $SandboxMemoryMb = 4096
 $SandboxTimeoutMinutes = 30
@@ -705,6 +706,9 @@ function Get-ActiveSandboxProcesses {
 }
 
 if ($env:OS -ne "Windows_NT") { throw "$TaskId Sandbox verification requires the active Windows Codex machine." }
+if ($TaskId -eq $RepositoryStabilizationTaskId -and $Phase -ne "Full") {
+    throw "Repository stabilization supports only the shared Full Sandbox verification profile."
+}
 if ($TaskId -eq "TL-0104" -and $Phase -notin @("Targeted", "Quick", "Full")) {
     throw "TL-0104 supports only Targeted, Quick, or Full Sandbox verification."
 }
