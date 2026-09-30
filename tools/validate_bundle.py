@@ -27,6 +27,9 @@ ROOT = Path(__file__).resolve().parents[1]
 ADR_NUMBERING_AMENDMENT_PATH = (
     "docs/amendments/2026-08-22-adr-0009-reservation.md"
 )
+STABILIZATION_AMENDMENT_PATH = (
+    "docs/amendments/2026-09-12-repository-stabilization.md"
+)
 TL0401_WINGET_ADR_PATH = "docs/adr/0009-winget-backend.md"
 TL0401_HUMAN_EVIDENCE = (
     "A maintainer reviews the spike evidence and approves ADR 0009 at "
@@ -111,6 +114,7 @@ REQUIRED_FILES = (
     "CHANGELOG.md",
     "docs/change-control.md",
     ADR_NUMBERING_AMENDMENT_PATH,
+    STABILIZATION_AMENDMENT_PATH,
     "docs/glossary.md",
     "docs/non-goals.md",
     "docs/product-contract.md",
@@ -141,10 +145,16 @@ REQUIRED_FILES = (
     M0_SANDBOX_GUEST_PATH,
     M0_SANDBOX_HOST_PATH,
     M0_FOUNDATION_GATE_PATH,
+    ".github/workflows/verify.yml",
+    "eng/verify.ps1",
+    "eng/test-manifest.json",
     "tools/merge_task_contracts.py",
+    "tools/validate_repository.py",
     "tools/requirements.txt",
     "tools/tests/test_pilot_fixtures.py",
     "tools/tests/test_validate_bundle.py",
+    "tools/tests/test_validate_repository.py",
+    "tools/tests/test_verify_runner.py",
 )
 BUNDLE_MANIFEST_FILE = "BUNDLE_MANIFEST.sha256"
 TASK_ID_RE = re.compile(r"^TL-\d{4}$")
@@ -758,10 +768,87 @@ ALLOWED_KIND = {"build", "code", "data", "docs", "gate", "release", "security", 
 ALLOWED_TEST_TIER = {"quick", "targeted", "full", "extended"}
 MUTABLE_FIELDS = ["status", "evidence", "blocked_reason"]
 
-CURRENT_BUNDLE_VERSION = "0.3.1"
-CURRENT_BUNDLE_GENERATED_ON = "2026-08-22"
-CURRENT_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 67))
+CURRENT_BUNDLE_VERSION = "0.4.0"
+CURRENT_BUNDLE_GENERATED_ON = "2026-09-30"
+CURRENT_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 73))
 CURRENT_TASK_COUNT = 91
+STABILIZATION_CI_CLARIFICATION = {
+    "summary": (
+        "Historical GitHub-hosted verification remains valid as a supplementary "
+        "clean-checkout result; under D-068 it is not authoritative runtime, "
+        "hardware, milestone, pilot, or release evidence."
+    ),
+    "task": "TL-0002",
+    "command_or_review": "Governance reclassification under AMD-2026-09-12-REPOSITORY-STABILIZATION",
+    "tier": "governance clarification",
+    "result": "historical evidence preserved; authority wording corrected",
+    "environment": "repository documentation only",
+    "date": "2026-09-30",
+    "duration": "not applicable",
+    "reference": f"D-068; {STABILIZATION_AMENDMENT_PATH}",
+    "limitation": "Does not rerun or invalidate the historical workflow; active-machine evidence remains required.",
+}
+STABILIZATION_DECISION_CONTRACTS = {
+    "D-067": (
+        "A completed task branch is integrated into the repository’s default branch before the next roadmap task begins.",
+        "A temporary stacked branch is permitted only for an explicitly named recovery, cumulative stabilization, or approved dependency sequence, and it must include a documented collapse plan.",
+        "No reset, force push, or history rewrite is used to collapse the stack.",
+    ),
+    "D-068": (
+        "GitHub Actions and other remote runners may perform supplementary clean-checkout, format, build, static, and deterministic test checks, but they are not authoritative runtime, hardware, accessibility, benchmark, milestone, pilot, or release evidence.",
+        "Historical CI evidence remains intact but is accompanied by a clarification.",
+        "Required task and release evidence is recorded from the active Codex machine or an allowed environment hosted on it.",
+    ),
+    "D-069": (
+        "`STATUS.md` is a concise operational handoff snapshot.",
+        "New `TASKS.yaml` evidence entries are compact structured references to committed durable evidence rather than long-form design essays or raw logs.",
+        "Existing completed history is not rewritten without a separate migration review.",
+    ),
+    "D-070": (
+        "Repeated clean-environment, Sandbox, and scenario execution is implemented through reusable host/guest runners and declarative profiles.",
+        "New large task-specific runner scripts require a documented technical reason and replacement/retirement plan.",
+        "Existing task-named scripts remain valid historical evidence and may act as compatibility wrappers.",
+        "New scenarios are independently invokable and report machine-readable results.",
+        "The test manifest identifies tier, budget, project/filter, hosted environment, and risk trigger.",
+    ),
+    "D-071": (
+        "A normalized evidence key has one semantic owner.",
+        "When two providers observe related facts, they use distinct keys and provenance or an orchestrator applies an explicit, versioned, deterministic reconciliation rule.",
+        "Duplicate keys with incompatible meanings are rejected.",
+        "Conflict, freshness, and source preference are tested.",
+        "Unknown or contradictory observations remain unknown/review-required rather than being selected by enumeration order.",
+    ),
+    "D-072": (
+        "Operating-system and other externally changing support-lifecycle knowledge is stored as versioned data with source identity, revision, and an “as of” date.",
+        "Missing, stale, contradictory, or unrecognized lifecycle data cannot satisfy a required support rule.",
+        "Historical jobs retain the lifecycle-data revision used.",
+        "Refreshing lifecycle data does not retroactively rewrite earlier evidence or decisions.",
+    ),
+}
+STABILIZATION_TASK_CONTRACTS = {
+    "TL-0107": {
+        "acceptance_criteria": (
+            "The provider does not publish a competing value under system.architecture. Any OS-specific architecture observation uses a distinct key and provenance, and TL-0112 owns deterministic reconciliation.",
+            "Lifecycle mapping records source identity, data revision, and an as-of date; stale, absent, contradictory, or unrecognized lifecycle data cannot produce a supported result.",
+            "Activation collection logs or exports no partial product key, product ID, account identifier, or raw licensing output and never interprets activation as legal licence ownership.",
+            "Pending-reboot evidence identifies each source and confidence; absence of one indicator does not prove that no reboot is pending.",
+        ),
+        "verification": (
+            "Test duplicate/contradictory architecture observations and prove there is no first-wins or last-wins behavior.",
+            "Test current, stale, missing, future/unknown, and contradictory lifecycle-data revisions with deterministic clocks.",
+            "Scan logs, serialized evidence, diagnostics, and failures for partial keys, product IDs, account identifiers, and raw licensing text.",
+        ),
+    },
+    "TL-0112": {
+        "acceptance_criteria": (
+            "Overlapping provider facts have one semantic owner or an explicit versioned reconciliation rule; conflicts and freshness never resolve by provider enumeration order.",
+            "The assessment snapshot records the lifecycle-data revision and as-of date used, and historical snapshots are not retroactively rewritten by later lifecycle refreshes.",
+        ),
+        "verification": (
+            "Property-test provider order independence and deterministic conflict/freshness handling.",
+        ),
+    },
+}
 V030_TL0008_SOURCE_COMMIT = "4fa3ea050fd5e9985fde9cc8218281698d371cc8"
 V030_TL0008_PROCEDURE_DIGEST = (
     "ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b"
@@ -769,7 +856,7 @@ V030_TL0008_PROCEDURE_DIGEST = (
 CURRENT_BUNDLE_DOCUMENT_MARKERS = {
     "ACCESSIBILITY.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
     "AGENTS.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "CHANGELOG.md": "## 0.3.1 — 22 August 2026",
+    "CHANGELOG.md": "## 0.4.0 — 2026-09-12",
     "CODEX_START_PROMPT.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
     "DECISIONS.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
     "DEVELOPMENT_WORKFLOW.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
@@ -5662,6 +5749,15 @@ def validate_m0_foundation_gate(
                 continue
             evidence = predecessor.get("evidence")
             evidence_count = len(evidence) if isinstance(evidence, list) else 0
+            # The approved M0 record predates this exact additive clarification.
+            # Preserve its frozen count without accepting arbitrary later evidence
+            # as a replacement for an approved predecessor input.
+            if (
+                predecessor_id == "TL-0002"
+                and isinstance(evidence, list)
+                and evidence.count(STABILIZATION_CI_CLARIFICATION) == 1
+            ):
+                evidence_count -= 1
             if predecessor.get("status") != "done" or evidence_count == 0:
                 validation.error(
                     f"{relative}: predecessor {predecessor_id} must be done with evidence"
@@ -6084,6 +6180,51 @@ def validate_m0_foundation_gate(
         )
 
 
+def validate_stabilization_contract(
+    validation: Validation,
+    task_by_id: dict[str, dict[str, Any]],
+) -> None:
+    """Keep the approved v0.4.0 amendment additive and fail closed on drift."""
+
+    decisions_text = markdown_visible_text(require_phrases("DECISIONS.md", (), validation))
+    headings = list(DECISION_HEADING_RE.finditer(decisions_text))
+    sections = {
+        heading.group(1): " ".join(
+            decisions_text[
+                heading.end():
+                headings[index + 1].start() if index + 1 < len(headings) else len(decisions_text)
+            ].split()
+        )
+        for index, heading in enumerate(headings)
+    }
+    for decision_id, phrases in STABILIZATION_DECISION_CONTRACTS.items():
+        body = sections.get(decision_id, "")
+        for phrase in phrases:
+            if phrase not in body:
+                validation.error(
+                    f"DECISIONS.md: {decision_id} is missing its governed constraint {phrase!r}"
+                )
+
+    for task_id, fields in STABILIZATION_TASK_CONTRACTS.items():
+        task = task_by_id.get(task_id, {})
+        refs = task.get("decision_refs", [])
+        if not isinstance(refs, list) or not all(ref in refs for ref in ("D-071", "D-072")):
+            validation.error(f"{task_id}: D-071 and D-072 decision references are required")
+        for field, expected_entries in fields.items():
+            entries = task.get(field, [])
+            for entry in expected_entries:
+                if not isinstance(entries, list) or entries.count(entry) != 1:
+                    validation.error(
+                        f"{task_id}: {field} must retain exactly one stabilization clause {entry!r}"
+                    )
+
+    evidence = task_by_id.get("TL-0002", {}).get("evidence", [])
+    if not isinstance(evidence, list) or evidence.count(STABILIZATION_CI_CLARIFICATION) != 1:
+        validation.error(
+            "TL-0002: retain the additive D-068 historical supplementary-CI clarification"
+        )
+
+
 def validate_current_bundle_document_markers(validation: Validation) -> None:
     for relative, marker in CURRENT_BUNDLE_DOCUMENT_MARKERS.items():
         text = require_phrases(relative, (), validation)
@@ -6145,7 +6286,7 @@ def validate_current_bundle_document_markers(validation: Validation) -> None:
             "extended",
             "TL-0008",
         ),
-        "DECISIONS.md": ("D-058", "D-059", "D-064", "D-066"),
+        "DECISIONS.md": ("D-058", "D-059", "D-064", "D-066", "D-072"),
         "PROJECT_BOUNDARY.md": (
             "Team B / B1",
             "project vacuum",
@@ -6158,7 +6299,7 @@ def validate_current_bundle_document_markers(validation: Validation) -> None:
             "Quick tier",
             "Targeted tier",
             "Full tier",
-            "Extended/stress tier",
+            "Extended tier",
             "active Codex machine",
         ),
         "DEVELOPMENT_WORKFLOW.md": (
@@ -6168,10 +6309,9 @@ def validate_current_bundle_document_markers(validation: Validation) -> None:
             "active Codex machine",
         ),
         "STATUS.md": (
-            "TL-0008",
-            V030_TL0008_SOURCE_COMMIT,
-            V030_TL0008_PROCEDURE_DIGEST,
-            "superseded",
+            "active Codex machine",
+            "supplementary",
+            "main",
         ),
         "LOW_SPEC.md": (
             "active Codex machine",
@@ -6233,9 +6373,10 @@ def validate_testing_documents(
             "Quick tier",
             "Targeted tier",
             "Full tier",
-            "Extended/stress tier",
-            "Every extended scenario must be independently invokable",
-            "do not execute the old `MHT-001`–`MHT-021`",
+            "Extended tier",
+            "be independently invokable and produce a durable scenario-level result",
+            "Remote CI",
+            "supplementary clean-checkout check",
             "not hardware certification",
         ),
         "DEVELOPMENT_WORKFLOW.md": (
@@ -6246,10 +6387,9 @@ def validate_testing_documents(
             "active Codex machine only",
         ),
         "STATUS.md": (
-            "TL-0008",
-            V030_TL0008_SOURCE_COMMIT,
-            V030_TL0008_PROCEDURE_DIGEST,
-            "No physical hardware walkthrough",
+            "active Codex machine",
+            "supplementary",
+            "main",
         ),
         "LOW_SPEC.md": (
             CURRENT_BUNDLE_DOCUMENT_MARKERS["LOW_SPEC.md"],
@@ -6580,7 +6720,7 @@ def validate() -> int:
         )
     if tuple(decision_ids) != CURRENT_DECISION_IDS:
         validation.error(
-            "DECISIONS.md: current bundle must contain exactly D-001 through D-066"
+            "DECISIONS.md: current bundle must contain exactly D-001 through D-072"
         )
 
     milestones = task_doc.get("milestones")
@@ -6810,6 +6950,7 @@ def validate() -> int:
     validate_governance_documents(validation)
     validate_architecture_decision_records(validation, task_by_id, decision_set)
     validate_tl0401_adr_reservation(validation, task_by_id)
+    validate_stabilization_contract(validation, task_by_id)
     validate_security_documents(validation, task_by_id, decision_set)
     validate_privacy_documents(validation, task_by_id, decision_set)
     validate_pilot_fixtures(validation, task_by_id)
@@ -6930,7 +7071,7 @@ def report(
 
     print(f"OK: {summary or 'bundle structure valid'}")
     if codex_ready is not None:
-        print("Codex-ready tasks: " + (", ".join(codex_ready) if codex_ready else "none"))
+        print("Dependency-ready tasks (verify default-branch integration before selection): " + (", ".join(codex_ready) if codex_ready else "none"))
     return 0
 
 

@@ -66,6 +66,69 @@ EXPECTED_ACTIONS = {
     "actions/setup-dotnet": "a98b56852c35b8e3190ac28c8c2271da59106c68",
     "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
 }
+DETERMINISTIC_TEST_FILTER = "Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly"
+EXPECTED_TEST_MANIFEST = {
+    "schema_version": 1,
+    "authority": {
+        "runtime": "active_codex_machine",
+        "remote_ci": "supplementary_only",
+        "cross_hardware_certification": False,
+    },
+    "tiers": {
+        "quick": {
+            "target_seconds": 120,
+            "purpose": "format, build, governance contracts, and fast deterministic code feedback",
+            "test_projects": [
+                {
+                    "path": f"tests/{name}/{name}.csproj",
+                    "filter": DETERMINISTIC_TEST_FILTER,
+                }
+                for name in ("ThirdLife.Core.Tests", "ThirdLife.Inventory.Tests")
+            ],
+            "excludes": [
+                "active-machine observation",
+                "broad sandbox or VM matrix",
+                "destructive or host-mutating tests",
+                "extended resource/failure scenarios",
+                "complete validator mutation suite",
+            ],
+        },
+        "targeted": {
+            "target_seconds": 600,
+            "selection": "explicit -TestProject and optional -Filter",
+            "default_filter": DETERMINISTIC_TEST_FILTER,
+            "includes_quick": True,
+        },
+        "full": {
+            "filter": DETERMINISTIC_TEST_FILTER,
+            "separate_checks": "Active-machine observation and named Extended/SandboxOnly scenarios require explicit project/filter selection in their approved environment.",
+            "trigger": [
+                "milestone, preview, pilot, or stable gate",
+                "protected or cumulative default-branch integration",
+                "major refactor",
+                "data migration",
+                "dependency or engine change",
+                "explicit TASKS.yaml trigger",
+            ],
+            "includes": [
+                "all Python governance regression tests",
+                "locked restore",
+                "format",
+                "warnings-as-errors Release build",
+                "complete supported .NET test suite",
+            ],
+        },
+        "extended": {
+            "entry_point": "named scenario/profile, not a generic default command",
+            "requirements": [
+                "independently invokable",
+                "durable scenario result",
+                "checkpointed when long-running",
+                "run only for the named risk or gate",
+            ],
+        },
+    },
+}
 MACHINE_PATH_RE = re.compile(
     r"(?i)(?:\b[a-z]:[\\/]|\\\\[^\\/\s]+[\\/][^\\/\s]+|"
     r"file:/+(?:[a-z]:|/)|/(?:home|users)/[^/\s]+/)"
@@ -503,6 +566,51 @@ def validate_tool_and_source_configuration(validation: Validation) -> None:
             validation.error("NuGet.Config: package source credentials are prohibited")
 
 
+def validate_test_manifest(validation: Validation) -> None:
+    """Bind the declarative runner input to the approved safety and coverage contract."""
+
+    relative_path = "eng/test-manifest.json"
+    path = ROOT / relative_path
+
+    def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate object key")
+            result[key] = value
+        return result
+
+    try:
+        if path.stat().st_size > 65536:
+            validation.error(f"{relative_path}: must not exceed 64 KiB")
+            return
+        manifest = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+    except (OSError, UnicodeError, ValueError, RecursionError):
+        validation.error(f"{relative_path}: must be valid UTF-8 JSON with unique object keys")
+        return
+
+    def compare(actual: Any, expected: Any, field: str) -> None:
+        # Exact types prevent JSON true from satisfying a numeric schema/budget,
+        # or numeric 1 from satisfying a required boolean.
+        if type(actual) is not type(expected):
+            validation.error(f"{relative_path}: {field} has an invalid type")
+        elif isinstance(expected, dict):
+            if actual.keys() != expected.keys():
+                validation.error(f"{relative_path}: {field} must contain exactly the governed fields")
+            for key, value in expected.items():
+                if key in actual:
+                    compare(actual[key], value, f"{field}.{key}")
+        elif isinstance(expected, list):
+            if len(actual) != len(expected):
+                validation.error(f"{relative_path}: {field} must retain every governed entry exactly once")
+            for index, (actual_item, expected_item) in enumerate(zip(actual, expected)):
+                compare(actual_item, expected_item, f"{field}[{index}]")
+        elif actual != expected:
+            validation.error(f"{relative_path}: {field} differs from the governed contract")
+
+    compare(manifest, EXPECTED_TEST_MANIFEST, "manifest")
+
+
 def validate_workflow(validation: Validation) -> None:
     workflow_path = ROOT / ".github" / "workflows" / "verify.yml"
     try:
@@ -517,7 +625,7 @@ def validate_workflow(validation: Validation) -> None:
         return
 
     expected_workflow = {
-        "name": "Verify",
+        "name": "Supplementary Repository Check",
         "on": {
             "push": {"branches": ["main"]},
             "pull_request": {"branches": ["main"]},
@@ -525,12 +633,12 @@ def validate_workflow(validation: Validation) -> None:
         },
         "permissions": {"contents": "read"},
         "concurrency": {
-            "group": "verify-${{ github.workflow }}-${{ github.ref }}",
+            "group": "supplementary-${{ github.workflow }}-${{ github.ref }}",
             "cancel-in-progress": "true",
         },
         "jobs": {
-            "verify": {
-                "name": "Windows authoritative verification",
+            "supplementary-windows-check": {
+                "name": "Supplementary Windows clean-checkout check",
                 "runs-on": "windows-2025",
                 "timeout-minutes": "30",
                 "defaults": {"run": {"shell": "pwsh"}},
@@ -576,13 +684,16 @@ def validate_workflow(validation: Validation) -> None:
                         },
                     },
                     {
-                        "name": "Install validator dependency",
+                        "name": "Install pinned validator dependency",
                         "run": (
                             "python -m pip --isolated install --no-deps "
                             "--requirement tools/requirements.txt"
                         ),
                     },
-                    {"name": "Verify", "run": "./eng/verify.ps1"},
+                    {
+                        "name": "Run supplementary Quick tier",
+                        "run": "./eng/verify.ps1 -Tier Quick -Restore -SupplementaryCi",
+                    },
                 ],
             }
         },
@@ -612,22 +723,23 @@ def validate_workflow(validation: Validation) -> None:
             ".github/workflows/verify.yml: workflow permissions must be contents: read only"
         )
     jobs = workflow.get("jobs")
-    job = jobs.get("verify") if isinstance(jobs, dict) else None
+    job_id = "supplementary-windows-check"
+    job = jobs.get(job_id) if isinstance(jobs, dict) else None
     if not isinstance(job, dict):
-        validation.error(".github/workflows/verify.yml: jobs.verify is required")
+        validation.error(f".github/workflows/verify.yml: jobs.{job_id} is required")
         return
     if job.get("runs-on") != "windows-2025":
         validation.error(
-            ".github/workflows/verify.yml: jobs.verify must run on windows-2025"
+            f".github/workflows/verify.yml: jobs.{job_id} must run on windows-2025"
         )
     if job.get("timeout-minutes") != "30":
         validation.error(
-            ".github/workflows/verify.yml: jobs.verify timeout-minutes must equal 30"
+            f".github/workflows/verify.yml: jobs.{job_id} timeout-minutes must equal 30"
         )
 
     steps = job.get("steps")
     if not isinstance(steps, list):
-        validation.error(".github/workflows/verify.yml: jobs.verify.steps must be a list")
+        validation.error(f".github/workflows/verify.yml: jobs.{job_id}.steps must be a list")
         return
     found_actions: dict[str, str] = {}
     runs: list[str] = []
@@ -719,9 +831,9 @@ def validate_workflow(validation: Validation) -> None:
         validation.error(
             ".github/workflows/verify.yml: CI must install the pinned validator dependency"
         )
-    if "./eng/verify.ps1" not in runs:
+    if "./eng/verify.ps1 -Tier Quick -Restore -SupplementaryCi" not in runs:
         validation.error(
-            ".github/workflows/verify.yml: CI must invoke ./eng/verify.ps1"
+            ".github/workflows/verify.yml: CI must invoke the restored supplementary Quick tier"
         )
 
     workflow_text = workflow_path.read_text(encoding="utf-8")
@@ -853,6 +965,7 @@ def validate() -> int:
     validate_central_packages(project_paths, validation)
     validate_tool_and_source_configuration(validation)
     validate_workflow(validation)
+    validate_test_manifest(validation)
     supply_chain_result = validate_supply_chain_contract(validation)
     validate_no_machine_paths(validation)
 

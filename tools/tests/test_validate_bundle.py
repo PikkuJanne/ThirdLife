@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import itertools
 import json
@@ -3312,6 +3313,32 @@ class M0FoundationGateContractTests(unittest.TestCase):
                 validation.errors,
             )
 
+    def test_exact_later_ci_clarification_preserves_historical_predecessor_count(self) -> None:
+        self.assertIn(
+            "`TL-0002` | `done`; 3 evidence entries",
+            self.gate_path(REPOSITORY_ROOT).read_text(encoding="utf-8"),
+        )
+        self.assertEqual(self.validate_contract(REPOSITORY_ROOT).errors, [])
+
+    def test_ci_clarification_cannot_hide_changed_predecessor_history(self) -> None:
+        for mutation in ("remove_history", "append", "alter_clarification", "duplicate_clarification"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                self.copy_contract(root)
+                tasks = copy.deepcopy(TASK_BY_ID)
+                entries = tasks["TL-0002"]["evidence"]
+                clarification = next(entry for entry in entries if entry.get("tier") == "governance clarification")
+                if mutation == "remove_history":
+                    entries.pop(0)
+                elif mutation == "append":
+                    entries.append({"summary": "Unbound additional evidence."})
+                elif mutation == "duplicate_clarification":
+                    entries.append(copy.deepcopy(clarification))
+                else:
+                    clarification["reference"] = "D-068; unrelated.md"
+                errors = self.validate_contract(root, tasks).errors
+                self.assertTrue(any("TL-0002 state must equal" in error for error in errors), errors)
+
     def test_unfinished_or_evidence_free_predecessor_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -3863,9 +3890,9 @@ class TestingDocumentContractTests(unittest.TestCase):
             ),
         )
 
-    def test_live_task_metadata_matches_v031_contract(self) -> None:
-        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.3.1")
-        self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-08-22")
+    def test_live_task_metadata_matches_v040_contract(self) -> None:
+        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.4.0")
+        self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-09-30")
         self.assertEqual(TASK_DOCUMENT["portfolio"]["roadmap_version"], "2.1")
         self.assertEqual(
             TASK_DOCUMENT["portfolio"]["test_tiers"],
@@ -3883,14 +3910,14 @@ class TestingDocumentContractTests(unittest.TestCase):
                 destination.write_bytes(source.read_bytes())
             path = root / "SECURITY.md"
             body = path.read_text(encoding="utf-8")
-            self.assertEqual(body.count("**Bundle version:** 0.3.1"), 1)
+            self.assertEqual(body.count("**Bundle version:** 0.4.0"), 1)
             path.write_text(
                 body.replace(
-                    "**Bundle version:** 0.3.1",
+                    "**Bundle version:** 0.4.0",
                     "**Bundle version:** 0.3.0",
                     1,
                 )
-                + "\n**Bundle version:** 0.3.1\n",
+                + "\n**Bundle version:** 0.4.0\n",
                 encoding="utf-8",
             )
             validation = validate_bundle.Validation()
@@ -3898,10 +3925,140 @@ class TestingDocumentContractTests(unittest.TestCase):
                 validate_bundle.validate_current_bundle_document_markers(validation)
             self.assertIn(
                 "SECURITY.md: 'Bundle version' metadata must be exactly one line "
-                "'**Bundle version:** 0.3.1'; found "
-                "['**Bundle version:** 0.3.0', '**Bundle version:** 0.3.1']",
+                "'**Bundle version:** 0.4.0'; found "
+                "['**Bundle version:** 0.3.0', '**Bundle version:** 0.4.0']",
                 validation.errors,
             )
+
+
+class StabilizationContractTests(unittest.TestCase):
+    def validate_contract(
+        self,
+        *,
+        decisions: str | None = None,
+        tasks: dict[str, dict[str, object]] | None = None,
+    ) -> validate_bundle.Validation:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            (root / "DECISIONS.md").write_text(
+                decisions if decisions is not None else
+                (REPOSITORY_ROOT / "DECISIONS.md").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            validation = validate_bundle.Validation()
+            with patch.object(validate_bundle, "ROOT", root):
+                validate_bundle.validate_stabilization_contract(
+                    validation, tasks if tasks is not None else TASK_BY_ID
+                )
+        return validation
+
+    def test_current_stabilization_contract_is_valid(self) -> None:
+        self.assertEqual(self.validate_contract().errors, [])
+        self.assertEqual(validate_bundle.CURRENT_DECISION_IDS[-1], "D-072")
+        self.assertEqual(len(validate_bundle.CURRENT_DECISION_IDS), 72)
+
+    def test_each_new_decision_is_required_in_its_own_visible_section(self) -> None:
+        decisions = (REPOSITORY_ROOT / "DECISIONS.md").read_text(encoding="utf-8")
+        for decision_number in range(67, 73):
+            decision_id = f"D-{decision_number:03d}"
+            match = re.search(
+                rf"(?ms)^### {decision_id} —.*?(?=^### D-|\Z)", decisions
+            )
+            self.assertIsNotNone(match)
+            assert match is not None
+            for wrapper in ("<!--\n{}\n-->", "```text\n{}\n```", "{}"):
+                with self.subTest(decision_id=decision_id, wrapper=wrapper):
+                    replacement = wrapper.format(match.group(0))
+                    if wrapper == "{}":
+                        replacement = replacement.replace(decision_id, "D-099", 1)
+                    mutated = decisions[:match.start()] + replacement + decisions[match.end():]
+                    errors = self.validate_contract(decisions=mutated).errors
+                    self.assertTrue(any(decision_id in error for error in errors), errors)
+
+    def test_unsafe_decision_amendments_are_rejected(self) -> None:
+        decisions = (REPOSITORY_ROOT / "DECISIONS.md").read_text(encoding="utf-8")
+        mutations = (
+            ("No reset, force push, or history rewrite", "A reset, force push, or history rewrite", "D-067"),
+            ("not authoritative runtime", "authoritative runtime", "D-068"),
+            ("not rewritten without a separate migration review", "rewritten freely", "D-069"),
+            ("New scenarios are independently invokable", "New scenarios cannot be selected independently", "D-070"),
+            ("Duplicate keys with incompatible meanings are rejected", "Duplicate keys use the last observed value", "D-071"),
+            ("cannot satisfy a required support rule", "can satisfy a required support rule", "D-072"),
+        )
+        for old, new, decision_id in mutations:
+            with self.subTest(decision_id=decision_id):
+                self.assertIn(old, decisions)
+                errors = self.validate_contract(decisions=decisions.replace(old, new)).errors
+                self.assertTrue(any(decision_id in error for error in errors), errors)
+
+    def test_task_clarifications_cannot_be_deleted_duplicated_or_weakened(self) -> None:
+        for task_id in ("TL-0107", "TL-0112"):
+            for field in ("acceptance_criteria", "verification"):
+                clauses = [
+                    entry for entry in TASK_BY_ID[task_id][field]
+                    if entry in validate_bundle.STABILIZATION_TASK_CONTRACTS[task_id][field]
+                ]
+                for clause in clauses:
+                    for operation in ("remove", "duplicate", "weaken"):
+                        with self.subTest(task_id=task_id, field=field, clause=clause, operation=operation):
+                            tasks = copy.deepcopy(TASK_BY_ID)
+                            entries = tasks[task_id][field]
+                            if operation == "duplicate":
+                                entries.append(clause)
+                            elif operation == "remove":
+                                entries.remove(clause)
+                            else:
+                                entries[entries.index(clause)] = "Optional: " + clause
+                            errors = self.validate_contract(tasks=tasks).errors
+                            self.assertTrue(any(task_id in error and field in error for error in errors), errors)
+
+    def test_reconciliation_and_lifecycle_decision_references_are_required(self) -> None:
+        for task_id in ("TL-0107", "TL-0112"):
+            for decision_id in ("D-071", "D-072"):
+                with self.subTest(task_id=task_id, decision_id=decision_id):
+                    tasks = copy.deepcopy(TASK_BY_ID)
+                    tasks[task_id]["decision_refs"].remove(decision_id)
+                    errors = self.validate_contract(tasks=tasks).errors
+                    self.assertTrue(any(task_id in error for error in errors), errors)
+
+    def test_historical_ci_clarification_cannot_be_removed_or_made_authoritative(self) -> None:
+        for replacement in (None, "Historical CI is authoritative runtime evidence."):
+            with self.subTest(replacement=replacement):
+                tasks = copy.deepcopy(TASK_BY_ID)
+                evidence = tasks["TL-0002"]["evidence"]
+                entry = next(item for item in evidence if item.get("tier") == "governance clarification")
+                if replacement is None:
+                    evidence.remove(entry)
+                else:
+                    entry["summary"] = replacement
+                errors = self.validate_contract(tasks=tasks).errors
+                self.assertTrue(any("TL-0002" in error for error in errors), errors)
+
+    def test_task_progress_does_not_change_the_frozen_contract(self) -> None:
+        tasks = copy.deepcopy(TASK_BY_ID)
+        tasks["TL-0107"]["status"] = "in_progress"
+        tasks["TL-0107"]["evidence"].append({"summary": "Later authorized task evidence."})
+        self.assertEqual(self.validate_contract(tasks=tasks).errors, [])
+
+    def test_malformed_task_fields_report_errors_without_crashing(self) -> None:
+        for field in ("decision_refs", "acceptance_criteria", "verification"):
+            for value in (None, 42, {"unexpected": "value"}, [{}]):
+                with self.subTest(field=field, value=value):
+                    tasks = copy.deepcopy(TASK_BY_ID)
+                    tasks["TL-0107"][field] = value
+                    self.assertTrue(self.validate_contract(tasks=tasks).errors)
+
+    def test_runner_workflow_and_amendment_are_governed_inputs(self) -> None:
+        for relative in (
+            "docs/amendments/2026-09-12-repository-stabilization.md",
+            "eng/test-manifest.json",
+            "eng/verify.ps1",
+            ".github/workflows/verify.yml",
+            "tools/validate_repository.py",
+            "tools/tests/test_validate_repository.py",
+        ):
+            with self.subTest(relative=relative):
+                self.assertIn(relative, validate_bundle.REQUIRED_FILES)
 
 
 if __name__ == "__main__":

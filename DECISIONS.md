@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Frozen Decision Register
 
-**Bundle version:** 0.3.1  
-**Generated:** 2026-08-22  
+**Bundle version:** 0.4.0  
+**Generated:** 2026-09-30  
 **Status:** Binding for the Team B/B1 ThirdLife Setup Core roadmap
 
 ## Purpose and authority
@@ -106,6 +106,12 @@ Codex may propose an amendment, but it may not declare one approved.
 | [D-064](#d-064) | TL-0008 draft 1 and the immediate MHT walkthrough are superseded |
 | [D-065](#d-065) | Manual hardware-test workflow remains, hardware-matrix certification does not |
 | [D-066](#d-066) | Hardware and resource claims are limited to observed evidence |
+| [D-067](#d-067) | Integrate completed work before the next task |
+| [D-068](#d-068) | Remote CI remains supplementary |
+| [D-069](#d-069) | Compact live status and durable evidence |
+| [D-070](#d-070) | Reusable test runners and declarative profiles |
+| [D-071](#d-071) | Evidence ownership and deterministic reconciliation |
+| [D-072](#d-072) | Versioned and stale-safe lifecycle knowledge |
 
 ## Decisions
 
@@ -770,3 +776,124 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** `LOW_SPEC.md`, `TESTING.md`, `RELEASE_INTERFACE.md`, release notes, support guidance, and known limitations record the reference-machine profile, constraints, workload hashes, skipped cases, and claim boundaries. Unsupported wording blocks release until narrowed.
 
 **Revisit trigger.** Broader claims require separately collected, reviewable evidence from the named hardware scope and an approved release-interface update.
+
+<!-- BEGIN V0.4.0 REPOSITORY STABILIZATION DECISIONS -->
+
+Approved for application by the project owner on 30 September 2026 under
+[AMD-2026-09-12-REPOSITORY-STABILIZATION](docs/amendments/2026-09-12-repository-stabilization.md).
+The cumulative merge and branch/PR retirement remain pending separate owner review.
+
+<a id="d-067"></a>
+
+### D-067 — Completed task work is integrated before the next roadmap task
+
+**Decision.** A completed task branch is integrated into the repository’s default branch
+before the next roadmap task begins. A temporary stacked branch is permitted only for an
+explicitly named recovery, cumulative stabilization, or approved dependency sequence, and it
+must include a documented collapse plan.
+
+**Rationale.** GitHub cannot be the continuity source of truth when the default branch remains
+many completed tasks behind and multiple stale branches appear equally authoritative.
+
+**Implementation constraint.** Every task handoff records the integration pull request or the
+approved temporary-stack exception. Codex does not begin the next product task merely because
+the previous task is pushed to a non-default branch. No reset, force push, or history rewrite
+is used to collapse the stack.
+
+**Revisit trigger.** Only through a documented branch-strategy decision that preserves one
+unambiguous continuation line.
+
+<a id="d-068"></a>
+
+### D-068 — Remote CI is supplementary and never authoritative runtime evidence
+
+**Decision.** GitHub Actions and other remote runners may perform supplementary clean-checkout,
+format, build, static, and deterministic test checks, but they are not authoritative runtime,
+hardware, accessibility, benchmark, milestone, pilot, or release evidence.
+
+**Rationale.** The portfolio explicitly assigns implementation and validation to the active
+Codex machine. Calling a hosted runner authoritative contradicts the single-machine evidence
+boundary and can conceal environmental differences.
+
+**Implementation constraint.** Workflow names, job names, documentation, and new task
+evidence use “supplementary” or equivalent wording. Historical CI evidence remains intact but
+is accompanied by a clarification. Required task and release evidence is recorded from the
+active Codex machine or an allowed environment hosted on it.
+
+**Revisit trigger.** Only through a later portfolio-level validation-hardware decision.
+
+<a id="d-069"></a>
+
+### D-069 — Live status and task evidence remain compact and reference durable artifacts
+
+**Decision.** `STATUS.md` is a concise operational handoff snapshot. New `TASKS.yaml` evidence
+entries are compact structured references to committed durable evidence rather than long-form
+design essays or raw logs.
+
+**Rationale.** Oversized live-control files are difficult for humans and automation to review,
+increase merge conflicts, and obscure the current action.
+
+**Implementation constraint.** Detailed immutable evidence belongs under
+`artifacts/evidence/<task>/`, gate records, ADRs, or dated reviews. A compact task entry retains
+task, command/review, tier, result, duration, environment, commit/reference, digest, and
+limitation. Existing completed history is not rewritten without a separate migration review.
+
+**Revisit trigger.** The evidence schema may evolve, but live control files remain bounded and
+machine-readable.
+
+<a id="d-070"></a>
+
+### D-070 — Test execution uses reusable runners and declarative profiles
+
+**Decision.** Repeated clean-environment, Sandbox, and scenario execution is implemented
+through reusable host/guest runners and declarative profiles. New large task-specific runner
+scripts require a documented technical reason and replacement/retirement plan.
+
+**Rationale.** Copying large one-off harnesses increases maintenance cost, hides behavioral
+differences, and makes test-tier execution difficult to compare.
+
+**Implementation constraint.** Existing task-named scripts remain valid historical evidence
+and may act as compatibility wrappers. New scenarios are independently invokable and report
+machine-readable results. The test manifest identifies tier, budget, project/filter, hosted
+environment, and risk trigger.
+
+**Revisit trigger.** A scenario may receive a dedicated runner only when the reusable harness
+cannot safely express its lifecycle or isolation needs.
+
+<a id="d-071"></a>
+
+### D-071 — Each evidence fact has one semantic owner or an explicit reconciliation rule
+
+**Decision.** A normalized evidence key has one semantic owner. When two providers observe
+related facts, they use distinct keys and provenance or an orchestrator applies an explicit,
+versioned, deterministic reconciliation rule.
+
+**Rationale.** Silent first-wins, last-wins, or overwrite behavior can turn conflicting
+architecture, lifecycle, security, or hardware observations into false certainty.
+
+**Implementation constraint.** Duplicate keys with incompatible meanings are rejected.
+Conflict, freshness, and source preference are tested. Unknown or contradictory observations
+remain unknown/review-required rather than being selected by enumeration order.
+
+**Revisit trigger.** A source-preference rule changes only through a reviewed evidence-contract
+amendment.
+
+<a id="d-072"></a>
+
+### D-072 — Lifecycle knowledge is versioned, dated, attributable, and stale-safe
+
+**Decision.** Operating-system and other externally changing support-lifecycle knowledge is
+stored as versioned data with source identity, revision, and an “as of” date. Providers collect
+facts; lifecycle mapping remains attributable and reproducible.
+
+**Rationale.** A hard-coded unversioned “supported” boolean becomes silently wrong as vendor
+support policy changes.
+
+**Implementation constraint.** Missing, stale, contradictory, or unrecognized lifecycle data
+cannot satisfy a required support rule. Historical jobs retain the lifecycle-data revision
+used. Refreshing lifecycle data does not retroactively rewrite earlier evidence or decisions.
+
+**Revisit trigger.** Data source or refresh policy may change through a reviewed provenance and
+offline-behavior decision.
+
+<!-- END V0.4.0 REPOSITORY STABILIZATION DECISIONS -->

@@ -1,112 +1,157 @@
 # ThirdLife Setup Core — Development and GitHub Continuity Workflow
 
-**Bundle version:** 0.3.1  
+**Bundle version:** 0.4.0  
 **Continuity source of truth:** GitHub repository  
-**Runtime hardware scope:** active Codex machine only
+**Authoritative runtime hardware:** active Codex machine only  
+**Remote CI classification:** supplementary
 
 ## 1. Purpose
 
-The active Codex machine is replaceable; the pushed repository state is not. Every Codex session must be recoverable from GitHub without relying on chat history, local-only files, IDE state, or memory.
+The pushed repository must be sufficient for another Codex session or another machine to
+continue safely without chat history, IDE state, local-only files, or human memory.
 
-This workflow also enforces the portfolio’s single-machine validation baseline. Source continuity may move to another machine later through a clean clone, but no task depends on another machine being available at the same time, a hardware lab, a remote runtime runner, or an unpushed worktree.
+Continuity requires more than pushing a task branch. Completed task work must return to one
+unambiguous default-branch line before the next roadmap task begins.
 
-## 2. Start-of-session sequence
+## 2. Start every session safely
 
 Before proposing or changing implementation:
 
-1. Read this file completely.
-2. From the repository root, identify the intended remote and branch:
-
-   ```powershell
-   git remote -v
-   git branch --show-current
-   git status --short --branch
-   git rev-parse HEAD
-   git log -1 --decorate --oneline
-   ```
-
-3. Fetch without rewriting local work:
-
-   ```powershell
-   git fetch --all --prune
-   ```
-
-4. Compare local and upstream state:
-
-   ```powershell
-   git status --short --branch
-   git rev-list --left-right --count HEAD...@{upstream}
-   ```
-
-   If no upstream is configured, record that fact and use the repository’s documented branch policy. Do not guess a remote branch.
-
-5. Stop and report before implementation when:
-
-   - the remote is unexpected;
-   - the branch is not the intended task branch;
-   - the worktree contains unexplained changes;
-   - local and remote histories diverge;
-   - the expected commit cannot be found; or
-   - a rebase/reset/force push would be required without explicit authorization.
-
-6. Read `STATUS.md`.
-7. Read `DECISIONS.md`, `ROADMAP.md`, `PROJECT_BOUNDARY.md`, `SECURITY.md`, `ACCESSIBILITY.md`, `LOW_SPEC.md`, `TESTING.md`, `AGENTS.md`, and the selected `TASKS.yaml` entry.
-8. Run the smallest relevant baseline command before editing and record pre-existing failures.
-
-Do not start substantive work from an accidentally stale branch.
-
-## 3. Branch policy
-
-Use the repository’s existing documented branch strategy. When no project-specific exception exists, prefer a short-lived branch named after the task, for example:
-
-```text
-task/TL-0008-single-machine-validation
+```powershell
+git remote -v
+git branch --show-current
+git status --short --branch
+git rev-parse HEAD
+git log -1 --decorate --oneline
+git fetch --all --prune
+git status --short --branch
+git rev-list --left-right --count HEAD...@{upstream}
 ```
 
-A branch must contain one coherent task outcome. Do not mix unrelated cleanup, future B4 integration, or sibling-project work into the task branch.
+If no upstream exists, record that fact and identify the intended remote branch from the
+documented branch/PR state. Do not guess.
 
-Direct work on the default branch is permitted only when the repository has explicitly adopted that solo-development model and the branch is protected by the same checkpoint, verification, and push rules.
+Stop before implementation when:
+
+- the remote is unexpected;
+- the task branch is not the intended branch;
+- the worktree contains unexplained changes;
+- local and remote histories diverge;
+- the expected completed-task/default-branch integration cannot be identified;
+- preserving work would require reset, force push, or history rewriting.
+
+Then read:
+
+1. `STATUS.md`;
+2. `DECISIONS.md`;
+3. `ROADMAP.md`;
+4. `PROJECT_BOUNDARY.md`;
+5. `SECURITY.md`;
+6. `ACCESSIBILITY.md`;
+7. `LOW_SPEC.md`;
+8. this file;
+9. `TESTING.md`;
+10. `AGENTS.md`;
+11. the selected `TASKS.yaml` entry and its durable evidence.
+
+Run the narrowest relevant baseline before editing.
+
+## 3. Branch lifecycle
+
+### 3.1 Normal rule
+
+Use one short-lived branch per roadmap task:
+
+```text
+codex/tl-0107-os-lifecycle-activation
+```
+
+The branch contains one coherent task outcome. It must not contain sibling work, future B4
+integration, unrelated cleanup, or the next task.
+
+### 3.2 Merge before the next task
+
+A product task is not ready for handoff to the next product task until:
+
+- intended changes and evidence are committed and pushed;
+- a pull request or documented direct-integration path exists;
+- required review/gate evidence is complete;
+- the task is integrated into `main`;
+- `main` contains the reported commit or merge commit;
+- stale task branches are classified;
+- live `STATUS.md` points to updated `main`.
+
+Do not begin the next roadmap task on top of an unmerged completed-task stack.
+
+### 3.3 Temporary stacked-work exception
+
+A stack is allowed only for a named recovery, cumulative stabilization, or approved
+dependency sequence. Record:
+
+- why integration cannot yet occur;
+- exact base and head;
+- included task IDs;
+- owning pull request;
+- collapse/merge plan;
+- stop condition;
+- branch-retirement plan.
+
+The 0.4.0 cumulative stabilization is such an exception. It ends when the advanced TL-0106
+line is integrated into `main`.
 
 ## 4. Checkpoint commits
 
-Create a coherent, buildable commit and push after every meaningful completed unit, and always before:
+Commit and push coherent buildable checkpoints:
 
-- pausing work;
-- ending a session;
-- switching machines or worktrees;
-- starting a risky migration;
-- running a destructive or broad mutating test;
-- handing the task to another Codex session; or
-- requesting human review.
+- after each meaningful unit;
+- before pausing or ending a session;
+- before changing machines/worktrees;
+- before a risky migration or mutating test;
+- before human review;
+- before updating a cumulative pull request.
 
-A checkpoint commit should:
+A checkpoint:
 
-- reference the task ID;
-- contain the intended source, tests, fixtures, schemas, migrations, documentation, and task/status updates together;
-- exclude generated outputs, caches, local virtual environments, raw logs, personal data, and secrets;
-- pass the quick tier; and
-- state any known targeted/full/extended tests still pending.
+- references the task or amendment;
+- includes related source, tests, fixtures, schemas, migrations, docs, and state together;
+- passes Quick;
+- excludes secrets, personal data, caches, generated raw logs, and local environments;
+- records broader verification still pending.
 
-Suggested commit form:
+## 5. Pull-request and branch discipline
 
-```text
-TL-0008: adopt same-machine validation baseline
-```
+Before opening a pull request:
 
-## 5. Push and handoff rule
+- fetch/prune;
+- verify base/head;
+- inspect commit range and changed files;
+- verify the branch contains no unrelated task;
+- update status/evidence;
+- run required active-machine tiers.
 
-A session or task handoff is not complete until:
+Before closing a superseded PR or deleting a branch:
 
-- intended changes are committed;
-- the commit is pushed;
-- the remote branch contains the reported commit;
-- `TASKS.yaml` and `STATUS.md` reflect the current state;
-- test commands, tiers, durations, and results are recorded;
-- tests not run and the reason are recorded;
-- the worktree is clean except for explicitly documented local artifacts; and
-- the next action is executable without the previous chat.
+1. verify its intended commits are reachable from the retained line or intentionally rejected;
+2. record any unique commits/content;
+3. obtain project-owner approval;
+4. add a clear supersession/retirement note;
+5. never delete the only copy of intended work.
 
-Verify before reporting completion:
+Do not merge an older divergent PR merely to make it disappear.
+
+## 6. Push and handoff
+
+A session handoff is complete only when:
+
+- changes are committed and pushed;
+- local/upstream SHAs match or the exact difference is documented;
+- `TASKS.yaml` and concise `STATUS.md` are current;
+- durable evidence artifacts are committed;
+- tests run/not run and rationale are recorded;
+- the worktree is clean except for explicitly documented local artifacts;
+- the next action is executable without the prior chat.
+
+Verify:
 
 ```powershell
 git status --short --branch
@@ -114,124 +159,131 @@ git rev-parse HEAD
 git rev-parse @{upstream}
 ```
 
-Do not report a commit as pushed when the two commit IDs do not match or the upstream check was not possible.
+## 7. Evidence storage
 
-## 6. Clean-clone continuation
+`STATUS.md` is a current snapshot, not an archive.
 
-At milestone, pilot, preview, and stable-release gates—and when the task explicitly requires it—create a separate clean clone or clean worktree on the same physical Codex machine.
-
-The clean environment must be able to:
-
-1. restore required external assets from checked-in manifests and documented verified sources;
-2. install/restore locked dependencies;
-3. build/start the project;
-4. run the quick tier; and
-5. locate current task/status/testing instructions.
-
-The clean clone proves repository continuity. It does not create a second-hardware claim.
-
-Do not make continuation depend on:
-
-- an untracked local database;
-- a manually installed undocumented binary;
-- IDE-specific state;
-- a secret that is not described through a safe example/secret-management path;
-- a file outside the repository with no restoration manifest; or
-- a sibling repository.
-
-## 7. Secrets, personal data, and large assets
-
-Never commit:
-
-- passwords, tokens, private keys, recovery keys, credentials, or signing secrets;
-- donor, recipient, operator, or beneficiary personal data;
-- serial numbers, asset tags, device names, SSIDs, IP addresses, or personal paths in fixtures/evidence;
-- raw hardware or diagnostic logs containing identifying data;
-- caches, generated reports from real jobs, or local test databases; or
-- machine-specific virtual environments and IDE caches.
-
-Provide safe examples such as `.env.example` only when needed. Required large assets use Git LFS or a versioned download manifest containing source, licence, hash, size, and restoration command.
-
-## 8. Test execution and hardware scope
-
-All tests run according to `TESTING.md` on the active Codex machine. This includes:
-
-- host Windows checks;
-- clean clones/worktrees;
-- virtual machines, Windows Sandbox, or containers hosted on the active machine;
-- resource constraints and synthetic fault scenarios; and
-- human accessibility/operator/recipient walkthroughs.
-
-Do not create a task dependency on:
-
-- another physical computer;
-- a lower-performance device;
-- a volunteer hardware pool;
-- a cloud CI runner or GitHub Actions runtime matrix; or
-- missing peripheral/equipment classes.
-
-GitHub stores source, history, issues, and release records. It is not the authoritative runtime test environment for this portfolio.
-
-## 9. Divergence and recovery
-
-When local and remote branches diverge:
-
-1. stop implementation;
-2. preserve the worktree and identify local/remote commits;
-3. inspect the actual changes;
-4. choose the documented safe merge/rebase strategy;
-5. do not use `git reset --hard`, force push, or history rewriting merely to obtain a clean state; and
-6. request explicit authorization when recovery would discard or rewrite someone else’s work.
-
-When GitHub is temporarily unavailable, local commits may continue only when safe, but:
-
-- do not declare a handoff complete;
-- do not switch machines;
-- do not claim the remote contains the work; and
-- synchronize and verify as the first action after connectivity returns.
-
-## 10. Current TL-0008 migration sequence
-
-The repository is currently at the point where the former hardware-lab procedure would have been executed. That procedure is superseded.
-
-Use the exact transition process in `TL-0008_TRANSITION.md` and the copy-ready prompt in `CODEX_TL0008_TRANSITION_PROMPT.md`.
-
-The historical references are:
-
-- procedure: `TL-0008 draft 1`;
-- source commit: `4fa3ea050fd5e9985fde9cc8218281698d371cc8`;
-- digest: `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`.
-
-Do not reset the repository to that commit merely because it is named. Verify whether it is an ancestor/current reference. Preserve newer work. Archive the old procedure with a superseded banner; do not execute `MHT-001`–`MHT-021` as TL-0008 completion evidence.
-
-## 11. End-of-session report
-
-Every report includes:
+New detailed evidence belongs in:
 
 ```text
-Task:
+artifacts/evidence/TL-XXXX/
+artifacts/gates/
+docs/reviews/
+docs/adr/
+```
+
+A task evidence entry remains compact and contains:
+
+- task;
+- command/review;
+- tier;
+- result;
+- duration;
+- environment/constraint;
+- commit/artifact/digest;
+- concise limitation.
+
+Do not paste raw logs, secrets, personal data, or multi-page design analysis into
+`TASKS.yaml`.
+
+## 8. Clean-clone continuation
+
+At milestone, preview, pilot, stable, cumulative-integration, and named task gates, use a
+separate clean clone/worktree or allowed hosted environment on the active physical machine.
+
+The clean environment must:
+
+1. restore verified external assets from checked-in manifests;
+2. restore locked dependencies;
+3. build/start the project;
+4. run Quick;
+5. locate the current task and evidence;
+6. contain no dependency on sibling repositories or undocumented local files.
+
+This proves source continuity, not multi-hardware support.
+
+## 9. Physical and runtime test scope
+
+All authoritative implementation and validation occur on the active Codex machine, including
+host checks, clean clones/worktrees, Windows Sandbox, VMs, containers, virtual disks,
+constraints, and human walkthroughs.
+
+Do not create dependencies on:
+
+- another physical PC;
+- a lower-performance device;
+- a volunteer lab;
+- missing peripheral classes;
+- GitHub-hosted runtime behavior;
+- a cloud hardware matrix.
+
+Use deterministic fixtures, sanitized captured samples, safe same-machine constraints,
+bounded observation, and explicit limitations.
+
+## 10. Remote CI
+
+GitHub Actions is permitted only as a supplementary clean-checkout signal. It may run format,
+build, static, and deterministic tests, but it cannot satisfy:
+
+- active-machine runtime evidence;
+- hardware/provider observation;
+- accessibility walkthroughs;
+- performance/resource evidence;
+- milestone/pilot/stable gates;
+- release authorization.
+
+Workflow and evidence text must not call remote output authoritative.
+
+## 11. Divergence and recovery
+
+When histories diverge:
+
+1. stop implementation;
+2. preserve worktree and identify commits;
+3. inspect actual changes and ownership;
+4. choose the documented merge/rebase strategy;
+5. do not use `reset --hard`, force push, or history rewriting for convenience;
+6. request owner authorization before discarding or rewriting work.
+
+If GitHub is unavailable, local commits may continue when safe, but no handoff, merge,
+machine switch, or claim of remote publication is complete.
+
+## 12. Historical TL-0008 transition
+
+The TL-0008 single-machine transition is complete. The transition prompt and superseded
+physical-device procedure remain historical audit records only.
+
+Normal task selection comes from live `STATUS.md` and `TASKS.yaml`. Do not rerun the old
+device-pool walkthrough.
+
+## 13. End-of-session report
+
+```text
+Task/amendment:
 Branch:
+Base:
 Commit:
-Push status:
+Push/upstream:
 Working tree:
+Default-branch integration state:
+Pull request:
 
 User outcome:
 Changed files:
+Durable evidence:
 
 Testing:
-- Quick: command | duration | result
-- Targeted: command | duration | result/not run + reason
-- Full: command | duration | result/not run + trigger decision
-- Extended: scenario(s) | duration | result/not run + trigger decision
+- Quick:
+- Targeted:
+- Full:
+- Extended:
+- Supplementary CI:
 
-Reference-machine / clean-environment details:
-Defects and focused regressions:
-Security/privacy impact:
-Accessibility/modest-hardware impact:
-Data/migration impact:
-Project-boundary/release-interface impact:
-Outstanding evidence or blocker:
+Security/privacy:
+Accessibility/modest hardware:
+Data/migration:
+Project boundary/release interface:
+Known limitations:
+Owner decision required:
 Next action:
 ```
-
-A narrative cannot substitute for a pushed commit, durable evidence, or truthful test state.

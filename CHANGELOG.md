@@ -1,5 +1,29 @@
 # Roadmap Bundle Changelog
 
+## 0.4.0 — 2026-09-12
+
+Prepared 12 September; approved for application 30 September 2026. Merge remains pending owner review.
+
+### Repository stabilization
+
+- Added an explicit merge-before-next-task rule and cumulative stabilization path.
+- Reclassified remote CI as supplementary and preserved active-machine authority.
+- Reworked the local verification entry point into Quick, Targeted, and Full modes.
+- Added `eng/test-manifest.json` for budgets and fast-project selection.
+- Replaced the live status document with a concise handoff snapshot while archiving the prior
+  detailed status.
+- Established compact task evidence with durable artifact references.
+- Required reusable test runners and declarative profiles for future clean-environment work.
+- Removed the completed TL-0008 transition from normal Codex prompt selection.
+- Added evidence-key ownership/reconciliation and versioned lifecycle-data decisions.
+- Clarified TL-0107 and TL-0112 without marking either task complete.
+- Prepared one cumulative pull-request path from the advanced TL-0106 lineage to `main`.
+
+### Decisions
+
+Added D-067 through D-072 under amendment
+`AMD-2026-09-12-REPOSITORY-STABILIZATION`.
+
 ## 0.3.1 — 22 August 2026
 
 Governance patch that assigns a unique future ADR identity without changing product scope or runtime behavior.

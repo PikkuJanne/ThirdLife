@@ -1,6 +1,6 @@
 schema_version: 1
-bundle_version: 0.3.1
-generated_on: '2026-08-22'
+bundle_version: 0.4.0
+generated_on: '2026-09-30'
 project:
   name: ThirdLife
   component: ThirdLife Setup Core
@@ -337,6 +337,17 @@ tasks:
     environment: GitHub Actions windows-2025; commit 9ac9e9ed4b9b4b01828644199311aa1ae4054172
     date: '2026-08-14'
     reference: https://github.com/PikkuJanne/ThirdLife/actions/runs/31805725622; job 94784055142; artifact count 0
+  - summary: Historical GitHub-hosted verification remains valid as a supplementary clean-checkout result; under
+      D-068 it is not authoritative runtime, hardware, milestone, pilot, or release evidence.
+    task: TL-0002
+    command_or_review: Governance reclassification under AMD-2026-09-12-REPOSITORY-STABILIZATION
+    tier: governance clarification
+    result: historical evidence preserved; authority wording corrected
+    environment: repository documentation only
+    date: '2026-09-30'
+    duration: not applicable
+    reference: D-068; docs/amendments/2026-09-12-repository-stabilization.md
+    limitation: Does not rerun or invalidate the historical workflow; active-machine evidence remains required.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
@@ -2293,6 +2304,8 @@ tasks:
   - D-008
   - D-009
   - D-015
+  - D-071
+  - D-072
   objective: Collect Windows edition, build, architecture, support-target evidence, activation state, and pending-reboot indicators
     without changing licensing.
   deliverables:
@@ -2305,10 +2318,17 @@ tasks:
   - Unsupported or unknown lifecycle data cannot pass.
   - Pending-reboot evidence has an explicit source and confidence.
   - Tests cover activated, unactivated, unsupported, and provider-failure states.
+  - The provider does not publish a competing value under system.architecture. Any OS-specific architecture observation uses a distinct key and provenance, and TL-0112 owns deterministic reconciliation.
+  - Lifecycle mapping records source identity, data revision, and an as-of date; stale, absent, contradictory, or unrecognized lifecycle data cannot produce a supported result.
+  - Activation collection logs or exports no partial product key, product ID, account identifier, or raw licensing output and never interprets activation as legal licence ownership.
+  - Pending-reboot evidence identifies each source and confidence; absence of one indicator does not prove that no reboot is pending.
   verification:
   - Run captured-data tests.
   - Run on supported Windows 11 and Windows 10 or a synthetic equivalent.
   - Verify no write/activation APIs are invoked.
+  - Test duplicate/contradictory architecture observations and prove there is no first-wins or last-wins behavior.
+  - Test current, stale, missing, future/unknown, and contradictory lifecycle-data revisions with deterministic clocks.
+  - Scan logs, serialized evidence, diagnostics, and failures for partial keys, product IDs, account identifiers, and raw licensing text.
   evidence: []
   expected_test_tier: targeted
   full_test_triggers: []
@@ -2495,6 +2515,8 @@ tasks:
   - D-015
   - D-018
   - D-042
+  - D-071
+  - D-072
   objective: Run providers with bounded concurrency, cancellation, durable observation commits, and clear partial-failure
     semantics.
   deliverables:
@@ -2506,9 +2528,12 @@ tasks:
   - Cancellation leaves a consistent partial assessment.
   - Offline assessment makes no unapproved network request.
   - A provider crash cannot mark unrelated requirements passed.
+  - Overlapping provider facts have one semantic owner or an explicit versioned reconciliation rule; conflicts and freshness never resolve by provider enumeration order.
+  - The assessment snapshot records the lifecycle-data revision and as-of date used, and historical snapshots are not retroactively rewritten by later lifecycle refreshes.
   verification:
   - Test cancellation, timeout, provider exception, process interruption, and rerun.
   - Verify deterministic normalization for identical fixtures.
+  - Property-test provider order independence and deterministic conflict/freshness handling.
   evidence: []
   expected_test_tier: targeted
   full_test_triggers: []

@@ -1,6 +1,6 @@
 # AGENTS.md — ThirdLife Setup Core Codex Operating Contract
 
-**Bundle version:** 0.3.1  
+**Bundle version:** 0.4.0  
 **Project:** ThirdLife Setup Core — Team B / B1  
 **Physical validation scope:** active Codex machine only
 
@@ -37,6 +37,13 @@ The v0.1 controlled pilot at `TL-0611` is not the project exit. Team B/B1 comple
 `STATUS.md` is a factual handoff snapshot and cannot weaken a higher-authority document. `CODEX_START_PROMPT.md` and `CODEX_TL0008_TRANSITION_PROMPT.md` are operating prompts. `RELEASE_INTERFACE.md` is populated only from verified release behavior. `FUTURE_ASSEMBLY_NOTES.md` is non-binding deferred context.
 
 When a material contradiction exists, stop before the conflicting implementation and report the exact files, decisions, tasks, and safe options.
+
+### Default-branch integration check
+
+Before selecting a product task, compare the live continuation branch with `main`.
+If completed work is absent from `main`, perform only the named stabilization/integration
+work: verify ancestry and unique content, preserve intended work, and prepare one cumulative
+pull request. A temporary stack requires a recorded exception and collapse plan.
 
 ## 3. Project-vacuum and late-integration rules
 
@@ -79,6 +86,39 @@ Do not require or seek:
 Missing hardware variants are covered through deterministic fixtures, sanitized captured provider samples, safe same-machine constraints, bounded observation of capabilities actually present on the active machine, or explicit unverified limitations. None of these methods is cross-hardware certification.
 
 The former `TL-0008 draft 1` device-pool and `MHT-001`–`MHT-021` walkthrough is superseded by `D-064`. Preserve it only as a clearly marked historical record. Do not execute it as current evidence.
+
+## Integration and pull-request discipline
+
+A completed task branch is integrated into `main` before the next roadmap task begins.
+Temporary stacked work is allowed only for a named recovery, cumulative stabilization, or
+approved dependency sequence with a recorded collapse plan.
+
+- Do not select the next product task while completed prior work is absent from `main`.
+- Verify ancestry and unique commits before closing a pull request or deleting a branch.
+- Obtain project-owner approval before closing superseded pull requests or deleting branches.
+- Start the next roadmap task from updated `main` after the previous task is merged.
+- Never reset, force-push, or rewrite history merely to collapse a stack.
+- GitHub Actions is supplementary and cannot satisfy required active-machine runtime,
+  hardware, accessibility, benchmark, gate, pilot, or release evidence.
+- The completed TL-0008 transition is historical; current selection comes from live
+  `STATUS.md` and `TASKS.yaml`.
+
+### Evidence-size discipline
+
+Keep new task evidence compact: task, command/review, tier, result, duration,
+environment/constraint, commit/artifact/digest, and concise limitation. Put detailed reports
+and long-form reviews in committed `artifacts/evidence/<task>/`, gate records, ADRs, or dated
+review documents. `STATUS.md` remains a current handoff snapshot.
+
+### Overlapping provider facts and lifecycle data
+
+A normalized evidence key has one semantic owner. Related provider facts use distinct
+keys/provenance or an explicit deterministic reconciliation rule. First-wins, last-wins, and
+enumeration-order overwrite behavior are prohibited.
+
+Externally changing lifecycle knowledge is versioned, dated, attributable, and stale-safe.
+Unknown, stale, contradictory, or unrecognized lifecycle data cannot satisfy a required
+support rule.
 
 ## 5. Task selection
 
@@ -198,6 +238,11 @@ Once implemented, targeted/full/extended invocations must be documented and inde
 
 Remote runtime CI is optional and non-authoritative. It cannot substitute for active-machine evidence or become a project/release dependency.
 
+Repeated clean-environment and scenario work uses reusable host/guest runners and declarative
+profiles under D-070. New large task-specific scripts require a technical reason, owner, and
+replacement/retirement plan. Historical task-named runners and evidence remain version-bound;
+new scenarios produce independently invokable, bounded machine-readable results.
+
 ## 10. Architecture boundaries
 
 ### Domain purity
@@ -273,6 +318,11 @@ Branch: <branch>
 Commit: <commit>
 Push/upstream: <verified state>
 Working tree: clean | <documented state>
+Default-branch integration state:
+Cumulative/normal pull request:
+Remote CI classification: supplementary | not run
+Durable evidence artifact:
+Evidence-size impact:
 
 User outcome:
 - <what now works or is understood>

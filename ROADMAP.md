@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Binding Development Roadmap
 
-**Bundle version:** 0.3.1  
+**Bundle version:** 0.4.0  
 **Portfolio roadmap:** ThirdLife Software Portfolio v2.1 (15 August 2026)  
 **Project / queue:** ThirdLife Setup Core — Team B / B1  
 **Pilot target:** v0.1 controlled partner pilot at `TL-0611`  

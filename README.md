@@ -3,7 +3,7 @@
 This repository develops ThirdLife Setup Core: a local-first, auditable Windows refurbishment workflow for volunteer and staff refurbishers. Development follows the frozen decisions, standalone Team B/B1 boundary, and dependency-ordered task graph checked into this repository.
 
 **Current project:** Team B / B1 — ThirdLife Setup Core  
-**Roadmap bundle:** 0.3.1 / ThirdLife Software Portfolio v2.1  
+**Roadmap bundle:** 0.4.0 / ThirdLife Software Portfolio v2.1  
 **Physical validation scope:** active Codex machine only  
 **Pilot gate:** `TL-0611` — controlled v0.1 partner pilot  
 **Standalone release gate:** `TL-0710` — ThirdLife Setup Core 1.0  
@@ -11,6 +11,20 @@ This repository develops ThirdLife Setup Core: a local-first, auditable Windows 
 **Future integration project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
 
 The governed roadmap contains **91 tasks**, **8 milestone gates**, and **66 frozen decisions**. Current implementation progress and the next dependency-ready work are recorded in `TASKS.yaml` and `STATUS.md`; do not infer them from this README.
+
+## What changed in governed bundle 0.4.0
+
+- Consolidates completed work into one default-branch integration path before TL-0107.
+- Reclassifies GitHub Actions as supplementary, never authoritative runtime evidence.
+- Makes Quick include formatting, build, and fast code tests and adds an explicit Targeted
+  entry point.
+- Keeps `STATUS.md` concise and moves detailed evidence to durable task/gate artifacts.
+- Requires reusable runners/declarative profiles instead of continued task-specific harness
+  growth.
+- Removes the completed TL-0008 transition from normal prompt selection while preserving its
+  audit history.
+- Clarifies architecture-evidence ownership and versioned/stale-safe lifecycle data for
+  TL-0107/TL-0112.
 
 ## What changed in governed bundle 0.3.1
 
@@ -67,8 +81,8 @@ See `CHANGELOG.md` for the file-level change record.
 | [`docs/testing/accessibility-matrix.md`](docs/testing/accessibility-matrix.md) | Automated and later human accessibility coverage on the active machine. |
 | [`docs/history/TL-0008-draft-1-superseded.md`](docs/history/TL-0008-draft-1-superseded.md) | Full audit-preserved draft-1 procedure with a do-not-execute banner. |
 | `CODEX_START_PROMPT.md` | First-session prompt and reusable execution, review, gate, security, accessibility, recovery, deferral, release-interface, and handoff prompts. |
-| `TL-0008_TRANSITION.md` | Approved migration from the obsolete device-pool gate to same-machine validation. |
-| `CODEX_TL0008_TRANSITION_PROMPT.md` | Copy-ready instructions for this one-time transition. |
+| `TL-0008_TRANSITION.md` | Historical record of the completed device-pool-to-same-machine transition. |
+| `CODEX_TL0008_TRANSITION_PROMPT.md` | Historical one-time transition prompt; not a normal current entry point. |
 | `RELEASE_INTERFACE.md` | Human-readable black-box release sheet, populated as a preview draft at `TL-0610`, completed at `TL-0706`, and frozen before `TL-0710`; not a shared API. |
 | `FUTURE_ASSEMBLY_NOTES.md` | Non-binding B4 backlog for cross-project ideas; nothing here can block or expand B1. |
 | `CHANGELOG.md` | Bundle version and migration history. |
@@ -77,6 +91,7 @@ See `CHANGELOG.md` for the file-level change record.
 | `tools/supply_chain.py` | Standard-library dependency-contract validator and deterministic CycloneDX 1.6 generator. |
 | `tools/merge_task_contracts.py` | Reviewed merger that updates canonical contracts while preserving live task execution history. |
 | `tools/requirements.txt` | Source-, binary-, version-, and hash-pinned validator dependencies. |
+| `eng/test-manifest.json` | Machine-readable test-tier budgets, fast test selection, and evidence authority. |
 | `eng/generate-sbom.ps1` | Clean-checkout SBOM entry point; writes only the requested generated artifact. |
 | `BUNDLE_MANIFEST.sha256` | SHA-256 manifest generated after validation; excludes itself. |
 
@@ -141,15 +156,15 @@ py -3.14 -m venv .venv
 .\.venv\Scripts\python.exe -m pip --isolated install --no-deps --requirement tools\requirements.txt
 ```
 
-Run the quick documentation/schema/static tier during governed documentation work:
+Run Quick for governance, formatting, build, and fast code feedback. Add `-Restore` in a clean checkout:
 
 ```powershell
-.\eng\verify.ps1 -Tier Quick
+.\eng\verify.ps1 -Tier Quick -Restore
 ```
 
-Run `.\eng\verify.ps1 -Tier Full` only when a task or gate triggers the full restore/build/test suite.
+Run `.\eng\verify.ps1 -Tier Full -Restore` when a task or gate triggers the complete suite.
 
-For development, read the authority files in the required authority order and use the default selection rule in `AGENTS.md`. The validator prints the currently Codex-ready task IDs from live `TASKS.yaml` state. Work on exactly one selected task and publish its verified result before choosing another.
+For development, read the authority files in the required authority order and use the default selection rule in `AGENTS.md`. The validator lists dependency-ready task IDs from live `TASKS.yaml`; default-branch integration must also be verified before selection. Work on exactly one selected task and publish its verified result before choosing another.
 
 ## Milestone chain
 
@@ -192,6 +207,11 @@ M4 proves the architecture. M6 authorizes only a controlled pilot. M7 is the Tea
 - Any custom cross-app command or structured adapter.
 
 B4 will consume exact frozen releases and public release information. It will not consume active branches, internal databases, or private classes.
+
+
+### Branch integration rule
+
+A completed roadmap task is merged into `main` before the next task begins. Temporary stacked branches are exceptional, named, and accompanied by a collapse plan. Remote workflow output is supplementary and never replaces active-machine task or release evidence.
 
 ## Task selection and state
 
@@ -252,15 +272,25 @@ py -3.14 -m venv .venv
 .\.venv\Scripts\python.exe -m pip --isolated install --no-deps --requirement tools\requirements.txt
 ```
 
-For documentation/schema/static work, run the quick tier from the repository root:
+Run Quick and the relevant Targeted selection from the repository root:
 
 ```powershell
 .\eng\verify.ps1 -Tier Quick
+.\eng\verify.ps1 -Tier Targeted `
+  -TestProject tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj `
+  -Filter "FullyQualifiedName~ProviderContractTests"
+.\.venv\Scripts\python.exe -m unittest discover -s tools/tests -p "test_*.py"
 ```
 
-For a named full-tier trigger, run `.\eng\verify.ps1 -Tier Full` (the default when `-Tier` is omitted). The scripts resolve repository paths relative to themselves, so an absolute script path also works from another directory. Git Bash on Windows forwards the same arguments through `./eng/verify.sh`. Runtime evidence comes from the active Windows Codex machine; optional remote checks are non-authoritative.
+For a named Full trigger, run `.\eng\verify.ps1 -Tier Full -Restore`. Quick is the default when `-Tier` is omitted. The scripts resolve repository paths relative to themselves, so an absolute script path also works from another directory. Git Bash on Windows forwards the same arguments through `./eng/verify.sh`. Runtime evidence comes from the active Windows Codex machine; optional remote checks are supplementary.
 
-The quick tier runs governance-validator regressions, bundle/schema checks, the manifest, repository boundaries, exact toolchain/package policy, and static continuity controls. The full tier then performs locked restore, formatting verification, a warnings-as-errors Release build, and all Release tests. Restore uses only `NuGet.Config` and `--locked-mode`; it does not rewrite the dependency graph.
+Quick checks the pinned toolchain, bundle/schema/manifest, repository boundaries, formatting,
+a warnings-as-errors Release build, and fast deterministic Core/Inventory tests. Targeted
+includes Quick and the selected projects/filter. The explicit Python command above is the
+Targeted governance regression set; Full includes it and the complete supported deterministic
+.NET suite. Active-machine and Extended scenarios are selected separately in their approved
+environment. Restore uses only `NuGet.Config` and `--locked-mode`; it does not rewrite the
+dependency graph. Tier budgets and filters are declared in `eng/test-manifest.json`.
 
 Generate the dependency SBOM without a restore, network request, package cache, or external SBOM tool:
 

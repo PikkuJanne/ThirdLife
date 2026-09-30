@@ -65,7 +65,7 @@ If an idea has value only with a sibling product, do not open an active B1 task,
 4. Change task dependencies or acceptance contracts only within the named approved amendment. Validate the complete DAG and milestone-gate closure.
 5. Increment the bundle version consistently and update `CHANGELOG.md` when D-045 applies.
 6. Regenerate checked-in generated artifacts from their source, refresh `BUNDLE_MANIFEST.sha256`, and inspect all diffs.
-7. Run the selected task's quick or targeted checks and any full or extended tier whose documented trigger applies. Use `eng/verify.ps1 -Tier Quick` for the quick documentation/schema/static tier; reserve the full tier for its named triggers. Do not disable warnings, analyzers, security, accessibility, modest-hardware, provenance, signature/hash, or test gates.
+7. Run the selected task's quick or targeted checks and any full or extended tier whose documented trigger applies. `eng/verify.ps1 -Tier Quick` validates governance, formatting, a warnings-as-errors build, and fast Core/Inventory tests; Targeted adds selected subsystem tests. Run the complete governance regression suite through its named Targeted command or Full. Reserve Full for its named triggers, including cumulative integration. Do not disable warnings, analyzers, security, accessibility, modest-hardware, provenance, signature/hash, or test gates.
 8. Record environment-limited and human-only evidence honestly. A required approval or manual result cannot be inferred from automated output. All runtime evidence comes from the active Codex machine; fixtures and constraints are not cross-hardware certification.
 9. Publish the reviewed change and its evidence without secrets, personal data, machine-specific paths, or sibling private information.
 

@@ -1,278 +1,281 @@
 # ThirdLife Setup Core — Testing Strategy and Execution Contract
 
-**Bundle version:** 0.3.1  
+**Bundle version:** 0.4.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
-**Authoritative runtime hardware:** active Codex machine only
+**Authoritative runtime hardware:** active Codex machine only  
+**Remote CI:** supplementary
 
-## 1. Purpose
+## 1. Principles
 
-This file defines how ThirdLife Setup Core is verified quickly, reproducibly, and honestly. It replaces the former assumption that the project would maintain a hardware lab, lower-performance reference devices, or an external runner matrix.
+ThirdLife needs fast feedback and complete risk-relevant evidence.
 
-All implementation, tests, benchmarks, clean-clone checks, virtual machines, containers, Windows Sandbox sessions, and release evidence run on the same physical Codex machine. GitHub is the continuity source of truth, not a remote hardware test farm.
+- Run the smallest check capable of disproving the change.
+- Reduce each defect to a focused deterministic regression.
+- Escalate by risk and gate, not by habit.
+- Keep slow scenarios independently invokable.
+- Record what did not run and why.
+- Do not convert one-machine, VM, fixture, or constraint evidence into broad hardware claims.
 
-The test strategy must preserve two properties at the same time:
+The machine-readable tier/budget selection lives in `eng/test-manifest.json`.
 
-1. fast feedback during development; and
-2. complete, risk-relevant evidence at milestone and release gates.
+## 2. Quick tier
 
-A long suite is not the default response to every code change.
+**Default target:** 120 seconds on the active Codex machine.
 
-## 2. Test tiers
+Run:
 
-### 2.1 Quick tier
+```powershell
+.\eng\verify.ps1 -Tier Quick
+```
 
-**Default target:** two minutes or less on the active Codex machine.
+Quick includes:
 
-Typical contents:
+- pinned toolchain check;
+- direct bundle and repository validation;
+- formatting verification;
+- warnings-as-errors Release build;
+- fast deterministic Core tests;
+- fast deterministic Inventory tests excluding active-machine/extended scenarios.
 
-- formatting, linting, analyzers, and static/type checks;
-- bundle/schema validation;
-- changed unit/component tests and the smallest nearby regression set;
-- shortest primary smoke path with tiny deterministic fixtures; and
-- secret/PII and prohibited-coupling checks suitable for fast execution.
+Quick is required after small fixes and before each checkpoint commit.
 
-Required:
+Quick does not include:
 
-- after each small fix;
-- before every checkpoint commit; and
-- before moving a task from `in_progress` to `review` or `done`.
+- all validator mutation/regression tests;
+- broad Sandbox/VM matrices;
+- destructive or host-mutating operations;
+- active-machine capability observations;
+- extended fault/resource scenarios;
+- complete solution end-to-end testing.
 
-Quick tests fail fast and do not load large fixtures, start broad clean-environment matrices, or perform destructive/mutating host operations.
+A budget overrun is recorded and investigated. It is not hidden by removing meaningful code
+checks.
 
-### 2.2 Targeted tier
+In a clean checkout, add `-Restore`:
 
-**Default target:** ten minutes or less unless the task records a justified project-specific budget.
+```powershell
+.\eng\verify.ps1 -Tier Quick -Restore
+```
 
-Typical contents:
+## 3. Targeted tier
 
-- the failing regression case first;
-- the changed subsystem and nearby integrations;
-- only the relevant Windows provider, persistence, UI, package, update, broker, security, accessibility, migration, or report tests;
-- a bounded clean-environment or active-machine smoke test when the changed boundary requires it; and
-- deterministic fault cases for the changed behavior.
+**Default target:** 10 minutes unless the task records a justified alternative.
 
-Required:
+Example:
 
-- before pushing a feature or fix;
-- after changing a data/migration, privilege, IPC, package/update, security, network, filesystem, installer/lifecycle, or accessibility boundary; and
-- when a quick test indicates a wider but still bounded regression risk.
+```powershell
+.\eng\verify.ps1 -Tier Targeted `
+  -TestProject tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj `
+  -Filter "FullyQualifiedName~ProviderContractTests"
+```
 
-### 2.3 Full tier
+Targeted includes Quick plus the changed subsystem, nearby regressions, and risk-specific
+integration/failure checks.
 
-Typical contents:
+Pass several projects as a PowerShell array to `-TestProject`. A filter matching no tests
+fails verification. Without an explicit filter, Targeted uses the deterministic default in
+the manifest. Governance changes also run this independently invokable Targeted set:
 
-- all supported test layers;
-- complete core end-to-end journeys;
-- clean and upgraded installation paths;
-- migration, recovery, export, repair, and uninstall where applicable;
-- complete security/privacy and accessibility baseline checks; and
-- same-machine clean-clone/bootstrap verification.
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tools/tests -p "test_*.py"
+```
 
-Required:
+Required before pushing a feature/fix and after changes to:
 
-- at milestone, preview, pilot, and stable-release gates;
+- data or migration;
+- privilege/IPC;
+- security/privacy;
+- package/update;
+- network/filesystem;
+- provider/engine;
+- installer/lifecycle;
+- accessibility;
+- report/export.
+
+When direct host policy blocks a legitimate test host, use the governed active-machine
+Sandbox/VM profile and record that limitation. Do not weaken host security.
+
+## 4. Full tier
+
+Run:
+
+```powershell
+.\eng\verify.ps1 -Tier Full -Restore
+```
+
+Full includes:
+
+- complete Python governance regression tests;
+- bundle and repository validation;
+- locked dependency restore;
+- formatting;
+- warnings-as-errors Release build;
+- complete supported .NET test suite.
+
+The default Full filter excludes `ActiveMachine`, `Extended`, and `SandboxOnly` categories.
+Those scenarios run separately when their task/risk requires them, in the declared
+environment. For the current read-only inventory smoke on the unelevated active Windows
+host, use Targeted with the Inventory project and `-Filter "Category=ActiveMachine"`.
+Record each separate result; a default Full pass does not claim these scenarios passed.
+
+Use the approved active-machine clean environment when host policy blocks direct execution.
+
+Full is required:
+
+- at milestone, preview, pilot, stable, and protected-merge gates;
+- for cumulative default-branch integration;
 - after major refactors;
-- after data migrations or dependency/engine changes;
-- before a protected release merge; or
-- when `TASKS.yaml` names a full-tier trigger.
+- after migrations;
+- after dependency/engine changes;
+- when a task explicitly triggers it.
 
-Do not rerun the full tier after every edge-case fix. First run the smallest regression and related targeted set. Rerun the full tier only after the relevant fixes are green or when a shared cause makes the broader rerun necessary.
+Do not rerun Full after every small edge-case fix. Run the focused regression and Targeted
+set first.
 
-### 2.4 Extended/stress tier
+## 5. Extended tier
 
-Typical contents:
+Extended scenarios include:
 
-- large or adversarial fixtures;
-- repeated interruption, restart, resume, or endurance cases;
-- low-space, offline, interrupted-network, slow-destination, no-GPU, conservative-concurrency, and low-priority scenarios;
-- broad hostile-input, restore, integrity, or failure matrices; and
-- long resource measurements.
+- large/adversarial fixtures;
+- endurance;
+- repeated interruption/restart/resume;
+- low-space/offline/interrupted-network/slow-destination;
+- no-GPU/conservative-concurrency/low-priority;
+- restore/integrity drills;
+- broad hostile-input matrices.
 
-Required only:
+Run only the named scenario required by the changed risk or explicit gate. Each scenario must
+be independently invokable and produce a durable scenario-level result.
 
-- when the changed risk specifically needs it;
-- at a task or gate whose `extended_test_triggers` require it; or
-- at an explicitly scheduled release gate.
+## 6. Test manifest and reusable runners
 
-Every extended scenario must be independently invokable, checkpointed when long-running, and capable of producing a scenario-level result. Rerun the failed scenario and its related targeted tests, not the whole matrix, unless a shared cause is suspected.
+`eng/test-manifest.json` declares:
 
-## 3. Required test layers
+- tier budgets;
+- fast test projects and filters;
+- default authority;
+- remote-CI classification;
+- extended-scenario policy.
 
-| Layer | Project responsibility |
+Future clean-environment execution should use reusable host/guest runners with declarative
+profiles. Existing task-named scripts remain historical evidence or compatibility wrappers.
+
+The v0.4.0 cumulative gate uses a separate clean worktree on this physical machine and the
+shared `eng/verify.ps1` runner with its declarative test manifest. Bootstrap Python from the
+pinned README procedure, then run Quick with `-Restore` and Full. Existing task-specific
+Sandbox scripts remain bound to their historical source revisions: their old restore order
+and success markers are incompatible with the new Quick contract. Do not invoke those
+unchanged scripts against v0.4.0 or count their historical results as a new run. If host
+policy requires Sandbox again, adapt the shared execution profile and compatibility entry
+points with focused tests before collecting evidence; never change host security policy.
+
+A new large task-specific runner requires:
+
+- technical reason;
+- why the reusable runner cannot express the scenario;
+- owner;
+- retirement/replacement condition.
+
+## 7. Required layers
+
+| Layer | Responsibility |
 |---|---|
-| Unit/component | Domain invariants, parsers, validators, schemas, policy, redaction, path safety, persistence, migration, journal transitions, retention, report contracts, and failure handling. |
-| Provider/engine integration | Real structured invocation where safe, version/provenance checks, cancellation, timeout, unavailable/access-denied behavior, offline behavior, hostile input, update/rollback behavior, and cleanup. |
-| End-to-end | Complete primary journey in clean and upgraded environments on the active Codex machine, including interruption, recovery, export, restart, repair, and uninstall where applicable. |
-| Accessibility | Keyboard, focus, names/roles/states, screen-reader semantics/announcements, scaling, contrast, reduced resolution, plain-language errors, cancellation, and recovery. |
-| Modest-hardware | Same-machine no-GPU, conservative concurrency, low-priority, low-space, offline/interrupted-network, large-input, bounded-cache/temp/database, and graceful-degradation evidence. |
-| Security/privacy | Threat-model cases, privilege/IPC boundaries, malicious input, path/junction attacks, secrets, support-bundle sanitization, package/update provenance, logging, and no-telemetry default. |
-| User evidence | Representative operator/recipient/proxy walkthroughs on the active Codex machine, terminology, misunderstood actions, recovery, and usefulness. |
+| Unit/component | Domain invariants, parsers, validators, policy, redaction, persistence, migrations, journals, reports, failure semantics. |
+| Provider/engine | Fixed structured invocation, provenance, cancellation, timeout, unavailable/denied behavior, cleanup, hostile input. |
+| End to end | Complete primary journey, interruption, recovery, export, restart, repair, uninstall where applicable. |
+| Accessibility | Keyboard, focus, names/roles/states, announcements, scaling, contrast, plain language, cancellation/recovery. |
+| Modest hardware | Same-machine constraints, bounded memory/temp/cache/database, no-GPU, conservative concurrency, graceful degradation. |
+| Security/privacy | Threat cases, privilege/IPC, malicious input, path/link attacks, secrets, update provenance, support sanitization, no telemetry. |
+| User evidence | Representative operator/recipient/proxy walkthroughs, terminology, recovery, usefulness. |
 
-## 4. Allowed environments
+## 8. Deterministic fixtures and provider facts
 
-All environments below run on the active Codex machine:
+Fixtures are bounded, versioned, non-sensitive, attributable, reproducible, and independently
+runnable.
 
-- the host Windows installation for safe read-only or explicitly approved bounded tests;
-- a clean clone or separate worktree;
-- a clean virtual machine;
-- Windows Sandbox where suitable;
-- a container for portable tooling/tests;
-- a disposable virtual disk or isolated test workspace;
-- deterministic fakes, stubs, captured/sanitized provider samples, and synthetic fixtures; and
-- process/resource constraints that are safe and reversible.
+A fixture proves application behavior for represented data. It does not prove that every real
+provider or device behaves identically.
 
-These environments improve isolation and reproducibility. They do not constitute a multi-hardware test matrix.
+A normalized evidence key has one semantic owner. Related provider observations use distinct
+keys/provenance or an explicit deterministic orchestrator reconciliation rule. Provider order
+must not select the outcome.
 
-Not required or authoritative:
+Externally changing lifecycle data includes source, revision, and as-of date. Controlled
+clocks test current, stale, absent, future/unknown, and contradictory revisions.
 
-- a second physical computer;
-- a lower-performance machine;
-- a volunteer/partner device pool;
-- GitHub Actions or another cloud runtime matrix;
-- an external CI hardware farm; or
-- a physical set covering every storage, battery, manufacturer, TPM, display, port, or network class.
+## 9. Defect workflow
 
-An optional remote check may be used for non-authoritative convenience only if it introduces no release dependency and no secret/data risk. Its result cannot substitute for required active-machine evidence.
+1. Stop a broad run when enough evidence exists.
+2. Create the smallest practical deterministic reproduction.
+3. Add/update a focused regression.
+4. Run it first.
+5. Run the related Targeted set.
+6. Run broader scope only when triggered.
+7. Preserve failed and corrected evidence.
+8. Update compact task evidence and live status.
 
-## 5. Reference-machine record
+Blind rerun is not success. Quarantine requires owner, task, reason, risk, and removal
+condition.
 
-Before resource-sensitive or release testing, update `docs/testing/reference-machine-profile.md` with the sanitized active-machine profile required by `LOW_SPEC.md`.
+## 10. Safety and isolation
 
-Every test record that depends on Windows behavior or performance references that profile revision. Never include serial numbers, asset tags, device names, usernames, SSIDs, IP addresses, credentials, recovery keys, personal paths, screenshots, or raw logs.
-
-## 6. Deterministic fixture policy
-
-Use the smallest fixture capable of disproving the behavior.
-
-Fixtures must be:
-
-- deterministic and versioned;
-- non-sensitive;
-- attributable or project-created;
-- independently runnable;
-- bounded in size;
-- accompanied by expected result and hash when used for release evidence; and
-- safe to delete and recreate.
-
-Provider and hardware variants are represented through synthetic or captured sanitized data where the active machine cannot expose them. Examples include no battery, malformed battery XML, unavailable storage counters, TPM access denied, unsupported CPU, Secure Boot disabled, camera absent, multiple disks, provider timeout, or managed-device indicators.
-
-A fixture proves the application’s response to the represented data. It does not prove identical behavior on every real device or provider implementation.
-
-## 7. Defect workflow
-
-When a test exposes a defect:
-
-1. stop the broad run when enough evidence exists to isolate it;
-2. reduce it to the smallest practical deterministic reproduction;
-3. add or update a focused regression test;
-4. run that regression first;
-5. run the related targeted set;
-6. run a broader tier only when its trigger applies;
-7. preserve the failed and corrected scenario evidence; and
-8. update `STATUS.md` and the task evidence with exact commands and durations.
-
-Blindly rerunning a flaky test is not success. Flaky tests are defects. Temporary quarantine requires an owner, task, reason, risk assessment, and removal condition.
-
-## 8. Test isolation and safety
-
-Tests must be deterministic, isolated, idempotent, and independent of execution order wherever practical.
-
-Use:
-
-- temporary workspaces and unique internal IDs;
-- controlled clocks and random seeds;
-- network/provider stubs;
-- disposable databases and virtual disks;
-- explicit cleanup verification;
-- bounded timeouts and cancellation; and
-- restore/checkpoint records before any approved mutating host or VM test.
+Use temporary workspaces, controlled clocks/seeds, stubs, disposable databases/disks,
+bounded timeouts, cancellation, and cleanup verification.
 
 Do not:
 
-- alter firmware, TPM, Secure Boot, ownership/management controls, activation, or unsupported compatibility settings;
-- use unknown removable media;
-- run destructive stress by default;
-- disable the host’s security controls merely to create a test case;
-- place secrets or personal data in fixtures/logs; or
-- disrupt the active machine’s network, storage, or operating state without an explicit task, checkpoint, recovery plan, and human approval.
+- change firmware, TPM, Secure Boot, ownership/management, or activation to create a case;
+- disable security controls for test convenience;
+- use unknown media;
+- place secrets/personal data in fixtures or logs;
+- disrupt host storage/network/boot without an explicit task, checkpoint, recovery plan, and
+  approval.
 
-## 9. Manual hardware-test workflow
+## 11. Manual hardware and accessibility evidence
 
-ThirdLife’s guided manual hardware tests remain a product feature. Their development verification is not a hardware-lab exercise.
+Guided hardware tests remain a product feature. Development does not require every hardware
+class.
 
-At TL-0008:
+- Deterministically test state, pause/resume, unavailable/failure, evidence, and cleanup.
+- Walk through only capabilities available on the active machine when a named task requires it.
+- Represent absent capabilities truthfully with fixtures.
+- A workflow pass is not hardware certification.
 
-- specify test IDs, instructions, allowed result states, evidence classes, pause/resume, cleanup, and safety boundaries;
-- test state transitions and unavailable/failure paths deterministically;
-- do not execute the old `MHT-001`–`MHT-021` physical device-pool walkthrough; and
-- do not treat missing peripherals or equipment as blockers.
+Human accessibility evidence runs on the active machine at named tasks/gates and records
+assistive technology, build, procedure, result, and limitations.
 
-At later explicit tasks:
+## 12. Remote CI
 
-- a representative operator may walk through capabilities available on the active Codex machine;
-- absent capabilities use deterministic `Not available`/failure fixtures;
-- cold boot is performed only at its named gate on the active machine when required; and
-- the evidence is limited to workflow usability and that exact machine.
+The workflow is a supplementary clean-checkout check. It cannot replace any required
+active-machine runtime, hardware, accessibility, resource, gate, pilot, or release evidence.
 
-A pass means the specified workflow was truthfully completed. It is not hardware certification.
+Historical remote results remain valid as historical supplementary results; do not rewrite
+history to relabel them.
 
-## 10. Accessibility execution
+## 13. Evidence record
 
-Automated UI Automation and component tests run at quick/targeted scope where possible. Human keyboard/screen-reader/scaling walkthroughs run only when the task or gate requires them, always on the active Codex machine.
+A durable execution record contains:
 
-At minimum, record:
-
-- keyboard-only completion;
-- visible focus and logical order;
-- control names, roles, states, relationships, and announcements;
-- Narrator and, when installed/approved, NVDA behavior;
-- 200% scaling and reduced resolution;
-- high contrast and color independence;
-- progress/cancellation/recovery; and
-- explicit limitations.
-
-## 11. Evidence record
-
-Every test execution record contains:
-
-- task ID;
-- source commit and branch;
-- test tier;
-- exact command or human procedure revision;
-- start/end time and duration;
-- active reference-machine profile revision;
-- hosted environment and constraint profile, if any;
+- task and source commit/branch;
+- tier and exact command/procedure;
+- timestamps/duration;
+- reference-machine profile;
+- hosted environment/constraint;
 - fixture/workload IDs and hashes;
-- pass, fail, blocked, or not run result;
-- durable artifact path;
-- cleanup/recovery result;
-- defect/limitation reference; and
-- tests not run with rationale.
+- result;
+- artifact path;
+- cleanup/recovery;
+- defect/limitation;
+- skipped tiers and rationale.
 
-Completion reports state branch, commit, push status, clean-tree status, tests by tier/command/duration/result, skipped tiers and why, and why the selected scope was sufficient.
+Live `STATUS.md` summarizes the latest relevant records. `TASKS.yaml` references durable
+evidence rather than embedding long reports.
 
-## 12. Current TL-0008 supersession
+## 14. Release claims
 
-The following prior instruction is historical and must not be executed as the current gate:
+Release evidence includes the test manifest, clean-clone result, active reference-machine
+profile, constraints/workload hashes, resource measurements, accessibility/security/privacy
+results, defect dispositions, and explicit limitations.
 
-- procedure: `TL-0008 draft 1`;
-- source commit: `4fa3ea050fd5e9985fde9cc8218281698d371cc8`;
-- procedure digest: `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`;
-- former requirement: physical device pool plus `MHT-001`–`MHT-021` walkthrough.
-
-Preserve the old text only as a superseded historical record with a prominent **DO NOT EXECUTE** notice. The active TL-0008 contract is the same-machine plan in `TASKS.yaml` and `TL-0008_TRANSITION.md`.
-
-## 13. Release evidence and claim limits
-
-A release evidence package includes:
-
-- test manifest with quick, targeted, full, and extended commands, durations, results, and skipped tiers;
-- active reference-machine profile;
-- clean-clone result;
-- same-machine constraint settings and workload hashes;
-- resource measurements and regression comparison;
-- accessibility/security/privacy/lifecycle results;
-- defect disposition and targeted reruns; and
-- explicit limitations.
-
-Release notes may say that the product is **designed for modest hardware** and report observed same-machine results. They may not claim broad hardware support, manufacturer coverage, lower-performance-device validation, or minimum specifications that were not actually tested.
+Release wording may say **designed for modest hardware** and report observed results. It may
+not claim unperformed cross-hardware certification or untested minimum specifications.

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Focused regressions for repository-level supply-chain approval governance."""
+"""Focused regressions for repository workflow and supply-chain governance."""
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -13,6 +14,7 @@ import yaml
 
 
 TOOLS_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = TOOLS_ROOT.parent
 sys.path.insert(0, str(TOOLS_ROOT))
 
 import supply_chain  # noqa: E402
@@ -151,6 +153,243 @@ class SupplyChainApprovalGovernanceTests(unittest.TestCase):
         )
 
         self.assertEqual(validation.errors, [])
+
+
+class TestManifestContractTests(unittest.TestCase):
+    def read_manifest(self) -> dict[str, object]:
+        return json.loads((REPOSITORY_ROOT / "eng/test-manifest.json").read_text(encoding="utf-8"))
+
+    def validate(self, manifest: object, *, raw: bool = False) -> validate_repository.Validation:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            (root / "eng").mkdir()
+            (root / "eng/test-manifest.json").write_text(
+                manifest if raw else json.dumps(manifest), encoding="utf-8"
+            )
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_test_manifest(validation)
+        return validation
+
+    def test_current_manifest_satisfies_governed_selection(self) -> None:
+        self.assertEqual(self.validate(self.read_manifest()).errors, [])
+
+    def test_missing_duplicate_or_arbitrary_quick_projects_are_rejected(self) -> None:
+        for mutation in ("empty", "remove_core", "remove_inventory", "duplicate", "path", "fields"):
+            with self.subTest(mutation=mutation):
+                manifest = self.read_manifest()
+                projects = manifest["tiers"]["quick"]["test_projects"]
+                if mutation == "empty":
+                    projects.clear()
+                elif mutation == "remove_core":
+                    projects.pop(0)
+                elif mutation == "remove_inventory":
+                    projects.pop(1)
+                elif mutation == "duplicate":
+                    projects.append(projects[0])
+                elif mutation == "path":
+                    projects[0]["path"] = "../unreviewed.csproj"
+                else:
+                    projects[0]["command"] = "arbitrary"
+                self.assertTrue(self.validate(manifest).errors)
+
+    def test_filters_cannot_expand_scope_or_skip_all_tests(self) -> None:
+        for tier in ("quick", "targeted", "full"):
+            for test_filter in ("", "Category=Missing", "Category!=Extended", "Category!=ActiveMachine|Category!=Extended"):
+                with self.subTest(tier=tier, test_filter=test_filter):
+                    manifest = self.read_manifest()
+                    selection = manifest["tiers"][tier]
+                    if tier == "quick":
+                        selection["test_projects"][0]["filter"] = test_filter
+                    else:
+                        selection["default_filter" if tier == "targeted" else "filter"] = test_filter
+                    self.assertTrue(self.validate(manifest).errors)
+
+    def test_authority_certification_schema_and_quick_inclusion_are_frozen(self) -> None:
+        mutations = (
+            (("schema_version",), 2),
+            (("schema_version",), True),
+            (("authority", "runtime"), "remote_runner"),
+            (("authority", "remote_ci"), "authoritative"),
+            (("authority", "cross_hardware_certification"), True),
+            (("authority", "cross_hardware_certification"), 0),
+            (("tiers", "targeted", "includes_quick"), False),
+            (("tiers", "targeted", "includes_quick"), 1),
+        )
+        for path, value in mutations:
+            with self.subTest(path=path, value=value):
+                manifest = self.read_manifest()
+                owner = manifest
+                for key in path[:-1]:
+                    owner = owner[key]
+                owner[path[-1]] = value
+                self.assertTrue(self.validate(manifest).errors)
+
+    def test_budgets_and_gate_scenario_controls_cannot_be_removed(self) -> None:
+        for tier, field in (
+            ("quick", "target_seconds"),
+            ("targeted", "target_seconds"),
+            ("full", "trigger"),
+            ("full", "includes"),
+            ("full", "separate_checks"),
+            ("extended", "entry_point"),
+            ("extended", "requirements"),
+        ):
+            with self.subTest(tier=tier, field=field):
+                manifest = self.read_manifest()
+                manifest["tiers"][tier].pop(field)
+                self.assertTrue(self.validate(manifest).errors)
+        for value in (0, -1, 600, "120", 120.0, True):
+            with self.subTest(value=value):
+                manifest = self.read_manifest()
+                manifest["tiers"]["quick"]["target_seconds"] = value
+                self.assertTrue(self.validate(manifest).errors)
+
+    def test_unknown_fields_and_duplicate_json_keys_are_rejected(self) -> None:
+        manifest = self.read_manifest()
+        manifest["tiers"]["quick"]["skip_build"] = True
+        self.assertTrue(self.validate(manifest).errors)
+        body = json.dumps(self.read_manifest()).replace('"schema_version": 1', '"schema_version": 2, "schema_version": 1')
+        errors = self.validate(body, raw=True).errors
+        self.assertTrue(any("unique object keys" in error for error in errors), errors)
+
+    def test_malformed_and_oversized_manifest_is_reported_without_crashing(self) -> None:
+        for value in (None, [], 1, "invalid"):
+            with self.subTest(value=value):
+                self.assertTrue(self.validate(value).errors)
+        for body in ("{", " " * 65537, "[" * 2000 + "]" * 2000):
+            with self.subTest(length=len(body)):
+                self.assertTrue(self.validate(body, raw=True).errors)
+
+
+class SupplementaryWorkflowContractTests(unittest.TestCase):
+    def read_workflow(self) -> dict[str, object]:
+        return yaml.load(
+            (REPOSITORY_ROOT / ".github/workflows/verify.yml").read_text(encoding="utf-8"),
+            Loader=yaml.BaseLoader,
+        )
+
+    def validate(self, workflow: object) -> validate_repository.Validation:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            destination = root / ".github/workflows/verify.yml"
+            destination.parent.mkdir(parents=True)
+            destination.write_text(yaml.safe_dump(workflow), encoding="utf-8")
+            validation = validate_repository.Validation()
+            with patch.object(validate_repository, "ROOT", root):
+                validate_repository.validate_workflow(validation)
+        return validation
+
+    def job(self, workflow: dict[str, object]) -> dict[str, object]:
+        return workflow["jobs"]["supplementary-windows-check"]
+
+    def test_current_workflow_is_hardened_and_supplementary(self) -> None:
+        self.assertEqual(self.validate(self.read_workflow()).errors, [])
+
+    def test_authoritative_workflow_or_job_name_is_rejected(self) -> None:
+        for target in ("workflow", "job"):
+            with self.subTest(target=target):
+                workflow = self.read_workflow()
+                owner = workflow if target == "workflow" else self.job(workflow)
+                owner["name"] = "Windows authoritative verification"
+                self.assertTrue(self.validate(workflow).errors)
+
+    def test_ci_requires_quick_restore_and_supplementary_mode(self) -> None:
+        for argument in (" -Tier Quick", " -Restore", " -SupplementaryCi"):
+            with self.subTest(argument=argument):
+                workflow = self.read_workflow()
+                step = self.job(workflow)["steps"][-1]
+                self.assertIn(argument, step["run"])
+                step["run"] = step["run"].replace(argument, "")
+                errors = self.validate(workflow).errors
+                self.assertTrue(any("supplementary Quick tier" in error for error in errors), errors)
+
+    def test_remote_runtime_or_extended_execution_is_rejected(self) -> None:
+        for command in (
+            "./eng/verify.ps1 -Tier Full -Restore -SupplementaryCi",
+            "./eng/verify.ps1 -Tier Extended -Restore -SupplementaryCi",
+            "./eng/run-tl0010-sandbox.ps1",
+        ):
+            with self.subTest(command=command):
+                workflow = self.read_workflow()
+                self.job(workflow)["steps"][-1]["run"] = command
+                self.assertTrue(self.validate(workflow).errors)
+
+    def test_privileged_triggers_and_write_permissions_are_rejected(self) -> None:
+        for mutation in ("pull_request_target", "write", "job_write"):
+            with self.subTest(mutation=mutation):
+                workflow = self.read_workflow()
+                if mutation == "pull_request_target":
+                    workflow["on"]["pull_request_target"] = {"branches": ["main"]}
+                elif mutation == "write":
+                    workflow["permissions"] = {"contents": "write"}
+                else:
+                    self.job(workflow)["permissions"] = {"contents": "write"}
+                self.assertTrue(self.validate(workflow).errors)
+
+    def test_persisted_credentials_and_shallow_history_are_rejected(self) -> None:
+        for field, value in (("persist-credentials", "true"), ("fetch-depth", "1")):
+            with self.subTest(field=field):
+                workflow = self.read_workflow()
+                self.job(workflow)["steps"][0]["with"][field] = value
+                errors = self.validate(workflow).errors
+                self.assertTrue(any("disable persisted credentials" in error for error in errors), errors)
+
+    def test_action_tags_and_unknown_pins_are_rejected(self) -> None:
+        for index in range(3):
+            for revision in ("v7", "f" * 40):
+                with self.subTest(index=index, revision=revision):
+                    workflow = self.read_workflow()
+                    step = self.job(workflow)["steps"][index]
+                    step["uses"] = step["uses"].split("@", 1)[0] + "@" + revision
+                    self.assertTrue(self.validate(workflow).errors)
+
+    def test_extra_commands_artifact_uploads_secrets_and_bypasses_are_rejected(self) -> None:
+        mutations = (
+            {"name": "Extra command", "run": "Write-Output unexpected"},
+            {"name": "Upload", "uses": "actions/upload-artifact@" + "a" * 40},
+            {"name": "Secret", "run": "Write-Output '${{ secrets.TOKEN }}'"},
+        )
+        for step in mutations:
+            with self.subTest(step=step):
+                workflow = self.read_workflow()
+                self.job(workflow)["steps"].append(step)
+                self.assertTrue(self.validate(workflow).errors)
+        for bypass in ("continue-on-error", "if"):
+            with self.subTest(bypass=bypass):
+                workflow = self.read_workflow()
+                self.job(workflow)["steps"][-1][bypass] = "true"
+                self.assertTrue(self.validate(workflow).errors)
+
+    def test_pinned_toolchain_and_dependencies_cannot_drift(self) -> None:
+        for target in ("dotnet", "python", "pip"):
+            with self.subTest(target=target):
+                workflow = self.read_workflow()
+                steps = self.job(workflow)["steps"]
+                if target == "dotnet":
+                    steps[1]["with"] = {"dotnet-version": "10.0.x"}
+                elif target == "python":
+                    steps[2]["with"]["python-version"] = "3.x"
+                else:
+                    steps[3]["run"] = "python -m pip install PyYAML"
+                self.assertTrue(self.validate(workflow).errors)
+
+    def test_malformed_job_or_step_is_reported_without_crashing(self) -> None:
+        for value in (None, [], "invalid"):
+            for target in ("workflow", "jobs", "job", "steps", "step"):
+                with self.subTest(value=value, target=target):
+                    workflow = self.read_workflow()
+                    if target == "workflow":
+                        workflow = value
+                    elif target == "jobs":
+                        workflow["jobs"] = value
+                    elif target == "job":
+                        workflow["jobs"]["supplementary-windows-check"] = value
+                    elif target == "steps":
+                        self.job(workflow)["steps"] = value
+                    else:
+                        self.job(workflow)["steps"][0] = value
+                    self.assertTrue(self.validate(workflow).errors)
 
 
 if __name__ == "__main__":

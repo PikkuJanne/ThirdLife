@@ -1,4 +1,4 @@
-name: Verify
+name: Supplementary Repository Check
 
 on:
   push:
@@ -13,12 +13,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: verify-${{ github.workflow }}-${{ github.ref }}
+  group: supplementary-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Windows authoritative verification
+  supplementary-windows-check:
+    # This hosted job is a convenience clean-checkout signal only.
+    # Authoritative ThirdLife runtime, hardware, accessibility, benchmark,
+    # milestone, pilot, and release evidence runs on the active Codex machine.
+    name: Supplementary Windows clean-checkout check
     runs-on: windows-2025
     timeout-minutes: 30
 
@@ -52,8 +55,8 @@ jobs:
           python-version: "3.14.7"
           architecture: x64
 
-      - name: Install validator dependency
+      - name: Install pinned validator dependency
         run: python -m pip --isolated install --no-deps --requirement tools/requirements.txt
 
-      - name: Verify
-        run: ./eng/verify.ps1
+      - name: Run supplementary Quick tier
+        run: ./eng/verify.ps1 -Tier Quick -Restore -SupplementaryCi
