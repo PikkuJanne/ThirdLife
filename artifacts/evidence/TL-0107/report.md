@@ -1,11 +1,20 @@
-# TL-0107 â€” OS lifecycle and activation inventory
+# TL-0107 — OS lifecycle and activation inventory
 
 **Date:** 2026-09-30  
-**Task state:** Done; normal pull-request integration is the next continuity step  
+**Task state:** Review; Sandbox Quick passed, committed-source evidence pending  
 **Branch:** `codex/tl-0107-os-lifecycle-activation`  
 **Base:** `74b6c8cbc7b4426eebf38139ed3374f66e3ff8be`  
 **Environment:** active Codex machine only; standard-user Windows 11 x64  
 **Runtime authority:** local; remote CI is supplementary
+
+## Publication
+
+Implementation checkpoint `c144221b2010592ebf5635182396ee6cf80e5b1e` was committed, pushed,
+and verified equal to its upstream. Normal [PR #8](https://github.com/PikkuJanne/ThirdLife/pull/8)
+is open against main. Main has all prior completed work; TL-0107 integration remains pending.
+The follow-up adapts the existing governed Sandbox runner for this task's final Quick
+verification; its commit is reported in the final session handoff. The documented Word
+reference remains excluded. No later product task was started.
 
 ## Continuity and scope
 
@@ -49,7 +58,7 @@ binding documents. Existing privacy-owner-approved files and licence inventory a
 | Read-only activation, no key installation/bypass | Four reviewed read/resource imports; all-provider native/source boundary tests; native fake verifies call and cleanup sequence |
 | Unknown/unsupported lifecycle cannot pass | Current, end date, next day, 30-day boundary, stale, missing, future, unknown source/revision/build/edition/architecture, malformed and duplicate/conflicting data tests |
 | Reboot source and confidence | Three fixed registry sources; per-source `indicator_only`; mixed failures, all-absent, malformed metadata, recovery tests |
-| Activated/unactivated/provider failures | Status 0â€“3 fixtures; conflicting/missing/invalid/oversized rows; HRESULT/exception/cancellation/timeout/cleanup fixtures |
+| Activated/unactivated/provider failures | Status 0–3 fixtures; conflicting/missing/invalid/oversized rows; HRESULT/exception/cancellation/timeout/cleanup fixtures |
 | Architecture ownership and order | Disjoint descriptors; conflicting OS/system values preserved in both orders; complete observation set with duplicate OS architecture rejected in both orders |
 | Lifecycle attribution/history | Source/revision/as-of/fresh-through/evaluation date serialized; immutable catalog copies; earlier serialized observation unchanged after later stale evaluation |
 | Licensing data excluded | Synthetic native-buffer and exception canaries; serialized evidence/failure scans; source excludes logging/diagnostic sinks and sensitive queries; native status-only projection |
@@ -82,7 +91,7 @@ Full was not triggered: this task has no named trigger and changes no dependency
 migration, major architecture, milestone/release/protected-merge gate. Cumulative integration
 Full belongs to the already merged PR #7. Extended was not triggered; bounded adversarial,
 failure, timeout, and recovery cases ran in Targeted. No clean-clone gate was required for
-this ordinary provider task. No remote runtime evidence was used.
+this ordinary provider task; the final host-policy block requires a governed Sandbox Quick. No remote runtime evidence was used.
 
 ## Defect handling and review
 
@@ -96,6 +105,14 @@ The first new handoff validation rejected missing required authority wording and
 under the governed path scanner. Correcting the wording and recording the PR number made the
 unchanged validator pass. No product runtime failure or test quarantine occurred.
 
+The final documentation update used the host default text encoding and the handoff Quick
+check rejected altered Unicode contract text (2.978 s). The committed UTF-8 files were
+restored and only intended handoff fields reapplied with explicit UTF-8. A focused YAML
+comparison confirmed the other 90 task records were unchanged; bundle validation passed
+before the corrected Quick rerun. No corrupted task-contract text was committed or pushed.
+The follow-up also corrected three previously committed report punctuation sequences.
+A strict UTF-8 and mojibake scan of all changed text files then passed.
+
 Two independent read-only reviews found no actionable correctness or privacy defect.
 The final diff review checks key/product/account leakage, native calls, arbitrary paths/URLs,
 registry access rights, lifetime/cleanup, evidence ordering, unknown states, dependencies,
@@ -107,7 +124,8 @@ only TL-0107 execution state/evidence is updated.
 Reference profile: `REF-CODEX-001`, revision `2026-08-29.1`. This session reconfirmed
 Windows `10.0.26200.0`, x64 and .NET SDK `10.0.400`. Local shell is PowerShell `7.6.5`
 (newer than the historical profile); the shared verifier uses Windows PowerShell. Python is
-`3.14.7`. There was no physical/VM/storage/network/security constraint or hardware change.
+`3.14.7`. The provider checks used the unchanged host. Final Quick uses a disposable 4 GiB Sandbox
+on that same physical machine; host security remains unchanged.
 
 One isolated OS-provider smoke observed 33.154 ms elapsed, 46.875 ms process CPU,
 73,875,456 bytes test-host peak working set, 14 observations, and 7,034 bytes serialized
@@ -141,5 +159,38 @@ The task commit binds the report, structured results, manifest, code, and task s
   claim is made. Smoke success does not imply every source is accessible or every PC is covered.
 - Windows 10 and hardware/provider variants are synthetic; no second machine was used.
 
-**Next dependency-ready task:** TL-0108 â€” storage inventory and reliability evidence,
+**Next dependency-ready task:** TL-0108 — storage inventory and reliability evidence,
 only after this task is integrated into updated main. It was not started.
+
+## Final host-policy reproduction
+
+After the documented UTF-8 correction, Quick passed validators, format and Release build but
+Core test assembly loading was blocked by Application Control (`0x800711C7`; 29.651 s total).
+A focused `IdentifiersAndJobTests` no-build run reproduced that exact block in 1.900 s.
+The earlier Targeted and completion Quick passes remain valid for unchanged product/test
+sources; the final handoff Quick passed in the governed same-machine Sandbox profile described below.
+No security policy, trust check, analyzer, or failing test is disabled.
+
+## Reused Sandbox Quick profile
+
+The existing host/guest runner now accepts only TL-0107 with Quick for this new profile.
+It stages the complete solution lock closure and reachable source history, validates hashes,
+restores into a guest-private cache with NuGet audit enabled, and calls the current shared
+`eng/verify.ps1 -Tier Quick -Restore`. The manifest records tier, budget, selection reference,
+environment and risk trigger; its exact validator rejects scope or authority drift. No new
+large task-specific script was added. Historical profiles retain their prior behavior.
+
+The 4 GiB guest, read-only input mappings, bounded sanitized result, source/request/harness
+bindings and verified cleanup are retained. Networking is enabled for governed NuGet audit.
+The combined Quick command is bounded at 180 seconds for cold restore/build; the normal
+120-second tier target remains. ActiveMachine provider checks are excluded from guest Quick.
+No host security or SDK source-revision stamping was altered to bypass Application Control.
+
+Focused runner/manifest tests passed 23/23 in 27.415 s. Preflight passed in 12.064 s. The
+transient guest Quick then passed 79 Core and 222 Inventory tests, zero warnings/errors, in
+90.883 s (guest 147.628 s; full host command 202.252 s). Source digest and bounded result digest
+are retained in `runs.json`. Two read-only reviews found no remaining implementation issue.
+This narrow profile addition triggers focused infrastructure checks, not a new Full gate.
+
+The exact committed-source execution will persist its bounded structured result before task
+completion. Same-machine guest success does not prove direct-host policy compatibility.

@@ -184,6 +184,25 @@ Their old Quick restore order and success markers are incompatible with v0.4.0; 
 those legacy phases for this gate or count their historical results as a new run. Future
 profiles must reuse the shared verifier and retain focused invocation and safety checks.
 
+TL-0107 adds a Quick-only profile for the final verification when host Application Control
+blocks test-assembly loading. It reuses this harness and the shared verifier; its declarative
+profile is recorded in `eng/test-manifest.json`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 `
+  -Phase Quick -EvidenceTaskId TL-0107 -PersistEvidence
+```
+
+Use `-PreflightOnly` without `-PersistEvidence` first. Persistent results require a committed,
+unchanged tracked worktree. This profile stages the complete locked solution package closure,
+then runs `eng/verify.ps1 -Tier Quick -Restore` with audit enabled. Guest networking is enabled
+for the governed NuGet audit. The shared Quick command has a 180-second hard limit to allow a
+cold 4 GiB guest restore/build; the normal Quick target remains 120 seconds. Bootstrap and
+staging time are reported separately from the shared tier. Existing source/history/package
+bindings, read-only inputs, bounded results, and verified cleanup remain enforced. ActiveMachine
+tests are excluded by the unchanged Quick filters; host provider smoke evidence remains separate.
+This does not establish direct-host policy compatibility or cross-hardware certification.
+
 A new large task-specific runner requires:
 
 - technical reason;

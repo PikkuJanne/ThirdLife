@@ -84,6 +84,57 @@
       "duration_seconds": 29.579883,
       "passed_tests": 301,
       "result": "passed; 79 Core + 222 Inventory, 0 failed/skipped; runner 29.324s"
+    },
+    {
+      "id": "handoff-encoding-check",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/verify.ps1 -Tier Quick",
+      "duration_seconds": 2.978036,
+      "passed_tests": 0,
+      "result": "failed bundle contract text check after documentation encoding error; restored UTF-8 and verified exact task-field scope"
+    },
+    {
+      "id": "handoff-host-policy-block",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/verify.ps1 -Tier Quick",
+      "duration_seconds": 29.650718,
+      "passed_tests": 0,
+      "result": "validators, format and build passed; Core test assembly load blocked by Application Control 0x800711C7"
+    },
+    {
+      "id": "host-policy-focused-reproduction",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Core.Tests/ThirdLife.Core.Tests.csproj --configuration Release --no-build --no-restore --filter \"FullyQualifiedName~IdentifiersAndJobTests\" --logger \"console;verbosity=normal\"",
+      "duration_seconds": 1.900106,
+      "passed_tests": 0,
+      "result": "same Application Control 0x800711C7 assembly-load block; no tests executed"
+    },
+    {
+      "id": "sandbox-profile-regression",
+      "tier": "targeted",
+      "command": ".venv/Scripts/python.exe -m unittest tools.tests.test_sandbox_harness tools.tests.test_validate_repository.TestManifestContractTests",
+      "duration_seconds": 27.415,
+      "passed_tests": 23,
+      "result": "passed; exact task/tier, command dispatch, package closure, audit, authority and budget mutation coverage"
+    },
+    {
+      "id": "sandbox-quick-preflight",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Quick -EvidenceTaskId TL-0107 -PreflightOnly",
+      "duration_seconds": 12.064172,
+      "result": "passed; source and dependency staging, bindings and verified cleanup; no guest execution"
+    },
+    {
+      "id": "sandbox-quick-transient",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Quick -EvidenceTaskId TL-0107",
+      "duration_seconds": 202.251544,
+      "guest_duration_seconds": 147.628,
+      "shared_quick_duration_seconds": 90.883,
+      "passed_tests": 301,
+      "result": "passed; 79 Core + 222 Inventory; zero skipped; warnings-as-errors Release solution build; source and cleanup verified; tracked overlay before checkpoint",
+      "source_sha256": "6ce78d6bc850f0d49f5a8a250bbeeef463585b46a362d94d10531c99d9d60ca5",
+      "result_sha256": "cd95f774d67403f150d91747462d1545b237c28e6e59e2d1442a2383748ccd3d"
     }
   ],
   "os_resource_observation": {
@@ -99,7 +150,7 @@
   "not_run": {
     "full": "No milestone/release/protected merge, major refactor, migration, dependency/engine change, or named task trigger. Prior cumulative gate belongs to PR7.",
     "extended": "No named task trigger, large workload, endurance, or host-resource mutation risk. Focused bounded hostile/failure cases are Targeted.",
-    "clean_environment": "No named task/clean-clone gate. Direct host provider tests passed.",
-    "remote_ci": "Not run as task evidence; supplementary only."
+    "clean_environment": "Final Quick passed in same-machine disposable 4 GiB Windows Sandbox; exact committed evidence run follows.",
+    "remote_ci": "Supplementary PR8 check passed for c144221; not used as active-machine evidence."
   }
 }

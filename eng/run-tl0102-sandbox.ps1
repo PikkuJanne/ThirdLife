@@ -5,7 +5,7 @@ param(
     [string] $Phase = "Targeted",
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("TL-0102", "TL-0103", "TL-0104", "AMD-2026-09-12-REPOSITORY-STABILIZATION")]
+    [ValidateSet("TL-0102", "TL-0103", "TL-0104", "TL-0107", "AMD-2026-09-12-REPOSITORY-STABILIZATION")]
     [string] $EvidenceTaskId = "TL-0102",
 
     [Parameter(Mandatory = $false)]
@@ -360,9 +360,10 @@ function Get-LockedNuGetClosure {
         [Parameter(Mandatory = $true)][string] $SelectedPhase,
         [Parameter(Mandatory = $true)][string] $SelectedTaskId
     )
-    if ($SelectedPhase -eq "Quick") { return @() }
+    $sharedQuick = $SelectedTaskId -eq "TL-0107" -and $SelectedPhase -eq "Quick"
+    if ($SelectedPhase -eq "Quick" -and -not $sharedQuick) { return @() }
     $lockFiles = @()
-    if ($SelectedPhase -eq "Full") {
+    if ($SelectedPhase -eq "Full" -or $sharedQuick) {
         $lockFiles = @(Get-ChildItem -LiteralPath $SourceRoot -Filter "packages.lock.json" -File -Recurse -Force |
             Where-Object { $_.FullName -notmatch "[\\/](?:bin|obj|\.venv|\.git)[\\/]" } |
             Sort-Object FullName)
@@ -709,6 +710,9 @@ if ($env:OS -ne "Windows_NT") { throw "$TaskId Sandbox verification requires the
 if ($TaskId -eq $RepositoryStabilizationTaskId -and $Phase -ne "Full") {
     throw "Repository stabilization supports only the shared Full Sandbox verification profile."
 }
+if ($TaskId -eq "TL-0107" -and $Phase -ne "Quick") {
+    throw "TL-0107 supports only the shared Quick Sandbox verification profile."
+}
 if ($TaskId -eq "TL-0104" -and $Phase -notin @("Targeted", "Quick", "Full")) {
     throw "TL-0104 supports only Targeted, Quick, or Full Sandbox verification."
 }
@@ -848,7 +852,7 @@ try {
     Assert-BoundedTree -Path $historyStage -MaximumFiles 1 -MaximumBytes $MaxHistoryBundleBytes
     $historyBundleDigest = Get-SourceDigest -Root $historyStage
 
-    $networkingEnabled = $Phase -eq "Full"
+    $networkingEnabled = $Phase -eq "Full" -or ($TaskId -eq "TL-0107" -and $Phase -eq "Quick")
     $networkReason = if ($networkingEnabled) { "governed_nuget_audit" } else { "disabled_offline_phase" }
     $networkingMode = if ($networkingEnabled) { "Enable" } else { "Disable" }
     $sandboxVersionText = (Get-Item -LiteralPath $sandboxExecutable).VersionInfo.FileVersion

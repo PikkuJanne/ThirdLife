@@ -260,6 +260,33 @@ class TestManifestContractTests(unittest.TestCase):
     def test_current_manifest_satisfies_governed_selection(self) -> None:
         self.assertEqual(self.validate(self.read_manifest()).errors, [])
 
+    def test_sandbox_profile_task_selection_authority_trigger_and_bounds_cannot_drift(self) -> None:
+        for field, replacement in (
+            ("task_id", "TL-0104"),
+            ("tier", "Full"),
+            ("selection_ref", "tiers.full.filter"),
+            ("selection_ref", "arbitrary.command"),
+            ("hosted_environment", "remote_runner"),
+            ("risk_trigger", ""),
+            ("target_seconds", 600),
+            ("command_timeout_seconds", 1200),
+            ("command_timeout_seconds", True),
+            ("host_timeout_minutes", 60),
+            ("memory_mb", 8192),
+            ("network_reason", "disabled_offline_phase"),
+        ):
+            with self.subTest(field=field, replacement=replacement):
+                manifest = self.read_manifest()
+                manifest["sandbox_profiles"]["tl0107_quick"][field] = replacement
+                self.assertTrue(self.validate(manifest).errors)
+        for remove_profile in (False, True):
+            manifest = self.read_manifest()
+            if remove_profile:
+                manifest["sandbox_profiles"].clear()
+            else:
+                del manifest["sandbox_profiles"]
+            self.assertTrue(self.validate(manifest).errors)
+
     def test_missing_duplicate_or_arbitrary_quick_projects_are_rejected(self) -> None:
         for mutation in ("empty", "remove_core", "remove_inventory", "duplicate", "path", "fields"):
             with self.subTest(mutation=mutation):

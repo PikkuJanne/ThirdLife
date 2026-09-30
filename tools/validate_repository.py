@@ -128,6 +128,20 @@ EXPECTED_TEST_MANIFEST = {
             ],
         },
     },
+    "sandbox_profiles": {
+        "tl0107_quick": {
+            "task_id": "TL-0107",
+            "tier": "Quick",
+            "selection_ref": "tiers.quick.test_projects",
+            "hosted_environment": "active_machine_windows_sandbox",
+            "risk_trigger": "host_application_control_blocks_required_quick",
+            "target_seconds": 120,
+            "command_timeout_seconds": 180,
+            "host_timeout_minutes": 30,
+            "memory_mb": 4096,
+            "network_reason": "governed_nuget_audit",
+        },
+    },
 }
 MACHINE_PATH_RE = re.compile(
     r"(?i)(?:\b[a-z]:[\\/]|\\\\[^\\/\s]+[\\/][^\\/\s]+|"
