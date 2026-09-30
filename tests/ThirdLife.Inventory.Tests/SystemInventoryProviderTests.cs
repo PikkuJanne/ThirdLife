@@ -17,6 +17,9 @@ namespace ThirdLife.Inventory.Tests;
 
 public sealed class SystemInventoryProviderTests
 {
+    private static readonly string[] ReviewedSystemSourceFiles =
+        ["SystemInventoryProvider.cs", "SystemInventorySource.cs", "SmbiosInventoryParser.cs"];
+
     private static readonly DateTimeOffset FixtureTimestamp =
         new(2034, 2, 3, 4, 5, 6, TimeSpan.Zero);
 
@@ -829,9 +832,8 @@ public sealed class SystemInventoryProviderTests
         var windowsSourceRoot = Path.Combine(repositoryRoot, "src", "ThirdLife.Inventory", "Windows");
         var source = string.Join(
             '\n',
-            Directory.EnumerateFiles(windowsSourceRoot, "*.cs", SearchOption.TopDirectoryOnly)
-                .Order(StringComparer.Ordinal)
-                .Select(File.ReadAllText));
+            ReviewedSystemSourceFiles
+                .Select(name => File.ReadAllText(Path.Combine(windowsSourceRoot, name))));
         var forbiddenFragments = new[]
         {
             "System.Diagnostics.Process",

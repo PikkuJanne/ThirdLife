@@ -1,0 +1,105 @@
+{
+  "task": "TL-0107",
+  "date": "2026-09-30",
+  "branch": "codex/tl-0107-os-lifecycle-activation",
+  "base_commit": "74b6c8cbc7b4426eebf38139ed3374f66e3ff8be",
+  "environment": "Active Codex machine, unelevated Windows 11 10.0.26200.0 x64; .NET SDK 10.0.400; reference REF-CODEX-001 revision 2026-08-29.1; no host constraints or security changes",
+  "runs": [
+    {
+      "id": "baseline",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter \"FullyQualifiedName~ProviderContractTests\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 13.242096,
+      "passed_tests": 20,
+      "result": "passed"
+    },
+    {
+      "id": "initial-compile",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter \"FullyQualifiedName~WindowsLifecycleCatalogTests\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 2.81,
+      "passed_tests": 0,
+      "result": "compile blocked: new test syntax/analyzer errors; corrected before executable focused tests"
+    },
+    {
+      "id": "activation-focused",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter \"FullyQualifiedName~ActivationProviderTests&Category!=ActiveMachine\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 5.207,
+      "passed_tests": 42,
+      "result": "passed"
+    },
+    {
+      "id": "activation-active",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --no-build --filter \"FullyQualifiedName~ActivationProviderTests&Category=ActiveMachine\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 2.222,
+      "passed_tests": 1,
+      "result": "passed"
+    },
+    {
+      "id": "os-lifecycle-reboot-boundary-focused",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter \"(FullyQualifiedName~OperatingSystemProviderTests|FullyQualifiedName~WindowsLifecycleCatalogTests|FullyQualifiedName~PendingRebootProviderTests|FullyQualifiedName~InventoryReadOnlyBoundaryTests)&Category!=ActiveMachine\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 5.075849,
+      "passed_tests": 129,
+      "result": "passed"
+    },
+    {
+      "id": "duplicate-architecture-regression",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter \"FullyQualifiedName~DuplicateOsArchitectureIsRejectedInsteadOfSelected\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 3.983642,
+      "passed_tests": 2,
+      "result": "passed"
+    },
+    {
+      "id": "os-active",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --no-build --filter \"FullyQualifiedName~OperatingSystemProviderTests&Category=ActiveMachine\" --logger \"console;verbosity=detailed\"",
+      "duration_seconds": 1.794511,
+      "passed_tests": 1,
+      "result": "passed"
+    },
+    {
+      "id": "reboot-active",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --no-build --filter \"FullyQualifiedName~PendingRebootProviderTests&Category=ActiveMachine\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 1.725849,
+      "passed_tests": 1,
+      "result": "passed"
+    },
+    {
+      "id": "governed-targeted",
+      "tier": "targeted",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj",
+      "duration_seconds": 38.786247,
+      "passed_tests": 301,
+      "result": "passed; Quick 79 Core + 222 Inventory; targeted Inventory 222 repeated by shared runner; runner 38.401s"
+    },
+    {
+      "id": "completion-quick",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/verify.ps1 -Tier Quick",
+      "duration_seconds": 29.579883,
+      "passed_tests": 301,
+      "result": "passed; 79 Core + 222 Inventory, 0 failed/skipped; runner 29.324s"
+    }
+  ],
+  "os_resource_observation": {
+    "elapsed_milliseconds": 33.1536,
+    "process_cpu_milliseconds": 46.875,
+    "test_host_peak_working_set_bytes": 73875456,
+    "normalized_output_bytes": 7034,
+    "observations": 14,
+    "provider_workers": 1,
+    "provider_file_writes": 0,
+    "limitation": "One bounded host observation. Peak is whole test-host process, not provider-only memory; CPU includes test-host work. No approved performance budget or cross-hardware claim."
+  },
+  "not_run": {
+    "full": "No milestone/release/protected merge, major refactor, migration, dependency/engine change, or named task trigger. Prior cumulative gate belongs to PR7.",
+    "extended": "No named task trigger, large workload, endurance, or host-resource mutation risk. Focused bounded hostile/failure cases are Targeted.",
+    "clean_environment": "No named task/clean-clone gate. Direct host provider tests passed.",
+    "remote_ci": "Not run as task evidence; supplementary only."
+  }
+}

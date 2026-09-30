@@ -102,6 +102,15 @@ A slower result may be acceptable. The following are not acceptable for a suppor
 
 ## 6. Hardware and provider coverage
 
+`TL-0107` uses one worker per provider instance with two-second OS/reboot and five-second
+activation caller timeouts. A timed-out native read retains its slot until cleanup returns;
+there is no retry loop, polling, GPU use, cache, or provider file write. Lifecycle rows,
+activation status copies, and observation counts have fixed bounds. The native SLC API owns
+its initial allocation; the copy limit does not bound that Windows allocation. The task's
+durable evidence records active-machine process metrics and output size, without an approved
+performance budget or cross-hardware claim. Details and cancellation limits are in
+`docs/inventory/os-activation-reboot.md`.
+
 Hardware variability is covered through a capability/risk matrix, not a physical-device inventory. For each variant—such as battery absent, storage counters unavailable, Secure Boot disabled, TPM access denied, multiple disks, unsupported CPU, camera absent, or network unavailable—the matrix identifies one or more of:
 
 1. deterministic unit/component fixture;

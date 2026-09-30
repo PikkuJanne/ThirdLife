@@ -118,6 +118,14 @@ The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md)
 
 ## 10. Filesystem and persistence
 
+`TL-0107` adds read-only OS, activation, and pending-reboot providers. Their
+[source and privacy contract](docs/inventory/os-activation-reboot.md) records the closed native
+API set, numeric activation-only projection, metadata-only reboot checks, bounded workers,
+sanitized failures, and stale-safe lifecycle data. No licensing operation, key/account
+collection, registry write, shell command, or network request is introduced. Activation is
+not proof of legal licence ownership; missing reboot indicators are not proof that no restart
+is needed.
+
 - `TL-0102` implements the registered local store at `%LOCALAPPDATA%\ThirdLife\SetupCore\JobStore`; arbitrary roots are available only to internal deterministic tests.
 - A new database is migrated, fingerprinted, integrity-checked, and closed at a restrictive random sibling path before a no-overwrite same-directory handle rename publishes it. A crash therefore leaves either no final database or a complete identified database. Bounded, exactly named initialization residue is reconciled only after ACL, final-path, object-type, link-count, reparse-point, identity, and size checks.
 - SQLite migrations are embedded, explicit, versioned, transactional, and bound to immutable script and resulting-schema SHA-256 values in the migration ledger. Application ID, version, ledger, schema, quick-integrity, and foreign-key checks fail closed for unrelated, truncated, newer, altered, or corrupt stores.
