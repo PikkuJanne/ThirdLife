@@ -2293,7 +2293,7 @@ tasks:
   workstream: inventory
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -2329,7 +2329,17 @@ tasks:
   - Test duplicate/contradictory architecture observations and prove there is no first-wins or last-wins behavior.
   - Test current, stale, missing, future/unknown, and contradictory lifecycle-data revisions with deterministic clocks.
   - Scan logs, serialized evidence, diagnostics, and failures for partial keys, product IDs, account identifiers, and raw licensing text.
-  evidence: []
+  evidence:
+  - summary: Read-only OS, versioned stale-safe lifecycle, activation, and source-specific reboot evidence verified; no licensing or host mutation.
+    task: TL-0107
+    command_or_review: eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj; three separate ActiveMachine smoke tests; source/privacy review; committed Sandbox Quick profile
+    tier: targeted including Quick, focused regressions, and same-machine Sandbox Quick
+    result: passed; 79 Core and 222 Inventory tests; all three new active-machine smoke tests; 23 harness/manifest regressions; final committed Sandbox Quick
+    environment: Active Codex machine, unelevated Windows 11 x64; REF-CODEX-001 revision 2026-08-29.1; Windows 10 and variants synthetic; final Quick in 4 GiB same-machine Sandbox
+    date: '2026-09-30'
+    duration: Targeted 38.786 s; active activation 2.222 s, OS 1.795 s, reboot 1.726 s; committed Sandbox Quick 90.707 s, guest 148.017 s, total 201.530 s
+    reference: PR 8; implementation c144221; verified Sandbox source dd4f1d0; artifacts/audit/TL-0107; artifacts/evidence/TL-0107/report.md; runs.json; inputs.sha256 (bdd24c5aedeba3e115a2cef7e65d4130b8275a58fc09181218444e29793c11d8)
+    limitation: Native calls can outlive caller timeout; lifecycle expires after 2026-10-30; reboot indicators incomplete; no ownership, readiness, or cross-hardware claim; Full/Extended not triggered; direct-host Application Control compatibility remains unverified.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepositoryStabilizationTaskId = "AMD-2026-09-12-REPOSITORY-STABILIZATION"
-$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104", $RepositoryStabilizationTaskId)
+$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104", "TL-0107", $RepositoryStabilizationTaskId)
 $TaskId = "Unavailable"
 $ResultSchemaVersion = 2
 $SandboxMemoryMb = 4096
@@ -708,6 +708,8 @@ function Get-CommandTimeoutSeconds {
     )
     if ($EvidenceTaskId -eq $RepositoryStabilizationTaskId -and $SelectedPhase -eq "Full" -and
         $Label -eq "repository-stabilization-full") { return 1200 }
+    if ($EvidenceTaskId -eq "TL-0107" -and $SelectedPhase -eq "Quick" -and
+        $Label -eq "tl0107-shared-quick") { return 180 }
     return $CommandTimeoutSeconds
 }
 
@@ -850,6 +852,9 @@ function Assert-RunRequest {
     if ($RunRequest.task_id -eq $RepositoryStabilizationTaskId -and $RunRequest.phase -ne "Full") {
         throw "The repository stabilization run request requires the shared Full profile."
     }
+    if ($RunRequest.task_id -eq "TL-0107" -and $RunRequest.phase -ne "Quick") {
+        throw "The TL-0107 run request requires the shared Quick profile."
+    }
     if ($RunRequest.run_id -isnot [string] -or $RunRequest.run_id -notmatch "^[0-9a-f]{32}$" -or
         $RunRequest.expected_head_commit -isnot [string] -or $RunRequest.expected_head_commit -notmatch "^[0-9a-f]{40}$") { throw "The run request contains an invalid source identity." }
     foreach ($digestName in @("expected_source_digest", "history_bundle_sha256", "repository_status_sha256", "launcher_sha256", "runner_sha256", "sandbox_config_sha256", "nuget_closure_sha256", "python_packages_sha256")) {
@@ -861,9 +866,11 @@ function Assert-RunRequest {
     $historyRequired = $RunRequest.phase -in @("Quick", "Full")
     if ($RunRequest.source_history_included -ne $historyRequired -or ($RunRequest.nuget_package_count -isnot [int] -and $RunRequest.nuget_package_count -isnot [long]) -or
         $RunRequest.nuget_package_count -lt 0 -or $RunRequest.nuget_package_count -gt $MaxNuGetPackages) { throw "The run request contains an unsafe history or package-count value." }
-    $full = $RunRequest.phase -eq "Full"
-    if ($RunRequest.networking_enabled -ne $full -or $RunRequest.nuget_audit_enabled -ne $full -or
-        $RunRequest.network_reason -ne $(if ($full) { "governed_nuget_audit" } else { "disabled_offline_phase" })) { throw "The run request violates the phase network contract." }
+    $sharedQuick = $RunRequest.task_id -eq "TL-0107" -and $RunRequest.phase -eq "Quick"
+    if ($sharedQuick -and $RunRequest.nuget_package_count -eq 0) { throw "The shared Quick profile requires the complete locked package closure." }
+    $auditRequired = $RunRequest.phase -eq "Full" -or $sharedQuick
+    if ($RunRequest.networking_enabled -ne $auditRequired -or $RunRequest.nuget_audit_enabled -ne $auditRequired -or
+        $RunRequest.network_reason -ne $(if ($auditRequired) { "governed_nuget_audit" } else { "disabled_offline_phase" })) { throw "The run request violates the phase network contract." }
 }
 
 function Assert-SandboxConfiguration {
@@ -967,21 +974,34 @@ function Assert-PythonPackages {
     if ($actual -notin $admitted) { throw "The offline Python wheel is not admitted by the exact requirements file." }
 }
 
-function Invoke-RepositoryStabilizationFull {
+function Invoke-SharedVerifierProfile {
     param(
         [Parameter(Mandatory = $true)][string] $DotnetExecutable,
-        [Parameter(Mandatory = $true)][string] $NuGetConfigPath
+        [Parameter(Mandatory = $true)][string] $NuGetConfigPath,
+        [Parameter(Mandatory = $true)][string] $EvidenceTaskId,
+        [Parameter(Mandatory = $true)][string] $SelectedPhase
     )
+    # Closed task/tier profiles reuse the shared verifier and its declarative manifest.
+    # Historical task phases below retain their original, version-bound behavior.
+    if ($EvidenceTaskId -eq $RepositoryStabilizationTaskId -and $SelectedPhase -eq "Full") {
+        $restoreLabel = "locked-full-restore-and-audit"
+        $verificationLabel = "repository-stabilization-full"
+    }
+    elseif ($EvidenceTaskId -eq "TL-0107" -and $SelectedPhase -eq "Quick") {
+        $restoreLabel = "locked-quick-restore-and-audit"
+        $verificationLabel = "tl0107-shared-quick"
+    }
+    else { throw "The shared verifier task and tier do not match an allowlisted profile." }
     # Populate the guest-private cache from the verified staged closure first.
-    # The shared Full tier then repeats locked restore and audit using the unchanged
+    # The shared tier then repeats locked restore and audit using the unchanged
     # repository NuGet.Config; every external package is pinned by its lock hash.
-    Invoke-RequiredCommand -Label "locked-full-restore-and-audit" -FilePath $DotnetExecutable -Arguments @(
+    Invoke-RequiredCommand -Label $restoreLabel -FilePath $DotnetExecutable -Arguments @(
         "restore", "ThirdLife.sln", "--locked-mode", "--configfile", $NuGetConfigPath, "--nologo",
         "-p:NuGetAudit=true", "-p:NuGetAuditMode=all"
     ) -Failure "restore_failed"
-    Invoke-RequiredCommand -Label "repository-stabilization-full" -FilePath "powershell.exe" -Arguments @(
-        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "eng\verify.ps1", "-Tier", "Full", "-Restore"
-    ) -Failure "verification_failed" -SuccessMarker "OK: ThirdLife Full verification passed in "
+    Invoke-RequiredCommand -Label $verificationLabel -FilePath "powershell.exe" -Arguments @(
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "eng\verify.ps1", "-Tier", $SelectedPhase, "-Restore"
+    ) -Failure "verification_failed" -SuccessMarker "OK: ThirdLife $SelectedPhase verification passed in "
 }
 
 function Write-SandboxNuGetConfig {
@@ -1227,8 +1247,8 @@ try {
             if ($null -ne $filter) { $testArguments += @("--filter", $filter) }
             Invoke-RequiredCommand -Label "persistence-tests" -FilePath $dotnetExecutable -Arguments $testArguments -Failure "test_failed" -SuccessMarker "Passed!"
         }
-        elseif ($TaskId -eq $RepositoryStabilizationTaskId) {
-            Invoke-RepositoryStabilizationFull -DotnetExecutable $dotnetExecutable -NuGetConfigPath $nugetConfig
+        elseif ($TaskId -in @($RepositoryStabilizationTaskId, "TL-0107")) {
+            Invoke-SharedVerifierProfile -DotnetExecutable $dotnetExecutable -NuGetConfigPath $nugetConfig -EvidenceTaskId $TaskId -SelectedPhase $phase
         }
         elseif ($phase -eq "Quick") {
             Invoke-RequiredCommand -Label "governed-quick" -FilePath "powershell.exe" -Arguments @(

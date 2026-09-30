@@ -2,73 +2,52 @@
 
 **Snapshot date:** 2026-09-30  
 **Bundle baseline:** 0.4.0  
-**Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Current milestone:** M1 — Audit-only vertical slice  
-**Current activity:** `AMD-2026-09-12-REPOSITORY-STABILIZATION` — review; required verification complete  
-**Last completed product task:** `TL-0106` — system inventory  
-**Next product task after merge:** `TL-0107` — OS lifecycle and activation inventory
+**Current task:** `TL-0107` — OS lifecycle and activation inventory; done, integration pending
 
-## Git and continuation
+## Continuity
 
-| Field | Verified state |
-|---|---|
-| Repository | `PikkuJanne/ThirdLife` |
-| Branch | `codex/repository-stabilization-v0.4.0` |
-| Reviewed and starting commit | `89303ab15ed749754290b7c17e5f6cdb27719a00` |
-| `main` at session start | `1bb776f710bfa76f485bbee8d4b182b7a5284cd9` |
-| Ancestry | Starting advanced line contains `main`, 42 ahead / 0 behind |
-| Upstream | `origin/codex/repository-stabilization-v0.4.0`; Full-verified checkpoint `861bb14` pushed; final evidence commit is reported in the session handoff |
-| Worktree | Implementation complete; explained unrelated Word reference remains untouched and excluded |
-| Runtime authority | active Codex machine only; remote CI is supplementary |
-| Integration | One cumulative PR prepared for owner review; no merge authorized in this session |
+- Cumulative PR #7 merged at `74b6c8cbc7b4426eebf38139ed3374f66e3ff8be`; updated main contains all prior completed work.
+- Current branch: `codex/tl-0107-os-lifecycle-activation`, created from that updated main.
+- Implementation checkpoint `c144221b2010592ebf5635182396ee6cf80e5b1e` is pushed; local and upstream matched after publication.
+- Verification checkpoint `dd4f1d06b8f67a91afa0e0392bef54095adfe81f` is pushed and bound to passing committed-source Sandbox evidence.
+- Normal PR #8 is open against main; TL-0107 is not yet integrated. The final evidence/handoff commit is reported in the session handoff.
+- Legacy PR/branch disposition is unchanged; no closure, deletion, or history rewrite performed.
+- The documented unrelated Word roadmap reference remains untouched and excluded.
+- Git synchronization uses the documented process-scoped HTTPS bridge; configured SSH origin is unchanged.
+- Runtime authority: active Codex machine only; remote CI is supplementary.
 
-SSH authentication is unavailable unattended. Git synchronization uses the previously
-documented process-scoped HTTPS `insteadOf` bridge; the configured remote is unchanged.
+## Outcome
 
-## Outcome and scope
-
-M0 and `TL-0101`–`TL-0106` remain complete. This amendment updates integration discipline,
-test selection, evidence storage, and future provider contracts. No product task state or
-prior evidence is removed. `TL-0107` and `TL-0112` remain backlog.
-
-The owner authorized application on 30 September. D-067–D-072 are adopted; cumulative merge,
-closure of PRs #4–#6, and branch retirement remain separate owner decisions. Unique legacy
-privacy and supply-chain implementations are preserved for that disposition review.
+Read-only OS facts, separate architecture provenance, versioned offline lifecycle mapping,
+activation status, and source-specific reboot indicators are implemented. Unknown/stale or
+contradictory data cannot satisfy support. Activation contains no keys, product IDs, account
+identifiers, raw licensing output, or legal ownership conclusion. Missing reboot indicators
+never prove that no reboot is pending. No UI, dependency, migration, privilege, or host change.
 
 ## Verification
 
-| Tier | Latest result |
-|---|---|
-| Baseline | `tools/validate_bundle.py` passed in 2.932 s before editing |
-| Quick | Clean worktree passed in 42.269 s; final evidence Quick passed in 40.083 s (runner 38.330 s), 79 Core + 50 Inventory |
-| Targeted | 345 subsystem tests in 88.772 s; 223 governance tests in 143.552 s; separate active smoke 1/1 in 34.424 s including Quick |
-| Full | Passed at `861bb14` in governed same-machine Sandbox: all 355 .NET tests, shared Full 342.486 s; wrapper 456.452 s including launch/binding/cleanup |
-| Extended | No new product/resource/interruption risk trigger; not run |
-| Supplementary CI | Optional; not used as task/gate evidence |
+- Baseline: 20 provider-contract tests passed in 13.242 s; no pre-existing runtime failure.
+- Targeted, including Quick: passed in 38.786 s; 79 Core + 222 Inventory tests, format,
+  validators, and Release solution build with zero warnings/errors.
+- Completion Quick passed in 29.580 s; three separate unelevated active-machine smoke tests passed (activation, OS, reboot).
+- Direct-host handoff Quick hit Application Control (0x800711C7) loading Core tests; focused no-build reproduction confirmed the block. Host security is unchanged.
+- Final committed-source Sandbox Quick passed: 79 Core + 222 Inventory; zero warnings/errors;
+  90.707 s shared tier, 148.017 s guest, 201.530 s total. Source bindings and cleanup verified.
+- Runner/manifest regressions: 23 passed in 27.415 s; staging preflight and transient Quick passed.
+- Full and Extended: no trigger. Remote CI is not used as task evidence.
+- Detailed results, input digests, resource observation, acceptance mapping, and limitations:
+  `artifacts/evidence/TL-0107/report.md`, `runs.json`, `inputs.sha256`, and the bounded
+  result/manifest pair in `artifacts/audit/TL-0107/`.
 
-The first clean Quick at `70c7da0` failed locked restore (NU1004). The two Inventory locks
-omitted existing internal Core references. A focused reproduction and regression caught
-the defect; corrected locks leave all external packages and the licence matrix unchanged.
-Corrected clean Quick passed. Full then encountered the known host policy block
-(`0x800711C7`); a focused Reports test reproduced it. Host security is unchanged.
-The reviewed Sandbox adaptation passed seven focused tests and staging preflight.
-Exact-commit Sandbox Full passed with source bindings and cleanup verified. The direct-host
-policy limitation remains; this adds no cross-hardware or direct-host compatibility claim.
+## Limits and next action
 
-## Durable records
+Native calls cannot be forcibly aborted; one worker per instance stays occupied until cleanup.
+Lifecycle revision `thirdlife.windows-lifecycle.2026-09-30.v1` expires after 2026-10-30.
+Specialized/unlisted editions and builds remain unknown. Reboot indicators are incomplete.
+No patch-currency, hardware, licence-ownership, complete-readiness, or cross-hardware claim.
+Direct-host Application Control compatibility remains unverified; the final Quick used the
+governed same-machine 4 GiB Sandbox profile. No required task verification remains outstanding.
 
-- [Approved amendment](docs/amendments/2026-09-12-repository-stabilization.md)
-- [Review input](docs/reviews/2026-09-12-repository-review.md)
-- [Branch/PR disposition](docs/reviews/2026-09-30-branch-disposition.md)
-- Prior detailed status: `artifacts/handoffs/STATUS-pre-v0.4.0-20260930T125339Z-89303ab15ed7.md`
-- [Stabilization execution evidence](artifacts/evidence/AMD-2026-09-12-REPOSITORY-STABILIZATION/report.md)
-
-## Stop point and next action
-
-Review the pushed stabilization branch and its cumulative PR to `main`. Required active-machine
-verification is complete. Stop for owner review. Do not merge, close existing PRs, or delete branches.
-Do not start `TL-0107` in the stabilization session.
-
-After an owner-approved merge, fetch updated `main` and select `TL-0107` in a new session.
-No sibling integration, product data migration, privilege change, release behavior, human
-walkthrough, cold boot, or cross-hardware certification is claimed here.
+Review PR #8, then integrate TL-0107 into main. The next dependency-ready task is
+`TL-0108` — storage inventory and reliability evidence, only after integration. It is not started.

@@ -1,0 +1,170 @@
+{
+  "task": "TL-0107",
+  "date": "2026-09-30",
+  "branch": "codex/tl-0107-os-lifecycle-activation",
+  "base_commit": "74b6c8cbc7b4426eebf38139ed3374f66e3ff8be",
+  "environment": "Active Codex machine, unelevated Windows 11 10.0.26200.0 x64; .NET SDK 10.0.400; reference REF-CODEX-001 revision 2026-08-29.1; no host constraints or security changes; final Quick in same-machine disposable Windows Sandbox with 4096 MiB and governed NuGet audit networking",
+  "runs": [
+    {
+      "id": "baseline",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter \"FullyQualifiedName~ProviderContractTests\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 13.242096,
+      "passed_tests": 20,
+      "result": "passed"
+    },
+    {
+      "id": "initial-compile",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --filter FullyQualifiedName~WindowsLifecycleCatalogTests --no-restore --verbosity minimal",
+      "duration_seconds": 2.81,
+      "passed_tests": 0,
+      "result": "compile blocked: new test syntax/analyzer errors; corrected before executable focused tests"
+    },
+    {
+      "id": "activation-focused",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter \"FullyQualifiedName~ActivationProviderTests&Category!=ActiveMachine\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 5.207,
+      "passed_tests": 42,
+      "result": "passed"
+    },
+    {
+      "id": "activation-active",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --no-build --filter \"FullyQualifiedName~ActivationProviderTests&Category=ActiveMachine\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 2.222,
+      "passed_tests": 1,
+      "result": "passed"
+    },
+    {
+      "id": "os-lifecycle-reboot-boundary-focused",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter \"(FullyQualifiedName~OperatingSystemProviderTests|FullyQualifiedName~WindowsLifecycleCatalogTests|FullyQualifiedName~PendingRebootProviderTests|FullyQualifiedName~InventoryReadOnlyBoundaryTests)&Category!=ActiveMachine\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 5.075849,
+      "passed_tests": 129,
+      "result": "passed"
+    },
+    {
+      "id": "duplicate-architecture-regression",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter \"FullyQualifiedName~DuplicateOsArchitectureIsRejectedInsteadOfSelected\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 3.983642,
+      "passed_tests": 2,
+      "result": "passed"
+    },
+    {
+      "id": "os-active",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --no-build --filter \"FullyQualifiedName~OperatingSystemProviderTests&Category=ActiveMachine\" --logger \"console;verbosity=detailed\"",
+      "duration_seconds": 1.794511,
+      "passed_tests": 1,
+      "result": "passed"
+    },
+    {
+      "id": "reboot-active",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --no-build --filter \"FullyQualifiedName~PendingRebootProviderTests&Category=ActiveMachine\" --logger \"console;verbosity=minimal\"",
+      "duration_seconds": 1.725849,
+      "passed_tests": 1,
+      "result": "passed"
+    },
+    {
+      "id": "governed-targeted",
+      "tier": "targeted",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj",
+      "duration_seconds": 38.786247,
+      "passed_tests": 301,
+      "result": "passed; Quick 79 Core + 222 Inventory; targeted Inventory 222 repeated by shared runner; runner 38.401s"
+    },
+    {
+      "id": "completion-quick",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/verify.ps1 -Tier Quick",
+      "duration_seconds": 29.579883,
+      "passed_tests": 301,
+      "result": "passed; 79 Core + 222 Inventory, 0 failed/skipped; runner 29.324s"
+    },
+    {
+      "id": "handoff-encoding-check",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/verify.ps1 -Tier Quick",
+      "duration_seconds": 2.978036,
+      "passed_tests": 0,
+      "result": "failed bundle contract text check after documentation encoding error; restored UTF-8 and verified exact task-field scope"
+    },
+    {
+      "id": "handoff-host-policy-block",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/verify.ps1 -Tier Quick",
+      "duration_seconds": 29.650718,
+      "passed_tests": 0,
+      "result": "validators, format and build passed; Core test assembly load blocked by Application Control 0x800711C7"
+    },
+    {
+      "id": "host-policy-focused-reproduction",
+      "tier": "targeted",
+      "command": "dotnet test tests/ThirdLife.Core.Tests/ThirdLife.Core.Tests.csproj --configuration Release --no-build --no-restore --filter \"FullyQualifiedName~IdentifiersAndJobTests\" --logger \"console;verbosity=normal\"",
+      "duration_seconds": 1.900106,
+      "passed_tests": 0,
+      "result": "same Application Control 0x800711C7 assembly-load block; no tests executed"
+    },
+    {
+      "id": "sandbox-profile-regression",
+      "tier": "targeted",
+      "command": ".venv/Scripts/python.exe -m unittest tools.tests.test_sandbox_harness tools.tests.test_validate_repository.TestManifestContractTests",
+      "duration_seconds": 27.415,
+      "passed_tests": 23,
+      "result": "passed; exact task/tier, command dispatch, package closure, audit, authority and budget mutation coverage"
+    },
+    {
+      "id": "sandbox-quick-preflight",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Quick -EvidenceTaskId TL-0107 -PreflightOnly",
+      "duration_seconds": 12.064172,
+      "result": "passed; source and dependency staging, bindings and verified cleanup; no guest execution"
+    },
+    {
+      "id": "sandbox-quick-transient",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Quick -EvidenceTaskId TL-0107",
+      "duration_seconds": 202.251544,
+      "guest_duration_seconds": 147.628,
+      "shared_quick_duration_seconds": 90.883,
+      "passed_tests": 301,
+      "result": "passed; 79 Core + 222 Inventory; zero skipped; warnings-as-errors Release solution build; source and cleanup verified; tracked overlay before checkpoint",
+      "source_sha256": "6ce78d6bc850f0d49f5a8a250bbeeef463585b46a362d94d10531c99d9d60ca5",
+      "result_sha256": "cd95f774d67403f150d91747462d1545b237c28e6e59e2d1442a2383748ccd3d"
+    },
+    {
+      "id": "sandbox-quick-committed",
+      "tier": "quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Quick -EvidenceTaskId TL-0107 -PersistEvidence",
+      "duration_seconds": 201.53032,
+      "guest_duration_seconds": 148.017,
+      "shared_quick_duration_seconds": 90.707,
+      "passed_tests": 301,
+      "result": "passed; 79 Core + 222 Inventory, no failed/skipped tests; zero warnings/errors; exact committed clean tracked source and verified cleanup",
+      "commit": "dd4f1d06b8f67a91afa0e0392bef54095adfe81f",
+      "source_sha256": "3615142d876327d477668313942c52e39afc6ac4a1f774b4efb56e8e858ed40b",
+      "result_sha256": "bb0b013f951d1476f08c5268e75a98e09f210ce6837f418b62aa03d02462875f",
+      "artifact": "artifacts/audit/TL-0107/quick-3615142d876327d477668313942c52e39afc6ac4a1f774b4efb56e8e858ed40b-ec14749e6b115f38dcf41696725ed6d5.json",
+      "manifest": "artifacts/audit/TL-0107/quick-3615142d876327d477668313942c52e39afc6ac4a1f774b4efb56e8e858ed40b-ec14749e6b115f38dcf41696725ed6d5.manifest.json"
+    }
+  ],
+  "os_resource_observation": {
+    "elapsed_milliseconds": 33.1536,
+    "process_cpu_milliseconds": 46.875,
+    "test_host_peak_working_set_bytes": 73875456,
+    "normalized_output_bytes": 7034,
+    "observations": 14,
+    "provider_workers": 1,
+    "provider_file_writes": 0,
+    "limitation": "One bounded host observation. Peak is whole test-host process, not provider-only memory; CPU includes test-host work. No approved performance budget or cross-hardware claim."
+  },
+  "not_run": {
+    "full": "No milestone/release/protected merge, major refactor, migration, dependency/engine change, or named task trigger. Prior cumulative gate belongs to PR7.",
+    "extended": "No named task trigger, large workload, endurance, or host-resource mutation risk. Focused bounded hostile/failure cases are Targeted.",
+    "remote_ci": "Remote runtime is not task evidence. Supplementary PR8 check passed for c144221; later checkpoint status is reported separately."
+  }
+}
