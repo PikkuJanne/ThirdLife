@@ -83,7 +83,7 @@ EXPECTED_TEST_MANIFEST = {
                     "path": f"tests/{name}/{name}.csproj",
                     "filter": DETERMINISTIC_TEST_FILTER,
                 }
-                for name in ("ThirdLife.Core.Tests", "ThirdLife.Inventory.Tests")
+                for name in ("ThirdLife.Core.Tests", "ThirdLife.Inventory.Tests", "ThirdLife.UI.Tests")
             ],
             "excludes": [
                 "active-machine observation",
@@ -137,6 +137,48 @@ EXPECTED_TEST_MANIFEST = {
             "risk_trigger": "host_application_control_blocks_required_quick",
             "target_seconds": 120,
             "command_timeout_seconds": 180,
+            "host_timeout_minutes": 30,
+            "memory_mb": 4096,
+            "network_reason": "governed_nuget_audit",
+        },
+        "tl0109_quick": {
+            "task_id": "TL-0109",
+            "tier": "Quick",
+            "selection_ref": "tiers.quick.test_projects",
+            "hosted_environment": "active_machine_windows_sandbox",
+            "risk_trigger": "host_application_control_blocks_required_quick",
+            "target_seconds": 120,
+            "command_timeout_seconds": 180,
+            "host_timeout_minutes": 30,
+            "memory_mb": 4096,
+            "network_reason": "governed_nuget_audit",
+        },
+        "tl0109_targeted": {
+            "task_id": "TL-0109",
+            "tier": "Targeted",
+            "test_projects": [
+                f"tests/{name}/{name}.csproj"
+                for name in ("ThirdLife.Inventory.Tests", "ThirdLife.UI.Tests")
+            ],
+            "filter_ref": "tiers.targeted.default_filter",
+            "includes_quick_ref": "tiers.targeted.includes_quick",
+            "required_native_step": {
+                "label": "tl0109-native-cleanup",
+                "test_project": "tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj",
+                "filter": "FullyQualifiedName=ThirdLife.Inventory.Tests.BatteryReportWorkspaceTests.ActiveMachineCancellationTerminatesTheOwnedJobAndVerifiesCleanup|FullyQualifiedName=ThirdLife.Inventory.Tests.BatteryReportWorkspaceTests.ActiveMachineProductionSourceHasBoundedSanitizedMetricsAndVerifiedCleanup|FullyQualifiedName=ThirdLife.Inventory.Tests.BatteryReportProviderTests.SandboxBatteryCollectionRecordsOnlyAvailabilityAndBoundedMetrics",
+                "success_marker": "Test Run Successful.",
+                "required_success_markers": [
+                    "Passed ThirdLife.Inventory.Tests.BatteryReportWorkspaceTests.ActiveMachineCancellationTerminatesTheOwnedJobAndVerifiesCleanup [",
+                    "Passed ThirdLife.Inventory.Tests.BatteryReportWorkspaceTests.ActiveMachineProductionSourceHasBoundedSanitizedMetricsAndVerifiedCleanup [",
+                    "Passed ThirdLife.Inventory.Tests.BatteryReportProviderTests.SandboxBatteryCollectionRecordsOnlyAvailabilityAndBoundedMetrics [",
+                ],
+                "command_timeout_seconds": 120,
+                "evidence_classification": "same_machine_sandbox_native_cleanup",
+            },
+            "hosted_environment": "active_machine_windows_sandbox",
+            "risk_trigger": "host_application_control_blocks_required_targeted",
+            "target_seconds": 600,
+            "command_timeout_seconds": 600,
             "host_timeout_minutes": 30,
             "memory_mb": 4096,
             "network_reason": "governed_nuget_audit",

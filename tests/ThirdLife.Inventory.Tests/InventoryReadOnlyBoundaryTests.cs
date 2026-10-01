@@ -7,36 +7,56 @@ namespace ThirdLife.Inventory.Tests;
 public sealed class InventoryReadOnlyBoundaryTests
 {
     [Fact]
-    public void AllWindowsProviderImportsAreReviewedReadsOrResourceCleanup()
+    public void AllWindowsProviderImportsHaveAnExactReviewedOwnerAndOperation()
     {
-        var allowed = new HashSet<(string Library, string EntryPoint)>
+        var allowed = new HashSet<(Type Owner, string Library, string EntryPoint)>
         {
-            ("kernel32.dll", "GetSystemFirmwareTable"),
-            ("kernel32.dll", "GetPhysicallyInstalledSystemMemory"),
-            ("kernel32.dll", "GetActiveProcessorCount"),
-            ("kernel32.dll", "GetProductInfo"),
-            ("kernel32.dll", "LocalFree"),
-            ("kernel32.dll", "GetSystemWindowsDirectoryW"),
-            ("kernel32.dll", "GetVolumePathNameW"),
-            ("kernel32.dll", "GetDriveTypeW"),
-            ("kernel32.dll", "GetDiskFreeSpaceExW"),
-            ("ole32.dll", "CoInitializeEx"),
-            ("ole32.dll", "CoUninitialize"),
-            ("ole32.dll", "CoCreateInstance"),
-            ("ole32.dll", "CoSetProxyBlanket"),
-            ("oleaut32.dll", "SysStringLen"),
-            ("oleaut32.dll", "VariantClear"),
-            ("oleaut32.dll", "SafeArrayGetDim"),
-            ("oleaut32.dll", "SafeArrayGetVartype"),
-            ("oleaut32.dll", "SafeArrayGetElemsize"),
-            ("oleaut32.dll", "SafeArrayGetLBound"),
-            ("oleaut32.dll", "SafeArrayGetUBound"),
-            ("oleaut32.dll", "SafeArrayGetElement"),
-            ("slc.dll", "SLOpen"),
-            ("slc.dll", "SLGetLicensingStatusInformation"),
-            ("slc.dll", "SLClose"),
-            ("advapi32.dll", "RegOpenKeyExW"),
-            ("advapi32.dll", "RegQueryValueExW"),
+            (typeof(WindowsSystemInventorySource), "kernel32.dll", "GetSystemFirmwareTable"),
+            (typeof(WindowsSystemInventorySource), "kernel32.dll", "GetPhysicallyInstalledSystemMemory"),
+            (typeof(WindowsSystemInventorySource), "kernel32.dll", "GetActiveProcessorCount"),
+            (typeof(WindowsOperatingSystemSource), "kernel32.dll", "GetProductInfo"),
+            (typeof(WindowsActivationNativeApi), "kernel32.dll", "LocalFree"),
+            (typeof(WindowsStorageVolumeSource), "kernel32.dll", "GetSystemWindowsDirectoryW"),
+            (typeof(WindowsStorageVolumeSource), "kernel32.dll", "GetVolumePathNameW"),
+            (typeof(WindowsStorageVolumeSource), "kernel32.dll", "GetDriveTypeW"),
+            (typeof(WindowsStorageVolumeSource), "kernel32.dll", "GetDiskFreeSpaceExW"),
+            (typeof(StorageWmiNativeMethods), "ole32.dll", "CoInitializeEx"),
+            (typeof(StorageWmiNativeMethods), "ole32.dll", "CoUninitialize"),
+            (typeof(StorageWmiNativeMethods), "ole32.dll", "CoCreateInstance"),
+            (typeof(StorageWmiNativeMethods), "ole32.dll", "CoSetProxyBlanket"),
+            (typeof(StorageWmiNativeMethods), "oleaut32.dll", "SysStringLen"),
+            (typeof(StorageWmiNativeMethods), "oleaut32.dll", "VariantClear"),
+            (typeof(StorageWmiNativeMethods), "oleaut32.dll", "SafeArrayGetDim"),
+            (typeof(StorageWmiNativeMethods), "oleaut32.dll", "SafeArrayGetVartype"),
+            (typeof(StorageWmiNativeMethods), "oleaut32.dll", "SafeArrayGetElemsize"),
+            (typeof(StorageWmiNativeMethods), "oleaut32.dll", "SafeArrayGetLBound"),
+            (typeof(StorageWmiNativeMethods), "oleaut32.dll", "SafeArrayGetUBound"),
+            (typeof(StorageWmiNativeMethods), "oleaut32.dll", "SafeArrayGetElement"),
+            (typeof(WindowsActivationNativeApi), "slc.dll", "SLOpen"),
+            (typeof(WindowsActivationNativeApi), "slc.dll", "SLGetLicensingStatusInformation"),
+            (typeof(WindowsActivationNativeApi), "slc.dll", "SLClose"),
+            (typeof(WindowsPendingRebootSource), "advapi32.dll", "RegOpenKeyExW"),
+            (typeof(WindowsPendingRebootSource), "advapi32.dll", "RegQueryValueExW"),
+            (typeof(WindowsBatteryReportEnvironment), "kernel32.dll", "GetSystemPowerStatus"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "GetSystemDirectoryW"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "CreateJobObjectW"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "SetInformationJobObject"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "CreateProcessW"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "AssignProcessToJobObject"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "ResumeThread"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "WaitForSingleObject"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "QueryInformationJobObject"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "GetExitCodeProcess"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "TerminateJobObject"),
+            (typeof(BatteryReportProcess), "kernel32.dll", "TerminateProcess"),
+            (typeof(BatteryReportFiles), "kernel32.dll", "CreateFileW"),
+            (typeof(BatteryReportFiles), "kernel32.dll", "GetFileInformationByHandle"),
+            (typeof(BatteryReportFiles), "kernel32.dll", "GetFinalPathNameByHandleW"),
+            (typeof(BatteryReportFiles), "kernel32.dll", "SetFileInformationByHandle"),
+            (typeof(BatteryReportFiles), "kernel32.dll", "GetDiskFreeSpaceExW"),
+            (typeof(BatteryReportFiles), "kernel32.dll", "GetDriveTypeW"),
+            (typeof(BatteryReportFiles), "shell32.dll", "SHGetKnownFolderPath"),
+            (typeof(BatteryReportFiles), "ole32.dll", "CoTaskMemFree"),
         };
         var imports = typeof(OperatingSystemProvider).Assembly.GetTypes()
             .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
@@ -45,7 +65,12 @@ public sealed class InventoryReadOnlyBoundaryTests
         Assert.Equal(allowed.Count, imports.Length);
         foreach (var (method, import) in imports)
         {
-            Assert.Contains((import!.Value, import.EntryPoint ?? method.Name), allowed);
+            var declaringType = method.DeclaringType!;
+            var owner = declaringType.DeclaringType ?? declaringType;
+            Assert.Contains((owner, import!.Value, import.EntryPoint ?? method.Name), allowed);
+            Assert.False(method.IsPublic);
+            Assert.False(declaringType.IsVisible);
+            Assert.True(import.ExactSpelling);
             Assert.Equal(DllImportSearchPath.System32, method.GetCustomAttribute<DefaultDllImportSearchPathsAttribute>()!.Paths);
         }
     }
@@ -89,7 +114,27 @@ public sealed class InventoryReadOnlyBoundaryTests
     }
 
     [Fact]
-    public void AllWindowsSourceFilesExcludeExecutionNetworkMutationAndRawLogging()
+    public void BatteryPathsCommandsAndNativeHelpersAreNotPublicExtensionPoints()
+    {
+        Type[] helpers =
+        [
+            typeof(IBatteryReportSource), typeof(IBatteryReportEnvironment), typeof(IBatteryReportWorkspace),
+            typeof(IBatteryReportProcess), typeof(WindowsBatteryReportSource), typeof(WindowsBatteryReportEnvironment),
+            typeof(BatteryReportWorkspace), typeof(BatteryReportFiles), typeof(BatteryReportProcess),
+            typeof(BatteryReportParser), typeof(BatteryReportSourceSnapshot), typeof(BatteryReportFileIdentity),
+        ];
+        Assert.All(helpers, static type => Assert.False(type.IsVisible));
+        var constructor = Assert.Single(typeof(BatteryReportProvider).GetConstructors());
+        Assert.Empty(constructor.GetParameters());
+        var methods = typeof(BatteryReportProvider).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+        Assert.Equal(2, methods.Length);
+        var observe = Assert.Single(methods, static method => method.Name == nameof(BatteryReportProvider.ObserveAsync));
+        Assert.Equal(typeof(CancellationToken), Assert.Single(observe.GetParameters()).ParameterType);
+        Assert.Single(methods, static method => method.Name == "get_Descriptor" && method.GetParameters().Length == 0);
+    }
+
+    [Fact]
+    public void AllWindowsSourceFilesExcludeGeneralExecutionNetworkMutationAndRawLogging()
     {
         var root = new DirectoryInfo(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "TASKS.yaml")))
@@ -108,6 +153,7 @@ public sealed class InventoryReadOnlyBoundaryTests
             "RegistryKey", "Registry.Set", "NativeLibrary.Load", "GetProcAddress", "Marshal.GetDelegateForFunctionPointer",
             "PartialProductKey", "ProductId", "InstallProductKey", "SLActivate", "SLSet", "RegSetValue", "RegCreateKey",
             ".Reserved", "ExecMethod", "PutInstance", "DeleteInstance",
+            "ProcessStartInfo", "ShellExecute", "WinExec", "CreateProcessWith", "File.Move", "Directory.Move",
         };
         foreach (var file in files)
         {
@@ -115,6 +161,42 @@ public sealed class InventoryReadOnlyBoundaryTests
             foreach (var fragment in forbidden)
             {
                 Assert.DoesNotContain(fragment, source, StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (Path.GetFileName(file) != "BatteryReportProcess.cs")
+            {
+                foreach (var fragment in new[]
+                {
+                    "CreateProcessW(", "CreateJobObjectW(", "SetInformationJobObject(", "AssignProcessToJobObject(",
+                    "ResumeThread(", "TerminateProcess(", "TerminateJobObject(", "powercfg.exe",
+                })
+                {
+                    Assert.DoesNotContain(fragment, source, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            if (Path.GetFileName(file) != "BatteryReportWorkspace.cs")
+            {
+                foreach (var fragment in new[]
+                {
+                    "FileMode.Create", "FileMode.Append", "FileAccess.Write", "FileAccess.ReadWrite",
+                    "FileOptions.DeleteOnClose", "new BinaryWriter(", "SetAccessControl(", "SetAccessRuleProtection(",
+                    "DirectorySecurity", "FileSecurity", ").Create(",
+                })
+                {
+                    Assert.DoesNotContain(fragment, source, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            if (Path.GetFileName(file) != "BatteryReportFiles.cs")
+            {
+                Assert.DoesNotContain("SetFileInformationByHandle(", source, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain("CreateFileW(", source, StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (Path.GetFileName(file) is not "BatteryReportFiles.cs" and not "BatteryReportWorkspace.cs")
+            {
+                Assert.DoesNotContain("MarkForDeletion(", source, StringComparison.OrdinalIgnoreCase);
             }
         }
     }

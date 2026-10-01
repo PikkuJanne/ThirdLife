@@ -5,7 +5,7 @@ param(
     [string] $Phase = "Targeted",
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("TL-0102", "TL-0103", "TL-0104", "TL-0107", "AMD-2026-09-12-REPOSITORY-STABILIZATION")]
+    [ValidateSet("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "AMD-2026-09-12-REPOSITORY-STABILIZATION")]
     [string] $EvidenceTaskId = "TL-0102",
 
     [Parameter(Mandatory = $false)]
@@ -360,10 +360,11 @@ function Get-LockedNuGetClosure {
         [Parameter(Mandatory = $true)][string] $SelectedPhase,
         [Parameter(Mandatory = $true)][string] $SelectedTaskId
     )
-    $sharedQuick = $SelectedTaskId -eq "TL-0107" -and $SelectedPhase -eq "Quick"
-    if ($SelectedPhase -eq "Quick" -and -not $sharedQuick) { return @() }
+    $sharedProfile = ($SelectedTaskId -eq "TL-0107" -and $SelectedPhase -eq "Quick") -or
+        ($SelectedTaskId -eq "TL-0109" -and $SelectedPhase -in @("Quick", "Targeted"))
+    if ($SelectedPhase -eq "Quick" -and -not $sharedProfile) { return @() }
     $lockFiles = @()
-    if ($SelectedPhase -eq "Full" -or $sharedQuick) {
+    if ($SelectedPhase -eq "Full" -or $sharedProfile) {
         $lockFiles = @(Get-ChildItem -LiteralPath $SourceRoot -Filter "packages.lock.json" -File -Recurse -Force |
             Where-Object { $_.FullName -notmatch "[\\/](?:bin|obj|\.venv|\.git)[\\/]" } |
             Sort-Object FullName)
@@ -713,6 +714,9 @@ if ($TaskId -eq $RepositoryStabilizationTaskId -and $Phase -ne "Full") {
 if ($TaskId -eq "TL-0107" -and $Phase -ne "Quick") {
     throw "TL-0107 supports only the shared Quick Sandbox verification profile."
 }
+if ($TaskId -eq "TL-0109" -and $Phase -notin @("Quick", "Targeted")) {
+    throw "TL-0109 supports only the shared Quick or Targeted Sandbox verification profiles."
+}
 if ($TaskId -eq "TL-0104" -and $Phase -notin @("Targeted", "Quick", "Full")) {
     throw "TL-0104 supports only Targeted, Quick, or Full Sandbox verification."
 }
@@ -810,8 +814,16 @@ try {
             "tools/tests/test_sandbox_harness.py"
         )
     }
+    if ($TaskId -eq "TL-0109") {
+        $taskWorkingPaths = @(
+            "src/ThirdLife.Inventory/Windows"
+            "tests/ThirdLife.Inventory.Tests"
+            "src/ThirdLife.UI"
+            "tests/ThirdLife.UI.Tests"
+        )
+    }
     $taskUntrackedFiles = @(& $gitExecutable -C $repositoryRoot ls-files --others --exclude-standard -- @taskWorkingPaths)
-    if ($LASTEXITCODE -ne 0) { throw "Unable to enumerate TL-0102/TL-0103/TL-0104 working files." }
+    if ($LASTEXITCODE -ne 0) { throw "Unable to enumerate the selected task's working files." }
     Assert-WorkingTreeSelectionBound -Repository $repositoryRoot -RelativePaths @($trackedFiles + $taskUntrackedFiles)
     foreach ($relative in $trackedFiles) { Copy-WorkingTreeFile -Repository $repositoryRoot -Destination $sourceStage -RelativePath $relative }
     foreach ($relative in $taskUntrackedFiles) { Copy-WorkingTreeFile -Repository $repositoryRoot -Destination $sourceStage -RelativePath $relative }
@@ -833,11 +845,11 @@ try {
         -PythonExecutable $pythonExecutable `
         -RequirementsPath (Join-Path $sourceStage "tools\requirements.txt") `
         -Destination $pythonPackagesStage `
-        -Required:($Phase -in @("Quick", "Full"))
+        -Required:($Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109")
     Assert-SafeTree -Path $pythonPackagesStage -RequireSingleLinks
     $pythonPackagesDigest = Get-SourceDigest -Root $pythonPackagesStage
 
-    $sourceHistoryIncluded = $Phase -in @("Quick", "Full")
+    $sourceHistoryIncluded = $Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109"
     if ($sourceHistoryIncluded) {
         $historyBundlePath = Join-Path $historyStage "repository-history.bundle"
         Invoke-CheckedNativeCommand -Label "Stage exact reachable Git history" -FilePath $gitExecutable -Arguments @(
@@ -852,7 +864,7 @@ try {
     Assert-BoundedTree -Path $historyStage -MaximumFiles 1 -MaximumBytes $MaxHistoryBundleBytes
     $historyBundleDigest = Get-SourceDigest -Root $historyStage
 
-    $networkingEnabled = $Phase -eq "Full" -or ($TaskId -eq "TL-0107" -and $Phase -eq "Quick")
+    $networkingEnabled = $Phase -eq "Full" -or ($TaskId -eq "TL-0107" -and $Phase -eq "Quick") -or $TaskId -eq "TL-0109"
     $networkReason = if ($networkingEnabled) { "governed_nuget_audit" } else { "disabled_offline_phase" }
     $networkingMode = if ($networkingEnabled) { "Enable" } else { "Disable" }
     $sandboxVersionText = (Get-Item -LiteralPath $sandboxExecutable).VersionInfo.FileVersion

@@ -1,0 +1,49 @@
+{
+  "task": "TL-0109",
+  "date": "2026-10-01",
+  "reference_machine": "REF-CODEX-001 revision 2026-08-29.1",
+  "classification": "active_machine_read_only_battery_collection",
+  "raw_report_retained": false,
+  "hardware_identity_retained": false,
+  "security_policy_changed": false,
+  "physical_source_observations": [
+    {
+      "operation": "default production source",
+      "status": "Collected",
+      "exit_code": 0,
+      "elapsed_ms": 244.447,
+      "cpu_ms": 62.5,
+      "private_growth_bytes": 712704,
+      "handle_growth": 29,
+      "cleanup_complete": true
+    },
+    {
+      "operation": "fixed powercfg report",
+      "elevated": false,
+      "status": "Collected",
+      "exit_code": 0,
+      "elapsed_ms": 272.175,
+      "cpu_ms": 46.875,
+      "private_growth_bytes": 0,
+      "handle_growth": 12,
+      "completed_report_bytes": 18771,
+      "battery_count": 1,
+      "design_capacity": "Available",
+      "full_charge_capacity": "Available",
+      "cycle_count": "Unavailable",
+      "cleanup_complete": true
+    },
+    {
+      "operation": "native cancellation immediately after launch",
+      "status": "Cancelled",
+      "elapsed_ms": 15.047,
+      "cleanup_complete": true
+    }
+  ],
+  "limitations": [
+    "Measurements are process deltas, not peak memory/handles or a benchmark. Completed report size is not peak disk usage.",
+    "Physical observations preceded final process startup allocation-order hardening and factory rename. Rebuilt Inventory.dll was blocked by existing host Application Control 0x800711C7.",
+    "Final current source must pass native cancellation and production-source cleanup in governed Windows Sandbox on this same physical machine; guest capability is recorded separately.",
+    "No health, swelling, endurance, charging, manufacturer coverage, minimum-spec or cross-hardware certification."
+  ]
+}

@@ -35,7 +35,8 @@ Quick includes:
 - formatting verification;
 - warnings-as-errors Release build;
 - fast deterministic Core tests;
-- fast deterministic Inventory tests excluding active-machine/extended scenarios.
+- fast deterministic Inventory tests excluding active-machine/extended scenarios;
+- UI component and accessibility contract tests for the implemented WPF surface.
 
 Quick is required after small fixes and before each checkpoint commit.
 
@@ -202,6 +203,36 @@ staging time are reported separately from the shared tier. Existing source/histo
 bindings, read-only inputs, bounded results, and verified cleanup remain enforced. ActiveMachine
 tests are excluded by the unchanged Quick filters; host provider smoke evidence remains separate.
 This does not establish direct-host policy compatibility or cross-hardware certification.
+
+TL-0109 has separate allowlisted Quick and Targeted profiles for the same host Application
+Control blocker. Targeted invokes the shared verifier with the Inventory and UI test projects,
+including Quick and the unchanged deterministic filter, then requires the three exact methods
+declared in the manifest: `ActiveMachineCancellationTerminatesTheOwnedJobAndVerifiesCleanup`,
+`ActiveMachineProductionSourceHasBoundedSanitizedMetricsAndVerifiedCleanup`, and
+`SandboxBatteryCollectionRecordsOnlyAvailabilityAndBoundedMetrics`. This additional command
+has a 120-second limit and requires all three per-test pass markers plus the test-run success
+marker. It verifies native process cancellation, workspace cleanup and the complete provider
+through the inventory runner in the same-machine guest;
+the production source may truthfully report no battery there. Both profiles stage the complete locked
+solution closure and pinned Python/history inputs, restore with audit enabled, and retain the
+same 4 GiB guest, read-only mappings, result/source binding, cleanup, and 30-minute host limit.
+The shared commands are bounded to 180 seconds for Quick and 600 seconds for Targeted; the
+normal tier targets remain 120 and 600 seconds. The exact selection, environment, risk trigger,
+and budgets are declared in `eng/test-manifest.json`.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 `
+  -Phase Quick -EvidenceTaskId TL-0109 -PersistEvidence
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 `
+  -Phase Targeted -EvidenceTaskId TL-0109 -PersistEvidence
+```
+
+Run the chosen phase with `-PreflightOnly` and without `-PersistEvidence` first. Persistent
+results require committed, unchanged tracked source. Quick continues to exclude ActiveMachine
+tests. Targeted admits only the three declared checks beyond its deterministic selection;
+the fixed-report test with its standard-user assertion remains host-only. Physical-host battery
+observation and UI accessibility evidence are recorded separately. A guest pass
+does not establish direct-host policy compatibility or cross-hardware certification.
 
 A new large task-specific runner requires:
 

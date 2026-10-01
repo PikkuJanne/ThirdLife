@@ -102,6 +102,16 @@ A slower result may be acceptable. The following are not acceptable for a suppor
 
 ## 6. Hardware and provider coverage
 
+`TL-0109` bounds battery evidence to four packs and 23 observations including failure.
+Streaming XML is limited to 4 MiB, with node/depth/attribute bounds. A shared collection slot
+and private cross-process lock prevent overlapping reports. The native writer has a 20-second
+deadline, five-second termination wait and monitored 4 MiB soft ceiling; it can overshoot
+between 100 ms checks. Preflight requires 16 MiB free. Exact cleanup follows each operation,
+and no GPU, permanent service, cache or battery exercise is introduced. The caller can stop
+waiting at 30 seconds while the source retains cleanup ownership. See
+`docs/inventory/battery-report.md` and the measured task evidence; no endurance or battery-health
+claim follows from capacity/cycle observations.
+
 `TL-0108` bounds normalized storage evidence to four physical disks and a separate system
 volume within the existing 64-observation contract. An oversized enumeration fails closed
 instead of silently publishing a partial inventory. Its five-second caller timeout and

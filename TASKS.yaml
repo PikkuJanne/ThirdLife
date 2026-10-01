@@ -2399,7 +2399,7 @@ tasks:
   workstream: inventory
   kind: code
   priority: P0
-  status: backlog
+  status: review
   size: L
   executor: codex
   environment: windows
@@ -2432,7 +2432,17 @@ tasks:
   - Run the provider on the active Codex machine; a host with no exposed battery records Not available and does not block
     completion.
   - Verify cleanup after success, failure, timeout, and cancellation.
-  evidence: []
+  evidence:
+  - summary: Fixed bounded battery XML generation, per-pack observations, verified owned cleanup and visible human-inspection notice implemented; committed Targeted verification pending.
+    task: TL-0109
+    command_or_review: powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -EvidenceTaskId TL-0109 -Phase Quick; physical source collection; independent privacy/native-boundary review
+    tier: quick plus focused targeted checks
+    result: Quick passed; 79 Core, 476 Inventory and 3 UI tests, zero warnings/errors; Python governance 256 passed and final profile regressions 35 passed
+    environment: Active Codex machine; REF-CODEX-001 revision 2026-08-29.1; governed Windows Sandbox for final assembly runtime; host Application Control unchanged
+    date: '2026-10-01'
+    duration: Quick 103.396 s, guest total 158.640 s; Python 244.284 s; final profile regressions 62.776 s
+    reference: artifacts/evidence/TL-0109/report.md; runs.json; active-battery.json; inputs.sha256
+    limitation: Final committed Targeted and exact native/provider guest checks pending. Physical source exposed capacities and unavailable cycles before final process startup hardening; no health or cross-hardware claim.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

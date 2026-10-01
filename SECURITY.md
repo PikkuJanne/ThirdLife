@@ -118,6 +118,15 @@ The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md)
 
 ## 10. Filesystem and persistence
 
+`TL-0109` adds a [fixed battery-report operation and temporary-data contract](docs/inventory/battery-report.md).
+Only the system powercfg battery XML command can run; no caller command, path or option is
+accepted. Its suspended process joins a kill-on-close job before resuming. Raw XML stays in
+an operation-owned protected directory, is streamed through a bounded parser and is removed
+by validated file identity. Restart recovery accepts only the durable ownership record;
+uncertain cleanup blocks further collection. Numeric lifecycle codes are the only failure
+details retained. This is a narrow temporary-file operation, with no raw attachment or
+export permission. Same-user/local-administrator compromise remains outside the ACL boundary.
+
 `TL-0108` adds a [read-only storage source and normalization contract](docs/inventory/storage.md).
 Fixed local WMI projections and their explicit physical-disk/counter association collect
 bounded numeric facts. Routing identifiers are transient and excluded from normalized
