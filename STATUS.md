@@ -4,40 +4,36 @@
 **Bundle baseline:** 0.4.0  
 **Runtime authority:** active Codex machine only; remote CI is supplementary  
 **Current milestone:** M1 — Audit-only vertical slice  
-**Current task:** TL-0111 — Implement network and key-device enumeration; done, integration pending
+**Current task:** TL-0112 — Implement the read-only assessment orchestrator; in progress
 
 ## Continuity
 
-TL-0110 PR #11 is merged into main `72c26dc808e9b24a6fb6dd431f205957eb41fd58`.
-Its final head `1c2249ad00b93d921063dd282d3d63c8c36067dc` is an ancestor.
-Local main fast-forwarded before creation of `codex/tl-0111-device-enumeration`.
-The complete TL-0111 dependency chain is done. No completed-task stack.
-
-The SSH origin is unchanged; fetch uses the documented process-scoped HTTPS bridge.
+TL-0111 PR #12 merged into main `bbdc15f403f6ca28e8ee57e9404c85988a8d5141`.
+Its final head `edf95723e24df2797df7f9880765f05a22ff4782` is an ancestor with no unique
+unmerged commits. Local main fast-forwarded before `codex/tl-0112-assessment-orchestrator`
+was created. Every transitive TL-0112 dependency is done; no completed-task stack.
+The SSH origin remains unchanged; fetch uses the process-scoped HTTPS bridge.
 Prior branches and the unrelated untracked Word reference remain untouched.
 
 ## Work and verification
 
-Implemented fixed local read-only network and device-class sources with bounded numeric
-evidence, per-class errors, explicit unknown states and separate functional-test semantics.
-Network identities, personal device names and endpoint paths are excluded.
+Baseline provider-contract/lifecycle tests passed 95 cases in 30.797s including build.
+The task adds bounded read-only scheduling, transactional sanitization revalidation,
+independent provider commits and immutable assessment snapshots using the existing
+observation store. Incomplete runs preserve exact committed evidence; reruns append new
+identities. Each evidence key has one registered owner. Historical lifecycle evidence is
+retained exactly. No migration, new dependency or released interface is introduced.
 
-Baseline 25, focused 201, interface-absence regression 3 and active-machine smoke 1 passed.
-Host Targeted passed governance/format/build, Core 79 and Inventory 824, then Windows
-Application Control blocked the unchanged UI assembly (0x800711C7). A single-test
-reproduction confirmed the load failure. Committed-source same-machine Sandbox Targeted
-passed in 123.805s (180.917s total), including Quick and Core 79 / Inventory 824 / UI 3 with zero
-failures/skips. Python governance 261 passed in 283.387s. No control or test is disabled.
-Full/Extended are not triggered. PR-triggered remote CI is supplementary and is not required evidence.
-
-Implementation `eb83e4f26c292498f2d9223f12a3adeea402f1bc` is pushed and source-bound.
-Durable evidence: `artifacts/evidence/TL-0111/`; result/manifest: `artifacts/audit/TL-0111/`.
-Network WMI denied 0x80041003 remains unknown; other class evidence is retained. Presence
-never substitutes for functional tests or proves physical absence outside the source scope.
+Focused assessment 77 and initial guard 4/21 passed; worker 1/4 resource fixture passed.
+Host Application Control 0x800711C7 blocks the rebuilt Persistence assembly, confirmed by
+a single assembly-load reproduction. Same-machine Sandbox Quick/Targeted passed: Core 83,
+Inventory 901, Persistence 113, UI 3; zero skips, 186.705s shared tier / 248.509s guest.
+Python governance passed 268 tests in 317.894s. Full/Extended are not triggered.
+Committed-source verification is pending. No security control or test is disabled.
+Durable evidence is under `artifacts/evidence/TL-0112/`.
 
 ## Next action
 
-Normal PR #12 is open into main.
-Merge it before selecting the next product task.
-Next dependency-ready task: **TL-0112 — Implement the read-only assessment orchestrator**.
-Do not start it until TL-0111 is integrated into updated main.
+Commit/push the implementation checkpoint, capture committed-source Sandbox evidence,
+complete the handoff record and prepare one normal TL-0112 PR into main.
+Do not begin another product task before TL-0112 is integrated into updated main.

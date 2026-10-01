@@ -288,7 +288,7 @@ class TestManifestContractTests(unittest.TestCase):
             self.assertTrue(self.validate(manifest).errors)
 
     def test_tl0109_sandbox_profiles_reject_selection_and_budget_drift(self) -> None:
-        for profile_name in ("tl0109_quick", "tl0109_targeted", "tl0111_quick", "tl0111_targeted"):
+        for profile_name in ("tl0109_quick", "tl0109_targeted", "tl0111_quick", "tl0111_targeted", "tl0112_quick", "tl0112_targeted"):
             for field, replacement in (
                 ("task_id", "TL-0107"), ("tier", "Full"),
                 ("hosted_environment", "remote_runner"), ("risk_trigger", ""),
@@ -339,6 +339,31 @@ class TestManifestContractTests(unittest.TestCase):
         manifest = self.read_manifest()
         manifest["sandbox_profiles"]["tl0111_quick"]["selection_ref"] = "tiers.full.filter"
         self.assertTrue(self.validate(manifest).errors)
+
+    def test_tl0112_profiles_reject_selection_or_native_execution_expansion(self) -> None:
+        for profile_name in ("tl0112_quick", "tl0112_targeted"):
+            manifest = self.read_manifest()
+            manifest["sandbox_profiles"][profile_name]["required_native_step"] = manifest["sandbox_profiles"]["tl0109_targeted"]["required_native_step"]
+            self.assertTrue(self.validate(manifest).errors)
+        for field, replacement in (
+            ("filter_ref", "Category=ActiveMachine"), ("includes_quick_ref", False),
+            ("test_projects", []), ("test_projects", ["arbitrary.csproj"]),
+            ("test_projects", ["tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj"]),
+        ):
+            with self.subTest(field=field, replacement=replacement):
+                manifest = self.read_manifest()
+                manifest["sandbox_profiles"]["tl0112_targeted"][field] = replacement
+                self.assertTrue(self.validate(manifest).errors)
+        manifest = self.read_manifest()
+        manifest["sandbox_profiles"]["tl0112_quick"]["selection_ref"] = "tiers.full.filter"
+        self.assertTrue(self.validate(manifest).errors)
+
+    def test_tl0112_targeted_requires_each_of_the_four_reviewed_projects(self) -> None:
+        for removed in range(4):
+            with self.subTest(removed=removed):
+                manifest = self.read_manifest()
+                del manifest["sandbox_profiles"]["tl0112_targeted"]["test_projects"][removed]
+                self.assertTrue(self.validate(manifest).errors)
 
     def test_tl0109_native_step_rejects_filter_marker_budget_and_scope_drift(self) -> None:
         for field, replacement in (

@@ -77,6 +77,58 @@ public sealed class TransactionInterruptionTests
     }
 
     [Theory]
+    [InlineData("guarded_after_first_insert", false)]
+    [InlineData("guarded_before_commit", false)]
+    [InlineData("guarded_after_commit", true)]
+    public async Task ProcessKillAroundGuardedProviderBatchPreservesPriorEvidenceAndGate(
+        string mode,
+        bool expectedCommitted)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("guarded-crash");
+        var sanitization = PersistenceTestData.CreateSanitization("guarded-crash");
+        StoredJob before;
+        await using (var initializer = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+            await initializer.CreateJobAsync(job);
+            await initializer.AppendEvidenceAsync(new JobEvidenceBatch(
+                job.JobId, sanitizationEvidence: [sanitization]));
+            var decision = await initializer.RecordSanitizationGateDecisionAsync(
+                SanitizationGate.Evaluate(job.JobId, sanitization, PersistenceTestData.Timestamp.AddMinutes(2)));
+            await initializer.AppendEvidenceAsync(new JobEvidenceBatch(
+                job.JobId,
+                [
+                    PersistenceTestData.CreateObservation("guarded-prior-first"),
+                    PersistenceTestData.CreateObservation("guarded-prior-second"),
+                ],
+                expectedSanitizationGateDecisionId: decision.DecisionId));
+            before = (await initializer.LoadJobAsync(job.JobId))!;
+        }
+
+        await RunAndKillChildAsync(workspace, mode);
+
+        await using var reopened = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        var actual = await reopened.LoadJobAsync(job.JobId);
+        Assert.NotNull(actual);
+        Assert.Equal(before.Job, actual.Job);
+        Assert.Equal(before.Observations, actual.Observations.Take(before.Observations.Count));
+        Assert.Equal(before.Checkpoints, actual.Checkpoints.Take(before.Checkpoints.Count));
+        Assert.Equal(before.SanitizationEvidence, actual.SanitizationEvidence);
+        Assert.Equal(before.SanitizationGateDecisions, actual.SanitizationGateDecisions);
+        Assert.True(SanitizationGate.Inspect(actual).AllowsAssessment);
+        Assert.Equal(expectedCommitted ? 4 : 2, actual.Observations.Count);
+        Assert.Equal(expectedCommitted ? 4 : 3, actual.Checkpoints.Count);
+        if (expectedCommitted)
+        {
+            Assert.Equal(PersistenceTestData.CreateObservation("guarded-next-first"), actual.Observations[2]);
+            Assert.Equal(PersistenceTestData.CreateObservation("guarded-next-second"), actual.Observations[3]);
+            Assert.Equal(JobCheckpointKind.EvidenceCommitted, actual.Checkpoints[^1].Kind);
+        }
+        Assert.Equal(3, SqliteJobStore.CurrentSchemaVersion);
+        Assert.Equal(3, await SqliteTestControl.ReadUserVersionAsync(reopened.DatabasePath));
+    }
+
+    [Theory]
     [InlineData("job_before_commit", false)]
     [InlineData("job_after_commit", true)]
     public async Task ProcessKillAroundJobCreationReopensAsAbsentOrComplete(
@@ -283,6 +335,9 @@ public sealed class TransactionCrashChildTests
             "after_first_insert" => (JobStoreFaultPoint.AfterFirstEvidenceInsert, (int?)null),
             "before_commit" => (JobStoreFaultPoint.BeforeWriteCommit, (int?)null),
             "after_commit" => (JobStoreFaultPoint.AfterWriteCommit, (int?)null),
+            "guarded_after_first_insert" => (JobStoreFaultPoint.AfterFirstEvidenceInsert, (int?)null),
+            "guarded_before_commit" => (JobStoreFaultPoint.BeforeWriteCommit, (int?)null),
+            "guarded_after_commit" => (JobStoreFaultPoint.AfterWriteCommit, (int?)null),
             "job_before_commit" => (JobStoreFaultPoint.BeforeWriteCommit, (int?)null),
             "job_after_commit" => (JobStoreFaultPoint.AfterWriteCommit, (int?)null),
             "gate_before_commit" => (JobStoreFaultPoint.BeforeWriteCommit, (int?)null),
@@ -323,6 +378,23 @@ public sealed class TransactionCrashChildTests
                 gateJob.JobId,
                 evidence,
                 PersistenceTestData.Timestamp.AddMinutes(2)));
+            return;
+        }
+
+        if (mode.StartsWith("guarded_", StringComparison.Ordinal))
+        {
+            var guardedJob = PersistenceTestData.CreateJob("guarded-crash");
+            var stored = await store.LoadJobAsync(guardedJob.JobId);
+            Assert.NotNull(stored);
+            var access = SanitizationGate.Inspect(stored);
+            Assert.True(access.AllowsAssessment);
+            await store.AppendEvidenceAsync(new JobEvidenceBatch(
+                guardedJob.JobId,
+                [
+                    PersistenceTestData.CreateObservation("guarded-next-first"),
+                    PersistenceTestData.CreateObservation("guarded-next-second"),
+                ],
+                expectedSanitizationGateDecisionId: access.Decision!.DecisionId));
             return;
         }
 
