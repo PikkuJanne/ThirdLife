@@ -1,0 +1,64 @@
+{
+  "task": "TL-0109",
+  "date": "2026-10-01",
+  "reference_machine": "REF-CODEX-001 revision 2026-08-29.1",
+  "classification": "active_machine_read_only_battery_collection",
+  "raw_report_retained": false,
+  "hardware_identity_retained": false,
+  "security_policy_changed": false,
+  "physical_source_observations": [
+    {
+      "operation": "default production source",
+      "status": "Collected",
+      "exit_code": 0,
+      "elapsed_ms": 244.447,
+      "cpu_ms": 62.5,
+      "private_growth_bytes": 712704,
+      "handle_growth": 29,
+      "cleanup_complete": true
+    },
+    {
+      "operation": "fixed powercfg report",
+      "elevated": false,
+      "status": "Collected",
+      "exit_code": 0,
+      "elapsed_ms": 272.175,
+      "cpu_ms": 46.875,
+      "private_growth_bytes": 0,
+      "handle_growth": 12,
+      "completed_report_bytes": 18771,
+      "battery_count": 1,
+      "design_capacity": "Available",
+      "full_charge_capacity": "Available",
+      "cycle_count": "Unavailable",
+      "cleanup_complete": true
+    },
+    {
+      "operation": "native cancellation immediately after launch",
+      "status": "Cancelled",
+      "elapsed_ms": 15.047,
+      "cleanup_complete": true
+    }
+  ],
+  "limitations": [
+    "Measurements are process deltas, not peak memory/handles or a benchmark. Completed report size is not peak disk usage.",
+    "Physical observations preceded final process startup allocation-order hardening and factory rename. Rebuilt Inventory.dll was blocked by existing host Application Control 0x800711C7.",
+    "Final current source passed native cancellation, production-source cleanup and real provider/runner composition in governed Windows Sandbox on this same physical machine. Guest pass markers do not establish a physical battery observation.",
+    "No health, swelling, endurance, charging, manufacturer coverage, minimum-spec or cross-hardware certification."
+  ],
+  "final_guest_verification": {
+    "classification": "same_machine_sandbox_native_cleanup",
+    "commit": "40e97bb3afd951d5c7387b66183dd131adbfdf63",
+    "source_digest": "17d780a390b533aafd998ebfe074be9b4e39e29537214481ada0ee02956ba204",
+    "artifact": "artifacts/audit/TL-0109/targeted-17d780a390b533aafd998ebfe074be9b4e39e29537214481ada0ee02956ba204-a77ed7db8779ddf1e066c89eae1357bb.json",
+    "result": "passed",
+    "required_tests": [
+      "ActiveMachineCancellationTerminatesTheOwnedJobAndVerifiesCleanup",
+      "ActiveMachineProductionSourceHasBoundedSanitizedMetricsAndVerifiedCleanup",
+      "SandboxBatteryCollectionRecordsOnlyAvailabilityAndBoundedMetrics"
+    ],
+    "capability_state": "Not retained by normal console verbosity; no specific guest battery-capability claim",
+    "native_step_reported_seconds": 1.5818,
+    "raw_report_retained": false
+  }
+}

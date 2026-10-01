@@ -3,10 +3,34 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:ThirdLife.UI"
         mc:Ignorable="d"
-        Title="ThirdLife Setup Core" Height="450" Width="800">
-    <Grid>
-
-    </Grid>
+        Title="ThirdLife Setup Core" Height="450" Width="800"
+        MinHeight="240" MinWidth="320"
+        Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+        Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}"
+        FontFamily="{DynamicResource {x:Static SystemFonts.MessageFontFamilyKey}}"
+        FontSize="{DynamicResource {x:Static SystemFonts.MessageFontSizeKey}}"
+        FocusManager.FocusedElement="{Binding ElementName=BatteryNoticeScroll}">
+    <ScrollViewer x:Name="BatteryNoticeScroll"
+                  Padding="24"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Focusable="True"
+                  KeyboardNavigation.IsTabStop="True"
+                  AutomationProperties.Name="Battery safety information"
+                  AutomationProperties.HelpText="{Binding Text, ElementName=BatteryInspectionMessage}">
+        <StackPanel MaxWidth="720" HorizontalAlignment="Left">
+            <TextBlock x:Name="BatteryInspectionHeading"
+                       Text="Battery safety"
+                       FontSize="22"
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,12"
+                       TextWrapping="Wrap"
+                       AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock x:Name="BatteryInspectionMessage"
+                       Text="Battery reports cannot detect swelling. Swelling requires human inspection."
+                       TextWrapping="Wrap"
+                       TextTrimming="None" />
+        </StackPanel>
+    </ScrollViewer>
 </Window>

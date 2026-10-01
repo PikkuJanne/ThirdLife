@@ -16,6 +16,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 POWERSHELL = shutil.which("pwsh") or shutil.which("powershell.exe")
 CORE = "tests/ThirdLife.Core.Tests/ThirdLife.Core.Tests.csproj"
 INVENTORY = "tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj"
+UI = "tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj"
 DIAGNOSTICS = "tests/ThirdLife.Diagnostics.Tests/ThirdLife.Diagnostics.Tests.csproj"
 PERSISTENCE = "tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj"
 DEFAULT_FILTER = "Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly"
@@ -34,7 +35,7 @@ class VerificationRunnerTests(unittest.TestCase):
         (self.root / "eng").mkdir()
         for relative in ("eng/verify.ps1", "eng/test-manifest.json", "global.json"):
             shutil.copyfile(REPOSITORY_ROOT / relative, self.root / relative)
-        for relative in (CORE, INVENTORY, DIAGNOSTICS, PERSISTENCE):
+        for relative in (CORE, INVENTORY, UI, DIAGNOSTICS, PERSISTENCE):
             target = self.root / relative
             target.parent.mkdir(parents=True)
             target.write_text("<Project />\n", encoding="utf-8")
@@ -116,9 +117,9 @@ class VerificationRunnerTests(unittest.TestCase):
         result, records = self.run_tier(restore=True)
         self.assert_passed(result)
         operations = [record["arguments"][0] for record in records]
-        self.assertEqual(operations, ["--version", "-c", "tools/validate_bundle.py", "tools/validate_repository.py", "restore", "format", "build", "test", "test"])
+        self.assertEqual(operations, ["--version", "-c", "tools/validate_bundle.py", "tools/validate_repository.py", "restore", "format", "build", "test", "test", "test"])
         calls = self.selected_tests(records)
-        self.assertEqual([call[1] for call in calls], [CORE, INVENTORY])
+        self.assertEqual([call[1] for call in calls], [CORE, INVENTORY, UI])
         for call in calls:
             self.assertEqual(call[call.index("--filter") + 1], DEFAULT_FILTER)
             self.assertEqual(call[-2:], ["--", "RunConfiguration.TreatNoTestsAsError=true"])
@@ -132,8 +133,8 @@ class VerificationRunnerTests(unittest.TestCase):
         result, records = self.run_tier("Targeted", projects=(DIAGNOSTICS, PERSISTENCE), test_filter=selected_filter)
         self.assert_passed(result)
         calls = self.selected_tests(records)
-        self.assertEqual([call[1] for call in calls], [CORE, INVENTORY, DIAGNOSTICS, PERSISTENCE])
-        self.assertEqual([call[call.index("--filter") + 1] for call in calls], [DEFAULT_FILTER, DEFAULT_FILTER, selected_filter, selected_filter])
+        self.assertEqual([call[1] for call in calls], [CORE, INVENTORY, UI, DIAGNOSTICS, PERSISTENCE])
+        self.assertEqual([call[call.index("--filter") + 1] for call in calls], [DEFAULT_FILTER, DEFAULT_FILTER, DEFAULT_FILTER, selected_filter, selected_filter])
         self.assertNotIn("restore", [record["arguments"][0] for record in records])
 
     def test_targeted_default_excludes_active_observation(self) -> None:
@@ -145,8 +146,8 @@ class VerificationRunnerTests(unittest.TestCase):
         result, records = self.run_tier("Targeted", projects=(INVENTORY,), test_filter="Category=ActiveMachine")
         self.assert_passed(result)
         calls = self.selected_tests(records)
-        self.assertEqual(calls[1][calls[1].index("--filter") + 1], DEFAULT_FILTER)
-        self.assertEqual(calls[-1][calls[-1].index("--filter") + 1], "Category=ActiveMachine")
+        self.assertEqual([call[1] for call in calls], [CORE, INVENTORY, UI, INVENTORY])
+        self.assertEqual([call[call.index("--filter") + 1] for call in calls], [DEFAULT_FILTER, DEFAULT_FILTER, DEFAULT_FILTER, "Category=ActiveMachine"])
 
     def test_full_runs_governance_regressions_and_locked_supported_suite(self) -> None:
         result, records = self.run_tier("Full")
@@ -186,7 +187,7 @@ class VerificationRunnerTests(unittest.TestCase):
         result, records = self.run_tier(supplementary=True)
         self.assert_passed(result)
         self.assertIn("supplementary evidence context", result.stdout)
-        self.assertEqual(len(self.selected_tests(records)), 2)
+        self.assertEqual([call[1] for call in self.selected_tests(records)], [CORE, INVENTORY, UI])
 
 
 if __name__ == "__main__":

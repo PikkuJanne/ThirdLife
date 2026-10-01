@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepositoryStabilizationTaskId = "AMD-2026-09-12-REPOSITORY-STABILIZATION"
-$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104", "TL-0107", $RepositoryStabilizationTaskId)
+$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", $RepositoryStabilizationTaskId)
 $TaskId = "Unavailable"
 $ResultSchemaVersion = 2
 $SandboxMemoryMb = 4096
@@ -56,6 +56,7 @@ $commandSequence = 0
 $commandTreeTerminationUnverified = $false
 $request = $null
 $phase = "Unavailable"
+$gitConfigurationGuard = $null
 
 $commandRunnerSource = @'
 using System;
@@ -650,6 +651,27 @@ function Write-Utf8CreateNew {
     finally { $stream.Dispose() }
 }
 
+function Open-IsolatedGitConfiguration {
+    param([Parameter(Mandatory = $true)][string] $StatePath)
+
+    # Git requires a regular config file here; uppercase NUL is not accepted by
+    # every pinned Git for Windows runtime. Create it empty and keep writes and
+    # deletion denied for the entire guest command sequence.
+    $path = Join-Path $StatePath "git-global-empty.config"
+    $guard = [System.IO.FileStream]::new(
+        $path, [System.IO.FileMode]::CreateNew,
+        [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::Read
+    )
+    try {
+        $guard.Flush($true)
+        $env:GIT_CONFIG_NOSYSTEM = "1"
+        $env:GIT_CONFIG_GLOBAL = $path
+        $env:GIT_TERMINAL_PROMPT = "0"
+        return $guard
+    }
+    catch { $guard.Dispose(); throw }
+}
+
 function Invoke-Robocopy {
     param(
         [Parameter(Mandatory = $true)][string] $Source,
@@ -710,6 +732,12 @@ function Get-CommandTimeoutSeconds {
         $Label -eq "repository-stabilization-full") { return 1200 }
     if ($EvidenceTaskId -eq "TL-0107" -and $SelectedPhase -eq "Quick" -and
         $Label -eq "tl0107-shared-quick") { return 180 }
+    if ($EvidenceTaskId -eq "TL-0109" -and $SelectedPhase -eq "Quick" -and
+        $Label -eq "tl0109-shared-quick") { return 180 }
+    if ($EvidenceTaskId -eq "TL-0109" -and $SelectedPhase -eq "Targeted" -and
+        $Label -eq "tl0109-shared-targeted") { return 600 }
+    if ($EvidenceTaskId -eq "TL-0109" -and $SelectedPhase -eq "Targeted" -and
+        $Label -eq "tl0109-native-cleanup") { return 120 }
     return $CommandTimeoutSeconds
 }
 
@@ -803,7 +831,8 @@ function Invoke-RequiredCommand {
         [Parameter(Mandatory = $true)][string] $FilePath,
         [Parameter(Mandatory = $true)][string[]] $Arguments,
         [Parameter(Mandatory = $true)][ValidateSet("source_binding_failed", "python_bootstrap_failed", "restore_failed", "test_failed", "verification_failed")][string] $Failure,
-        [Parameter(Mandatory = $false)][string] $SuccessMarker = ""
+        [Parameter(Mandatory = $false)][string] $SuccessMarker = "",
+        [Parameter(Mandatory = $false)][string[]] $RequiredSuccessMarkers = @()
     )
     $previousFailureCode = $script:failureCode
     $script:failureCode = $Failure
@@ -821,6 +850,9 @@ function Invoke-RequiredCommand {
     if ($command.output_exceeded) { $script:failureCode = "output_limit_exceeded"; throw "A governed command exceeded its raw output limit." }
     if ($command.exit_code -ne 0) { $script:failureCode = $Failure; throw "A governed command returned a failure." }
     if (-not $command.marker_found) { $script:exitCode = 2; $script:failureCode = "success_marker_missing"; throw "A governed command omitted its required success marker." }
+    foreach ($marker in $RequiredSuccessMarkers) {
+        if (-not $command.tail_text.Contains($marker)) { $script:exitCode = 2; $script:failureCode = "success_marker_missing"; throw "A governed command omitted a required test completion marker." }
+    }
     $script:failureCode = $previousFailureCode
 }
 
@@ -855,6 +887,9 @@ function Assert-RunRequest {
     if ($RunRequest.task_id -eq "TL-0107" -and $RunRequest.phase -ne "Quick") {
         throw "The TL-0107 run request requires the shared Quick profile."
     }
+    if ($RunRequest.task_id -eq "TL-0109" -and $RunRequest.phase -notin @("Quick", "Targeted")) {
+        throw "The TL-0109 run request requires the shared Quick or Targeted profile."
+    }
     if ($RunRequest.run_id -isnot [string] -or $RunRequest.run_id -notmatch "^[0-9a-f]{32}$" -or
         $RunRequest.expected_head_commit -isnot [string] -or $RunRequest.expected_head_commit -notmatch "^[0-9a-f]{40}$") { throw "The run request contains an invalid source identity." }
     foreach ($digestName in @("expected_source_digest", "history_bundle_sha256", "repository_status_sha256", "launcher_sha256", "runner_sha256", "sandbox_config_sha256", "nuget_closure_sha256", "python_packages_sha256")) {
@@ -863,12 +898,12 @@ function Assert-RunRequest {
     foreach ($booleanName in @("expected_tracked_clean", "source_history_included", "networking_enabled", "nuget_audit_enabled")) {
         if ($RunRequest.$booleanName -isnot [bool]) { throw "The run request contains an invalid Boolean." }
     }
-    $historyRequired = $RunRequest.phase -in @("Quick", "Full")
+    $historyRequired = $RunRequest.phase -in @("Quick", "Full") -or $RunRequest.task_id -eq "TL-0109"
     if ($RunRequest.source_history_included -ne $historyRequired -or ($RunRequest.nuget_package_count -isnot [int] -and $RunRequest.nuget_package_count -isnot [long]) -or
         $RunRequest.nuget_package_count -lt 0 -or $RunRequest.nuget_package_count -gt $MaxNuGetPackages) { throw "The run request contains an unsafe history or package-count value." }
-    $sharedQuick = $RunRequest.task_id -eq "TL-0107" -and $RunRequest.phase -eq "Quick"
-    if ($sharedQuick -and $RunRequest.nuget_package_count -eq 0) { throw "The shared Quick profile requires the complete locked package closure." }
-    $auditRequired = $RunRequest.phase -eq "Full" -or $sharedQuick
+    $sharedProfile = ($RunRequest.task_id -eq "TL-0107" -and $RunRequest.phase -eq "Quick") -or $RunRequest.task_id -eq "TL-0109"
+    if ($sharedProfile -and $RunRequest.nuget_package_count -eq 0) { throw "The shared verifier profile requires the complete locked package closure." }
+    $auditRequired = $RunRequest.phase -eq "Full" -or $sharedProfile
     if ($RunRequest.networking_enabled -ne $auditRequired -or $RunRequest.nuget_audit_enabled -ne $auditRequired -or
         $RunRequest.network_reason -ne $(if ($auditRequired) { "governed_nuget_audit" } else { "disabled_offline_phase" })) { throw "The run request violates the phase network contract." }
 }
@@ -963,7 +998,7 @@ function Assert-PythonPackages {
     )
     if ((Get-SourceDigest -Root $Path) -ne $RunRequest.python_packages_sha256) { throw "The mapped Python package digest does not match the request." }
     $items = @(Get-ChildItem -LiteralPath $Path -Force -ErrorAction Stop)
-    if ($RunRequest.phase -notin @("Quick", "Full")) {
+    if ($RunRequest.phase -notin @("Quick", "Full") -and $RunRequest.task_id -ne "TL-0109") {
         if ($items.Count -ne 0) { throw "A focused phase received an unnecessary Python package." }
         return
     }
@@ -983,6 +1018,9 @@ function Invoke-SharedVerifierProfile {
     )
     # Closed task/tier profiles reuse the shared verifier and its declarative manifest.
     # Historical task phases below retain their original, version-bound behavior.
+    $verificationArguments = @(
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "eng\verify.ps1", "-Tier", $SelectedPhase, "-Restore"
+    )
     if ($EvidenceTaskId -eq $RepositoryStabilizationTaskId -and $SelectedPhase -eq "Full") {
         $restoreLabel = "locked-full-restore-and-audit"
         $verificationLabel = "repository-stabilization-full"
@@ -990,6 +1028,20 @@ function Invoke-SharedVerifierProfile {
     elseif ($EvidenceTaskId -eq "TL-0107" -and $SelectedPhase -eq "Quick") {
         $restoreLabel = "locked-quick-restore-and-audit"
         $verificationLabel = "tl0107-shared-quick"
+    }
+    elseif ($EvidenceTaskId -eq "TL-0109" -and $SelectedPhase -eq "Quick") {
+        $restoreLabel = "locked-quick-restore-and-audit"
+        $verificationLabel = "tl0109-shared-quick"
+    }
+    elseif ($EvidenceTaskId -eq "TL-0109" -and $SelectedPhase -eq "Targeted") {
+        $restoreLabel = "locked-targeted-restore-and-audit"
+        $verificationLabel = "tl0109-shared-targeted"
+        # -File cannot pass an array through the native PowerShell boundary.
+        # This fixed expression contains no request text or arbitrary selection.
+        $verificationArguments = @(
+            "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+            "& '.\eng\verify.ps1' -Tier Targeted -TestProject @('tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj', 'tests\ThirdLife.UI.Tests\ThirdLife.UI.Tests.csproj') -Restore"
+        )
     }
     else { throw "The shared verifier task and tier do not match an allowlisted profile." }
     # Populate the guest-private cache from the verified staged closure first.
@@ -999,9 +1051,22 @@ function Invoke-SharedVerifierProfile {
         "restore", "ThirdLife.sln", "--locked-mode", "--configfile", $NuGetConfigPath, "--nologo",
         "-p:NuGetAudit=true", "-p:NuGetAuditMode=all"
     ) -Failure "restore_failed"
-    Invoke-RequiredCommand -Label $verificationLabel -FilePath "powershell.exe" -Arguments @(
-        "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "eng\verify.ps1", "-Tier", $SelectedPhase, "-Restore"
-    ) -Failure "verification_failed" -SuccessMarker "OK: ThirdLife $SelectedPhase verification passed in "
+    Invoke-RequiredCommand -Label $verificationLabel -FilePath "powershell.exe" -Arguments $verificationArguments `
+        -Failure "verification_failed" -SuccessMarker "OK: ThirdLife $SelectedPhase verification passed in "
+    if ($EvidenceTaskId -eq "TL-0109" -and $SelectedPhase -eq "Targeted") {
+        # Exact native cleanup checks are separate from physical-host battery evidence.
+        # The standard-user fixed-report test is deliberately excluded from this guest.
+        Invoke-RequiredCommand -Label "tl0109-native-cleanup" -FilePath $DotnetExecutable -Arguments @(
+            "test", "tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj",
+            "--configuration", "Release", "--no-build", "--no-restore", "--nologo",
+            "--filter", "FullyQualifiedName=ThirdLife.Inventory.Tests.BatteryReportWorkspaceTests.ActiveMachineCancellationTerminatesTheOwnedJobAndVerifiesCleanup|FullyQualifiedName=ThirdLife.Inventory.Tests.BatteryReportWorkspaceTests.ActiveMachineProductionSourceHasBoundedSanitizedMetricsAndVerifiedCleanup|FullyQualifiedName=ThirdLife.Inventory.Tests.BatteryReportProviderTests.SandboxBatteryCollectionRecordsOnlyAvailabilityAndBoundedMetrics",
+            "--logger", "console;verbosity=normal"
+        ) -Failure "test_failed" -SuccessMarker "Test Run Successful." -RequiredSuccessMarkers @(
+            "Passed ThirdLife.Inventory.Tests.BatteryReportWorkspaceTests.ActiveMachineCancellationTerminatesTheOwnedJobAndVerifiesCleanup [",
+            "Passed ThirdLife.Inventory.Tests.BatteryReportWorkspaceTests.ActiveMachineProductionSourceHasBoundedSanitizedMetricsAndVerifiedCleanup [",
+            "Passed ThirdLife.Inventory.Tests.BatteryReportProviderTests.SandboxBatteryCollectionRecordsOnlyAvailabilityAndBoundedMetrics ["
+        )
+    }
 }
 
 function Write-SandboxNuGetConfig {
@@ -1146,9 +1211,7 @@ try {
     $env:NUGET_XMLDOC_MODE = "skip"
     $env:PIP_DISABLE_PIP_VERSION_CHECK = "1"
     $env:PIP_NO_INPUT = "1"
-    $env:GIT_CONFIG_NOSYSTEM = "1"
-    $env:GIT_CONFIG_GLOBAL = "NUL"
-    $env:GIT_TERMINAL_PROMPT = "0"
+    $gitConfigurationGuard = Open-IsolatedGitConfiguration -StatePath $stateDirectory
 
     $dotnetVersionCommand = Invoke-BoundedCommand -Label "dotnet-version" -FilePath $dotnetExecutable -Arguments @("--version")
     $dotnetVersionLines = @($dotnetVersionCommand.tail_text -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -match "^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$" })
@@ -1198,7 +1261,7 @@ try {
 
     Push-Location $workDirectory
     try {
-        if ($phase -in @("Quick", "Full")) {
+        if ($phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109") {
             $pythonVersionCommand = Invoke-BoundedCommand -Label "python-version" -FilePath $pythonExecutable -Arguments @("-c", "import platform; print(platform.python_version())") -SuccessMarker "3.14.7"
             if ($pythonVersionCommand.exit_code -ne 0 -or -not $pythonVersionCommand.marker_found) { $failureCode = "python_bootstrap_failed"; throw "The mapped Python runtime is not the governed version." }
             $pythonVersion = "3.14.7"
@@ -1212,7 +1275,10 @@ try {
             Invoke-RequiredCommand -Label "python-package-version" -FilePath $venvPython -Arguments @("-c", "import yaml; print(yaml.__version__)") -Failure "python_bootstrap_failed" -SuccessMarker "6.0.3"
         }
 
-        if ($phase -eq "Targeted" -and $TaskId -eq "TL-0104") {
+        if ($TaskId -in @($RepositoryStabilizationTaskId, "TL-0107", "TL-0109")) {
+            Invoke-SharedVerifierProfile -DotnetExecutable $dotnetExecutable -NuGetConfigPath $nugetConfig -EvidenceTaskId $TaskId -SelectedPhase $phase
+        }
+        elseif ($phase -eq "Targeted" -and $TaskId -eq "TL-0104") {
             $diagnosticsProject = "tests\ThirdLife.Diagnostics.Tests\ThirdLife.Diagnostics.Tests.csproj"
             Invoke-RequiredCommand -Label "locked-offline-diagnostics-restore" -FilePath $dotnetExecutable -Arguments @(
                 "restore", $diagnosticsProject, "--locked-mode", "--configfile", $nugetConfig, "--nologo", "-p:NuGetAudit=false"
@@ -1246,9 +1312,6 @@ try {
             $testArguments = @("test", $persistenceProject, "--configuration", "Release", "--no-restore", "--nologo")
             if ($null -ne $filter) { $testArguments += @("--filter", $filter) }
             Invoke-RequiredCommand -Label "persistence-tests" -FilePath $dotnetExecutable -Arguments $testArguments -Failure "test_failed" -SuccessMarker "Passed!"
-        }
-        elseif ($TaskId -in @($RepositoryStabilizationTaskId, "TL-0107")) {
-            Invoke-SharedVerifierProfile -DotnetExecutable $dotnetExecutable -NuGetConfigPath $nugetConfig -EvidenceTaskId $TaskId -SelectedPhase $phase
         }
         elseif ($phase -eq "Quick") {
             Invoke-RequiredCommand -Label "governed-quick" -FilePath "powershell.exe" -Arguments @(
@@ -1333,6 +1396,7 @@ finally {
         }
     }
     finally {
+        if ($null -ne $gitConfigurationGuard) { $gitConfigurationGuard.Dispose() }
         if ($sandboxMappedInvocation -and $sandboxIdentityVerified) {
             Start-Process -FilePath "$env:WINDIR\System32\shutdown.exe" -ArgumentList @("/s", "/t", "2", "/f") -WindowStyle Hidden | Out-Null
         }

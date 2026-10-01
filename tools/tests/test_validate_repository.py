@@ -287,8 +287,68 @@ class TestManifestContractTests(unittest.TestCase):
                 del manifest["sandbox_profiles"]
             self.assertTrue(self.validate(manifest).errors)
 
+    def test_tl0109_sandbox_profiles_reject_selection_and_budget_drift(self) -> None:
+        for profile_name in ("tl0109_quick", "tl0109_targeted"):
+            for field, replacement in (
+                ("task_id", "TL-0107"), ("tier", "Full"),
+                ("hosted_environment", "remote_runner"), ("risk_trigger", ""),
+                ("target_seconds", 1200), ("command_timeout_seconds", 1200),
+                ("command_timeout_seconds", True), ("host_timeout_minutes", 60),
+                ("memory_mb", 8192), ("network_reason", "disabled_offline_phase"),
+            ):
+                with self.subTest(profile=profile_name, field=field, replacement=replacement):
+                    manifest = self.read_manifest()
+                    manifest["sandbox_profiles"][profile_name][field] = replacement
+                    self.assertTrue(self.validate(manifest).errors)
+            manifest = self.read_manifest()
+            del manifest["sandbox_profiles"][profile_name]
+            self.assertTrue(self.validate(manifest).errors)
+        for field, replacement in (
+            ("selection_ref", "tiers.full.filter"), ("selection_ref", "arbitrary.command"),
+        ):
+            manifest = self.read_manifest()
+            manifest["sandbox_profiles"]["tl0109_quick"][field] = replacement
+            self.assertTrue(self.validate(manifest).errors)
+        for field, replacement in (
+            ("filter_ref", "tiers.full.filter"), ("filter_ref", "Category=ActiveMachine"),
+            ("includes_quick_ref", "tiers.full.includes"), ("includes_quick_ref", False),
+            ("test_projects", []),
+            ("test_projects", ["tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj"]),
+            ("test_projects", ["tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj"] * 2),
+            ("test_projects", ["arbitrary.csproj"]),
+        ):
+            with self.subTest(field=field, replacement=replacement):
+                manifest = self.read_manifest()
+                manifest["sandbox_profiles"]["tl0109_targeted"][field] = replacement
+                self.assertTrue(self.validate(manifest).errors)
+
+    def test_tl0109_native_step_rejects_filter_marker_budget_and_scope_drift(self) -> None:
+        for field, replacement in (
+            ("label", "arbitrary"), ("test_project", "arbitrary.csproj"),
+            ("filter", "Category=ActiveMachine"),
+            ("filter", "FullyQualifiedName~BatteryReportWorkspaceTests"),
+            ("success_marker", ""), ("required_success_markers", []),
+            ("required_success_markers", ["Test Run Successful."]),
+            ("command_timeout_seconds", 600), ("command_timeout_seconds", True),
+            ("evidence_classification", "physical_host_battery"),
+        ):
+            with self.subTest(field=field, replacement=replacement):
+                manifest = self.read_manifest()
+                manifest["sandbox_profiles"]["tl0109_targeted"]["required_native_step"][field] = replacement
+                self.assertTrue(self.validate(manifest).errors)
+        manifest = self.read_manifest()
+        del manifest["sandbox_profiles"]["tl0109_targeted"]["required_native_step"]
+        self.assertTrue(self.validate(manifest).errors)
+        for removed in range(3):
+            manifest = self.read_manifest()
+            manifest["sandbox_profiles"]["tl0109_targeted"]["required_native_step"]["required_success_markers"].pop(removed)
+            self.assertTrue(self.validate(manifest).errors)
+        manifest = self.read_manifest()
+        manifest["sandbox_profiles"]["tl0109_quick"]["required_native_step"] = manifest["sandbox_profiles"]["tl0109_targeted"]["required_native_step"]
+        self.assertTrue(self.validate(manifest).errors)
+
     def test_missing_duplicate_or_arbitrary_quick_projects_are_rejected(self) -> None:
-        for mutation in ("empty", "remove_core", "remove_inventory", "duplicate", "path", "fields"):
+        for mutation in ("empty", "remove_core", "remove_inventory", "remove_ui", "duplicate", "path", "fields"):
             with self.subTest(mutation=mutation):
                 manifest = self.read_manifest()
                 projects = manifest["tiers"]["quick"]["test_projects"]
@@ -298,6 +358,8 @@ class TestManifestContractTests(unittest.TestCase):
                     projects.pop(0)
                 elif mutation == "remove_inventory":
                     projects.pop(1)
+                elif mutation == "remove_ui":
+                    projects.pop(2)
                 elif mutation == "duplicate":
                     projects.append(projects[0])
                 elif mutation == "path":
