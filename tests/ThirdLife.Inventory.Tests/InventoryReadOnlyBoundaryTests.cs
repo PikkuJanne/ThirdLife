@@ -37,6 +37,10 @@ public sealed class InventoryReadOnlyBoundaryTests
             (typeof(WindowsActivationNativeApi), "slc.dll", "SLClose"),
             (typeof(WindowsPendingRebootSource), "advapi32.dll", "RegOpenKeyExW"),
             (typeof(WindowsPendingRebootSource), "advapi32.dll", "RegQueryValueExW"),
+            (typeof(WindowsFirmwarePlatformNativeApi), "kernel32.dll", "GetFirmwareType"),
+            (typeof(WindowsFirmwarePlatformNativeApi), "advapi32.dll", "RegOpenKeyExW"),
+            (typeof(WindowsFirmwarePlatformNativeApi), "advapi32.dll", "RegQueryValueExW"),
+            (typeof(WindowsTpmSource), "tbs.dll", "Tbsi_GetDeviceInfo"),
             (typeof(WindowsBatteryReportEnvironment), "kernel32.dll", "GetSystemPowerStatus"),
             (typeof(BatteryReportProcess), "kernel32.dll", "GetSystemDirectoryW"),
             (typeof(BatteryReportProcess), "kernel32.dll", "CreateJobObjectW"),
@@ -78,22 +82,27 @@ public sealed class InventoryReadOnlyBoundaryTests
     [Fact]
     public void ComInterfacesExposeOnlyTheReviewedConnectionAndReadSlots()
     {
-        var allowed = new Dictionary<Guid, (int ReservedSlots, string Method, Type[] Parameters)>
+        var allowed = new Dictionary<Type, (Guid Guid, int ReservedSlots, string Method, Type[] Parameters)>
         {
-            [new("DC12A687-737F-11CF-884D-00AA004B2E24")] = (0, "ConnectServer",
+            [typeof(IStorageWbemLocator)] = (new("DC12A687-737F-11CF-884D-00AA004B2E24"), 0, "ConnectServer",
                 [typeof(string), typeof(nint), typeof(nint), typeof(nint), typeof(int), typeof(nint), typeof(nint), typeof(IStorageWbemServices).MakeByRefType()]),
-            [new("9556DC99-828C-11CF-A37E-00AA003240C7")] = (17, "ExecQuery",
+            [typeof(IStorageWbemServices)] = (new("9556DC99-828C-11CF-A37E-00AA003240C7"), 17, "ExecQuery",
                 [typeof(string), typeof(string), typeof(int), typeof(nint), typeof(IStorageWbemEnumerator).MakeByRefType()]),
-            [new("027947E1-D731-11CE-A357-000000000001")] = (1, "Next",
+            [typeof(IStorageWbemEnumerator)] = (new("027947E1-D731-11CE-A357-000000000001"), 1, "Next",
                 [typeof(int), typeof(uint), typeof(IStorageWbemObject).MakeByRefType(), typeof(uint).MakeByRefType()]),
-            [new("DC12A681-737F-11CF-884D-00AA004B2E24")] = (1, "Get",
+            [typeof(IStorageWbemObject)] = (new("DC12A681-737F-11CF-884D-00AA004B2E24"), 1, "Get",
                 [typeof(string), typeof(int), typeof(nint), typeof(int).MakeByRefType(), typeof(nint)]),
+            // Three implicit IUnknown slots plus these 21 inert slots place the
+            // fixed synchronous read at IWbemServices native slot 24.
+            [typeof(ITpmWbemReadinessServices)] = (new("9556DC99-828C-11CF-A37E-00AA003240C7"), 21, "ExecMethod",
+                [typeof(string), typeof(string), typeof(int), typeof(nint), typeof(nint), typeof(IStorageWbemObject).MakeByRefType(), typeof(nint)]),
         };
         var interfaces = typeof(StorageProvider).Assembly.GetTypes().Where(type => type.IsImport).ToArray();
         Assert.Equal(allowed.Count, interfaces.Length);
         foreach (var type in interfaces)
         {
-            Assert.True(allowed.TryGetValue(type.GUID, out var contract));
+            Assert.True(allowed.TryGetValue(type, out var contract));
+            Assert.Equal(contract.Guid, type.GUID);
             Assert.True(type.IsInterface && !type.IsPublic);
             Assert.Equal(ComInterfaceType.InterfaceIsIUnknown, type.GetCustomAttribute<InterfaceTypeAttribute>()!.Value);
             var methods = type.GetMethods().OrderBy(method => method.MetadataToken).ToArray();
@@ -110,7 +119,36 @@ public sealed class InventoryReadOnlyBoundaryTests
             Assert.Equal(typeof(int), read.ReturnType);
             Assert.True((read.MethodImplementationFlags & MethodImplAttributes.PreserveSig) != 0);
             Assert.Equal(contract.Parameters, read.GetParameters().Select(parameter => parameter.ParameterType));
+            if (type == typeof(ITpmWbemReadinessServices))
+            {
+                var parameters = read.GetParameters();
+                Assert.Equal(UnmanagedType.BStr, parameters[0].GetCustomAttribute<MarshalAsAttribute>()!.Value);
+                Assert.Equal(UnmanagedType.BStr, parameters[1].GetCustomAttribute<MarshalAsAttribute>()!.Value);
+                Assert.True(parameters[5].IsOut);
+                Assert.Equal(UnmanagedType.Interface, parameters[5].GetCustomAttribute<MarshalAsAttribute>()!.Value);
+            }
         }
+    }
+
+    [Fact]
+    public void FirmwareSourcesQueriesAndNativeHelpersAreNotPublicExtensionPoints()
+    {
+        Type[] helpers =
+        [
+            typeof(IFirmwareSecuritySource), typeof(IFirmwarePlatformSource), typeof(IFirmwarePlatformNativeApi),
+            typeof(IDeviceGuardSource), typeof(ITpmSource), typeof(WindowsFirmwareSecuritySource),
+            typeof(WindowsFirmwarePlatformSource), typeof(WindowsFirmwarePlatformNativeApi),
+            typeof(WindowsDeviceGuardSource), typeof(WindowsTpmSource), typeof(FirmwareWmiValueReader),
+            typeof(SmbiosHardwareSecurityParser), typeof(ITpmWbemReadinessServices),
+        ];
+        Assert.All(helpers, static type => Assert.False(type.IsVisible));
+        var constructor = Assert.Single(typeof(FirmwareSecurityProvider).GetConstructors());
+        Assert.Empty(constructor.GetParameters());
+        var methods = typeof(FirmwareSecurityProvider).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+        Assert.Equal(2, methods.Length);
+        var observe = Assert.Single(methods, static method => method.Name == nameof(FirmwareSecurityProvider.ObserveAsync));
+        Assert.Equal(typeof(CancellationToken), Assert.Single(observe.GetParameters()).ParameterType);
+        Assert.Single(methods, static method => method.Name == "get_Descriptor" && method.GetParameters().Length == 0);
     }
 
     [Fact]
@@ -158,9 +196,10 @@ public sealed class InventoryReadOnlyBoundaryTests
         foreach (var file in files)
         {
             var source = File.ReadAllText(file);
+            var guardedSource = RemoveExactlyReviewedTpmRead(Path.GetFileName(file), source);
             foreach (var fragment in forbidden)
             {
-                Assert.DoesNotContain(fragment, source, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain(fragment, guardedSource, StringComparison.OrdinalIgnoreCase);
             }
 
             if (Path.GetFileName(file) != "BatteryReportProcess.cs")
@@ -199,5 +238,21 @@ public sealed class InventoryReadOnlyBoundaryTests
                 Assert.DoesNotContain("MarkForDeletion(", source, StringComparison.OrdinalIgnoreCase);
             }
         }
+    }
+
+    private static string RemoveExactlyReviewedTpmRead(string fileName, string source)
+    {
+        var reviewed = fileName switch
+        {
+            "TpmWmiInterop.cs" => "int ExecMethod(",
+            "WindowsTpmSource.cs" => "((ITpmWbemReadinessServices)services).ExecMethod(\"Win32_Tpm=@\", \"IsReadyInformation\", 0, 0, 0, out result, 0)",
+            _ => null,
+        };
+        if (reviewed is null) { return source; }
+
+        // Require one exact declaration/call before excluding it from the general
+        // method-execution ban. Any extra call, input, object path, method or flag fails.
+        Assert.Equal(2, source.Split(reviewed, StringSplitOptions.None).Length);
+        return source.Replace(reviewed, "ReviewedTpmRead", StringComparison.Ordinal);
     }
 }

@@ -102,6 +102,8 @@ A slower result may be acceptable. The following are not acceptable for a suppor
 
 ## 6. Hardware and provider coverage
 
+`TL-0110` bounds firmware/TPM evidence to 38 singleton facts plus a failure observation, a 16-byte TBS record, one instance per WMI query, 16 DeviceGuard values and 128-character version fields. The existing 1 MiB SMBIOS buffer is cleared after parsing. One worker per provider instance retains admission through cleanup; the caller timeout is 15 seconds. Native calls can outlive cancellation, so no second worker is admitted until cleanup. Read-only measured evidence and limits are recorded in `artifacts/evidence/TL-0110/` and `docs/inventory/firmware-security.md`; this does not certify other hardware.
+
 `TL-0109` bounds battery evidence to four packs and 23 observations including failure.
 Streaming XML is limited to 4 MiB, with node/depth/attribute bounds. A shared collection slot
 and private cross-process lock prevent overlapping reports. The native writer has a 20-second
