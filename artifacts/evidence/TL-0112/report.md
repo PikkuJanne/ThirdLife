@@ -4,7 +4,7 @@
 **Branch:** `codex/tl-0112-assessment-orchestrator`  
 **Base:** `bbdc15f403f6ca28e8ee57e9404c85988a8d5141`  
 **Runtime authority:** active Codex machine only  
-**Status:** implementation complete; transient Targeted passed; committed-source binding pending
+**Status:** done; required active-machine evidence complete; main integration pending
 
 ## Continuity
 
@@ -55,8 +55,8 @@ Compilation initially caught CA1870 character searches and CA1861 test arrays. C
 search sets and readonly arrays resolved them without disabling analyzers. Harness tests
 passed 34 cases; a companion validator invocation initially used system Python without
 PyYAML. Selecting the governed virtual environment passed all 37 validator-module tests.
-The full Python governance suite passed all 268 tests in 317.894 seconds because runner
-controls changed.
+Because runner controls changed, the full Python governance suite also ran and passed
+all 268 tests in 317.894 seconds.
 
 Full is not triggered: this additive coordinator composes the unchanged provider runner and
 SQLite engine; there is no migration, external dependency/tool/engine replacement, major
@@ -92,7 +92,32 @@ without deleting earlier evidence. Input/workload hashes are in `inputs.json`.
   schema remains version 3, with no migration, new location, raw attachment or retention deletion.
 - Project boundary/release interface: no sibling or release-interface change.
 
-Implementation contract: `docs/inventory/assessment-orchestration.md`. The implementation
-checkpoint will receive a second, committed-source Sandbox binding before completion.
-Normal PR publication remains pending. Runtime source is unchanged after the passing
-transient run; only documentation and evidence were refined for this checkpoint.
+## Committed-source proof and handoff
+
+Implementation `5e7454e7ca8cb683aae97fad9df6671e6134399c` is pushed and verified against
+upstream. The persistent same-machine run passed the same Core 83 / Inventory 901 /
+Persistence 113 / UI 3 selection with zero failures or skips. Quick is included in Targeted;
+its duration is not measured separately. The shared tier took 165.978 seconds and the
+whole guest run took 223.462 seconds, within the 600-second shared Targeted limit.
+
+- Evidence: `artifacts/audit/TL-0112/targeted-834de9c1507de51f915d83a40be459a352ff5dd806421a90a2a8bb2ec5072dfb-28daefb9590f84b758cee3db85868ae4.json`.
+- Evidence SHA-256: `ca3ee1de3ba173085ece4e19ed1feda768287129ef8cbb89c720dbce8b7575bc`.
+- Source digest: `834de9c1507de51f915d83a40be459a352ff5dd806421a90a2a8bb2ec5072dfb`.
+- Matching manifest verifies the 5,551-byte result; manifest is 1,138 bytes. Source and
+  tracked state stayed unchanged. Raw command output was discarded. Guest networking
+  was enabled only for the governed NuGet audit; assessment fixture providers are offline.
+
+Final independent guard/journal/cancellation review found no actionable issues. All 24
+input hashes match the tested checkout bytes and normalize exactly to committed Git text
+under `.gitattributes`. The frozen task contracts and all other task records are unchanged.
+The final handoff changes only state, documentation and evidence; implementation is the
+same source covered by the committed run. Bundle/repository, diff, hash and task-contract
+checks verify this final metadata update without another unchanged runtime run.
+
+Implementation contract: `docs/inventory/assessment-orchestration.md`. One compact task
+entry points to four task evidence files and two bounded Sandbox files; STATUS remains a
+current snapshot. No new raw logs or captured personal data are committed.
+
+Normal PR publication is the remaining handoff step; merge it before TL-0113, the next
+dependency-ready task. No required TL-0112 human evidence remains. Full/Extended trigger
+rationale and host-policy/resource limitations above remain part of this completed task.

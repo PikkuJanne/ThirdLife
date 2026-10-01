@@ -99,5 +99,6 @@
       "path": "tools/tests/test_sandbox_harness.py",
       "sha256": "f48cbbfb20e1bacd59e92ea9cbd56501aef5700dec70c3def46b38d5b578f133"
     }
-  ]
+  ],
+  "hash_scope": "Exact tested Windows checkout bytes. C# and PowerShell use repository-governed CRLF; Git blobs normalize text to LF. Each file normalizes exactly to implementation commit 5e7454e7ca8cb683aae97fad9df6671e6134399c."
 }
