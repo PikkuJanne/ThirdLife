@@ -1,0 +1,107 @@
+{
+  "task": "TL-0111",
+  "date": "2026-10-01",
+  "branch": "codex/tl-0111-device-enumeration",
+  "base_commit": "72c26dc808e9b24a6fb6dd431f205957eb41fd58",
+  "environment": "Active Codex Windows machine; REF-CODEX-001 revision 2026-08-29.1; SDK10.0.400; Python3.14.7; PowerShell7.6.5; security policy unchanged",
+  "runs": [
+    {
+      "id": "narrow-baseline",
+      "tier": "targeted baseline",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --nologo --filter 'FullyQualifiedName~ProviderContractTests|FullyQualifiedName~InventoryReadOnlyBoundaryTests' -- RunConfiguration.TreatNoTestsAsError=true",
+      "duration_seconds": 20.0191835,
+      "passed_tests": 25,
+      "result": "Passed including Release build; no pre-existing failure in selected baseline."
+    },
+    {
+      "id": "first-build",
+      "tier": "focused build",
+      "command": "dotnet build tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --nologo",
+      "duration_seconds": 4.5133839,
+      "result": "Failed before tests: CA1861 on three constant arrays in new NetworkDeviceSourceTests. Replaced with static readonly arrays; no analyzer disabled."
+    },
+    {
+      "id": "focused",
+      "tier": "focused",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --nologo --filter '(FullyQualifiedName~DeviceEnumeration|FullyQualifiedName~DeviceClassSourceTests|FullyQualifiedName~NetworkDeviceSourceTests|FullyQualifiedName~InventoryReadOnlyBoundaryTests)&Category!=ActiveMachine' -- RunConfiguration.TreatNoTestsAsError=true",
+      "duration_seconds": 5.1764449,
+      "passed_tests": 201,
+      "result": "Passed; includes Release build. No skips/failures."
+    },
+    {
+      "id": "active-smoke-initial",
+      "tier": "targeted active observation",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-build --no-restore --nologo --filter 'FullyQualifiedName~DeviceEnumerationProviderTests.ActiveMachineReadOnlySmokeEmitsOnlyClassStatesAndProcessMetrics' --logger 'console;verbosity=detailed' -- RunConfiguration.TreatNoTestsAsError=true",
+      "duration_seconds": 1.8925336,
+      "passed_tests": 1,
+      "result": "Passed. Review subsequently scoped camera/Bluetooth/USB presence keys explicitly to interfaces; final smoke repeated after that correction."
+    },
+    {
+      "id": "interface-absence-regression",
+      "tier": "focused",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --nologo --filter 'FullyQualifiedName~EmptyInterfaceEnumerationPublishesOnlyScopedAbsence' -- RunConfiguration.TreatNoTestsAsError=true",
+      "duration_seconds": 5.8805209,
+      "passed_tests": 3,
+      "result": "Passed camera/Bluetooth/USB empty-interface cases. Disabled/missing-driver interface absence cannot be reported as physical absence; generic keys prohibited."
+    },
+    {
+      "id": "active-smoke-final",
+      "tier": "targeted active observation",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-build --no-restore --nologo --filter 'FullyQualifiedName~DeviceEnumerationProviderTests.ActiveMachineReadOnlySmokeEmitsOnlyClassStatesAndProcessMetrics' --logger 'console;verbosity=detailed' -- RunConfiguration.TreatNoTestsAsError=true",
+      "duration_seconds": 1.916184,
+      "passed_tests": 1,
+      "result": "Passed. Source collection121.7843ms; network WMI denied0x80041003; other class observations retained. See active-machine.json."
+    },
+    {
+      "id": "host-targeted-policy-block",
+      "tier": "targeted including Quick",
+      "command": "& .\\eng\\verify.ps1 -Tier Targeted -TestProject tests\\ThirdLife.Inventory.Tests\\ThirdLife.Inventory.Tests.csproj",
+      "duration_seconds": 44.282,
+      "result": "Blocked by host Application Control0x800711C7 loading unchanged ThirdLife.UI.dll. Governance/format passed; Release build0warnings0errors; Core79/Inventory824 passed; UI3 failed to load. Targeted extra project phase not reached. No checks disabled."
+    },
+    {
+      "id": "host-ui-minimal-reproduction",
+      "tier": "focused environment reproduction",
+      "command": "dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj --configuration Release --no-build --no-restore --nologo --filter 'FullyQualifiedName=ThirdLife.UI.Tests.AssemblyContractTests.AssemblyIdentityMatchesProjectBoundary' -- RunConfiguration.TreatNoTestsAsError=true",
+      "duration_seconds": 1.5657647,
+      "result": "Same0x800711C7 before assembly test body; no product regression isolated. Use governed same-machine Sandbox profile."
+    },
+    {
+      "id": "sandbox-profile-contracts",
+      "tier": "targeted governance",
+      "command": ".\\.venv\\Scripts\\python.exe -m unittest tools.tests.test_sandbox_harness tools.tests.test_validate_repository.TestManifestContractTests",
+      "duration_seconds": 93.418,
+      "passed_tests": 40,
+      "result": "Passed; no skips."
+    },
+    {
+      "id": "sandbox-preflight",
+      "tier": "targeted preparation",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Targeted -EvidenceTaskId TL-0111 -PreflightOnly",
+      "duration_seconds": null,
+      "result": "Passed source binding, locked closure, stage preparation and cleanup; duration not instrumented."
+    },
+    {
+      "id": "sandbox-transient-targeted",
+      "tier": "Targeted including Quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Targeted -EvidenceTaskId TL-0111",
+      "duration_seconds": 199.616,
+      "verification_duration_seconds": 137.344,
+      "source_digest": "d40593b7570cf7f2df2afa1e7188a8c270b100d2681c92ba45411da951dbcc20",
+      "result_sha256": "5a7a08962b6d59d84e556a934e8364240d655357c54042dd19321145deb90ab0",
+      "result": "Passed on same physical machine, 4 GiB guest; Quick governance/format/build Core79/Inventory824/UI3 then targeted Inventory824/UI3. Zero failures/skips. Transient overlay; committed-source durable run pending."
+    },
+    {
+      "id": "complete-python-governance",
+      "tier": "targeted governance",
+      "command": ".\\.venv\\Scripts\\python.exe -m unittest discover -s tools/tests -p test_*.py",
+      "duration_seconds": 283.387,
+      "passed_tests": 261,
+      "result": "Passed; no failures/skips."
+    }
+  ],
+  "broader_tiers": {
+    "full": "Not triggered: no gate, major refactor, migration, dependency/engine change or task trigger.",
+    "extended": "Not triggered: bounded deterministic provider/lifecycle cases run in targeted; no endurance or host mutation scenario."
+  }
+}

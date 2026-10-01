@@ -5,7 +5,7 @@ param(
     [string] $Phase = "Targeted",
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "AMD-2026-09-12-REPOSITORY-STABILIZATION")]
+    [ValidateSet("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "TL-0111", "AMD-2026-09-12-REPOSITORY-STABILIZATION")]
     [string] $EvidenceTaskId = "TL-0102",
 
     [Parameter(Mandatory = $false)]
@@ -361,7 +361,8 @@ function Get-LockedNuGetClosure {
         [Parameter(Mandatory = $true)][string] $SelectedTaskId
     )
     $sharedProfile = ($SelectedTaskId -eq "TL-0107" -and $SelectedPhase -eq "Quick") -or
-        ($SelectedTaskId -eq "TL-0109" -and $SelectedPhase -in @("Quick", "Targeted"))
+        ($SelectedTaskId -eq "TL-0109" -and $SelectedPhase -in @("Quick", "Targeted")) -or
+        ($SelectedTaskId -eq "TL-0111" -and $SelectedPhase -in @("Quick", "Targeted"))
     if ($SelectedPhase -eq "Quick" -and -not $sharedProfile) { return @() }
     $lockFiles = @()
     if ($SelectedPhase -eq "Full" -or $sharedProfile) {
@@ -717,6 +718,9 @@ if ($TaskId -eq "TL-0107" -and $Phase -ne "Quick") {
 if ($TaskId -eq "TL-0109" -and $Phase -notin @("Quick", "Targeted")) {
     throw "TL-0109 supports only the shared Quick or Targeted Sandbox verification profiles."
 }
+if ($TaskId -eq "TL-0111" -and $Phase -notin @("Quick", "Targeted")) {
+    throw "TL-0111 supports only the shared Quick or Targeted Sandbox verification profiles."
+}
 if ($TaskId -eq "TL-0104" -and $Phase -notin @("Targeted", "Quick", "Full")) {
     throw "TL-0104 supports only Targeted, Quick, or Full Sandbox verification."
 }
@@ -822,6 +826,12 @@ try {
             "tests/ThirdLife.UI.Tests"
         )
     }
+    if ($TaskId -eq "TL-0111") {
+        $taskWorkingPaths = @(
+            "src/ThirdLife.Inventory/Windows"
+            "tests/ThirdLife.Inventory.Tests"
+        )
+    }
     $taskUntrackedFiles = @(& $gitExecutable -C $repositoryRoot ls-files --others --exclude-standard -- @taskWorkingPaths)
     if ($LASTEXITCODE -ne 0) { throw "Unable to enumerate the selected task's working files." }
     Assert-WorkingTreeSelectionBound -Repository $repositoryRoot -RelativePaths @($trackedFiles + $taskUntrackedFiles)
@@ -845,11 +855,11 @@ try {
         -PythonExecutable $pythonExecutable `
         -RequirementsPath (Join-Path $sourceStage "tools\requirements.txt") `
         -Destination $pythonPackagesStage `
-        -Required:($Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109")
+        -Required:($Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111")
     Assert-SafeTree -Path $pythonPackagesStage -RequireSingleLinks
     $pythonPackagesDigest = Get-SourceDigest -Root $pythonPackagesStage
 
-    $sourceHistoryIncluded = $Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109"
+    $sourceHistoryIncluded = $Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111"
     if ($sourceHistoryIncluded) {
         $historyBundlePath = Join-Path $historyStage "repository-history.bundle"
         Invoke-CheckedNativeCommand -Label "Stage exact reachable Git history" -FilePath $gitExecutable -Arguments @(
@@ -864,7 +874,7 @@ try {
     Assert-BoundedTree -Path $historyStage -MaximumFiles 1 -MaximumBytes $MaxHistoryBundleBytes
     $historyBundleDigest = Get-SourceDigest -Root $historyStage
 
-    $networkingEnabled = $Phase -eq "Full" -or ($TaskId -eq "TL-0107" -and $Phase -eq "Quick") -or $TaskId -eq "TL-0109"
+    $networkingEnabled = $Phase -eq "Full" -or ($TaskId -eq "TL-0107" -and $Phase -eq "Quick") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111"
     $networkReason = if ($networkingEnabled) { "governed_nuget_audit" } else { "disabled_offline_phase" }
     $networkingMode = if ($networkingEnabled) { "Enable" } else { "Disable" }
     $sandboxVersionText = (Get-Item -LiteralPath $sandboxExecutable).VersionInfo.FileVersion

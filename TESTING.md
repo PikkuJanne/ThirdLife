@@ -234,6 +234,27 @@ the fixed-report test with its standard-user assertion remains host-only. Physic
 observation and UI accessibility evidence are recorded separately. A guest pass
 does not establish direct-host policy compatibility or cross-hardware certification.
 
+TL-0111 adds closed Quick and Targeted profiles to the same reusable runner for the host
+Application Control loader failure. Targeted runs the shared verifier with Inventory and UI,
+including Quick; it adds no native battery or host-mutation scenario. The full locked solution
+package closure, pinned Python packages and reachable source history are staged and hashed.
+The 4 GiB guest has read-only input mappings and networking only for governed NuGet audit.
+Quick has a 180-second command limit; Targeted has 600 seconds; the host retains 30 minutes.
+Normal tier targets remain 120/600 seconds. ActiveMachine tests stay outside these profiles.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 `
+  -Phase Targeted -EvidenceTaskId TL-0111 -PreflightOnly
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 `
+  -Phase Targeted -EvidenceTaskId TL-0111 -PersistEvidence
+```
+
+Use `-Phase Quick` for the independently selectable Quick profile. A transient run without
+`-PersistEvidence` may verify the in-progress source overlay before a checkpoint; source and
+tracked state must remain unchanged throughout it. Persistent results require a committed,
+unchanged tracked worktree. The same binding, bounded-result and verified-cleanup guards
+remain enforced. Direct-host policy compatibility and other physical hardware are unverified.
+
 A new large task-specific runner requires:
 
 - technical reason;

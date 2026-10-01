@@ -118,6 +118,13 @@ The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md)
 
 ## 10. Filesystem and persistence
 
+`TL-0111` adds [network and key-device enumeration](docs/inventory/device-enumeration.md).
+Fixed local numeric WMI projections, SetupAPI class/interface lists and a session digitizer
+metric return only class presence, collection state, bounded problem counts and numeric errors.
+No SSID, IP, MAC, device name, instance ID, endpoint path or media content is requested or
+retained. Sources expose no mutation, network request or configurable query. Class failures
+remain unknown; uncertain cleanup blocks reuse. Existing log/support allowlists are unchanged.
+
 `TL-0110` adds [firmware/TPM observations](docs/inventory/firmware-security.md) through fixed local read-only APIs, WMI projections and one no-input readiness method. Denied access stays unknown without elevation. Bounded raw TPM values retain provenance; no owner authorization, keys or arbitrary text is read. Cleanup failure blocks further use of that provider instance. Firmware indicators do not establish clear ownership, and no firmware or TPM mutation is exposed.
 
 `TL-0109` adds a [fixed battery-report operation and temporary-data contract](docs/inventory/battery-report.md).
