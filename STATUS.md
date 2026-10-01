@@ -13,7 +13,7 @@ The prior branch has no unique commits outside main. TL-0113 began from updated 
 `codex/tl-0113-accessible-shell`; its complete dependency chain is done. SSH origin is
 unchanged; fetch uses the process-scoped HTTPS bridge. Prior branches and the unrelated
 untracked Word reference remain untouched.
-Normal draft PR #14 is open against main: https://github.com/PikkuJanne/ThirdLife/pull/14.
+Normal draft PR #14 is open against main; its link is in the durable task report.
 TL-0113 is not integrated; the draft remains pending required human evidence.
 
 ## Outcome and evidence
