@@ -66,7 +66,7 @@ Exact commands, durations, failed attempts, environment and result digests are i
   contract, with no major refactor, migration, dependency/engine change or release gate.
 - Extended: not triggered. Small software-rendering/scaling fixtures run in Targeted;
   there is no broad resource, interruption, hardware or endurance matrix.
-- Remote CI: not run as task evidence; any automatic GitHub result is supplementary only.
+- Remote CI: GitHub has queued its supplementary Windows clean-checkout check. It is not required task evidence and cannot replace the active-machine results.
 
 ## Defects and limitations
 
@@ -110,7 +110,7 @@ runner: the existing guest cannot supply the required direct-host standard-user 
 ## Human handoff and next task
 
 Complete the source-bound [human walkthrough](human-walkthrough.md). The hybrid task stays
-`review` until the required results exist. The normal draft PR is the integration path; merge only after the task's evidence is complete. TL-0114 depends on TL-0113 and is not ready. No next product task
+`review` until the required results exist. [Normal draft PR #14](https://github.com/PikkuJanne/ThirdLife/pull/14) is the integration path; merge only after the task's evidence is complete. TL-0114 depends on TL-0113 and is not ready. No next product task
 was started. Live task evidence is a compact reference; detailed results remain here.
 
 Follow-up evidence commits change only documentation, task execution fields and bound result artifacts; production/test/runner source remains the verified implementation above.

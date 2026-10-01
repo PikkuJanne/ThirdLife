@@ -13,6 +13,8 @@ The prior branch has no unique commits outside main. TL-0113 began from updated 
 `codex/tl-0113-accessible-shell`; its complete dependency chain is done. SSH origin is
 unchanged; fetch uses the process-scoped HTTPS bridge. Prior branches and the unrelated
 untracked Word reference remain untouched.
+Normal draft PR #14 is open against main: https://github.com/PikkuJanne/ThirdLife/pull/14.
+TL-0113 is not integrated; the draft remains pending required human evidence.
 
 ## Outcome and evidence
 
@@ -33,6 +35,6 @@ results remain pending. The complete durable operator audit flow is still requir
 
 ## Next action
 
-Publish the draft PR and complete required human keyboard/screen-reader and display-setting
-evidence before marking TL-0113 done. Merge the task before continuing from main. TL-0114 is blocked by TL-0113;
-do not start another task. The complete durable audit flow remains necessary at TL-0116.
+Complete the source-bound human keyboard/screen-reader and display-setting walkthrough.
+Record results, then mark TL-0113 done and merge PR #14 before continuing from updated main.
+No next dependency-ready product task exists: TL-0114 is blocked by TL-0113.
