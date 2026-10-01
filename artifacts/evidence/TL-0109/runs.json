@@ -238,6 +238,20 @@
       "result": "Passed: Core79, Inventory476, UI3; bundle/repository controls, format, warnings-as-errors solution build; zero failed/skipped tests. Loaded-window keyboard/automation regression passed.",
       "source_digest": "551f42fb08a453158c9369d3b81ae4e3f47c5f1bf86f03c2d9c8d69c2dc32325",
       "result_sha256": "5ba29477911bb1080ef27125f4fe20711a16bf17d61e99e95a45d4f5574175aa"
+    },
+    {
+      "id": "committed-sandbox-targeted",
+      "tier": "targeted including Quick and native provider step",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -EvidenceTaskId TL-0109 -Phase Targeted -PersistEvidence",
+      "duration_seconds": 178.7,
+      "verification_seconds": 117.161,
+      "native_step_reported_seconds": 1.5818,
+      "result": "Passed: Quick Core79/Inventory476/UI3, selected Inventory476/UI3, then all three exact native/provider checks. Zero failed/skipped tests; committed clean source unchanged after run.",
+      "commit": "40e97bb3afd951d5c7387b66183dd131adbfdf63",
+      "source_digest": "17d780a390b533aafd998ebfe074be9b4e39e29537214481ada0ee02956ba204",
+      "artifact": "artifacts/audit/TL-0109/targeted-17d780a390b533aafd998ebfe074be9b4e39e29537214481ada0ee02956ba204-a77ed7db8779ddf1e066c89eae1357bb.json",
+      "result_sha256": "08b9b729f424a96ebea76ab955caeb8a15cfa78ba0e9133a801c51709761f12b",
+      "limitation": "Same-machine 4 GiB Windows Sandbox; network only for governed NuGet audit. Normal console verbosity retains pass markers, not individual guest capability values. No direct-host policy or hardware certification."
     }
   ]
 }

@@ -3,7 +3,7 @@
 **Snapshot date:** 2026-10-01  
 **Bundle baseline:** 0.4.0  
 **Current milestone:** M1 — Audit-only vertical slice  
-**Current task:** TL-0109 — battery report generation and parsing; review
+**Current task:** TL-0109 — battery report generation and parsing; done, integration pending
 
 ## Continuity
 
@@ -13,24 +13,28 @@
 - Git uses the documented process-scoped HTTPS bridge; configured SSH origin is unchanged.
 - All required physical runtime evidence belongs to this active Codex machine.
 
-## Current scope and verification
+## Completed outcome and evidence
 
-TL-0109 implementation is complete; committed Targeted verification remains pending. The provider generates
-one fixed Windows XML report, exposes bounded per-pack capacity/cycle observations, distinguishes
-absence from failure and verifies owned cleanup/recovery. The UI states that swelling requires
-human inspection. No battery exercise, health score, raw report export or sibling behavior.
+TL-0109 is done. Fixed battery XML generation exposes bounded per-pack design/full-charge
+capacity, cycles and valid inferred ratios, with explicit absence/failure and owned cleanup.
+The main window states that swelling requires human inspection. No later task has started.
 
-Physical standard-user collection exposed one battery, design/full-charge capacity and
-unavailable cycles; temporary cleanup passed. The final rebuilt assemblies encounter existing
-Application Control 0x800711C7. Security settings remain unchanged. Governed same-machine
-Sandbox verifies final code, including explicit native cancellation, source cleanup and actual
-provider/runner composition. Evidence is in `artifacts/evidence/TL-0109/`.
+Runtime commit: `40e97bb3afd951d5c7387b66183dd131adbfdf63`. Standalone Quick passed in
+103.396 s: 79 Core, 476 Inventory and 3 UI tests. Committed Targeted passed in 117.161 s,
+plus all three exact native/provider checks; whole guest 178.700 s. Python governance
+passed 256 tests, with 35 final profile regressions. Full/Extended were not triggered.
+Detailed acceptance, failures/corrections, hashed inputs and committed audit links are in
+`artifacts/evidence/TL-0109/report.md`.
 
-Python governance passed 256 tests; final exact-provider profile regressions passed 35 tests.
-Standalone Quick passed in 103.396 s: 79 Core, 476 Inventory and 3 UI tests. Committed
-Targeted (Inventory/UI plus exact native step) remains pending. No Full or Extended trigger applies.
+Physical standard-user source collection exposed one battery and design/full-charge capacity;
+cycles were unavailable. This observation preceded final startup hardening. Existing host
+Application Control 0x800711C7 blocks final assemblies, so current runtime was verified in
+Windows Sandbox on this same machine, including actual provider/runner composition, native
+cancellation and production-source cleanup. No security setting changed. No battery-health,
+endurance, cross-hardware or direct-host policy compatibility claim.
 
-## Next action
+## Integration and next action
 
-Finish required verification, record committed evidence and publish one normal TL-0109 PR.
-Merge it into main before starting TL-0110. No later task has started.
+Publish/review the normal `codex/tl-0109-battery-report` PR and merge it into updated main.
+Only then start TL-0110 — Implement UEFI, Secure Boot, and TPM inventory. No branch retirement,
+PR closure, release or sibling work is authorized by this task. Remote CI is supplementary.

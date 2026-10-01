@@ -1,7 +1,7 @@
 # TL-0109 — Battery report generation and parsing
 
 **Date:** 2026-10-01  
-**State:** Implementation complete; final Targeted verification pending  
+**State:** Done; normal PR/default-branch integration pending  
 **Branch:** `codex/tl-0109-battery-report`  
 **Base:** `262d22335d10b1a7d532f73a850a6877ddaa3c24`  
 **Runtime authority:** active Codex machine only; remote CI is supplementary
@@ -33,7 +33,7 @@ The existing governed runner supplies exact TL-0109 profiles in same-machine Win
 | No battery distinct from failure | Explicit power-status absence or valid empty report establishes absence. Denied, malformed, unknown, timeout and source failure stay unavailable/invalid. |
 | Internal filenames and cleanup | Fixed command with an internal GUID filename; protected ACLs, pinned identity, exclusive lock, durable bounded ownership record and exact-owned handle deletion. Fixtures cover success, failure, timeout, cancellation, crash recovery, concurrent writer, junction, hard link, replacement and uncertain cleanup. |
 | Swelling requires human inspection | Compiled main-window notice uses standard WPF controls, system colors, wrapping, scrolling, keyboard focus and automation text. Component checks exercise loaded-window focus and enlarged long text. No human inspection is inferred. |
-| Run actual provider on active machine | Physical native source collected one battery and verified cleanup; final wrapper/source composition is selected explicitly in the same-machine Sandbox profile because host Application Control blocks the rebuilt assemblies. Guest capability is a separate observation. |
+| Run actual provider on active machine | Physical native source collected one battery and verified cleanup; final wrapper/source composition is selected explicitly in the same-machine Sandbox profile because host Application Control blocks the rebuilt assemblies. Guest pass markers are recorded without claiming a specific battery capability. |
 
 The public provider accepts no caller command, arguments or paths. Six internal helper
 files implement bounded XML decoding, fixed System32 powercfg execution and the owned
@@ -55,8 +55,10 @@ Exact commands, durations and failed-attempt records are in `runs.json`.
 - Frozen Python governance suite passed 256 tests in 244.284 s before the additional exact
   Sandbox provider-wrapper selector; its focused harness/manifest regressions are recorded separately.
 - Final standalone Quick passed in 103.396 s (158.640 s guest total): 79 Core, 476 Inventory
-  and 3 UI tests, controls, format and warnings-as-errors solution build. Committed Targeted
-  remains pending.
+  and 3 UI tests, controls, format and warnings-as-errors solution build.
+- Committed Targeted passed in 117.161 s, including Quick and repeated Inventory/UI selection;
+  the three required native/provider checks also passed (1.582 s reported test time). Whole
+  guest duration was 178.700 s. Zero failures or skips. Source stayed unchanged and tracked-clean.
 - Full and Extended are not triggered: no dependency change, major refactor, migration,
   protected release merge, milestone gate or named scenario trigger. Native cancellation
   checks are independently selected within this task's Targeted profile.
@@ -93,8 +95,9 @@ Those physical observations preceded final startup allocation-order hardening an
 factory rename. The subsequent rebuilt Inventory.dll was blocked by the existing host
 Application Control policy. The final native Sandbox step therefore requires exact passing
 markers for production-source cleanup, real native cancellation and source/provider/runner
-composition. No fixture result is substituted for that step, and no guest result certifies
-the physical battery.
+composition; all three passed. Normal console verbosity preserves their exact pass markers
+but not the guest capability values. No fixture substitutes for that step, and no guest result
+certifies the physical battery.
 
 Bounds: four packs, 4 MiB XML, depth 16, 100,000 nodes, 64 attributes, 23 observations,
 16 MiB disk preflight, one in-process writer and one cross-process lock, 20-second command,
@@ -125,6 +128,14 @@ workflow remain their own tasks.
 
 ## Publication and next task
 
-Final committed runtime evidence, source hashes and publication state are pending below.
-One normal PR will target main. Do not start the next dependency-ready task,
+Implementation/runtime commit: `40e97bb3afd951d5c7387b66183dd131adbfdf63`.
+
+[Committed Targeted audit](../../audit/TL-0109/targeted-17d780a390b533aafd998ebfe074be9b4e39e29537214481ada0ee02956ba204-a77ed7db8779ddf1e066c89eae1357bb.json) and its adjacent manifest bind
+that commit to source digest `17d780a390b533aafd998ebfe074be9b4e39e29537214481ada0ee02956ba204`,
+result SHA-256 `08b9b729f424a96ebea76ab955caeb8a15cfa78ba0e9133a801c51709761f12b`,
+SDK 10.0.400, Python 3.14.7, Git 2.56.0.windows.1, the locked dependency closure and a 4 GiB
+same-machine guest. `inputs.sha256` binds 28 runtime source/test/profile/toolchain inputs.
+Later completion records change documentation/evidence only; those runtime hashes remain exact.
+
+One normal PR targets main; integration is pending. Do not start the next dependency-ready task,
 `TL-0110 — Implement UEFI, Secure Boot, and TPM inventory`, until TL-0109 is merged.
