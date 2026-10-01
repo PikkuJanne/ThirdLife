@@ -2452,7 +2452,7 @@ tasks:
   workstream: inventory
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -2482,7 +2482,17 @@ tasks:
   - Run captured/synthetic enabled, disabled, unavailable, access-denied, malformed, and ownership-lock indicator tests.
   - Run a read-only smoke test on the active Codex machine and preserve its actual observed state without changing firmware,
     TPM, or Secure Boot.
-  evidence: []
+  evidence:
+  - summary: Fixed read-only firmware, Secure Boot and TPM provider with bounded expert evidence and unknown denied/conflicting states.
+    task: TL-0110
+    command_or_review: Targeted including Quick; focused source/lifecycle/boundary regressions; unelevated active-machine smoke; independent privacy/resource review. Exact commands in runs.json.
+    tier: targeted
+    result: Passed; Core79, Inventory625, UI3 plus repeated Inventory625; active smoke1 passed. Zero failures/skips; no host mutations.
+    environment: Active Codex machine; REF-CODEX-001 revision 2026-08-29.1; Windows x64; SDK10.0.400; Python3.14.7; PowerShell7.6.5.
+    date: '2026-10-01'
+    duration: Targeted60.823s; active command6.886s (provider5.095s); focused and failed-attempt durations in runs.json.
+    reference: artifacts/evidence/TL-0110/report.md; artifacts/evidence/TL-0110/runs.json; artifacts/evidence/TL-0110/active-machine.json; artifacts/evidence/TL-0110/inputs.json.
+    limitation: Standard-user TPM WMI denied0x80041003; Secure Boot capability and TPM readiness unknown. No clear-ownership or cross-hardware claim. Normal PR must merge before TL-0111.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

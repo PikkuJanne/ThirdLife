@@ -159,7 +159,7 @@ internal sealed class WindowsSystemInventorySource : ISystemInventorySource
         }
     }
 
-    private static SystemInventorySourceValue<byte[]> ReadFirmwareTable()
+    internal static SystemInventorySourceValue<byte[]> ReadFirmwareTable()
     {
         var requiredBytes = NativeMethods.GetSystemFirmwareTable(
             RawSmbiosProviderSignature,

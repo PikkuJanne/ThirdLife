@@ -118,6 +118,8 @@ The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md)
 
 ## 10. Filesystem and persistence
 
+`TL-0110` adds [firmware/TPM observations](docs/inventory/firmware-security.md) through fixed local read-only APIs, WMI projections and one no-input readiness method. Denied access stays unknown without elevation. Bounded raw TPM values retain provenance; no owner authorization, keys or arbitrary text is read. Cleanup failure blocks further use of that provider instance. Firmware indicators do not establish clear ownership, and no firmware or TPM mutation is exposed.
+
 `TL-0109` adds a [fixed battery-report operation and temporary-data contract](docs/inventory/battery-report.md).
 Only the system powercfg battery XML command can run; no caller command, path or option is
 accepted. Its suspended process joins a kill-on-close job before resuming. Raw XML stays in

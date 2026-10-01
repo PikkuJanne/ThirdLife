@@ -710,7 +710,8 @@ public sealed class SystemInventoryProviderTests
             entered.TrySetResult(true);
             try
             {
-                cancellationToken.WaitHandle.WaitOne();
+                Assert.True(cancellationToken.WaitHandle.WaitOne(TimeSpan.FromSeconds(10)),
+                    "The synthetic source did not receive cancellation within its cleanup bound.");
                 cancellationToken.ThrowIfCancellationRequested();
                 return CompleteSnapshot(BuildMinimalFirmwareTable());
             }
@@ -725,11 +726,27 @@ public sealed class SystemInventoryProviderTests
         var provider = new SystemInventoryProvider(source, ProviderEvidenceOrigin.SyntheticFixture);
         using var cancellation = new CancellationTokenSource();
 
-        var pending = new InventoryProviderRunner().RunAsync(provider, cancellation.Token).AsTask();
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(1));
-        cancellation.Cancel();
-        var result = await pending;
-        await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        // This case tests caller cancellation. Thread-pool scheduling must not race
+        // the production deadline before the synthetic source has even entered.
+        var pending = new InventoryProviderRunner(new PausedTimeoutTimeProvider())
+            .RunAsync(provider, cancellation.Token).AsTask();
+        ProviderRunResult result;
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            cancellation.Cancel();
+            result = await pending.WaitAsync(TimeSpan.FromSeconds(5));
+            await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            cancellation.Cancel();
+            await pending.WaitAsync(TimeSpan.FromSeconds(5));
+            if (entered.Task.IsCompletedSuccessfully)
+            {
+                await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+        }
 
         Assert.Equal(ProviderRunOutcome.Cancelled, result.Outcome);
         Assert.Equal(1, source.InvocationCount);
@@ -1246,6 +1263,16 @@ public sealed class SystemInventoryProviderTests
         {
             Interlocked.Increment(ref _invocationCount);
             return _read(cancellationToken);
+        }
+    }
+
+    private sealed class PausedTimeoutTimeProvider : TimeProvider
+    {
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            Assert.Equal(TimeSpan.FromSeconds(2), dueTime);
+            Assert.Equal(Timeout.InfiniteTimeSpan, period);
+            return base.CreateTimer(callback, state, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         }
     }
 

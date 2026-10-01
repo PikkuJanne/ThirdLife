@@ -1,0 +1,80 @@
+{
+  "task": "TL-0110",
+  "date": "2026-10-01",
+  "method": "SHA256 of exact working-tree bytes; C# CRLF, Markdown LF; synthetic workloads reside in test source. Aggregate hashes sorted digest-two-spaces-path-LF rows.",
+  "aggregate_sha256": "e8db0549d1f41c93b0ec238b4606f99d786af27f7964c4940ff32cf064b5bdec",
+  "files": [
+    {
+      "path": "docs/inventory/firmware-security.md",
+      "sha256": "f8d2e2fbd0a22c58630e1ac58b8376eb7f165cda0105bd5f8811f47ee6155192"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/DeviceGuardSource.cs",
+      "sha256": "7a4a0848778860bd233d59495072383d665d562fde13e7b0ed129582281d4a17"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/FirmwarePlatformSource.cs",
+      "sha256": "f5d014a2c935268f31f1462e0835c603943a2e09c62e45e8c5909c5e11e7e5c7"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/FirmwareSecurityProvider.cs",
+      "sha256": "3fa1d0921676d0608b7acc2f8b3a2682521be54035d12ae8aad9c88b3e38d418"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/FirmwareSecuritySource.cs",
+      "sha256": "0be716810c032c23e54cfd87ed198ac50c3b34c163439eda49992f84f4ada7cc"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/FirmwareWmiValueReader.cs",
+      "sha256": "60107ea17f5b200f594add8ba74b0d81a6f7e03aadb8b79896ab6829a04977b4"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/SystemInventorySource.cs",
+      "sha256": "07cca7ec95f46e77dec8f6d858bf64427a82a8080d4dafff39189e5d22648bf0"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/TpmSource.cs",
+      "sha256": "aa11809c4bb3a5ff426fd74b55cd58c75bba82817d202974cce44212d77cb170"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/TpmWmiInterop.cs",
+      "sha256": "e614e1126ec92ae5db12927466f64a37d16220fde2a2f81d7fa2d28a1754e094"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/WindowsTpmSource.cs",
+      "sha256": "9ec87b90555eb80a7a19e5fdc3e2e864e994411302c9d7459afcd85c409635fe"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/DeviceGuardSourceTests.cs",
+      "sha256": "86bbb7c1cc8b218c91a1b5948d5da1c0706c487ca4e0dfcc392efd90d7655a0e"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/FirmwarePlatformSourceTests.cs",
+      "sha256": "fc1f400b62c9a88f518e667bbeb1011d9c165a377a73cd0e597bf509c7d2579c"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/FirmwareSecurityLifecycleTests.cs",
+      "sha256": "e822149761e26965af6229a9646adb7d281a3000042728e9bbff992990e6a5f6"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/FirmwareSecurityProviderTests.cs",
+      "sha256": "1a7cc3365046196b7583075d67ab3f10c0e8898884242a813ad26e10be93dc71"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/FirmwareWmiValueReaderTests.cs",
+      "sha256": "1c585c53a0fa3111043da8625af203c61844eb5d29f4458943aec7439db05418"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/InventoryReadOnlyBoundaryTests.cs",
+      "sha256": "2afcabe69dc76f7f27d45512d9540a210d2059c01924ab67886020ec47c80a52"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/SystemInventoryProviderTests.cs",
+      "sha256": "73daf83dcf05dbdd2d8a96dbe8873fe94cf9b06234e3e69a44b25a8ac59795d5"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/TpmSourceTests.cs",
+      "sha256": "4dfac921ce37347cc833304a01d1c277e41e9233f05c735373b4d7ffbe0cc7a4"
+    }
+  ]
+}

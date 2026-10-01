@@ -1,0 +1,87 @@
+{
+  "task": "TL-0110",
+  "elevated": false,
+  "outcome": "AccessDenied",
+  "observations": 39,
+  "durationMilliseconds": 5094.9161,
+  "processCpuMilliseconds": 343.75,
+  "processAllocatedBytes": 1118792,
+  "processWorkingSetBytes": 82702336,
+  "states": [
+    {
+      "key": "firmware.mode",
+      "value": {
+        "type": "enum",
+        "data": "uefi"
+      },
+      "availability": "Available",
+      "limitation": null
+    },
+    {
+      "key": "ownership.firmware_lock_indicator",
+      "value": null,
+      "availability": "Unknown",
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "secure_boot.capable",
+      "value": null,
+      "availability": "Unknown",
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "secure_boot.enabled",
+      "value": {
+        "type": "boolean",
+        "data": true
+      },
+      "availability": "Available",
+      "limitation": null
+    },
+    {
+      "key": "tpm.present",
+      "value": {
+        "type": "boolean",
+        "data": true
+      },
+      "availability": "Available",
+      "limitation": null
+    },
+    {
+      "key": "tpm.readiness.native_error_code",
+      "value": {
+        "type": "integer",
+        "data": 2147749891
+      },
+      "availability": "Available",
+      "limitation": null
+    },
+    {
+      "key": "tpm.ready",
+      "value": null,
+      "availability": "Unknown",
+      "limitation": "provider_value_missing"
+    },
+    {
+      "key": "tpm.version",
+      "value": {
+        "type": "string",
+        "data": "2.0"
+      },
+      "availability": "Available",
+      "limitation": null
+    },
+    {
+      "key": "tpm.wmi.native_error_code",
+      "value": {
+        "type": "integer",
+        "data": 2147749891
+      },
+      "availability": "Available",
+      "limitation": null
+    }
+  ],
+  "date": "2026-10-01",
+  "environment": "REF-CODEX-001 revision2026-08-29.1; active physical machine; Release .NET10.0.11; SDK10.0.400",
+  "limits": "One unelevated read, no changes. WMI denied0x80041003. Process metrics include test host and initialization; no cross-hardware or ownership-clearance claim. Version/identity strings outside normalized TPM major version were not exported."
+}

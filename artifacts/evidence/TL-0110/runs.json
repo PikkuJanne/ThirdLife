@@ -1,0 +1,124 @@
+{
+  "task": "TL-0110",
+  "date": "2026-10-01",
+  "branch": "codex/tl-0110-firmware-security",
+  "base_commit": "104664eb4d226fbc59d5b834ea5f862756ebc63f",
+  "environment": "Active Codex Windows machine; REF-CODEX-001 revision 2026-08-29.1; security policy unchanged",
+  "runs": [
+    {
+      "id": "narrow-baseline",
+      "tier": "targeted baseline",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter 'FullyQualifiedName~ProviderContractTests|FullyQualifiedName~InFlightCallerCancellationIsObservedWithoutPublishingValues' --logger 'console;verbosity=minimal'",
+      "duration_seconds": 20.733248,
+      "passed_tests": 21,
+      "result": "Passed; includes Release build. No current active-machine loader failure."
+    },
+    {
+      "id": "prior-supplementary-ci-review",
+      "tier": "review",
+      "command": "gh run view 36849426084 --log-failed; inspect source and blame",
+      "result": "Merged TL-0109 final-head supplementary CI failed only pre-existing SystemInventoryProviderTests.InFlightCallerCancellationIsObservedWithoutPublishingValues: 1-second source-entry wait timed out before cancellation assertion. Core79 passed, Inventory475 passed/1 failed; UI not reached. Fixture originated at TL-0106 commit89303ab15ed749754290b7c17e5f6cdb27719a00.",
+      "reference": "https://github.com/PikkuJanne/ThirdLife/actions/runs/36849426084/job/110327395515",
+      "limitation": "Remote CI is supplementary; this result does not establish a product cancellation defect or replace active-machine baseline."
+    },
+    {
+      "id": "prior-cancellation-fixture-regression",
+      "tier": "focused",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter 'FullyQualifiedName=ThirdLife.Inventory.Tests.SystemInventoryProviderTests.InFlightCallerCancellationIsObservedWithoutPublishingValues' --logger 'console;verbosity=normal'",
+      "duration_seconds": 14.7716472,
+      "passed_tests": 1,
+      "result": "Passed39ms; declared2s runner timeout preserved via controlled test clock; bounded scheduling waits and finally cleanup. Separate timeout behavior unchanged."
+    },
+    {
+      "id": "platform-source-focused",
+      "tier": "focused",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-build --no-restore --filter 'FullyQualifiedName~FirmwarePlatformSourceTests|FullyQualifiedName~DeviceGuardSourceTests'",
+      "duration_seconds": 4.9748114,
+      "passed_tests": 48,
+      "result": "Passed; preceding Release build0warnings0errors in1.946711s. Initial compile CA1861 test arrays fixed as staticreadonly before rerun."
+    },
+    {
+      "id": "tpm-compile-generic-constraint",
+      "tier": "focused build",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --no-restore --filter 'FullyQualifiedName~TpmSourceTests|FullyQualifiedName~FirmwareWmiValueReaderTests' --logger 'console;verbosity=minimal'",
+      "duration_seconds": 2.364,
+      "result": "Failed before tests: new provider generic Raw<T> missing notnull constraint (CS8714). Added matching constraint to provider and test helper; no guard disabled."
+    },
+    {
+      "id": "tpm-source-focused",
+      "tier": "focused",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --no-restore --filter 'FullyQualifiedName~TpmSourceTests|FullyQualifiedName~FirmwareWmiValueReaderTests' --logger 'console;verbosity=minimal'",
+      "duration_seconds": 6.826,
+      "passed_tests": 48,
+      "result": "Passed93ms; Debug build included. Final task verification uses Release. No native machine query."
+    },
+    {
+      "id": "firmware-focused",
+      "tier": "focused",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter '(FullyQualifiedName~FirmwareSecurity|FullyQualifiedName~FirmwarePlatformSourceTests|FullyQualifiedName~DeviceGuardSourceTests|FullyQualifiedName~TpmSourceTests|FullyQualifiedName~FirmwareWmiValueReaderTests|FullyQualifiedName~InventoryReadOnlyBoundaryTests)&Category!=ActiveMachine' --logger 'console;verbosity=minimal'",
+      "duration_seconds": 5.1512254,
+      "passed_tests": 143,
+      "result": "Passed187ms; includes Release build and four source cleanup/deadline regressions."
+    },
+    {
+      "id": "active-smoke-initial",
+      "tier": "Targeted active observation",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-build --no-restore --filter 'FullyQualifiedName=ThirdLife.Inventory.Tests.FirmwareSecurityProviderTests.ActiveMachineReadOnlySmokePreservesActualStatesAndBoundedEvidence' --logger 'console;verbosity=normal'",
+      "duration_seconds": 7.0069437,
+      "passed_tests": 1,
+      "result": "Passed; normal console verbosity suppressed passing-test state payload, requiring detailed evidence capture."
+    },
+    {
+      "id": "active-smoke-evidence",
+      "tier": "Targeted active observation",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-build --no-restore --filter 'FullyQualifiedName=ThirdLife.Inventory.Tests.FirmwareSecurityProviderTests.ActiveMachineReadOnlySmokePreservesActualStatesAndBoundedEvidence' --logger 'console;verbosity=detailed'",
+      "duration_seconds": 6.8864348,
+      "passed_tests": 1,
+      "result": "Passed; actual provider AccessDenied preserves independent UEFI/SecureBootenabled/TPM2.0presence facts. Minimized payload in active-machine.json. No elevation or host mutation."
+    },
+    {
+      "id": "bundle-in-progress-handoff-phrase",
+      "tier": "governance",
+      "command": ".venv/Scripts/python.exe tools/validate_bundle.py",
+      "result": "Failed only because in-progress STATUS omitted required literal active Codex machine; restored runtime-authority line without changing scope/validator. Repository controls validator passed independently."
+    },
+    {
+      "id": "lifecycle-compile",
+      "tier": "focused build",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter 'FullyQualifiedName~FirmwareSecurityLifecycleTests' --logger 'console;verbosity=minimal'",
+      "duration_seconds": 2.5824079,
+      "result": "Failed before tests; test helper generic notnull constraint and CA1861 constant-array warnings corrected."
+    },
+    {
+      "id": "lifecycle-focused",
+      "tier": "focused",
+      "command": "dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter 'FullyQualifiedName~ThirdLife.Inventory.Tests.FirmwareSecurityLifecycleTests' --logger 'console;verbosity=normal'",
+      "duration_seconds": 4.7060303,
+      "passed_tests": 10,
+      "result": "Passed; manual15s clock timeout and10 synthetic cancellation/cleanup/retry cases. VSTest2.1424s; no active native collection."
+    },
+    {
+      "id": "quick-windows-powershell-entry",
+      "tier": "Quick",
+      "command": "powershell -NoProfile -File eng/verify.ps1 -Tier Quick",
+      "duration_seconds": 0.3448865,
+      "result": "Not started: Windows PowerShell5 script execution disabled. Used installed PowerShell7.6.5 with existing RemoteSigned policy; no policy change or bypass."
+    },
+    {
+      "id": "quick-import-order",
+      "tier": "Quick",
+      "command": "pwsh -NoProfile -File eng/verify.ps1 -Tier Quick",
+      "duration_seconds": 23.280883,
+      "result": "Stopped at format gate: FirmwareWmiValueReader.cs using order. Corrected two using directives; focused format verification passed before required tier rerun. Bundle/repository validators passed."
+    },
+    {
+      "id": "final-targeted",
+      "tier": "Targeted including Quick",
+      "command": "pwsh -NoProfile -File eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj",
+      "duration_seconds": 62.4657089,
+      "script_duration_seconds": 60.823,
+      "result": "Passed. Quick: bundle/repository controls, format, Release solution build0warnings0errors, Core79/Inventory625/UI3. Targeted: Inventory625 repeated. Zero failures/skips. Physical observation separately selected and recorded.",
+      "limitation": "No Full/Extended trigger; no dependency/engine/migration/gate/harness change. RemoteCI supplementary."
+    }
+  ]
+}
