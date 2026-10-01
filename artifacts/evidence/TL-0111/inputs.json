@@ -1,0 +1,95 @@
+{
+  "task": "TL-0111",
+  "date": "2026-10-01",
+  "fixture_origin": "Synthetic class trees and native enumerators embedded in the hashed test sources; no real identities or captured media.",
+  "files": [
+    {
+      "path": "docs/testing/reference-machine-profile.md",
+      "sha256": "e9863c3ca84a46d14843fd7d1bbd8a83d63f4ba2ead250951e14735affede7a9"
+    },
+    {
+      "path": "eng/run-tl0102-sandbox-guest.ps1",
+      "sha256": "3811ac556d7475ecccf1934f1695babd1b6ef87f03596f69f0e7823c7136d06b"
+    },
+    {
+      "path": "eng/run-tl0102-sandbox.ps1",
+      "sha256": "19e8c4eee01c942e491854cc828ff9c275c2b3e311b22af1430427319649f159"
+    },
+    {
+      "path": "eng/test-manifest.json",
+      "sha256": "38cb787b14c2ef2390dcae105db77bdbc4ea5c6a61a7868a525483e3be8d7748"
+    },
+    {
+      "path": "global.json",
+      "sha256": "c39786ab1a147662bbe4db015f900165178875ec4a872ddae53bc0c90771ac34"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Normalization/InventoryProviderRunner.cs",
+      "sha256": "3b929e8b7a33c2cb3b6e648ba05bde48a930c697f7af16a385705003855b79b1"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Providers/ProviderReadResult.cs",
+      "sha256": "c8d2f7038e436da84c48944a987cefd300173a3e898607349afa5c77e6670bee"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/DeviceClassSource.cs",
+      "sha256": "c4fda6554eccb8652385cfacc981d7a2a637ab18de6863b4f7ccb1db95e3128f"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/DeviceEnumerationProvider.cs",
+      "sha256": "cdfc8216b8dfa66127d24c8b1b41042d0837250b22099f613a4da8828ad1fadf"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/DeviceEnumerationSource.cs",
+      "sha256": "277ddbf00673d3cbe44f9557b9f7e395c404c0bd7792267b21c70f7e58a55aab"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/DeviceGuardSource.cs",
+      "sha256": "7a4a0848778860bd233d59495072383d665d562fde13e7b0ed129582281d4a17"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/FirmwareWmiValueReader.cs",
+      "sha256": "60107ea17f5b200f594add8ba74b0d81a6f7e03aadb8b79896ab6829a04977b4"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/NetworkDeviceSource.cs",
+      "sha256": "6d5fa0547280b4f97429772b4b8e48e40eba1c0f98ce9f3ebfe4246065089726"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/StorageWmiInterop.cs",
+      "sha256": "b81507a0d524353053322c06864913642a4bcde75a9b6f5c3ce3e2dc8cffeda0"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/DeviceClassSourceTests.cs",
+      "sha256": "486ac59a063a10cca68f7f84a5842d9007a8a7e66b3fc6531d28ec21e957a911"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/DeviceEnumerationLifecycleTests.cs",
+      "sha256": "5ca6572820c90388d2e433b927f5c9ee48f3374724e2ea2daa29a68afb43df07"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/DeviceEnumerationProviderTests.cs",
+      "sha256": "4aacb46fc1e9752f6fba10e66f1bc0e3936be50790086a4598058ade4eb24cb8"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/InventoryReadOnlyBoundaryTests.cs",
+      "sha256": "391f9294299094427ec3a7d6b8c981cfec1feda9d06c9d60a6630bc8ddbc69ac"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/NetworkDeviceSourceTests.cs",
+      "sha256": "846292ae4716416d0000c33de693c99f1c5446fc4f7d5d36911881a828d74fa0"
+    },
+    {
+      "path": "tools/tests/test_sandbox_harness.py",
+      "sha256": "77dade94c710f5bc6c27b033c779a3dd80e28c9b93b21b89acc60e160b9248b5"
+    },
+    {
+      "path": "tools/tests/test_validate_repository.py",
+      "sha256": "6ffc3da1ffd9bb5928e054a2a0c8e56057d4bfc7a031a6c3476b883fe6db382f"
+    },
+    {
+      "path": "tools/validate_repository.py",
+      "sha256": "9d274911bcbeae4da89aae12e375875179f899a743bafa0eaa949d5421e6e191"
+    }
+  ]
+}

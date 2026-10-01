@@ -2502,7 +2502,7 @@ tasks:
   workstream: inventory
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: windows
@@ -2527,7 +2527,16 @@ tasks:
   verification:
   - Test synthetic device trees with missing/error devices.
   - Run on representative webcam/touch variants.
-  evidence: []
+  evidence:
+  - task: TL-0111
+    date: '2026-10-01'
+    command: Governed same-machine Sandbox Targeted including Quick; separate unelevated active observation; deterministic device/native/lifecycle fixtures; Python governance; independent boundary review.
+    tier: targeted
+    result: Passed Core79/Inventory824/UI3 and targeted Inventory824/UI3; Python261; focused201 and interface-absence regression3; active observation1. No failures/skips in final runs.
+    environment: REF-CODEX-001 revision2026-08-29.1; active Windows host plus 4GiB Windows Sandbox; SDK10.0.400; locked restore; host security unchanged.
+    duration: Committed Sandbox Targeted123.805s (180.917s total); Python283.387s; active command1.916s (provider121.784ms); all attempts in runs.json.
+    reference: Implementation eb83e4f26c292498f2d9223f12a3adeea402f1bc; artifacts/evidence/TL-0111/report.md; runs.json; active-machine.json; inputs.json; artifacts/audit/TL-0111/ committed-source result and manifest.
+    limitation: Host UI load blocked0x800711C7; same-machine Sandbox passed. Network WMI denied0x80041003 remains unknown. Presence is source-scoped and function untested; no cross-hardware claim. Merge normal PR before TL-0112.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

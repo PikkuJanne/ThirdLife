@@ -102,6 +102,14 @@ A slower result may be acceptable. The following are not acceptable for a suppor
 
 ## 6. Hardware and provider coverage
 
+`TL-0111` bounds device enumeration to eleven classes, 256 devices per class plus a sentinel,
+and 45 facts plus a failure observation. Numeric-only network WMI queries each use a three-second
+deadline, at most 288 calls and 100 ms enumeration waits. The 15-second caller timeout retains
+one worker per instance until native cleanup; synchronous Windows calls may outlive it.
+No GPU, polling, temporary file, cache or database growth is introduced. Endpoint and session
+presence is separate from physical function. Measurements, input hashes and limits are recorded
+in `artifacts/evidence/TL-0111/` and `docs/inventory/device-enumeration.md`; no other hardware is certified.
+
 `TL-0110` bounds firmware/TPM evidence to 38 singleton facts plus a failure observation, a 16-byte TBS record, one instance per WMI query, 16 DeviceGuard values and 128-character version fields. The existing 1 MiB SMBIOS buffer is cleared after parsing. One worker per provider instance retains admission through cleanup; the caller timeout is 15 seconds. Native calls can outlive cancellation, so no second worker is admitted until cleanup. Read-only measured evidence and limits are recorded in `artifacts/evidence/TL-0110/` and `docs/inventory/firmware-security.md`; this does not certify other hardware.
 
 `TL-0109` bounds battery evidence to four packs and 23 observations including failure.

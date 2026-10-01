@@ -1,0 +1,94 @@
+{
+  "task": "TL-0111",
+  "date": "2026-10-01",
+  "reference_machine": "REF-CODEX-001 revision 2026-08-29.1",
+  "environment": "Unelevated active Codex Windows machine; no host mutation",
+  "elevated": false,
+  "outcome": "AccessDenied",
+  "observations": 46,
+  "command_duration_seconds": 1.916184,
+  "provider_duration_milliseconds": 121.7843,
+  "process_cpu_milliseconds": 109.375,
+  "process_allocated_bytes": 196736,
+  "process_working_set_bytes": 85561344,
+  "process_peak_working_set_bytes": 85561344,
+  "normalized_evidence_bytes": 24414,
+  "provider_file_cache_database_growth_bytes": 0,
+  "classes": {
+    "audio": {
+      "collection_status": "collected",
+      "native_error_code": null,
+      "problem_count": 0,
+      "render_endpoint_present": true
+    },
+    "bluetooth": {
+      "collection_status": "collected",
+      "native_error_code": null,
+      "problem_count": 0,
+      "radio_interface_present": false
+    },
+    "camera": {
+      "collection_status": "collected",
+      "native_error_code": null,
+      "problem_count": 0,
+      "video_interface_present": true
+    },
+    "display": {
+      "collection_status": "collected",
+      "monitor_present": true,
+      "native_error_code": null,
+      "problem_count": 0
+    },
+    "ethernet": {
+      "collection_status": "access_denied",
+      "native_error_code": 2147749891,
+      "present": null,
+      "problem_count": null
+    },
+    "keyboard": {
+      "collection_status": "collected",
+      "native_error_code": null,
+      "present": true,
+      "problem_count": 0
+    },
+    "microphone": {
+      "capture_endpoint_present": true,
+      "collection_status": "collected",
+      "native_error_code": null,
+      "problem_count": 0
+    },
+    "pointing": {
+      "collection_status": "collected",
+      "native_error_code": null,
+      "present": true,
+      "problem_count": 0
+    },
+    "touch": {
+      "collection_status": "collected",
+      "native_error_code": null,
+      "problem_count": null,
+      "session_present": true
+    },
+    "usb_controller": {
+      "collection_status": "collected",
+      "host_interface_present": true,
+      "native_error_code": null,
+      "problem_count": 0
+    },
+    "wifi": {
+      "collection_status": "access_denied",
+      "native_error_code": 2147749891,
+      "present": null,
+      "problem_count": null
+    }
+  },
+  "functional_test": "not_performed",
+  "limitations": [
+    "Network WMI access denied (0x80041003); Wi-Fi and Ethernet remain unknown.",
+    "Bluetooth radio interface not enumerated; physical absence is not established.",
+    "Audio capture/render, monitor and touch facts are endpoint/class/session observations only.",
+    "Process metrics include test-host overhead, not a product memory budget.",
+    "One machine; no peripheral function, other hardware or minimum-specification claim."
+  ],
+  "retention": "Minimized class/status/numeric projection only; no names, addresses, device IDs, paths or raw logs."
+}

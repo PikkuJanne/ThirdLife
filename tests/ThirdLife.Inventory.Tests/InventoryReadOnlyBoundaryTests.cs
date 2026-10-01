@@ -11,6 +11,12 @@ public sealed class InventoryReadOnlyBoundaryTests
     {
         var allowed = new HashSet<(Type Owner, string Library, string EntryPoint)>
         {
+            (typeof(WindowsDeviceClassNativeApi), "setupapi.dll", "SetupDiGetClassDevsW"),
+            (typeof(WindowsDeviceClassNativeApi), "setupapi.dll", "SetupDiEnumDeviceInfo"),
+            (typeof(WindowsDeviceClassNativeApi), "setupapi.dll", "SetupDiDestroyDeviceInfoList"),
+            (typeof(WindowsDeviceClassNativeApi), "cfgmgr32.dll", "CM_Get_DevNode_Status"),
+            (typeof(WindowsDeviceClassNativeApi), "cfgmgr32.dll", "CM_MapCrToWin32Err"),
+            (typeof(WindowsDeviceClassNativeApi), "user32.dll", "GetSystemMetrics"),
             (typeof(WindowsSystemInventorySource), "kernel32.dll", "GetSystemFirmwareTable"),
             (typeof(WindowsSystemInventorySource), "kernel32.dll", "GetPhysicallyInstalledSystemMemory"),
             (typeof(WindowsSystemInventorySource), "kernel32.dll", "GetActiveProcessorCount"),
@@ -128,6 +134,29 @@ public sealed class InventoryReadOnlyBoundaryTests
                 Assert.Equal(UnmanagedType.Interface, parameters[5].GetCustomAttribute<MarshalAsAttribute>()!.Value);
             }
         }
+    }
+
+    [Fact]
+    public void DeviceEnumerationHasNoPublicIdentityQueryOrMutationSurface()
+    {
+        Type[] helpers =
+        [
+            typeof(IDeviceClassSource), typeof(IDeviceEnumerationSource), typeof(DeviceClassSnapshot),
+            typeof(WindowsDeviceEnumerationSource), typeof(WindowsDeviceClassSource),
+            typeof(WindowsDeviceClassNativeApi), typeof(WindowsNetworkDeviceSource),
+        ];
+        Assert.All(helpers, static type => Assert.False(type.IsVisible));
+        Assert.Empty(Assert.Single(typeof(DeviceEnumerationProvider).GetConstructors()).GetParameters());
+        var methods = typeof(DeviceEnumerationProvider).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+        Assert.Equal(2, methods.Length);
+        var observe = Assert.Single(methods, static method => method.Name == nameof(DeviceEnumerationProvider.ObserveAsync));
+        Assert.Equal(typeof(CancellationToken), Assert.Single(observe.GetParameters()).ParameterType);
+        Assert.Single(methods, static method => method.Name == "get_Descriptor" && method.GetParameters().Length == 0);
+        Assert.All(typeof(DeviceClassSnapshot).GetProperties(), static property =>
+        {
+            var type = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+            Assert.True(type.IsEnum || type == typeof(bool) || type == typeof(uint));
+        });
     }
 
     [Fact]
