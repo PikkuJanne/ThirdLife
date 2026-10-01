@@ -1,0 +1,32 @@
+{
+  "task": "TL-0112",
+  "date": "2026-10-01",
+  "workload": "synthetic_16_providers_63_boolean_facts_v1",
+  "provider_count": 16,
+  "facts_per_provider": 63,
+  "observations": [
+    {
+      "concurrency": 1,
+      "outcome": "Completed",
+      "duration_ms": 72.9606,
+      "process_cpu_ms": 125,
+      "allocated_bytes": 4914128,
+      "process_working_set_bytes": 85479424,
+      "normalized_observations": 1008,
+      "stored_observations": 1026,
+      "normalized_json_bytes": 483841
+    },
+    {
+      "concurrency": 4,
+      "outcome": "Completed",
+      "duration_ms": 12.0092,
+      "process_cpu_ms": 15.625,
+      "allocated_bytes": 4369416,
+      "process_working_set_bytes": 87347200,
+      "normalized_observations": 1008,
+      "stored_observations": 1026,
+      "normalized_json_bytes": 483841
+    }
+  ],
+  "limitation": "In-memory synthetic store; database growth unmeasured. No filesystem/temp/cache/network operation in fixture. Process metrics include test-host/JIT activity and are not comparative performance budgets or cross-hardware certification."
+}

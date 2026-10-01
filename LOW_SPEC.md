@@ -102,6 +102,15 @@ A slower result may be acceptable. The following are not acceptable for a suppor
 
 ## 6. Hardware and provider coverage
 
+`TL-0112` limits an assessment to 16 providers and 1–4 workers (default one), retaining
+admission until native cleanup completes. Each provider commits independently, with at most
+64 observations and one marker; start/finish add two, for at most 1,042 records per run.
+Markers are bounded to 4,096 characters and existing store ceilings remain unchanged.
+Gate rechecks use small SQLite projections rather than repeated observation-history loads.
+There is no GPU, new cache, polling or permanent worker. Interrupted runs retain complete
+batches; reruns append new snapshots. See `docs/inventory/assessment-orchestration.md` for
+resource and recovery limits; measurements do not establish cross-hardware performance.
+
 `TL-0111` bounds device enumeration to eleven classes, 256 devices per class plus a sentinel,
 and 45 facts plus a failure observation. Numeric-only network WMI queries each use a three-second
 deadline, at most 288 calls and 100 ms enumeration waits. The 15-second caller timeout retains

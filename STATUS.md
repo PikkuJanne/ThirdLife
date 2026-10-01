@@ -4,40 +4,35 @@
 **Bundle baseline:** 0.4.0  
 **Runtime authority:** active Codex machine only; remote CI is supplementary  
 **Current milestone:** M1 — Audit-only vertical slice  
-**Current task:** TL-0111 — Implement network and key-device enumeration; done, integration pending
+**Current task:** TL-0112 — Implement the read-only assessment orchestrator; done
 
 ## Continuity
 
-TL-0110 PR #11 is merged into main `72c26dc808e9b24a6fb6dd431f205957eb41fd58`.
-Its final head `1c2249ad00b93d921063dd282d3d63c8c36067dc` is an ancestor.
-Local main fast-forwarded before creation of `codex/tl-0111-device-enumeration`.
-The complete TL-0111 dependency chain is done. No completed-task stack.
-
-The SSH origin is unchanged; fetch uses the documented process-scoped HTTPS bridge.
+TL-0111 PR #12 is merged into main `bbdc15f403f6ca28e8ee57e9404c85988a8d5141`.
+Branch `codex/tl-0112-assessment-orchestrator` started from updated main; all dependencies
+are done. Implementation `5e7454e7ca8cb683aae97fad9df6671e6134399c` is pushed and verified.
+Normal PR #13 is open against main; this task is not yet integrated.
+The SSH origin remains unchanged; synchronization uses the process-scoped HTTPS bridge.
 Prior branches and the unrelated untracked Word reference remain untouched.
 
-## Work and verification
+## Outcome and evidence
 
-Implemented fixed local read-only network and device-class sources with bounded numeric
-evidence, per-class errors, explicit unknown states and separate functional-test semantics.
-Network identities, personal device names and endpoint paths are excluded.
+Bounded offline assessment now guards the exact sanitization decision at start, dispatch
+and transactional commits. Provider batches commit independently; interruption/cancellation
+preserves a truthful partial snapshot. Reruns append new identities. Evidence keys have
+exclusive owners; lifecycle revision/date observations remain immutable in history.
 
-Baseline 25, focused 201, interface-absence regression 3 and active-machine smoke 1 passed.
-Host Targeted passed governance/format/build, Core 79 and Inventory 824, then Windows
-Application Control blocked the unchanged UI assembly (0x800711C7). A single-test
-reproduction confirmed the load failure. Committed-source same-machine Sandbox Targeted
-passed in 123.805s (180.917s total), including Quick and Core 79 / Inventory 824 / UI 3 with zero
-failures/skips. Python governance 261 passed in 283.387s. No control or test is disabled.
-Full/Extended are not triggered. PR-triggered remote CI is supplementary and is not required evidence.
+Committed-source Sandbox Quick/Targeted passed Core 83, Inventory 901, Persistence 113,
+UI 3 with zero failures/skips: shared tier 165.978s / whole guest 223.462s. Python governance
+passed 268 tests in 317.894s; focused assessment 77 and synthetic concurrency 1/4 metrics
+passed. Full/Extended were not triggered. Host Application Control 0x800711C7 blocks the
+rebuilt Persistence assembly; security policy is unchanged and Sandbox evidence is authoritative
+on this same machine. No human UI or cross-hardware claim is made.
 
-Implementation `eb83e4f26c292498f2d9223f12a3adeea402f1bc` is pushed and source-bound.
-Durable evidence: `artifacts/evidence/TL-0111/`; result/manifest: `artifacts/audit/TL-0111/`.
-Network WMI denied 0x80041003 remains unknown; other class evidence is retained. Presence
-never substitutes for functional tests or proves physical absence outside the source scope.
+Durable evidence: `artifacts/evidence/TL-0112/report.md` and `artifacts/audit/TL-0112/`.
+New normalized records use existing schema 3; no migration, sibling or released-interface change.
 
 ## Next action
 
-Normal PR #12 is open into main.
-Merge it before selecting the next product task.
-Next dependency-ready task: **TL-0112 — Implement the read-only assessment orchestrator**.
-Do not start it until TL-0111 is integrated into updated main.
+Merge normal PR #13, then synchronize main. The next dependency-ready
+task is TL-0113 — Build the accessible six-stage WPF shell. Do not start it before integration.

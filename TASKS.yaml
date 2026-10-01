@@ -2546,7 +2546,7 @@ tasks:
   workstream: inventory
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: any
@@ -2583,7 +2583,16 @@ tasks:
   - Test cancellation, timeout, provider exception, process interruption, and rerun.
   - Verify deterministic normalization for identical fixtures.
   - Property-test provider order independence and deterministic conflict/freshness handling.
-  evidence: []
+  evidence:
+  - task: TL-0112
+    date: '2026-10-01'
+    command: Governed same-machine Sandbox Targeted including Quick; focused orchestration/guard tests; three guarded-batch process-termination cases; Python governance; independent boundary review.
+    tier: targeted
+    result: Passed Core 83, Inventory 901, Persistence 113, UI 3 with zero failures/skips; focused assessment 77; Python 268; synthetic worker 1/4 metrics. Full/Extended not triggered.
+    environment: REF-CODEX-001 revision 2026-08-29.1; active Windows host plus 4 GiB Windows Sandbox; SDK 10.0.400; locked restore; host security unchanged.
+    duration: Committed shared Targeted 165.978s including Quick; whole guest 223.462s; Python 317.894s; focused assessment 16.526s. All attempts in runs.json.
+    reference: Implementation 5e7454e7ca8cb683aae97fad9df6671e6134399c; artifacts/evidence/TL-0112/report.md, runs.json, inputs.json, resource-metrics.json; artifacts/audit/TL-0112/ result and manifest; result SHA256 ca3ee1de3ba173085ece4e19ed1feda768287129ef8cbb89c720dbce8b7575bc.
+    limitation: Host Persistence loading blocked by Application Control 0x800711C7; same-machine Sandbox passed. Native cleanup and in-memory resource limits documented; no human UI or cross-hardware claim. Merge normal PR before TL-0113.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

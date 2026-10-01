@@ -1,0 +1,104 @@
+{
+  "task": "TL-0112",
+  "date": "2026-10-01",
+  "fixture_origin": "Synthetic provider, clock, store and transaction fixtures in hashed test sources; no captured personal data.",
+  "files": [
+    {
+      "path": "docs/testing/reference-machine-profile.md",
+      "sha256": "e9863c3ca84a46d14843fd7d1bbd8a83d63f4ba2ead250951e14735affede7a9"
+    },
+    {
+      "path": "global.json",
+      "sha256": "c39786ab1a147662bbe4db015f900165178875ec4a872ddae53bc0c90771ac34"
+    },
+    {
+      "path": "src/ThirdLife.Core/Jobs/IJobStore.cs",
+      "sha256": "089643e9b63d5e1d3aa5642cfac4d743b187bb84942e905caf05ca9a6ec131fa"
+    },
+    {
+      "path": "src/ThirdLife.Core/Sanitization/SanitizationGate.cs",
+      "sha256": "91b171139e5789fe92c4f332032f90ad6522a5d16ec37f72876708412c860a82"
+    },
+    {
+      "path": "src/ThirdLife.Persistence/SqliteJobStore.cs",
+      "sha256": "5b4d9c30c4df75460a3ee9f0f2a523a8cf7be8f7dffa51d0fad0777bce07e224"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/AssessmentOrchestrator.cs",
+      "sha256": "4b31f67c3198ce71c09676a9a5c9f8313ae7dbee0e27ee785d54df2a32240231"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/AssessmentJournal.cs",
+      "sha256": "233b5757f446686d17f158ae0f974d1fddd147e536b07026bef9b17575985cbb"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/AssessmentSnapshot.cs",
+      "sha256": "77be0f80b035eaedcaebb09e4d50863eb1968d4852e36766127480dc70a3ef45"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Normalization/InventoryProviderRunner.cs",
+      "sha256": "3b929e8b7a33c2cb3b6e648ba05bde48a930c697f7af16a385705003855b79b1"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/OperatingSystemProvider.cs",
+      "sha256": "8bc95c9fe5fdcfa70326f096648d80b33c13937137a94793141f2cd624520752"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/WindowsLifecycleCatalog.cs",
+      "sha256": "0770c1f48eaf1b3c98b2aac8fbfdfea282a472a1dbcfc5c23abcc4762b06630c"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/WindowsLifecycleData.cs",
+      "sha256": "1c0004559e67bb370713ff0eabb079b64f2a09397903903eeb424095ef26e3fd"
+    },
+    {
+      "path": "tests/ThirdLife.Core.Tests/JobEvidenceBatchGuardTests.cs",
+      "sha256": "200b06dea3b4ec8cd4eb0ea6eb0e4bbd6ad18aa71510e881c111f5d2fdf43632"
+    },
+    {
+      "path": "tests/ThirdLife.Persistence.Tests/GuardedEvidenceTests.cs",
+      "sha256": "b0a8389a9fd968313976d4b2b6268f24d8828ff68892996938c413d27e2cc46e"
+    },
+    {
+      "path": "tests/ThirdLife.Persistence.Tests/TransactionInterruptionTests.cs",
+      "sha256": "952b704ca4d4255323318cf1d941a694972739fdc33db3dfc9c5810a33dc174b"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/AssessmentOrchestratorTests.cs",
+      "sha256": "92ca534c3aa663d586ddfa553653433a15e720a9d42384148c6dce1e422fcf83"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/AssessmentTestStore.cs",
+      "sha256": "6638066720b4dfb94a35d766b3c4a85d9dd3505d06a0f8eecb710cb37fa06932"
+    },
+    {
+      "path": "tests/ThirdLife.Inventory.Tests/AssessmentJournalTests.cs",
+      "sha256": "41708bf191e84cfef6abca4b92fa62d2fa3eaf24e7a6ed4aaff4c1b4311683bf"
+    },
+    {
+      "path": "eng/run-tl0102-sandbox.ps1",
+      "sha256": "faa38e2506f228077ff229e2340f3ddf2884f7d4c7dc4eefaabad2fe0046cb56"
+    },
+    {
+      "path": "eng/run-tl0102-sandbox-guest.ps1",
+      "sha256": "3e5fadbdcc8802c5184821ddba2a343ac2a5015668d14b8881f13f77e4fdf547"
+    },
+    {
+      "path": "eng/test-manifest.json",
+      "sha256": "4c674152ec44d5629424752dde7b271ff899cf7c2b20b0689921e7ece1d0424f"
+    },
+    {
+      "path": "tools/validate_repository.py",
+      "sha256": "8fd60dad7d4c49495a41a0d30119acf6982a77319b3a1b94f6eca6b658ccfbd6"
+    },
+    {
+      "path": "tools/tests/test_validate_repository.py",
+      "sha256": "cf7305f6e53beee0d02fe386db5a1149cd8c176ff4534d4a23df5c92cde47bc7"
+    },
+    {
+      "path": "tools/tests/test_sandbox_harness.py",
+      "sha256": "f48cbbfb20e1bacd59e92ea9cbd56501aef5700dec70c3def46b38d5b578f133"
+    }
+  ],
+  "hash_scope": "Exact tested Windows checkout bytes. C# and PowerShell use repository-governed CRLF; Git blobs normalize text to LF. Each file normalizes exactly to implementation commit 5e7454e7ca8cb683aae97fad9df6671e6134399c."
+}

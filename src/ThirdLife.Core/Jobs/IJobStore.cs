@@ -27,6 +27,25 @@ public interface IJobStore : IAsyncDisposable
     Task<StoredJob?> LoadJobAsync(
         JobId jobId,
         CancellationToken cancellationToken = default);
+
+    // Simple adapters may use the bounded job projection; the SQLite implementation reads
+    // only the current gate records, avoiding repeated loading of observation history.
+    async Task RequireSanitizationGateAsync(
+        JobId jobId,
+        SanitizationGateDecisionId expectedDecisionId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(jobId);
+        ArgumentNullException.ThrowIfNull(expectedDecisionId);
+        var job = await LoadJobAsync(jobId, cancellationToken).ConfigureAwait(false);
+        var access = job is null ? null : SanitizationGate.Inspect(job);
+        if (job?.Job.JobId != jobId || access is not { AllowsAssessment: true } ||
+            access.Decision!.DecisionId != expectedDecisionId)
+        {
+            throw new JobLifecycleException("sanitization_gate_changed",
+                "The current sanitization gate does not authorize this assessment.");
+        }
+    }
 }
 
 [JsonConverter(typeof(StableStringEnumConverter<JobCheckpointKind>))]
@@ -91,12 +110,22 @@ public sealed class JobEvidenceBatch
         JobId jobId,
         IEnumerable<Observation>? observations = null,
         IEnumerable<SanitizationEvidence>? sanitizationEvidence = null,
-        IEnumerable<HumanTestEvidence>? humanTests = null)
+        IEnumerable<HumanTestEvidence>? humanTests = null,
+        SanitizationGateDecisionId? expectedSanitizationGateDecisionId = null)
     {
         JobId = jobId ?? throw new ArgumentNullException(nameof(jobId));
         Observations = Copy(observations, nameof(observations));
         SanitizationEvidence = Copy(sanitizationEvidence, nameof(sanitizationEvidence));
         HumanTests = Copy(humanTests, nameof(humanTests));
+        ExpectedSanitizationGateDecisionId = expectedSanitizationGateDecisionId;
+
+        if (ExpectedSanitizationGateDecisionId is not null &&
+            (SanitizationEvidence.Count != 0 || HumanTests.Count != 0))
+        {
+            throw new ArgumentException(
+                "A sanitization-gated batch may contain only assessment observations.",
+                nameof(expectedSanitizationGateDecisionId));
+        }
 
         var total = Observations.Count + SanitizationEvidence.Count + HumanTests.Count;
         if (total == 0)
@@ -131,6 +160,10 @@ public sealed class JobEvidenceBatch
     public IReadOnlyList<SanitizationEvidence> SanitizationEvidence { get; }
 
     public IReadOnlyList<HumanTestEvidence> HumanTests { get; }
+
+    // When supplied, the store must revalidate this exact persisted allowing decision
+    // and current job state in the same transaction that appends the observations.
+    public SanitizationGateDecisionId? ExpectedSanitizationGateDecisionId { get; }
 
     private static IReadOnlyList<T> Copy<T>(IEnumerable<T>? values, string parameterName)
         where T : class

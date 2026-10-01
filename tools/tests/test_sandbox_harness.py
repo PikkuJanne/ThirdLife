@@ -42,7 +42,7 @@ class SandboxHarnessContractTests(unittest.TestCase):
 
     def test_tl0104_stages_only_its_diagnostics_working_inputs(self):
         self.assertIn(
-            '[ValidateSet("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "TL-0111", '
+            '[ValidateSet("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "TL-0111", "TL-0112", '
             '"AMD-2026-09-12-REPOSITORY-STABILIZATION")]', self.host
         )
         selection = re.search(
@@ -115,7 +115,7 @@ class SandboxHarnessContractTests(unittest.TestCase):
             'if ($TaskId -eq "TL-0107" -and $Phase -ne "Quick")', self.host
         )
         self.assertLess(
-            self.guest.index('if ($TaskId -in @($RepositoryStabilizationTaskId, "TL-0107", "TL-0109", "TL-0111"))'),
+            self.guest.index('if ($TaskId -in @($RepositoryStabilizationTaskId, "TL-0107", "TL-0109", "TL-0111", "TL-0112"))'),
             self.guest.index('elseif ($phase -eq "Quick")'),
         )
         self.assertEqual(self.host.count('<ReadOnly>true</ReadOnly>'), 9)
@@ -196,12 +196,12 @@ class SandboxHarnessContractTests(unittest.TestCase):
             self.assertEqual(resolved, expected)
         self.assertEqual(targeted["target_seconds"], manifest["tiers"]["targeted"]["target_seconds"])
         self.assertIn('if ($TaskId -eq "TL-0109" -and $Phase -notin @("Quick", "Targeted"))', self.host)
-        self.assertIn('-Required:($Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111")', self.host)
+        self.assertIn('-Required:($Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111" -or $TaskId -eq "TL-0112")', self.host)
         self.assertIn('$sourceHistoryIncluded = $Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109"', self.host)
-        self.assertIn('if ($phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111")', self.guest)
+        self.assertIn('if ($phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111" -or $TaskId -eq "TL-0112")', self.guest)
         self.assertIn('$RunRequest.phase -notin @("Quick", "Full") -and $RunRequest.task_id -ne "TL-0109"', self.guest)
         self.assertLess(
-            self.guest.index('if ($TaskId -in @($RepositoryStabilizationTaskId, "TL-0107", "TL-0109", "TL-0111"))'),
+            self.guest.index('if ($TaskId -in @($RepositoryStabilizationTaskId, "TL-0107", "TL-0109", "TL-0111", "TL-0112"))'),
             self.guest.index('elseif ($phase -in @("RoundTrip", "Integration", "Migration", "PathSecurity", "Interruption", "Targeted"))'),
         )
         selection = re.search(r'if \(\$TaskId -eq "TL-0109"\) \{\s*\$taskWorkingPaths = @\((.*?)\)\s*\}', self.host, re.DOTALL)
@@ -225,9 +225,28 @@ class SandboxHarnessContractTests(unittest.TestCase):
             "src/ThirdLife.Inventory/Windows", "tests/ThirdLife.Inventory.Tests",
         ])
         self.assertIn('if ($TaskId -eq "TL-0111" -and $Phase -notin @("Quick", "Targeted"))', self.host)
-        self.assertIn('-Required:($Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111")', self.host)
+        self.assertIn('-Required:($Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111" -or $TaskId -eq "TL-0112")', self.host)
         self.assertIn('$sourceHistoryIncluded = $Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111"', self.host)
         self.assertIn('if ($PersistEvidence) {\n        if (-not $trackedState.clean)', self.host)
+
+    def test_tl0112_profiles_keep_bounds_and_stage_only_assessment_working_inputs(self):
+        manifest = json.loads((REPOSITORY_ROOT / "eng/test-manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["sandbox_profiles"]["tl0112_quick"],
+                         dict(manifest["sandbox_profiles"]["tl0111_quick"], task_id="TL-0112"))
+        targeted = dict(manifest["sandbox_profiles"]["tl0111_targeted"], task_id="TL-0112")
+        targeted["test_projects"] = [f"tests/ThirdLife.{name}.Tests/ThirdLife.{name}.Tests.csproj"
+                                     for name in ("Inventory", "Core", "Persistence", "UI")]
+        self.assertEqual(manifest["sandbox_profiles"]["tl0112_targeted"], targeted)
+        selection = re.search(r'if \(\$TaskId -eq "TL-0112"\) \{\s*\$taskWorkingPaths = @\((.*?)\)\s*\}', self.host, re.DOTALL)
+        self.assertIsNotNone(selection)
+        self.assertEqual(re.findall(r'"([^"]+)"', selection.group(1)), [
+            "src/ThirdLife.Core/Jobs", "src/ThirdLife.Inventory", "src/ThirdLife.Persistence",
+            "tests/ThirdLife.Core.Tests", "tests/ThirdLife.Inventory.Tests", "tests/ThirdLife.Persistence.Tests",
+        ])
+        self.assertIn('if ($TaskId -eq "TL-0112" -and $Phase -notin @("Quick", "Targeted"))', self.host)
+        self.assertIn('-Required:($Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111" -or $TaskId -eq "TL-0112")', self.host)
+        self.assertIn('$sourceHistoryIncluded = $Phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111" -or $TaskId -eq "TL-0112"', self.host)
+        self.assertIn('if ($phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111" -or $TaskId -eq "TL-0112")', self.guest)
 
 
 @unittest.skipUnless(os.name == "nt" and POWERSHELL, "Windows PowerShell is required")
@@ -459,6 +478,33 @@ class RepositorySandboxProfileTests(unittest.TestCase):
             )
             self.assertNotEqual(failed.returncode, 0)
 
+    def test_tl0112_targeted_expression_preserves_array_binding_and_exit_status(self) -> None:
+        dispatched = self.dispatch(task_id="TL-0112", phase="Targeted")["calls"][1]
+        with tempfile.TemporaryDirectory(prefix="thirdlife-verifier-binding-") as temporary:
+            root = Path(temporary)
+            (root / "eng").mkdir()
+            verifier = root / "eng/verify.ps1"
+            verifier.write_text(
+                "param([string] $Tier, [string[]] $TestProject, [switch] $Restore)\n"
+                "@{tier=$Tier; projects=@($TestProject); restore=[bool]$Restore} | ConvertTo-Json -Compress\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [POWERSHELL, *dispatched["arguments"]], cwd=root,
+                capture_output=True, text=True, encoding="utf-8", timeout=30, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(json.loads(result.stdout), {
+                "tier": "Targeted", "restore": True,
+                "projects": [f"tests\\ThirdLife.{name}.Tests\\ThirdLife.{name}.Tests.csproj" for name in ("Inventory", "Core", "Persistence", "UI")],
+            })
+            verifier.write_text("throw 'Synthetic verification failure'\n", encoding="utf-8")
+            failed = subprocess.run(
+                [POWERSHELL, *dispatched["arguments"]], cwd=root,
+                capture_output=True, text=True, encoding="utf-8", timeout=30, check=False,
+            )
+            self.assertNotEqual(failed.returncode, 0)
+
     def test_tl0109_profiles_stop_on_restore_or_verification_failure(self) -> None:
         for phase in ("Quick", "Targeted"):
             failures = [(f"locked-{phase.lower()}-restore-and-audit", 1), (f"tl0109-shared-{phase.lower()}", 2)]
@@ -580,6 +626,28 @@ class RepositorySandboxProfileTests(unittest.TestCase):
                     self.assertTrue(failed["failed"])
                     self.assertEqual(len(failed["calls"]), count)
 
+    def test_tl0112_dispatch_runs_only_restore_and_shared_verification(self) -> None:
+        for phase in ("Quick", "Targeted"):
+            with self.subTest(phase=phase):
+                result = self.dispatch(task_id="TL-0112", phase=phase)
+                self.assertFalse(result["failed"])
+                self.assertEqual(len(result["calls"]), 2)
+                historical = self.dispatch(task_id="TL-0109", phase=phase)["calls"][:2]
+                historical[1]["label"] = f"tl0112-shared-{phase.lower()}"
+                if phase == "Targeted":
+                    historical[1]["arguments"][-1] = historical[1]["arguments"][-1].replace(
+                        "'tests\\ThirdLife.UI.Tests\\ThirdLife.UI.Tests.csproj'",
+                        "'tests\\ThirdLife.Core.Tests\\ThirdLife.Core.Tests.csproj', "
+                        "'tests\\ThirdLife.Persistence.Tests\\ThirdLife.Persistence.Tests.csproj', "
+                        "'tests\\ThirdLife.UI.Tests\\ThirdLife.UI.Tests.csproj'",
+                    )
+                self.assertEqual(result["calls"], historical)
+                for label, count in ((f"locked-{phase.lower()}-restore-and-audit", 1),
+                                     (f"tl0112-shared-{phase.lower()}", 2)):
+                    failed = self.dispatch(label, task_id="TL-0112", phase=phase)
+                    self.assertTrue(failed["failed"])
+                    self.assertEqual(len(failed["calls"]), count)
+
     def test_tl0111_timeouts_apply_only_to_the_exact_task_phase_and_label(self) -> None:
         result = self.invoke_functions(
             "$values = @(\n"
@@ -639,12 +707,72 @@ class RepositorySandboxProfileTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(int(result.stdout.strip()), len(altered))
 
+    def test_tl0112_timeouts_apply_only_to_the_exact_task_phase_and_label(self) -> None:
+        result = self.invoke_functions(
+            "$values = @(\n"
+            " Get-CommandTimeoutSeconds -Label 'tl0112-shared-quick' -EvidenceTaskId 'TL-0112' -SelectedPhase 'Quick'\n"
+            " Get-CommandTimeoutSeconds -Label 'tl0112-shared-targeted' -EvidenceTaskId 'TL-0112' -SelectedPhase 'Targeted'\n"
+            " Get-CommandTimeoutSeconds -Label 'tl0112-shared-targeted' -EvidenceTaskId 'TL-0109' -SelectedPhase 'Targeted'\n"
+            " Get-CommandTimeoutSeconds -Label 'tl0112-shared-targeted' -EvidenceTaskId 'TL-0112' -SelectedPhase 'Quick'\n"
+            " Get-CommandTimeoutSeconds -Label 'tl0112-shared-quick' -EvidenceTaskId 'TL-0112' -SelectedPhase 'Targeted'\n"
+            " Get-CommandTimeoutSeconds -Label 'locked-targeted-restore-and-audit' -EvidenceTaskId 'TL-0112' -SelectedPhase 'Targeted'\n"
+            " Get-CommandTimeoutSeconds -Label 'tl0109-native-cleanup' -EvidenceTaskId 'TL-0112' -SelectedPhase 'Targeted'\n"
+            ")\nConvertTo-Json -InputObject $values -Compress\n"
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(json.loads(result.stdout), [180, 600, 300, 300, 300, 300, 300])
+
+    def test_tl0112_transient_requests_allow_dirty_source_and_preserve_all_binding_guards(self) -> None:
+        request = {
+            "schema_version": 2, "task_id": "TL-0112", "phase": "Targeted",
+            "expected_head_commit": "a" * 40, "run_id": "b" * 32,
+            "expected_tracked_clean": False, "source_history_included": True,
+            "networking_enabled": True, "nuget_audit_enabled": True,
+            "network_reason": "governed_nuget_audit", "nuget_package_count": 18,
+            "sandbox_executable_version": "1.2.3.4",
+        }
+        for name in (
+            "expected_source_digest", "history_bundle_sha256", "repository_status_sha256",
+            "launcher_sha256", "runner_sha256", "sandbox_config_sha256", "nuget_closure_sha256",
+            "python_packages_sha256",
+        ):
+            request[name] = "c" * 64
+        valid = [dict(request, phase=phase, expected_tracked_clean=clean)
+                 for phase in ("Quick", "Targeted") for clean in (False, True)]
+        altered = [dict(request, phase=phase) for phase in (
+            "RoundTrip", "Integration", "Migration", "PathSecurity", "Interruption", "Full",
+        )]
+        for approved in valid:
+            altered += [dict(approved, **change) for change in (
+                {"networking_enabled": False}, {"nuget_audit_enabled": False},
+                {"network_reason": "disabled_offline_phase"}, {"source_history_included": False},
+                {"nuget_package_count": 0}, {"nuget_package_count": 65}, {"nuget_package_count": True},
+                {"task_id": "TL-0109"}, {"expected_source_digest": "invalid"},
+                {"filter": "Category=ActiveMachine"}, {"test_projects": ["unapproved.csproj"]},
+            )]
+        valid_json = json.dumps(valid).replace("'", "''")
+        invalid_json = json.dumps(altered).replace("'", "''")
+        result = self.invoke_functions(
+            "$TaskId = 'TL-0112'\n"
+            f"foreach ($request in ('{valid_json}' | ConvertFrom-Json)) {{ Assert-RunRequest -RunRequest $request }}\n"
+            f"$requests = '{invalid_json}' | ConvertFrom-Json\n"
+            "$rejected = 0\n"
+            "foreach ($request in $requests) {\n"
+            " $failed = $false\n"
+            " try { Assert-RunRequest -RunRequest $request } catch { $failed = $true }\n"
+            " if (-not $failed) { throw 'Unsafe request accepted' }; $rejected++\n"
+            "}\nWrite-Output $rejected\n"
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(int(result.stdout.strip()), len(altered))
+
     def test_dispatch_rejects_unapproved_task_phase_pairs_before_restore(self) -> None:
         for task, phase in (
             ("TL-0107", "Full"), ("TL-0107", "Targeted"),
             ("TL-0104", "Quick"), (STABILIZATION_OWNER, "Quick"),
             *(("TL-0109", phase) for phase in ("Full", "RoundTrip", "Integration", "Migration", "PathSecurity", "Interruption")),
             *(("TL-0111", phase) for phase in ("Full", "RoundTrip", "Integration", "Migration", "PathSecurity", "Interruption")),
+            *(("TL-0112", phase) for phase in ("Full", "RoundTrip", "Integration", "Migration", "PathSecurity", "Interruption")),
         ):
             with self.subTest(task=task, phase=phase):
                 result = self.dispatch(task_id=task, phase=phase)
@@ -660,9 +788,11 @@ class RepositorySandboxProfileTests(unittest.TestCase):
             "$batteryTargeted = @(Get-LockedNuGetClosure -SourceRoot $source -SelectedTaskId 'TL-0109' -SelectedPhase 'Targeted')\n"
             "$devicesQuick = @(Get-LockedNuGetClosure -SourceRoot $source -SelectedTaskId 'TL-0111' -SelectedPhase 'Quick')\n"
             "$devicesTargeted = @(Get-LockedNuGetClosure -SourceRoot $source -SelectedTaskId 'TL-0111' -SelectedPhase 'Targeted')\n"
+            "$assessmentQuick = @(Get-LockedNuGetClosure -SourceRoot $source -SelectedTaskId 'TL-0112' -SelectedPhase 'Quick')\n"
+            "$assessmentTargeted = @(Get-LockedNuGetClosure -SourceRoot $source -SelectedTaskId 'TL-0112' -SelectedPhase 'Targeted')\n"
             "$full = @(Get-LockedNuGetClosure -SourceRoot $source -SelectedTaskId $RepositoryStabilizationTaskId -SelectedPhase 'Full')\n"
             "$legacy = @(Get-LockedNuGetClosure -SourceRoot $source -SelectedTaskId 'TL-0104' -SelectedPhase 'Quick')\n"
-            "@{quick=$quick; batteryQuick=$batteryQuick; batteryTargeted=$batteryTargeted; devicesQuick=$devicesQuick; devicesTargeted=$devicesTargeted; full=$full; legacy=$legacy} | ConvertTo-Json -Depth 5 -Compress\n",
+            "@{quick=$quick; batteryQuick=$batteryQuick; batteryTargeted=$batteryTargeted; devicesQuick=$devicesQuick; devicesTargeted=$devicesTargeted; assessmentQuick=$assessmentQuick; assessmentTargeted=$assessmentTargeted; full=$full; legacy=$legacy} | ConvertTo-Json -Depth 5 -Compress\n",
             harness=HOST_HARNESS, function_names=("Get-LockedNuGetClosure",),
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -684,6 +814,8 @@ class RepositorySandboxProfileTests(unittest.TestCase):
         self.assertEqual(value["batteryTargeted"], value["full"])
         self.assertEqual(value["devicesQuick"], value["full"])
         self.assertEqual(value["devicesTargeted"], value["full"])
+        self.assertEqual(value["assessmentQuick"], value["full"])
+        self.assertEqual(value["assessmentTargeted"], value["full"])
         self.assertEqual(value["legacy"], [])
 
     def test_only_exact_quick_command_gets_the_bounded_quick_timeout(self) -> None:

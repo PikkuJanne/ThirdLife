@@ -255,6 +255,15 @@ tracked state must remain unchanged throughout it. Persistent results require a 
 unchanged tracked worktree. The same binding, bounded-result and verified-cleanup guards
 remain enforced. Direct-host policy compatibility and other physical hardware are unverified.
 
+TL-0112 reuses the same bounded runner with its own Quick and Targeted profiles. Targeted
+runs the shared verifier for Inventory, Core, Persistence and UI, including the owned-child
+process interruption tests. It uses the unchanged deterministic filter and adds no native
+hardware scenario. Quick/Targeted retain 180/600-second command limits, a 4 GiB guest,
+locked dependency and source/history hashes, bounded output and verified cleanup. Prior
+profiles are unchanged. Use `-EvidenceTaskId TL-0112 -Phase Targeted -PreflightOnly` first,
+then omit `-PreflightOnly` for transient verification or use `-PersistEvidence` against
+committed, tracked-clean source. Networking remains only for governed NuGet audit.
+
 A new large task-specific runner requires:
 
 - technical reason;

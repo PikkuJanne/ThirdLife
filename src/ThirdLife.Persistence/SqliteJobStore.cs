@@ -134,6 +134,12 @@ public sealed class SqliteJobStore : IJobStore
             async (connection, transaction, token) =>
             {
                 var deviceId = await ReadDeviceIdAsync(connection, transaction, batch.JobId, token).ConfigureAwait(false);
+                if (batch.ExpectedSanitizationGateDecisionId is not null)
+                {
+                    await RequireExpectedSanitizationGateAsync(
+                        connection, transaction, batch.JobId, batch.ExpectedSanitizationGateDecisionId, token)
+                        .ConfigureAwait(false);
+                }
                 var currentCount = await ReadEvidenceCountAsync(connection, transaction, batch.JobId, token)
                     .ConfigureAwait(false);
                 var proposedCount = batch.Observations.Count + batch.SanitizationEvidence.Count + batch.HumanTests.Count;
@@ -261,6 +267,34 @@ public sealed class SqliteJobStore : IJobStore
             cancellationToken);
     }
 
+    private async Task RequireExpectedSanitizationGateAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        JobId jobId,
+        SanitizationGateDecisionId expectedDecisionId,
+        CancellationToken cancellationToken)
+    {
+        if (await ReadArchiveStateAsync(connection, transaction, jobId, cancellationToken).ConfigureAwait(false))
+        {
+            throw new JobStoreConflictException();
+        }
+
+        var evidence = await ReadLatestSanitizationEvidenceAsync(connection, transaction, jobId, cancellationToken)
+            .ConfigureAwait(false);
+        if (evidence is null) { throw new JobStoreConflictException(); }
+        var decision = await ReadGateDecisionForEvidenceAsync(
+            connection, transaction, jobId, evidence.Metadata.EvidenceId, cancellationToken).ConfigureAwait(false);
+        if (decision is null || decision.DecisionId != expectedDecisionId ||
+            decision.Outcome != SanitizationGateOutcome.AllowAssessment)
+        {
+            throw new JobStoreConflictException();
+        }
+        if (!SanitizationGate.IsConsistent(decision, evidence))
+        {
+            throw new JobStoreCorruptionException("store_payload_mismatch");
+        }
+    }
+
     public async Task<SanitizationGateDecision> RecordSanitizationGateDecisionAsync(
         SanitizationGateDecision candidate,
         CancellationToken cancellationToken = default)
@@ -338,6 +372,32 @@ public sealed class SqliteJobStore : IJobStore
             cancellationToken).ConfigureAwait(false);
 
         return accepted ?? throw new JobStoreUnavailableException();
+    }
+
+    public async Task RequireSanitizationGateAsync(JobId jobId, SanitizationGateDecisionId expectedDecisionId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(jobId);
+        ArgumentNullException.ThrowIfNull(expectedDecisionId);
+        ThrowIfDisposed();
+        await _connectionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await TranslateReadErrorsAsync(async () =>
+            {
+                _layout.ValidateStoreGuards(_databaseGuard, _journalGuard);
+                ValidateStoreFileBounds(_databaseGuard, _journalGuard);
+                _layout.ValidateJobDirectory(jobId);
+                await using var transaction = _connection.BeginTransaction(deferred: true);
+                await RequireExpectedSanitizationGateAsync(_connection, transaction, jobId, expectedDecisionId,
+                    cancellationToken).ConfigureAwait(false);
+                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+                _layout.ValidateStoreGuards(_databaseGuard, _journalGuard);
+                ValidateStoreFileBounds(_databaseGuard, _journalGuard);
+                return true;
+            }).ConfigureAwait(false);
+        }
+        finally { _connectionGate.Release(); }
     }
 
     public async Task<StoredJob?> LoadJobAsync(JobId jobId, CancellationToken cancellationToken = default)

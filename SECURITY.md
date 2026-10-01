@@ -118,6 +118,14 @@ The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md)
 
 ## 10. Filesystem and persistence
 
+`TL-0112` adds [read-only assessment orchestration](docs/inventory/assessment-orchestration.md).
+Each start/provider/final batch revalidates its exact allowing sanitization decision inside
+the existing transaction. Closed system-generated markers bind immutable provider evidence
+to explicit snapshots; collisions, malformed correlation and ambiguous writes fail closed.
+Only registered standard-user/no-network providers are admitted. Cancellation and timeout
+retain worker admission through cleanup, including late cleanup failure. No migration,
+new raw-data permission, execution surface or export allowlist is introduced.
+
 `TL-0111` adds [network and key-device enumeration](docs/inventory/device-enumeration.md).
 Fixed local numeric WMI projections, SetupAPI class/interface lists and a session digitizer
 metric return only class presence, collection state, bounded problem counts and numeric errors.
