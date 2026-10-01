@@ -211,6 +211,35 @@ EXPECTED_TEST_MANIFEST = {
             "memory_mb": 4096,
             "network_reason": "governed_nuget_audit",
         },
+        "tl0113_quick": {
+            "task_id": "TL-0113",
+            "tier": "Quick",
+            "selection_ref": "tiers.quick.test_projects",
+            "hosted_environment": "active_machine_windows_sandbox",
+            "risk_trigger": "host_application_control_blocks_required_quick",
+            "target_seconds": 120,
+            "command_timeout_seconds": 180,
+            "host_timeout_minutes": 30,
+            "memory_mb": 4096,
+            "network_reason": "governed_nuget_audit",
+        },
+        "tl0113_targeted": {
+            "task_id": "TL-0113",
+            "tier": "Targeted",
+            "test_projects": [
+                f"tests/{name}/{name}.csproj"
+                for name in ("ThirdLife.UI.Tests",)
+            ],
+            "filter_ref": "tiers.targeted.default_filter",
+            "includes_quick_ref": "tiers.targeted.includes_quick",
+            "hosted_environment": "active_machine_windows_sandbox",
+            "risk_trigger": "host_application_control_blocks_required_targeted",
+            "target_seconds": 600,
+            "command_timeout_seconds": 600,
+            "host_timeout_minutes": 30,
+            "memory_mb": 4096,
+            "network_reason": "governed_nuget_audit",
+        },
         "tl0109_targeted": {
             "task_id": "TL-0109",
             "tier": "Targeted",

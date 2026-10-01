@@ -264,6 +264,32 @@ profiles are unchanged. Use `-EvidenceTaskId TL-0112 -Phase Targeted -PreflightO
 then omit `-PreflightOnly` for transient verification or use `-PersistEvidence` against
 committed, tracked-clean source. Networking remains only for governed NuGet audit.
 
+TL-0113 adds closed Quick and Targeted profiles for a host Application Control failure
+loading the rebuilt UI test assembly. Targeted selects the UI test project and includes
+the normal Quick projects. The unchanged deterministic filter excludes ActiveMachine,
+Extended and SandboxOnly tests. The standard-user apphost smoke remains a separate host
+check; the guest's component tests do not prove unelevated apphost startup or human
+assistive-technology behavior. No extra native or host-mutation scenario is admitted.
+
+Both profiles stage the full locked solution package closure, pinned Python packages and
+reachable source history. They retain a 4 GiB guest, read-only input mappings, verified
+source/package/result bindings, bounded output, cleanup and the 30-minute host limit.
+Quick/Targeted command limits remain 180/600 seconds and the normal tier targets remain
+120/600 seconds. Guest networking is enabled only for governed NuGet audit.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 `
+  -Phase Targeted -EvidenceTaskId TL-0113 -PreflightOnly
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 `
+  -Phase Targeted -EvidenceTaskId TL-0113 -PersistEvidence
+```
+
+Use `-Phase Quick` for the independently selectable Quick profile. A run without either
+switch verifies a transient source overlay; source and tracked state must remain unchanged
+throughout it. Persistent evidence requires committed, tracked-clean source. No host or
+guest security policy is changed. Direct-host loader compatibility, human review and other
+hardware remain separate evidence or explicit limitations.
+
 A new large task-specific runner requires:
 
 - technical reason;

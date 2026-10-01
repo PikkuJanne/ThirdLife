@@ -118,6 +118,12 @@ The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md)
 
 ## 10. Filesystem and persistence
 
+TL-0113's [review shell](docs/ui/accessible-shell.md) requests `asInvoker` and checks the
+current token before constructing the main window. Elevated or unverified sessions receive
+fixed recovery guidance and exit. The shell performs no job-store, provider, network, broker,
+logging or export operation. Navigation and progress presentation create no domain evidence,
+gate decision or approval. Unknown evidence remains explicit; no raw exception is displayed.
+
 `TL-0112` adds [read-only assessment orchestration](docs/inventory/assessment-orchestration.md).
 Each start/provider/final batch revalidates its exact allowing sanitization decision inside
 the existing transaction. Closed system-generated markers bind immutable provider evidence

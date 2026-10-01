@@ -4,35 +4,34 @@
 **Bundle baseline:** 0.4.0  
 **Runtime authority:** active Codex machine only; remote CI is supplementary  
 **Current milestone:** M1 — Audit-only vertical slice  
-**Current task:** TL-0112 — Implement the read-only assessment orchestrator; done
+**Current task:** TL-0113 — Build the accessible six-stage WPF shell; review
 
 ## Continuity
 
-TL-0111 PR #12 is merged into main `bbdc15f403f6ca28e8ee57e9404c85988a8d5141`.
-Branch `codex/tl-0112-assessment-orchestrator` started from updated main; all dependencies
-are done. Implementation `5e7454e7ca8cb683aae97fad9df6671e6134399c` is pushed and verified.
-Normal PR #13 is open against main; this task is not yet integrated.
-The SSH origin remains unchanged; synchronization uses the process-scoped HTTPS bridge.
-Prior branches and the unrelated untracked Word reference remain untouched.
+TL-0112 PR #13 is merged into main `d4ec836719746c659f12ca851f9890d62c76bfa7`.
+The prior branch has no unique commits outside main. TL-0113 began from updated main on
+`codex/tl-0113-accessible-shell`; its complete dependency chain is done. SSH origin is
+unchanged; fetch uses the process-scoped HTTPS bridge. Prior branches and the unrelated
+untracked Word reference remain untouched.
 
 ## Outcome and evidence
 
-Bounded offline assessment now guards the exact sanitization decision at start, dispatch
-and transactional commits. Provider batches commit independently; interruption/cancellation
-preserves a truthful partial snapshot. Reruns append new identities. Evidence keys have
-exclusive owners; lifecycle revision/date observations remain immutable in history.
+The six-stage review shell now separates requirements, evidence and plan. Intake/Inspect
+navigation creates no evidence, policy pass or approval; later stages retain readable criteria.
+Startup requires a standard-user token. No database, provider, network or broker is opened.
 
-Committed-source Sandbox Quick/Targeted passed Core 83, Inventory 901, Persistence 113,
-UI 3 with zero failures/skips: shared tier 165.978s / whole guest 223.462s. Python governance
-passed 268 tests in 317.894s; focused assessment 77 and synthetic concurrency 1/4 metrics
-passed. Full/Extended were not triggered. Host Application Control 0x800711C7 blocks the
-rebuilt Persistence assembly; security policy is unchanged and Sandbox evidence is authoritative
-on this same machine. No human UI or cross-hardware claim is made.
+Transient same-machine Sandbox Quick/Targeted passed Core 83, Inventory 901 and UI 43,
+zero failures/skips: shared tier 144.926s / guest 201.735s. Python governance passed 275
+in 349.394s. The direct-host apphost/UIA observation passed; Application Control 0x800711C7
+blocks the rebuilt xUnit assembly. Host security is unchanged. Committed-source verification
+follows this implementation checkpoint. Full/Extended were not triggered.
 
-Durable evidence: `artifacts/evidence/TL-0112/report.md` and `artifacts/audit/TL-0112/`.
-New normalized records use existing schema 3; no migration, sibling or released-interface change.
+Durable evidence: `artifacts/evidence/TL-0113/report.md`, `runs.json`, `inputs.json` and the
+source-bound `human-walkthrough.md`. Human keyboard, screen-reader and actual display-setting
+results remain pending. The complete durable operator audit flow is still required at TL-0116.
 
 ## Next action
 
-Merge normal PR #13, then synchronize main. The next dependency-ready
-task is TL-0113 — Build the accessible six-stage WPF shell. Do not start it before integration.
+Verify the committed checkpoint, publish the draft PR and complete required human keyboard
+and screen-reader evidence before marking TL-0113 done. TL-0114 is blocked by TL-0113;
+do not start another task. The complete durable audit flow remains necessary at TL-0116.

@@ -9,6 +9,7 @@ using System.Windows.Threading;
 
 namespace ThirdLife.UI.Tests;
 
+[Collection(ShellWindowChecks.Name)]
 public sealed class BatteryInspectionTests
 {
     [Fact]
@@ -20,18 +21,20 @@ public sealed class BatteryInspectionTests
             try
             {
                 var scroll = Assert.IsType<ScrollViewer>(window.Content);
+                var region = Assert.IsType<GroupBox>(window.FindName("BatterySafetyRegion"));
                 var message = Assert.IsType<TextBlock>(window.FindName("BatteryInspectionMessage"));
                 var heading = Assert.IsType<TextBlock>(window.FindName("BatteryInspectionHeading"));
                 ShowAndWaitForLoadedBindings(window);
                 Assert.True(scroll.IsLoaded);
                 Assert.Equal("Battery reports cannot detect swelling. Swelling requires human inspection.", message.Text);
-                Assert.True(scroll.Focusable);
-                Assert.True(KeyboardNavigation.GetIsTabStop(scroll));
-                Assert.Same(scroll, FocusManager.GetFocusedElement(window));
-                Assert.True(window.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)));
-                Assert.Same(scroll, Keyboard.FocusedElement);
-                Assert.Equal(AutomationHeadingLevel.Level1, AutomationProperties.GetHeadingLevel(heading));
-                var peer = Assert.IsType<ScrollViewerAutomationPeer>(UIElementAutomationPeer.CreatePeerForElement(scroll));
+                Assert.True(region.Focusable);
+                Assert.True(KeyboardNavigation.GetIsTabStop(region));
+                Assert.True(region.Focus());
+                region.BringIntoView();
+                ShellTestHost.Drain(window);
+                Assert.Same(region, Keyboard.FocusedElement);
+                Assert.Equal(AutomationHeadingLevel.Level2, AutomationProperties.GetHeadingLevel(heading));
+                var peer = Assert.IsType<GroupBoxAutomationPeer>(UIElementAutomationPeer.CreatePeerForElement(region));
                 Assert.Equal("Battery safety information", peer.GetName());
                 Assert.Equal(message.Text, peer.GetHelpText());
                 Assert.True(peer.IsKeyboardFocusable());
@@ -58,7 +61,7 @@ public sealed class BatteryInspectionTests
     {
         RunOnSta(() =>
         {
-            var window = new MainWindow();
+            var window = new MainWindow { Width = 480, Height = 320 };
             try
             {
                 var scroll = Assert.IsType<ScrollViewer>(window.Content);
@@ -67,9 +70,7 @@ public sealed class BatteryInspectionTests
                 message.Text = string.Join(' ', Enumerable.Repeat(message.Text, 8));
                 message.FontSize = 24;
                 content.LayoutTransform = new ScaleTransform(2, 2);
-                scroll.Measure(new Size(320, 180));
-                scroll.Arrange(new Rect(0, 0, 320, 180));
-                scroll.UpdateLayout();
+                ShellTestHost.Show(window);
 
                 Assert.Equal(ScrollBarVisibility.Disabled, scroll.HorizontalScrollBarVisibility);
                 Assert.Equal(ScrollBarVisibility.Auto, scroll.VerticalScrollBarVisibility);

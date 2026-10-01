@@ -1,36 +1,140 @@
-﻿<Window x:Class="ThirdLife.UI.MainWindow"
+<Window x:Class="ThirdLife.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
-        Title="ThirdLife Setup Core" Height="450" Width="800"
+        Title="ThirdLife Setup Core" Height="720" Width="980"
         MinHeight="240" MinWidth="320"
         Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
         Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}"
         FontFamily="{DynamicResource {x:Static SystemFonts.MessageFontFamilyKey}}"
-        FontSize="{DynamicResource {x:Static SystemFonts.MessageFontSizeKey}}"
-        FocusManager.FocusedElement="{Binding ElementName=BatteryNoticeScroll}">
-    <ScrollViewer x:Name="BatteryNoticeScroll"
-                  Padding="24"
-                  VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled"
-                  Focusable="True"
-                  KeyboardNavigation.IsTabStop="True"
-                  AutomationProperties.Name="Battery safety information"
-                  AutomationProperties.HelpText="{Binding Text, ElementName=BatteryInspectionMessage}">
-        <StackPanel MaxWidth="720" HorizontalAlignment="Left">
-            <TextBlock x:Name="BatteryInspectionHeading"
-                       Text="Battery safety"
-                       FontSize="22"
-                       FontWeight="SemiBold"
-                       Margin="0,0,0,12"
-                       TextWrapping="Wrap"
-                       AutomationProperties.HeadingLevel="Level1" />
-            <TextBlock x:Name="BatteryInspectionMessage"
-                       Text="Battery reports cannot detect swelling. Swelling requires human inspection."
-                       TextWrapping="Wrap"
-                       TextTrimming="None" />
+        FontSize="16"
+        FocusManager.FocusedElement="{Binding ElementName=IntakeButton}">
+  <Window.Resources>
+    <Style TargetType="TextBlock">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="TextTrimming" Value="None" />
+    </Style>
+    <Style TargetType="Button">
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Margin" Value="0,4,0,4" />
+    </Style>
+    <Style TargetType="GroupBox">
+      <Setter Property="Margin" Value="0,8,0,8" />
+      <Setter Property="Padding" Value="12" />
+      <Setter Property="BorderBrush" Value="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}" />
+    </Style>
+  </Window.Resources>
+  <ScrollViewer x:Name="ShellScroll" Padding="16"
+                VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                Focusable="True" KeyboardNavigation.IsTabStop="False"
+                AutomationProperties.Name="Workflow review, scrollable content">
+    <StackPanel x:Name="ShellContent" MaxWidth="1000">
+      <TextBlock Text="ThirdLife Setup Core" FontSize="26" FontWeight="SemiBold"
+                 AutomationProperties.HeadingLevel="Level1" />
+      <TextBlock Text="Review the refurbishment workflow" Margin="0,4,0,4" />
+      <TextBlock Text="No job is open. Reviewing a stage does not complete it or authorize device changes." />
+      <Button x:Name="SkipToReviewButton" Click="SkipToReview" AutomationProperties.Name="Skip to stage review">
+        <TextBlock Text="Skip to stage review" />
+      </Button>
+      <Grid x:Name="WorkflowLayout" SizeChanged="ResizeWorkflow">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition x:Name="NavigationColumn" Width="*" />
+          <ColumnDefinition Width="0" x:Name="ReviewColumn" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+      <GroupBox x:Name="WorkflowStages" Header="Workflow stages" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                AutomationProperties.Name="Workflow stages"
+                AutomationProperties.HelpText="Use Page Down and Page Up to read stage requirements. Intake and Inspect are available for review; later stages are unavailable.">
+        <StackPanel>
+          <Button x:Name="IntakeButton" Click="ShowIntake" AutomationProperties.AutomationId="StageIntake"
+                  AutomationProperties.Name="1. Intake, review requirements">
+            <TextBlock Text="1. Intake — review requirements" />
+          </Button>
+          <TextBlock Text="Required: an external sanitization record and a current allowing gate decision." />
+          <Button x:Name="InspectButton" Click="ShowInspect" AutomationProperties.AutomationId="StageInspect"
+                  AutomationProperties.Name="2. Inspect, review requirements">
+            <TextBlock Text="2. Inspect — review requirements" />
+          </Button>
+          <TextBlock Text="Required: an open job with accepted sanitization before any assessment can run." />
+          <Button x:Name="DecideButton" IsEnabled="False" AutomationProperties.Name="3. Decide, unavailable">
+            <TextBlock Text="3. Decide — unavailable" />
+          </Button>
+          <TextBlock x:Name="DecideCriteria" Text="Required: assessment evidence, a versioned policy and an explained disposition. Decision controls are not yet available." />
+          <Button x:Name="PrepareButton" IsEnabled="False" AutomationProperties.Name="4. Prepare, unavailable">
+            <TextBlock Text="4. Prepare — unavailable" />
+          </Button>
+          <TextBlock x:Name="PrepareCriteria" Text="Required: an eligible disposition and an approved plan showing changes, privileges, network use, disk space, restart and recovery. Preparation controls are not yet available." />
+          <Button x:Name="VerifyButton" IsEnabled="False" AutomationProperties.Name="5. Verify, unavailable">
+            <TextBlock Text="5. Verify — unavailable" />
+          </Button>
+          <TextBlock x:Name="VerifyCriteria" Text="Required: recorded action outcomes and independent checks, including restart checks where needed. Verification controls are not yet available." />
+          <Button x:Name="HandoverButton" IsEnabled="False" AutomationProperties.Name="6. Handover, unavailable">
+            <TextBlock Text="6. Handover — unavailable" />
+          </Button>
+          <TextBlock x:Name="HandoverCriteria" Text="Required: completed verification, finalization, reports and human sign-off. Handover controls are not yet available." />
         </StackPanel>
-    </ScrollViewer>
+      </GroupBox>
+      <StackPanel x:Name="ReviewContent" Grid.Row="1">
+      <GroupBox x:Name="StageReview" Header="Stage review" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                AutomationProperties.Name="{Binding StageHeading}" AutomationProperties.HelpText="{Binding StageSummary}">
+        <StackPanel>
+          <TextBlock x:Name="StageHeading" Text="{Binding StageHeading}" FontSize="22" FontWeight="SemiBold"
+                     AutomationProperties.HeadingLevel="Level2" />
+          <TextBlock Text="{Binding StageSummary}" Margin="0,6,0,0" />
+          <GroupBox x:Name="RequirementsRegion" Header="Requirements" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                    AutomationProperties.Name="Requirements" AutomationProperties.HelpText="{Binding RequirementsText}">
+            <TextBlock x:Name="RequirementsText" Text="{Binding RequirementsText}" />
+          </GroupBox>
+          <GroupBox x:Name="EvidenceRegion" Header="Evidence" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                    AutomationProperties.Name="Evidence" AutomationProperties.HelpText="{Binding EvidenceText}">
+            <TextBlock x:Name="EvidenceText" Text="{Binding EvidenceText}" />
+          </GroupBox>
+          <GroupBox x:Name="PlanRegion" Header="Plan" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                    AutomationProperties.Name="Plan" AutomationProperties.HelpText="{Binding PlanText}">
+            <TextBlock x:Name="PlanText" Text="{Binding PlanText}" />
+          </GroupBox>
+          <Expander x:Name="EvidenceDetails" Header="How to read evidence" AutomationProperties.Name="How to read evidence">
+            <TextBlock Margin="8" Text="Observed means a provider collected a fact. Human confirmed means a person recorded a check. Inferred means a conclusion was drawn from facts. Not available means evidence is missing. Evidence alone does not establish a policy pass, readiness or hardware certification." />
+          </Expander>
+        </StackPanel>
+      </GroupBox>
+      <GroupBox x:Name="ActivityRegion" Header="Activity" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                AutomationProperties.Name="Activity" AutomationProperties.HelpText="{Binding ActivityText}">
+        <StackPanel>
+          <TextBlock x:Name="ActivityAnnouncement" Text="{Binding ActivityText}"
+                     AutomationProperties.Name="{Binding ActivityText}" AutomationProperties.LiveSetting="Polite" />
+          <ProgressBar x:Name="ActivityProgress" Height="16" Margin="0,8,0,0"
+                       Minimum="0" Maximum="{Binding ProgressMaximum}" Value="{Binding ProgressValue, Mode=OneWay}"
+                       IsIndeterminate="{Binding IsIndeterminate}"
+                       AutomationProperties.Name="Operation progress" AutomationProperties.HelpText="{Binding ActivityText}">
+            <ProgressBar.Style>
+              <Style TargetType="ProgressBar">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </ProgressBar.Style>
+          </ProgressBar>
+        </StackPanel>
+      </GroupBox>
+      <GroupBox x:Name="BatterySafetyRegion" Header="Battery safety" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                AutomationProperties.Name="Battery safety information" AutomationProperties.HelpText="{Binding Text, ElementName=BatteryInspectionMessage}">
+        <StackPanel>
+          <TextBlock x:Name="BatteryInspectionHeading" Text="Human inspection required" FontWeight="SemiBold"
+                     AutomationProperties.HeadingLevel="Level2" />
+          <TextBlock x:Name="BatteryInspectionMessage" Text="Battery reports cannot detect swelling. Swelling requires human inspection." />
+        </StackPanel>
+      </GroupBox>
+      <TextBlock x:Name="StatusAnnouncement" Text="{Binding StatusText}" Margin="0,8,0,0"
+                 AutomationProperties.Name="{Binding StatusText}" AutomationProperties.LiveSetting="Polite" />
+      <Button x:Name="ReturnToStagesButton" Click="ReturnToStages" AutomationProperties.Name="Return to workflow stages">
+        <TextBlock Text="Return to workflow stages" />
+      </Button>
+      </StackPanel>
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
 </Window>

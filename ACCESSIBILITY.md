@@ -31,6 +31,14 @@ The complete **Intake → Inspect → Decide → Prepare → Verify → Handover
 
 Use standard WPF controls where practical. Custom controls require explicit UI Automation peers, keyboard behavior, and focused regression tests.
 
+The TL-0113 [review shell](docs/ui/accessible-shell.md) exposes Intake and Inspect,
+three named review regions, textual unavailable-stage criteria and the battery warning.
+Standard controls retain native keyboard focus and automation peers. Navigation and typed
+activity updates use polite live regions; fixtures exercise progress without collecting
+device evidence. The [source-bound human procedure](artifacts/evidence/TL-0113/human-walkthrough.md)
+records the shell portions of A11Y-001–A11Y-007. Its pending fields are not completed human
+evidence; the complete operator journey remains a later integration/gate obligation.
+
 ## 3. Recipient-controlled accessibility setup
 
 Core 1.0 may guide a present recipient through supported Windows settings such as text scaling, contrast, keyboard accessibility, pointer size/speed, screen reader, captions, speech input, mono audio, language, and keyboard layout.

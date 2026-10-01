@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "task": "TL-0113",
+  "source_base": "d4ec836719746c659f12ca851f9890d62c76bfa7",
+  "files_sha256": {
+    "eng/run-tl0102-sandbox-guest.ps1": "7982cb3b68f37a66a76282fd227abff86825050ae462174e5e47d2820e9b6f39",
+    "eng/run-tl0102-sandbox.ps1": "d167158d3e64842c3efb27969933d9f51d2e1495bc411c8cb0d695c085a177f1",
+    "eng/run-ui-smoke.ps1": "29fbf80960d56f23247ae093c0797be35a617eac5f71c5119c584be5b689a5d4",
+    "eng/test-manifest.json": "8a2fbd49abf8b38994f4edb995c51682f37a46cac6b330a257ab4aa2219d29c4",
+    "src/ThirdLife.UI/App.xaml": "d42919639b2bf1f1390c94830b6ab7085af7b29798374cab035aa1ae57266181",
+    "src/ThirdLife.UI/App.xaml.cs": "e718dd1fdda297ebcb5e6c00097317f88c74ea400a3c7e88382035c5eae28df3",
+    "src/ThirdLife.UI/MainWindow.xaml": "0bffd61adf7e7a8be934d5e78b6b381519f5fda9bcbc6efa7257721e106dd7ab",
+    "src/ThirdLife.UI/MainWindow.xaml.cs": "1bfe68a73c4603b09ccf29c364cb51943072981f76addcfda339cd00ac7a8674",
+    "src/ThirdLife.UI/Shell/ShellViewModel.cs": "2bd3a7ae898ffe4c397c191299e0cbd43777fd404dabdfda560bb1e6e3ed8ca5",
+    "src/ThirdLife.UI/Shell/StartupSafety.cs": "34becb7e8367156115591d08cee44bb784d0b9f7b4f87e07355c7e6194e557a3",
+    "src/ThirdLife.UI/ThirdLife.UI.csproj": "cda72306db6e936d4d88a93982bffb7ffb9c29cc518f2ed6580414003045953b",
+    "src/ThirdLife.UI/app.manifest": "196593382ff1edfb4df0d634927233d547312103055ca2cfffa9c66e29f5a771",
+    "tests/ThirdLife.UI.Tests/BatteryInspectionTests.cs": "ae7852876367b76585cc7e808e59b0b4c0dedb18159a17ca210092f97ce2c227",
+    "tests/ThirdLife.UI.Tests/ShellAccessibilityTests.cs": "2f70f7b1b0203426ee8cbd4274427cf9c38e152d941d9af4f64a302d9ec802c3",
+    "tests/ThirdLife.UI.Tests/ShellProcessSmokeTests.cs": "2e9fcd7d81c203f4568c5ebb7fce1098426e98783717d6a5606ed345ed2b9990",
+    "tests/ThirdLife.UI.Tests/ShellStateTests.cs": "50eaf80f6d1732b4bc8866c2f294a7b440edbcef631997d887a4a9e5ad7416d0",
+    "tests/ThirdLife.UI.Tests/ShellTestHost.cs": "41e4117c9eff106e09492495b8d157708b136e4fec218d3547744e438a92ef2a",
+    "tests/ThirdLife.UI.Tests/StartupSafetyTests.cs": "09871032c0ac2318e8fe707dac8bb480de4fa236f8a9006da1e9f1430183b2f8",
+    "tools/tests/test_sandbox_harness.py": "092a0302b2670a6e0ba4d69b018daeaf6597f7521d2aed32c2315faea7bee83f",
+    "tools/tests/test_validate_repository.py": "590048a7342e5bce9a9a69b805fc75faf5793cfc74dd5419f699f5b59e90df08",
+    "tools/validate_repository.py": "d77353600c9f4d0ea745298774cff364ed23fe385b830580f515cf5b78f6580d",
+    "docs/testing/reference-machine-profile.md": "e9863c3ca84a46d14843fd7d1bbd8a83d63f4ba2ead250951e14735affede7a9"
+  },
+  "claim": "Synthetic fixtures and same-machine observations only."
+}
