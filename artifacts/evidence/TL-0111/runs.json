@@ -98,10 +98,32 @@
       "duration_seconds": 283.387,
       "passed_tests": 261,
       "result": "Passed; no failures/skips."
+    },
+    {
+      "id": "sandbox-committed-targeted",
+      "tier": "Targeted including Quick",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Targeted -EvidenceTaskId TL-0111 -PersistEvidence",
+      "duration_seconds": 180.917,
+      "verification_duration_seconds": 123.805,
+      "source_commit": "eb83e4f26c292498f2d9223f12a3adeea402f1bc",
+      "source_digest": "6698f9a5abf53009c424f2a9fa0bfc30d3fa3fd2700e8ef28c49aa21cad853e6",
+      "result_sha256": "de72c6d4f1556480c06907cf83b324b93006ea9b11d27bbc9388a9d3279af3e1",
+      "artifact": "artifacts/audit/TL-0111/targeted-6698f9a5abf53009c424f2a9fa0bfc30d3fa3fd2700e8ef28c49aa21cad853e6-8a37b41b14584678cb826f3be495c5a2.json",
+      "manifest": "artifacts/audit/TL-0111/targeted-6698f9a5abf53009c424f2a9fa0bfc30d3fa3fd2700e8ef28c49aa21cad853e6-8a37b41b14584678cb826f3be495c5a2.manifest.json",
+      "result": "Passed; tracked-clean committed source unchanged. Quick governance/format/build Core79/Inventory824/UI3 then targeted Inventory824/UI3, no failures/skips. 4 GiB same-machine Sandbox; governed NuGet audit networking. Verified bounded evidence and cleanup; no direct-host policy compatibility claim."
+    },
+    {
+      "id": "final-handoff-controls",
+      "tier": "Quick governance after evidence-only edits",
+      "command": "python tools/validate_bundle.py; python tools/validate_repository.py; git diff --check; structural TASKS comparison; source/workload SHA-256 comparison",
+      "duration_seconds": 3.479,
+      "result": "Passed. Initial handoff validation caught Windows-default text decoding changing UTF-8 punctuation; restored explicitly as UTF-8. STATUS URL rejected by its path guard and replaced with PR number. Only TL-0111 status/evidence changed; all implementation, test and harness hashes match the passing committed-source Quick/Targeted snapshot."
     }
   ],
   "broader_tiers": {
     "full": "Not triggered: no gate, major refactor, migration, dependency/engine change or task trigger.",
     "extended": "Not triggered: bounded deterministic provider/lifecycle cases run in targeted; no endurance or host mutation scenario."
-  }
+  },
+  "implementation_commit": "eb83e4f26c292498f2d9223f12a3adeea402f1bc",
+  "remote_ci": "PR-triggered supplementary check started on implementation eb83e4f26c292498f2d9223f12a3adeea402f1bc; remote runtime is not required evidence. Final state can be inspected on PR #12."
 }

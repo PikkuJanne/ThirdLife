@@ -4,7 +4,7 @@
 **Bundle baseline:** 0.4.0  
 **Runtime authority:** active Codex machine only; remote CI is supplementary  
 **Current milestone:** M1 — Audit-only vertical slice  
-**Current task:** TL-0111 — Implement network and key-device enumeration; in progress
+**Current task:** TL-0111 — Implement network and key-device enumeration; done, integration pending
 
 ## Continuity
 
@@ -22,20 +22,22 @@ Implemented fixed local read-only network and device-class sources with bounded 
 evidence, per-class errors, explicit unknown states and separate functional-test semantics.
 Network identities, personal device names and endpoint paths are excluded.
 
-Baseline25, focused201, interface-absence regression3 and active-machine smoke1 passed.
-Host Targeted passed governance/format/build, Core79 and Inventory824, then Windows
+Baseline 25, focused 201, interface-absence regression 3 and active-machine smoke 1 passed.
+Host Targeted passed governance/format/build, Core 79 and Inventory 824, then Windows
 Application Control blocked the unchanged UI assembly (0x800711C7). A single-test
-reproduction confirmed the load failure. Same-machine Sandbox Targeted passed in137.344s
-(199.616s total), including Quick and Core79/Inventory824/UI3 with zero skips. Python
-governance261 passed in283.387s. No control or test is disabled. Full/Extended are not triggered.
+reproduction confirmed the load failure. Committed-source same-machine Sandbox Targeted
+passed in 123.805s (180.917s total), including Quick and Core 79 / Inventory 824 / UI 3 with zero
+failures/skips. Python governance 261 passed in 283.387s. No control or test is disabled.
+Full/Extended are not triggered. PR-triggered remote CI is supplementary and is not required evidence.
 
-Durable evidence: `artifacts/evidence/TL-0111/report.md`, `runs.json`, `active-machine.json`.
-Network WMI denied0x80041003 remains unknown; other class evidence is retained. Presence
+Implementation `eb83e4f26c292498f2d9223f12a3adeea402f1bc` is pushed and source-bound.
+Durable evidence: `artifacts/evidence/TL-0111/`; result/manifest: `artifacts/audit/TL-0111/`.
+Network WMI denied 0x80041003 remains unknown; other class evidence is retained. Presence
 never substitutes for functional tests or proves physical absence outside the source scope.
 
 ## Next action
 
-Commit/push the tested snapshot, capture durable committed-source Sandbox verification,
-then prepare the normal TL-0111 PR into main.
-Next dependency-ready task after completion: **TL-0112 — Implement the read-only assessment orchestrator**.
+Normal PR #12 is open into main.
+Merge it before selecting the next product task.
+Next dependency-ready task: **TL-0112 — Implement the read-only assessment orchestrator**.
 Do not start it until TL-0111 is integrated into updated main.

@@ -4,7 +4,7 @@
 **Branch:** `codex/tl-0111-device-enumeration`  
 **Base:** `72c26dc808e9b24a6fb6dd431f205957eb41fd58`  
 **Runtime authority:** active Codex machine only  
-**Status:** implementation verified; committed-source Sandbox evidence pending
+**Status:** done; normal PR integration pending
 
 ## Continuity and scope
 
@@ -49,8 +49,24 @@ Sandbox/manifest contract suite passed 40 tests in 93.418 seconds. Preflight pas
 The existing D-070 runner gained only TL-0111 Quick/Targeted declarative profiles and
 their exact allowlist contracts. A 4 GiB same-machine guest restores locked dependencies;
 networking is restricted by purpose to governed NuGet audit. Source/harness/configuration
-hashes, bounded results, timeouts and cleanup remain enforced. The next run binds durable
-evidence to the committed tested snapshot; it is a source-continuity check.
+hashes, bounded results, timeouts and cleanup remain enforced.
+
+Committed-source Targeted passed in 123.805 seconds (180.917 seconds total), with the same
+79/824/3 and 824/3 counts, zero failures/skips and a zero-warning Release build. The
+tracked-clean source was unchanged throughout the run. Its bound implementation commit is
+`eb83e4f26c292498f2d9223f12a3adeea402f1bc`; source digest is
+`6698f9a5abf53009c424f2a9fa0bfc30d3fa3fd2700e8ef28c49aa21cad853e6`.
+The append-only result and manifest under `artifacts/audit/TL-0111/` retain hashes for source,
+history, harness, guest configuration, locked package closure and the bounded sanitized
+result. Result SHA-256 is
+`de72c6d4f1556480c06907cf83b324b93006ea9b11d27bbc9388a9d3279af3e1`.
+Runner cleanup completed. No raw guest output or machine identities were retained.
+Final handoff changes only task state and evidence; all implementation/test/harness input
+hashes still match the verified snapshot. Fresh bundle/repository controls check that handoff.
+PR-triggered remote CI is supplementary and is not required evidence. A final handoff edit initially decoded
+UTF-8 as the Windows default encoding, changing punctuation in three unrelated YAML lines
+and the report title. Bundle validation caught it; explicit UTF-8 restored the text. A
+structural comparison confirms only TL-0111 status/evidence differ from the checkpoint.
 
 Full is not triggered: no milestone/release gate, major refactor, migration or dependency
 change. Extended is not triggered: task trigger lists are empty, and bounded lifecycle,
@@ -100,6 +116,11 @@ Detailed source meanings, recovery, API references and exclusions are in
 
 ## Handoff
 
-Committed source binding and normal PR publication are pending. TL-0112 is the next
-dependency-ready task after completion; it must wait for this
-task's PR to merge into main.
+Implementation `eb83e4f26c292498f2d9223f12a3adeea402f1bc` was pushed and verified against
+upstream. The final evidence checkpoint preserves its tested implementation. Normal
+[PR #12](https://github.com/PikkuJanne/ThirdLife/pull/12) is open; this task is not yet
+integrated into main. TL-0112 is dependency-ready
+but must wait for this task's PR to merge into updated main. No owner approval, human
+walkthrough or release sign-off is required by TL-0111. The known host-policy and source
+availability limits remain documented. One compact task entry points to durable evidence;
+STATUS remains a current snapshot.
