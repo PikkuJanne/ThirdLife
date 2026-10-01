@@ -35,6 +35,9 @@ endurance, cross-hardware or direct-host policy compatibility claim.
 
 ## Integration and next action
 
-Publish/review the normal `codex/tl-0109-battery-report` PR and merge it into updated main.
+Normal PR #10 in PikkuJanne/ThirdLife is open from
+`codex/tl-0109-battery-report` to main. Implementation and committed evidence are pushed;
+review and merge remain pending. Tracked work is clean at publication; only the documented
+unrelated Word reference remains untracked.
 Only then start TL-0110 — Implement UEFI, Secure Boot, and TPM inventory. No branch retirement,
 PR closure, release or sibling work is authorized by this task. Remote CI is supplementary.

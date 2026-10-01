@@ -137,5 +137,11 @@ SDK 10.0.400, Python 3.14.7, Git 2.56.0.windows.1, the locked dependency closure
 same-machine guest. `inputs.sha256` binds 28 runtime source/test/profile/toolchain inputs.
 Later completion records change documentation/evidence only; those runtime hashes remain exact.
 
-One normal PR targets main; integration is pending. Do not start the next dependency-ready task,
+[Normal PR #10](https://github.com/PikkuJanne/ThirdLife/pull/10) targets main. Implementation
+and evidence are pushed, with local/upstream equality verified. Integration is pending; no
+branch was retired. Only the documented unrelated Word reference remains untracked. Remote
+CI is supplementary. The task uses one compact YAML evidence entry, a current STATUS snapshot
+and six detailed evidence/audit files totaling less than 40 KiB.
+
+Do not start the next dependency-ready task,
 `TL-0110 — Implement UEFI, Secure Boot, and TPM inventory`, until TL-0109 is merged.
