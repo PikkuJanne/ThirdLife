@@ -1,7 +1,7 @@
 # TL-0110 — UEFI, Secure Boot and TPM inventory
 
 **Date:** 2026-10-01  
-**State:** Done; normal pull request/default-branch integration pending  
+**State:** Done; [normal PR #11](https://github.com/PikkuJanne/ThirdLife/pull/11) open, default-branch integration pending  
 **Branch:** `codex/tl-0110-firmware-security`  
 **Base:** `104664eb4d226fbc59d5b834ea5f862756ebc63f`  
 **Authority:** active Codex machine only; remote CI supplementary
@@ -58,7 +58,8 @@ the application does not elevate to fill it.
 
 Targeted passed in 60.823 s (62.466 s including command startup): Quick controls, format,
 zero-warning Release solution build, 79 Core / 625 Inventory / 3 UI tests, followed by
-625 Inventory tests again. Zero failures or skips. Exact commands, durations, failed
+625 Inventory tests again. Final handoff Quick passed in 52.583 s (54.245 s command),
+with the same 79/625/3 counts. Zero failures or skips. Exact commands, durations, failed
 attempts and final tier results are in `runs.json`.
 Focused tests first covered native parsing and normalization; lifecycle tests then covered
 manual-clock timeout, admission through cancellation, cleanup precedence, later-source
@@ -84,6 +85,7 @@ No sibling, data/migration, persistence/export or release-interface change is in
 
 ## Handoff
 
-The normal pull request must merge into main before TL-0111 begins. No prior PR is closed,
+Implementation commit `98175080554ec7bf74ee4dc7e1358655adf449c1` was pushed, then verified
+against upstream and live remote. Normal PR #11 must merge into main before TL-0111 begins. No prior PR is closed,
 branch deleted, history rewritten or next task started by this work. One compact task
 evidence entry points here; detailed evidence stays out of `STATUS.md` and `TASKS.yaml`.

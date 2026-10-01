@@ -11,7 +11,7 @@
 TL-0109 PR #10 is merged into main `104664eb4d226fbc59d5b834ea5f862756ebc63f`.
 Its head `14cbe14` is an ancestor. Local main fast-forwarded before creation of
 `codex/tl-0110-firmware-security`; all dependencies are done. No completed-task stack.
-TL-0110 requires one normal pull request into main before the next roadmap task begins.
+TL-0110 normal PR #11 is open into main. Implementation commit `98175080554ec7bf74ee4dc7e1358655adf449c1` is pushed and remote-verified. Merge PR #11 before the next roadmap task begins.
 
 The SSH origin is unchanged; fetch/push use the documented process-scoped HTTPS bridge.
 Prior branches and the unrelated untracked Word reference remain untouched. No sibling
@@ -34,6 +34,6 @@ and `inputs.json`. One compact task entry; detailed logs remain outside the hand
 
 ## Next action
 
-Publish/review/merge the normal TL-0110 pull request, then fetch and verify main ancestry.
+Review/merge normal PR #11, then fetch and verify main ancestry.
 Next dependency-ready task: **TL-0111 — Implement network and key-device enumeration**.
 Do not start it until TL-0110 is integrated into updated main.

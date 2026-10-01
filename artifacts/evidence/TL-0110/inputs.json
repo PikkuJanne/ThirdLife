@@ -2,7 +2,7 @@
   "task": "TL-0110",
   "date": "2026-10-01",
   "method": "SHA256 of exact working-tree bytes; C# CRLF, Markdown LF; synthetic workloads reside in test source. Aggregate hashes sorted digest-two-spaces-path-LF rows.",
-  "aggregate_sha256": "e8db0549d1f41c93b0ec238b4606f99d786af27f7964c4940ff32cf064b5bdec",
+  "aggregate_sha256": "128dc0ca68ddff331fec14f8a53b5c35645ff9c224604e352a3c63a2278dc8b6",
   "files": [
     {
       "path": "docs/inventory/firmware-security.md",
@@ -27,6 +27,22 @@
     {
       "path": "src/ThirdLife.Inventory/Windows/FirmwareWmiValueReader.cs",
       "sha256": "60107ea17f5b200f594add8ba74b0d81a6f7e03aadb8b79896ab6829a04977b4"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/SmbiosHardwareSecurityParser.cs",
+      "sha256": "553b0eed32ca89ccff7ca01de30d6ed8d937b4f3761ed51101288f16a8a633ce"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/SmbiosInventoryParser.cs",
+      "sha256": "4a3499cc899d20f9ef4b619408723fd8daaa58633def691feed9c24db845336e"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/StorageWmiInterop.cs",
+      "sha256": "b81507a0d524353053322c06864913642a4bcde75a9b6f5c3ce3e2dc8cffeda0"
+    },
+    {
+      "path": "src/ThirdLife.Inventory/Windows/StorageWmiValueReader.cs",
+      "sha256": "9c968a8d2db4fb0125c9dbb1fac422ddbebfa96f2db5f13342e54422279f5b7c"
     },
     {
       "path": "src/ThirdLife.Inventory/Windows/SystemInventorySource.cs",
