@@ -132,6 +132,8 @@
     "full": "Not triggered: additive coordinator composes unchanged provider runner and SQLite engine; no migration, dependency change, major refactor, gate or explicit task trigger.",
     "extended": "Not triggered: bounded cancellation, order permutations, worker constraints and independently selected child-process interruption cases fit Targeted; no endurance or broad host constraint."
   },
-  "pending": "Normal PR publication and merge; next product task awaits integration.",
-  "implementation_commit": "5e7454e7ca8cb683aae97fad9df6671e6134399c"
+  "pending": "Merge normal PR #13 into main before TL-0113; no required TL-0112 evidence remains.",
+  "implementation_commit": "5e7454e7ca8cb683aae97fad9df6671e6134399c",
+  "pull_request": "https://github.com/PikkuJanne/ThirdLife/pull/13",
+  "remote_ci_classification": "supplementary"
 }

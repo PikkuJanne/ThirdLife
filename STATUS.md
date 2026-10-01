@@ -11,7 +11,7 @@
 TL-0111 PR #12 is merged into main `bbdc15f403f6ca28e8ee57e9404c85988a8d5141`.
 Branch `codex/tl-0112-assessment-orchestrator` started from updated main; all dependencies
 are done. Implementation `5e7454e7ca8cb683aae97fad9df6671e6134399c` is pushed and verified.
-Normal TL-0112 PR publication is pending; this task is not integrated into main.
+Normal PR #13 is open against main; this task is not yet integrated.
 The SSH origin remains unchanged; synchronization uses the process-scoped HTTPS bridge.
 Prior branches and the unrelated untracked Word reference remain untouched.
 
@@ -34,5 +34,5 @@ New normalized records use existing schema 3; no migration, sibling or released-
 
 ## Next action
 
-Publish and merge the normal TL-0112 PR, then synchronize main. The next dependency-ready
+Merge normal PR #13, then synchronize main. The next dependency-ready
 task is TL-0113 — Build the accessible six-stage WPF shell. Do not start it before integration.

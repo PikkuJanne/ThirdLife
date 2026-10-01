@@ -118,6 +118,7 @@ Implementation contract: `docs/inventory/assessment-orchestration.md`. One compa
 entry points to four task evidence files and two bounded Sandbox files; STATUS remains a
 current snapshot. No new raw logs or captured personal data are committed.
 
-Normal PR publication is the remaining handoff step; merge it before TL-0113, the next
-dependency-ready task. No required TL-0112 human evidence remains. Full/Extended trigger
+Normal [PR #13](https://github.com/PikkuJanne/ThirdLife/pull/13) is open against main.
+The branch is not yet integrated; merge it before TL-0113, the next dependency-ready task.
+Remote CI is supplementary; required active-machine verification is complete. No required TL-0112 human evidence remains. Full/Extended trigger
 rationale and host-policy/resource limitations above remain part of this completed task.
