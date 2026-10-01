@@ -2638,9 +2638,9 @@ tasks:
     tier: targeted
     result: Core 83, Inventory 901 and UI 43 passed with zero failures/skips; Python 275 passed. Human keyboard, screen-reader and display-setting results pending.
     environment: REF-CODEX-001 revision 2026-08-29.1; current host Windows 26300, PowerShell 7.6.5, SDK 10.0.400; 4 GiB same-machine Sandbox; locked restore/audit; host security unchanged.
-    duration: Transient shared Targeted 144.926s including Quick; whole guest 201.735s; Python 349.394s. Exact attempts and committed-source follow-up are in runs.json.
-    reference: artifacts/evidence/TL-0113/report.md, runs.json, inputs.json and human-walkthrough.md; transient result SHA256 2135d383e6c4ced8f40e003125b38f41ed3bfae4e949d178f65de4a0ebca8325.
-    limitation: Review-only shell; no live job/assessment composition. Host xUnit loader blocked by Application Control 0x800711C7; Sandbox components pass. Human evidence and source-bound final verification remain pending.
+    duration: Committed shared Targeted 142.152s including Quick; whole guest 197.982s; Python 349.394s; host smoke 2.472s. Exact attempts are in runs.json.
+    reference: Verified source 518744b751c531680e24a99b964c3b05a9b7c434; artifacts/evidence/TL-0113/report.md, runs.json, inputs.json, host-smoke.json and human-walkthrough.md; artifacts/audit/TL-0113; result SHA256 9c56558396248f3e82e1191b6a69e613c0150eae1c1819708a932b2896582b3c.
+    limitation: Review-only shell; no live job/assessment composition. Host xUnit loader blocked by Application Control 0x800711C7; Sandbox components pass. Human keyboard/screen-reader and actual display-setting evidence remains pending; no cross-hardware claim.
   human_evidence_required:
   - A human records keyboard-only and screen-reader smoke-test results.
   expected_test_tier: targeted

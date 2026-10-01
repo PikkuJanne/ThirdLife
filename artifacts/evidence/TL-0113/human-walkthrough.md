@@ -7,6 +7,20 @@
 
 ## Bind the result to the build
 
+The verified Release build is from `518744b751c531680e24a99b964c3b05a9b7c434` on
+`codex/tl-0113-accessible-shell`. Its apphost SHA-256 is
+`cb2d204146ee7dbb3b2bbffa83495646fdc1832ba859f4b9ea4545618c6955a8` and UI DLL SHA-256 is
+`eab61e2df46c8ef41f845a358f0db5347dae8afc2864742be243e386b4046861`.
+Evidence-only follow-up commits retain that tested source; use these existing Release files
+and verify the hashes. If you rebuild, record the new source/artifact hashes and rerun the
+smoke before the walkthrough. Human result fields below are still pending.
+
+Launch the verified build from a normal terminal:
+
+```powershell
+& .\src\ThirdLife.UI\bin\Release\net10.0-windows\ThirdLife.UI.exe
+```
+
 Use a normal, unelevated terminal and a committed build supplied with this task. Before
 starting, record the following. Use an opaque reviewer label and role, not a personal name.
 Record only sanitized version/settings information; omit usernames, machine names,

@@ -112,6 +112,56 @@
       "network_reason": "governed_nuget_audit",
       "cleanup": "verified_by_runner",
       "limitation": "Transient dirty-source result; committed-source verification follows."
+    },
+    {
+      "scenario": "sandbox_targeted_committed",
+      "tier": "targeted_including_quick",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Targeted -EvidenceTaskId TL-0113 -PersistEvidence",
+      "result": "passed",
+      "source_commit": "518744b751c531680e24a99b964c3b05a9b7c434",
+      "counts": {
+        "core": 83,
+        "inventory": 901,
+        "ui": 43
+      },
+      "ui_repeated_by_targeted": true,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 197.982,
+      "shared_tier_duration_seconds": 142.152,
+      "source_digest": "263de2b7993af873d14ad4f7168dbcb08eadc99bfaa2c63837539b09b900ac42",
+      "result_sha256": "9c56558396248f3e82e1191b6a69e613c0150eae1c1819708a932b2896582b3c",
+      "artifact": "artifacts/audit/TL-0113/targeted-263de2b7993af873d14ad4f7168dbcb08eadc99bfaa2c63837539b09b900ac42-e2e968c249c2358e02bbfc9783b46b78.json",
+      "environment": "same_machine_windows_sandbox_4096MiB",
+      "cleanup": "verified_by_runner",
+      "limitation": "Human keyboard/screen-reader and real display settings remain pending; ActiveMachine xUnit cases intentionally excluded by unchanged filter."
+    },
+    {
+      "scenario": "direct_host_smoke_script_first_invocation",
+      "tier": "targeted",
+      "command": "powershell -NoProfile -File eng/run-ui-smoke.ps1",
+      "result": "blocked_before_launch",
+      "limitation": "Windows PowerShell execution policy rejected the script. The corrected invocation uses the same process-scoped ExecutionPolicy argument as the governed Sandbox harness; no persistent policy setting changes."
+    },
+    {
+      "schema_version": 1,
+      "task": "TL-0113",
+      "date": "2026-10-01",
+      "scenario": "shell_startup_external_uia_navigation",
+      "result": "passed",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File eng/run-ui-smoke.ps1",
+      "source_commit": "518744b751c531680e24a99b964c3b05a9b7c434",
+      "tracked_source_clean": true,
+      "apphost_sha256": "cb2d204146ee7dbb3b2bbffa83495646fdc1832ba859f4b9ea4545618c6955a8",
+      "assembly_sha256": "eab61e2df46c8ef41f845a358f0db5347dae8afc2864742be243e386b4046861",
+      "standard_user_token": true,
+      "rendering": "default_wpf",
+      "cleanup": "normal_exit",
+      "elapsed_to_observation_ms": 2355,
+      "peak_working_set_bytes": 269774848,
+      "cpu_ms": 906.25,
+      "total_elapsed_ms": 2472,
+      "limitation": "Automated UIA status observation only; no human screen-reader or event-callback delivery claim."
     }
   ]
 }

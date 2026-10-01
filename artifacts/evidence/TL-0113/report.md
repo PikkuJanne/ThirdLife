@@ -3,6 +3,7 @@
 **Date:** 2026-10-01  
 **Branch:** `codex/tl-0113-accessible-shell`  
 **Base:** `d4ec836719746c659f12ca851f9890d62c76bfa7`  
+**Verified implementation:** `518744b751c531680e24a99b964c3b05a9b7c434`  
 **Status:** review — required human keyboard and screen-reader evidence pending  
 **Runtime authority:** active Codex machine; remote CI is supplementary
 
@@ -53,8 +54,14 @@ Exact commands, durations, failed attempts, environment and result digests are i
 - Direct-host UIA smoke observes standard-user startup, Inspect navigation and changed
   textual status, then normal close. It uses installed Windows UI Automation because
   Application Control blocks the rebuilt xUnit assembly; it does not change that policy.
-- Committed-source Sandbox verification and the final source-bound host smoke follow the
-  implementation checkpoint. Their durable result files will be linked here at handoff.
+- Committed-source Sandbox Targeted including Quick passed the same Core 83, Inventory 901
+  and UI 43 cases with no failures/skips: shared tier **142.152s**, whole guest **197.982s**.
+  The [result](../../audit/TL-0113/targeted-263de2b7993af873d14ad4f7168dbcb08eadc99bfaa2c63837539b09b900ac42-e2e968c249c2358e02bbfc9783b46b78.json)
+  and matching manifest bind source `518744b`, source/package hashes and verified cleanup.
+  Result SHA-256: `9c56558396248f3e82e1191b6a69e613c0150eae1c1819708a932b2896582b3c`.
+- The source-bound [host smoke](host-smoke.json) passed in **2.472s**, with **269,774,848 bytes**
+  peak working set and **906.25ms** CPU time; cleanup was a normal exit. The report includes
+  the exact apphost/assembly hashes. It does not prove spoken or callback event delivery.
 - Full: not triggered. This is the initial scoped shell under the explicit Targeted task
   contract, with no major refactor, migration, dependency/engine change or release gate.
 - Extended: not triggered. Small software-rendering/scaling fixtures run in Targeted;
@@ -90,7 +97,7 @@ NuGet audit. Source/package bindings, bounded output and cleanup remain enforced
 
 The shell retains six fixed stages and one bounded activity projection (0–16 work units).
 It has no polling, operation worker, history collection or application-managed cache/disk
-growth. Loaded shell tests explicitly select software rendering. The direct-host observation
+growth. The new shell accessibility tests explicitly select software rendering. The direct-host observation
 records default WPF rendering, elapsed time, CPU time and peak working set; this includes
 startup/UIA overhead and establishes no resource budget or minimum hardware specification.
 OS/runtime cache behavior is not measured. No other hardware or assistive technology is certified.
@@ -103,6 +110,7 @@ runner: the existing guest cannot supply the required direct-host standard-user 
 ## Human handoff and next task
 
 Complete the source-bound [human walkthrough](human-walkthrough.md). The hybrid task stays
-`review` until the required results exist. Publish the normal draft PR; merge only after the
-task's evidence is complete. TL-0114 depends on TL-0113 and is not ready. No next product task
+`review` until the required results exist. The normal draft PR is the integration path; merge only after the task's evidence is complete. TL-0114 depends on TL-0113 and is not ready. No next product task
 was started. Live task evidence is a compact reference; detailed results remain here.
+
+Follow-up evidence commits change only documentation, task execution fields and bound result artifacts; production/test/runner source remains the verified implementation above.

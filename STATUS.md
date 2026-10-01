@@ -20,11 +20,12 @@ The six-stage review shell now separates requirements, evidence and plan. Intake
 navigation creates no evidence, policy pass or approval; later stages retain readable criteria.
 Startup requires a standard-user token. No database, provider, network or broker is opened.
 
-Transient same-machine Sandbox Quick/Targeted passed Core 83, Inventory 901 and UI 43,
-zero failures/skips: shared tier 144.926s / guest 201.735s. Python governance passed 275
+Committed-source same-machine Sandbox Quick/Targeted passed Core 83, Inventory 901 and UI 43,
+zero failures/skips: shared tier 142.152s / guest 197.982s. Python governance passed 275
 in 349.394s. The direct-host apphost/UIA observation passed; Application Control 0x800711C7
-blocks the rebuilt xUnit assembly. Host security is unchanged. Committed-source verification
-follows this implementation checkpoint. Full/Extended were not triggered.
+blocks the rebuilt xUnit assembly. Host security is unchanged. Verified implementation
+`518744b751c531680e24a99b964c3b05a9b7c434` is pushed. Host smoke passed in 2.472s with
+normal cleanup. Full/Extended were not triggered.
 
 Durable evidence: `artifacts/evidence/TL-0113/report.md`, `runs.json`, `inputs.json` and the
 source-bound `human-walkthrough.md`. Human keyboard, screen-reader and actual display-setting
@@ -32,6 +33,6 @@ results remain pending. The complete durable operator audit flow is still requir
 
 ## Next action
 
-Verify the committed checkpoint, publish the draft PR and complete required human keyboard
-and screen-reader evidence before marking TL-0113 done. TL-0114 is blocked by TL-0113;
+Publish the draft PR and complete required human keyboard/screen-reader and display-setting
+evidence before marking TL-0113 done. Merge the task before continuing from main. TL-0114 is blocked by TL-0113;
 do not start another task. The complete durable audit flow remains necessary at TL-0116.

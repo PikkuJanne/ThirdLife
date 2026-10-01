@@ -124,7 +124,7 @@ screen-reader review. The Sandbox runs with a different token, so the standard-u
 apphost observation remains separate from its component tests.
 
 ```powershell
-powershell -NoProfile -File eng/run-ui-smoke.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File eng/run-ui-smoke.ps1
 ```
 
 The shell does not yet compose a durable operator audit journey. Before the TL-0116 M1
