@@ -1,6 +1,6 @@
 schema_version: 1
-bundle_version: 0.4.0
-generated_on: '2026-09-30'
+bundle_version: 0.5.0
+generated_on: '2026-11-24'
 project:
   name: ThirdLife
   component: ThirdLife Setup Core
@@ -141,8 +141,10 @@ milestones:
   - The normal flow makes no system changes and runs unelevated.
   - Missing evidence remains unknown and normalized observations are deterministic across synthetic/captured fixtures and
     the active machine.
-  - A representative operator completes the available workflow on the active Codex machine; unavailable hardware capabilities
-    are handled truthfully and exercised through deterministic states.
+  - A representative operator completes the integrated audit workflow in the tested active-machine scenario and acknowledges
+    that scope. One applicable manual observation and labelled unavailable/failure examples are sampled at TL-0116, with
+    deterministic coverage for remaining capabilities and transitions.
+  - The project owner records a separate decision on the M1 gate.
   - No claim of broad hardware coverage or certification is made.
 - id: M2
   name: Explainable disposition engine
@@ -2602,7 +2604,7 @@ tasks:
   workstream: ui
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: hybrid
   environment: windows
@@ -2629,11 +2631,42 @@ tasks:
   - Unavailable later stages are visibly disabled without hiding criteria.
   verification:
   - Run UI automation smoke tests.
-  - Complete the audit shell with keyboard only.
-  - Test Narrator/NVDA, high contrast, and 200% scaling.
-  evidence: []
+  - Codex prepares and rehearses the verified shell and records build identity, environment, timing and case results.
+  - Review keyboard focus, navigation, semantics and announcements in one keyboard-only Narrator journey. Repeat the applicable
+    speech cases separately if an approved NVDA configuration is already available and report unavailable configurations.
+  - Check actual 200% Windows scaling, a supported reduced resolution and a Windows contrast theme with focused interactions.
+    Restore the starting settings and record the result for each applicable shell case independently.
+  evidence:
+  - task: TL-0113
+    date: '2026-10-01'
+    command: Same-machine Sandbox Targeted including Quick; loaded WPF automation/focus/scaling/activity fixtures; direct-host apphost UIA smoke; Python governance.
+    tier: targeted
+    result: Core 83, Inventory 901 and UI 43 passed with zero failures/skips; Python 275 passed. Human keyboard, screen-reader and display-setting results pending.
+    environment: REF-CODEX-001 revision 2026-08-29.1; current host Windows 26300, PowerShell 7.6.5, SDK 10.0.400; 4 GiB same-machine Sandbox; locked restore/audit; host security unchanged.
+    duration: Committed shared Targeted 142.152s including Quick; whole guest 197.982s; Python 349.394s; host smoke 2.472s. Exact attempts are in runs.json.
+    reference: Verified source 518744b751c531680e24a99b964c3b05a9b7c434; artifacts/evidence/TL-0113/report.md, runs.json, inputs.json, host-smoke.json and human-walkthrough.md; artifacts/audit/TL-0113; result SHA256 9c56558396248f3e82e1191b6a69e613c0150eae1c1819708a932b2896582b3c.
+    limitation: Review-only shell; no live job/assessment composition. Host xUnit loader blocked by Application Control 0x800711C7; Sandbox components pass. Human keyboard/screen-reader and actual display-setting evidence remains pending; no cross-hardware claim.
+  - task: TL-0113
+    date: '2026-11-24'
+    command: Amendment governance regression, active-host Targeted including Quick, zero-discovery canary and shell setup rehearsal.
+    tier: targeted
+    result: Core 83, Inventory 901 and UI 43 passed with zero failures/skips and UI ran once. Governance passed 278 tests and no-match discovery failed as required.
+    environment: REF-CODEX-001 revision 2026-08-29.1 on Windows 11 build 26300 with SDK 10.0.400 and an isolated same-machine worktree.
+    duration: Targeted 101.017s, complete governance 321.827s, discovery canary 3.435s.
+    reference: artifacts/evidence/TL-0113/amendment-verification.md and artifacts/evidence/TL-0113/human-walkthrough.md.
+    limitation: Human shell observations and post-session restoration are pending. No M1 gate decision or cross-hardware claim.
+  - task: TL-0113
+    date: '2026-11-24'
+    command: Prepared human shell check mapped to A11Y-001 through A11Y-007 and Codex settings restoration.
+    tier: targeted
+    result: The shell reviewer confirmed all four groups passed, including both display modes. Codex verified the original settings restored.
+    environment: REF-CODEX-001 revision 2026-08-29.1, standard-user Windows 11 build 26300, built-in Narrator, 200% scale, reduced resolution and Aquatic contrast.
+    duration: About 10 minutes handoff to confirmation and 55 seconds settings restoration. Hands-on review time unmeasured.
+    reference: artifacts/evidence/TL-0113/human-walkthrough.md, verified shell source 518744b751c531680e24a99b964c3b05a9b7c434.
+    limitation: Shell scope only. NVDA unavailable. Integrated operator flow, live progress and M1 owner decision are outside this observation.
   human_evidence_required:
-  - A human records keyboard-only and screen-reader smoke-test results.
+  - A human observes the prepared keyboard-only and Narrator journey and the actual display-setting checks for the applicable
+    shell portions of A11Y-001 through A11Y-007. Codex maps the real observations to individual cases and records any limitations.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
@@ -2645,11 +2678,12 @@ tasks:
   priority: P0
   status: backlog
   size: L
-  executor: hybrid
+  executor: codex
   environment: windows
   depends_on:
   - TL-0101
   - TL-0111
+  - TL-0112
   - TL-0113
   decision_refs:
   - D-015
@@ -2662,31 +2696,43 @@ tasks:
   - D-065
   - D-066
   objective: Provide guided, resumable human-test capture for keyboard, pointer, display, audio, microphone, camera, network,
-    charging, sleep/wake, and representative ports without requiring a hardware lab.
+    charging, sleep/wake, and representative ports without requiring a hardware lab. Compose the unelevated job, external
+    sanitization evidence, read-only assessment, and manual capture workflow through the existing services.
   deliverables:
   - src/ThirdLife.UI/Features/ManualTests
+  - src/ThirdLife.UI/Shell
   - src/ThirdLife.Core/ManualTests
   - tests/ThirdLife.Core.Tests/ManualTestTests.cs
+  - tests/ThirdLife.UI.Tests
   acceptance_criteria:
-  - Each test records pass, fail, not tested, or not available plus operator, timestamp, notes, and evidence class.
+  - Each test records Pass, Fail, Not run, or Not available with operator, timestamp, notes, evidence class and the required
+    unavailable reason. Not run is the canonical meaning of the earlier wording not tested.
   - Detected presence does not automatically pass a functional test.
   - The workflow can pause and resume without rewriting completed evidence.
   - No test starts destructive stress, changes firmware/security ownership controls, or writes unknown removable media.
   - Instructions are usable without a mouse and not color-dependent.
   - All state transitions and capability-absent/equipment-unavailable paths are deterministically testable without possessing
     each hardware class.
-  - A bounded host-machine walkthrough may exercise only capabilities actually available on the active Codex machine and cannot
-    be represented as broad hardware validation.
+  - The unelevated operator UI creates and opens durable jobs without recipient identity. Reopening restores committed evidence
+    and manual-test progress.
+  - The operator records real external sanitization evidence in the durable job and can see its gate outcome. The existing gate
+    refuses assessment when evidence is missing or fails validation and gives a clear next action. Navigation grants no
+    assessment access. Synthetic sanitization never unlocks live collection on an unsanitized host.
+  - Read-only assessment starts asynchronously without blocking navigation. Cancellation requested and confirmed cancellation
+    have distinct states, and committed partial results remain truthful and recoverable.
+  - Provider failures, unavailable facts and incomplete work stay explicit and never pass requirements or establish readiness.
+  - New controls expose meaningful names, logical keyboard focus, readable errors and text states that distinguish unavailable
+    functions from unmet job prerequisites.
   verification:
   - Unit/property-test all state transitions, resume, evidence preservation, prohibited-result promotion, and unavailable-reason
     validation.
-  - Run keyboard/accessibility smoke checks and a bounded operator walkthrough on the active Codex machine for available capabilities;
-    use deterministic fixtures for absent capabilities.
+  - Automate service-to-UI integration for job create/open/reopen, sanitization capture and gate acceptance or refusal, provider
+    failure and timeout, cancellation, restart/reopen, evidence preservation, and manual-state transitions with bounded
+    deterministic fixtures.
+  - Run keyboard and UI Automation checks for the reachable controls. Prepare the operator scenario and labelled unavailable and
+    failure examples for the integrated TL-0116 human usability review.
   - Verify an essential failure remains a blocker candidate and Not available never becomes Pass.
   evidence: []
-  human_evidence_required:
-  - A representative operator completes the guided workflow on the active Codex machine for available capabilities and reviews
-    the simulated unavailable/failure paths; the record explicitly limits the evidence to that machine and workflow usability.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
@@ -2714,21 +2760,28 @@ tasks:
   - D-061
   - D-063
   objective: Render a deterministic workshop report that separates observations, unavailable evidence, and human-confirmed
-    tests without machine changes.
+    tests without machine changes. Let the operator generate and open the report from the durable job in the UI.
   deliverables:
   - src/ThirdLife.Reports/WorkshopReport
   - tests/ThirdLife.Reports.Tests
   - fixtures/expected-reports/M1
+  - src/ThirdLife.UI/Shell
+  - tests/ThirdLife.UI.Tests
   acceptance_criteria:
   - Full device identity appears only in the workshop privacy class.
   - Every item shows evidence class, provider/operator, and timestamp.
   - Unknown values remain visible and never appear passed.
   - Recipient identity is not required.
   - Output is stable for identical job data.
+  - The operator generates a report directly from durable job data including partial and unavailable results, with their evidence
+    class, provenance or operator, and time intact.
+  - The UI opens the generated artifact through a bounded, typed path. Write failures, inaccessible destinations and filename
+    collisions leave existing output intact and give a clear outcome. Opening the report conveys no readiness approval.
   verification:
   - Golden-file test synthetic reports.
   - Scan outputs for prohibited data.
   - Compare a report with its job record.
+  - Verify deterministic generation and opening through the UI on success and on write, destination, collision and opening failures.
   evidence: []
   expected_test_tier: targeted
   full_test_triggers: []
@@ -2769,17 +2822,29 @@ tasks:
   - Missing evidence remains unknown.
   - Jobs survive process termination and reopen.
   - Normal logs exclude prohibited personal data.
-  - Keyboard-only and screen-reader smoke tests are recorded.
+  - Keyboard-only and screen-reader observations are recorded for the completed audit flow and new or changed interactions.
+    Applicable unchanged shell observations carry forward with their original provenance. Actual display questions receive focused checks.
+  - A representative operator completes the integrated audit journey, records one representative applicable manual observation,
+    reviews clearly labelled unavailable/failure examples, and confirms pause/resume or close/reopen usability. Remaining capability
+    variants and state transitions have automated coverage. The operator acknowledges that the observations cover only the tested
+    active-machine scenario.
+  - If a safe physical sample is unavailable, a clearly labelled fixture may show workflow usability with the unobserved physical
+    function recorded as a limitation. Synthetic sanitization never authorizes live assessment against an unsanitized real host,
+    and fixture-derived observations stay separate from real-device evidence.
   verification:
   - Run the complete audit flow on the active Codex machine or a clean Windows environment hosted on it, using deterministic
     fixtures for unavailable hardware variants.
-  - Run the documented quick/targeted checks and bundle validation.
+  - Rehearse create/open, sanitization, read-only assessment, manual capture, close/reopen and report generation/opening on the
+    prepared safe scenario. Resolve functional failures before inviting the operator. Verify durable persistence, cancellation/recovery,
+    report accuracy and unelevated operation automatically where possible.
+  - Run the documented Full gate verification, applicable Quick/Targeted checks and bundle validation.
   - Inspect logs, database, temporary paths, and report for prohibited data and unsupported claims.
   evidence: []
   human_evidence_required:
   - Project owner approves the M1 gate record.
-  - A representative operator completes the audit flow on the active Codex machine and acknowledges the limits of single-machine
-    evidence.
+  - A representative operator completes the prepared combined audit, manual-capture and accessibility review on the active Codex
+    machine or a safe Windows environment hosted on it, with the actual usability observations mapped to the gate criteria.
+  - The operator explicitly acknowledges that the observations cover only the tested active-machine scenario.
   expected_test_tier: full
   full_test_triggers:
   - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.

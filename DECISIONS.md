@@ -1,12 +1,12 @@
 # ThirdLife Setup Core — Frozen Decision Register
 
-**Bundle version:** 0.4.0  
-**Generated:** 2026-09-30  
+**Bundle version:** 0.5.0  
+**Generated:** 2026-11-24  
 **Status:** Binding for the Team B/B1 ThirdLife Setup Core roadmap
 
 ## Purpose and authority
 
-This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, modest-hardware, testing, continuity, and delivery choices that Codex must treat as constraints rather than suggestions. Revision 0.3.1 preserves the ThirdLife Software Portfolio v2.1 single-machine and risk-based testing baseline and records the approved unique ADR-number reservation for the future TL-0401 WinGet backend decision.
+This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, modest-hardware, testing, continuity, and delivery choices that govern Codex work. Revision 0.5.0 adds the owner's decision on human testing and bounded continuation. Earlier decisions and approved amendments retain their provenance.
 
 When implementation pressure conflicts with a decision here, stop, record the conflict, and request an explicit human decision. Do not silently reinterpret a frozen decision.
 
@@ -112,6 +112,7 @@ Codex may propose an amendment, but it may not declare one approved.
 | [D-070](#d-070) | Reusable test runners and declarative profiles |
 | [D-071](#d-071) | Evidence ownership and deterministic reconciliation |
 | [D-072](#d-072) | Versioned and stale-safe lifecycle knowledge |
+| [D-073](#d-073) | Focused human testing and bounded continuation |
 
 ## Decisions
 
@@ -897,3 +898,21 @@ used. Refreshing lifecycle data does not retroactively rewrite earlier evidence 
 offline-behavior decision.
 
 <!-- END V0.4.0 REPOSITORY STABILIZATION DECISIONS -->
+
+<a id="d-073"></a>
+
+### D-073 — Human testing answers a concrete question and bounded assignments continue through integration
+
+**Decision.** Automated checks are the default for implementation verification. Ask for human testing only when a concrete unresolved perception, usability or physical-observation question affects a decision. Accountable owner and risk approvals require an actual decision from the designated person. Record automated results, human observations and approvals distinctly.
+
+**Rationale.** Objective checks and technical administration can run before a review. They can establish startup, state transitions and accessibility semantics. Perceived speech, actual display usability and operator judgment need attributable observations where required.
+
+**Implementation constraint.** Codex owns the verified build and starting state, route rehearsal, privacy-safe build and environment identity, timing, prepared settings and restoration, case mapping, and durable evidence. Every handoff identifies the question, brief action, time estimate, affected decision and retest trigger. Combine overlapping observations in one session and record each case independently. Carry forward valid unchanged evidence with original provenance, and retest failed, changed or genuinely new interactions. Required observations and approvals remain pending until received.
+
+Keep one active task and branch at a time and merge before starting the next task under D-067. Within the expressly assigned sequence TL-0113 through TL-0116, Codex continues after integration without a separate conversational stop at each task. The prepared TL-0113 observation, the integrated TL-0116 observations and owner gate decision, a concrete external blocker, and evidenced M1 completion are the handoff points for this assignment. Later milestones retain their governing requirements and need their own execution scope.
+
+Each diagnostic repeat identifies the changed input or expected new information. After two materially identical uninformative attempts, use a different approach or record the unresolved limitation and continue independent work. Keep triggered quality gates, active-machine validation, host security and supplementary remote CI in force.
+
+**Approved amendment.** On 24 November 2026, project owner Janne Vuorela authorized `AMD-2026-11-24-MINIMAL-HUMAN-TESTING` and routine work through evidenced M1 completion. The [amendment record](docs/amendments/2026-11-24-minimal-human-testing.md) defines the scope, transferred TL-0114 human acceptance and evidence treatment.
+
+**Revisit trigger.** A later bounded assignment may consolidate human procedures while preserving their explicit owners and decisions. A change to a governed acceptance criterion requires an approved synchronized amendment under D-045.

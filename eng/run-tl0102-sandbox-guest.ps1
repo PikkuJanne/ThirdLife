@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepositoryStabilizationTaskId = "AMD-2026-09-12-REPOSITORY-STABILIZATION"
-$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "TL-0111", "TL-0112", $RepositoryStabilizationTaskId)
+$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "TL-0111", "TL-0112", "TL-0113", $RepositoryStabilizationTaskId)
 $TaskId = "Unavailable"
 $ResultSchemaVersion = 2
 $SandboxMemoryMb = 4096
@@ -746,6 +746,10 @@ function Get-CommandTimeoutSeconds {
         $Label -eq "tl0112-shared-quick") { return 180 }
     if ($EvidenceTaskId -eq "TL-0112" -and $SelectedPhase -eq "Targeted" -and
         $Label -eq "tl0112-shared-targeted") { return 600 }
+    if ($EvidenceTaskId -eq "TL-0113" -and $SelectedPhase -eq "Quick" -and
+        $Label -eq "tl0113-shared-quick") { return 180 }
+    if ($EvidenceTaskId -eq "TL-0113" -and $SelectedPhase -eq "Targeted" -and
+        $Label -eq "tl0113-shared-targeted") { return 600 }
     return $CommandTimeoutSeconds
 }
 
@@ -904,6 +908,9 @@ function Assert-RunRequest {
     if ($RunRequest.task_id -eq "TL-0112" -and $RunRequest.phase -notin @("Quick", "Targeted")) {
         throw "The TL-0112 run request requires the shared Quick or Targeted profile."
     }
+    if ($RunRequest.task_id -eq "TL-0113" -and $RunRequest.phase -notin @("Quick", "Targeted")) {
+        throw "The TL-0113 run request requires the shared Quick or Targeted profile."
+    }
     if ($RunRequest.run_id -isnot [string] -or $RunRequest.run_id -notmatch "^[0-9a-f]{32}$" -or
         $RunRequest.expected_head_commit -isnot [string] -or $RunRequest.expected_head_commit -notmatch "^[0-9a-f]{40}$") { throw "The run request contains an invalid source identity." }
     foreach ($digestName in @("expected_source_digest", "history_bundle_sha256", "repository_status_sha256", "launcher_sha256", "runner_sha256", "sandbox_config_sha256", "nuget_closure_sha256", "python_packages_sha256")) {
@@ -912,10 +919,10 @@ function Assert-RunRequest {
     foreach ($booleanName in @("expected_tracked_clean", "source_history_included", "networking_enabled", "nuget_audit_enabled")) {
         if ($RunRequest.$booleanName -isnot [bool]) { throw "The run request contains an invalid Boolean." }
     }
-    $historyRequired = $RunRequest.phase -in @("Quick", "Full") -or $RunRequest.task_id -eq "TL-0109" -or $RunRequest.task_id -eq "TL-0111" -or $RunRequest.task_id -eq "TL-0112"
+    $historyRequired = $RunRequest.phase -in @("Quick", "Full") -or $RunRequest.task_id -eq "TL-0109" -or $RunRequest.task_id -eq "TL-0111" -or $RunRequest.task_id -eq "TL-0112" -or $RunRequest.task_id -eq "TL-0113"
     if ($RunRequest.source_history_included -ne $historyRequired -or ($RunRequest.nuget_package_count -isnot [int] -and $RunRequest.nuget_package_count -isnot [long]) -or
         $RunRequest.nuget_package_count -lt 0 -or $RunRequest.nuget_package_count -gt $MaxNuGetPackages) { throw "The run request contains an unsafe history or package-count value." }
-    $sharedProfile = ($RunRequest.task_id -eq "TL-0107" -and $RunRequest.phase -eq "Quick") -or $RunRequest.task_id -eq "TL-0109" -or $RunRequest.task_id -eq "TL-0111" -or $RunRequest.task_id -eq "TL-0112"
+    $sharedProfile = ($RunRequest.task_id -eq "TL-0107" -and $RunRequest.phase -eq "Quick") -or $RunRequest.task_id -eq "TL-0109" -or $RunRequest.task_id -eq "TL-0111" -or $RunRequest.task_id -eq "TL-0112" -or $RunRequest.task_id -eq "TL-0113"
     if ($sharedProfile -and $RunRequest.nuget_package_count -eq 0) { throw "The shared verifier profile requires the complete locked package closure." }
     $auditRequired = $RunRequest.phase -eq "Full" -or $sharedProfile
     if ($RunRequest.networking_enabled -ne $auditRequired -or $RunRequest.nuget_audit_enabled -ne $auditRequired -or
@@ -1012,7 +1019,7 @@ function Assert-PythonPackages {
     )
     if ((Get-SourceDigest -Root $Path) -ne $RunRequest.python_packages_sha256) { throw "The mapped Python package digest does not match the request." }
     $items = @(Get-ChildItem -LiteralPath $Path -Force -ErrorAction Stop)
-    if ($RunRequest.phase -notin @("Quick", "Full") -and $RunRequest.task_id -ne "TL-0109" -and $RunRequest.task_id -ne "TL-0111" -and $RunRequest.task_id -ne "TL-0112") {
+    if ($RunRequest.phase -notin @("Quick", "Full") -and $RunRequest.task_id -ne "TL-0109" -and $RunRequest.task_id -ne "TL-0111" -and $RunRequest.task_id -ne "TL-0112" -and $RunRequest.task_id -ne "TL-0113") {
         if ($items.Count -ne 0) { throw "A focused phase received an unnecessary Python package." }
         return
     }
@@ -1079,6 +1086,18 @@ function Invoke-SharedVerifierProfile {
         $verificationArguments = @(
             "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
             "& '.\eng\verify.ps1' -Tier Targeted -TestProject @('tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj', 'tests\ThirdLife.Core.Tests\ThirdLife.Core.Tests.csproj', 'tests\ThirdLife.Persistence.Tests\ThirdLife.Persistence.Tests.csproj', 'tests\ThirdLife.UI.Tests\ThirdLife.UI.Tests.csproj') -Restore"
+        )
+    }
+    elseif ($EvidenceTaskId -eq "TL-0113" -and $SelectedPhase -eq "Quick") {
+        $restoreLabel = "locked-quick-restore-and-audit"
+        $verificationLabel = "tl0113-shared-quick"
+    }
+    elseif ($EvidenceTaskId -eq "TL-0113" -and $SelectedPhase -eq "Targeted") {
+        $restoreLabel = "locked-targeted-restore-and-audit"
+        $verificationLabel = "tl0113-shared-targeted"
+        $verificationArguments = @(
+            "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+            "& '.\eng\verify.ps1' -Tier Targeted -TestProject @('tests\ThirdLife.UI.Tests\ThirdLife.UI.Tests.csproj') -Restore"
         )
     }
     else { throw "The shared verifier task and tier do not match an allowlisted profile." }
@@ -1299,7 +1318,7 @@ try {
 
     Push-Location $workDirectory
     try {
-        if ($phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111" -or $TaskId -eq "TL-0112") {
+        if ($phase -in @("Quick", "Full") -or $TaskId -eq "TL-0109" -or $TaskId -eq "TL-0111" -or $TaskId -eq "TL-0112" -or $TaskId -eq "TL-0113") {
             $pythonVersionCommand = Invoke-BoundedCommand -Label "python-version" -FilePath $pythonExecutable -Arguments @("-c", "import platform; print(platform.python_version())") -SuccessMarker "3.14.7"
             if ($pythonVersionCommand.exit_code -ne 0 -or -not $pythonVersionCommand.marker_found) { $failureCode = "python_bootstrap_failed"; throw "The mapped Python runtime is not the governed version." }
             $pythonVersion = "3.14.7"
@@ -1313,7 +1332,7 @@ try {
             Invoke-RequiredCommand -Label "python-package-version" -FilePath $venvPython -Arguments @("-c", "import yaml; print(yaml.__version__)") -Failure "python_bootstrap_failed" -SuccessMarker "6.0.3"
         }
 
-        if ($TaskId -in @($RepositoryStabilizationTaskId, "TL-0107", "TL-0109", "TL-0111", "TL-0112")) {
+        if ($TaskId -in @($RepositoryStabilizationTaskId, "TL-0107", "TL-0109", "TL-0111", "TL-0112", "TL-0113")) {
             Invoke-SharedVerifierProfile -DotnetExecutable $dotnetExecutable -NuGetConfigPath $nugetConfig -EvidenceTaskId $TaskId -SelectedPhase $phase
         }
         elseif ($phase -eq "Targeted" -and $TaskId -eq "TL-0104") {

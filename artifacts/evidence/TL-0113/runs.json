@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "task": "TL-0113",
+  "date": "2026-10-01",
+  "authority": "active_codex_machine",
+  "runs": [
+    {
+      "scenario": "pre_edit_ui_baseline",
+      "tier": "targeted_baseline",
+      "command": "dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj --configuration Release --no-restore --nologo",
+      "result": "passed",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 7.476,
+      "environment": "active_machine_direct_host"
+    },
+    {
+      "scenario": "shell_state_focused",
+      "tier": "quick_focused",
+      "command": "dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj --no-restore --filter FullyQualifiedName~ShellStateTests --verbosity minimal",
+      "result": "passed",
+      "passed": 24,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 5.018,
+      "environment": "active_machine_direct_host_debug"
+    },
+    {
+      "scenario": "initial_loaded_window_regression",
+      "tier": "targeted_focused",
+      "result": "failed",
+      "passed": 7,
+      "failed": 12,
+      "duration_seconds": 4.996,
+      "environment": "active_machine_direct_host_debug",
+      "defect": "ProgressBar.Value default TwoWay binding rejected read-only ProgressValue at Window.Show; corrected to explicit OneWay."
+    },
+    {
+      "scenario": "corrected_activity_release",
+      "tier": "targeted_focused",
+      "command": "dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj --configuration Release --no-restore --no-build --filter FullyQualifiedName~ActivityFixturesUpdateLiveTextProgressAndRecoveryWithoutClaimingReadiness --nologo",
+      "result": "blocked_before_discovery",
+      "duration_seconds": 3.111,
+      "environment": "active_machine_direct_host_release",
+      "limitation": "Host Application Control 0x800711C7 blocked UI.Tests.dll. No test executed; no security policy changed."
+    },
+    {
+      "scenario": "runner_governance_focused",
+      "tier": "targeted",
+      "command": ".venv/Scripts/python.exe -m unittest tools.tests.test_sandbox_harness tools.tests.test_validate_repository",
+      "result": "passed",
+      "passed": 78,
+      "failed": 0,
+      "duration_seconds": 160.298,
+      "environment": "active_machine_direct_host"
+    },
+    {
+      "scenario": "direct_host_uia_observation_preliminary",
+      "tier": "targeted",
+      "result": "passed",
+      "duration_seconds": 6.924,
+      "peak_working_set_bytes": 290009088,
+      "cpu_ms": 953.125,
+      "environment": "active_machine_direct_host_standard_user",
+      "cleanup": "normal_exit",
+      "limitation": "Uncommitted-source preliminary observation; changed UIA status observed. No screen-reader/human/event-delivery claim."
+    },
+    {
+      "scenario": "sandbox_targeted_initial",
+      "tier": "targeted",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Targeted -EvidenceTaskId TL-0113",
+      "result": "failed_formatting_before_tests",
+      "duration_seconds": 121.916,
+      "shared_tier_duration_seconds": 59.38,
+      "environment": "same_machine_windows_sandbox_4096MiB",
+      "source_digest": "791b8a211b1ffec0167e1750dffffd325f89ab33d4a275187cb2b4d657bd204e",
+      "result_sha256": "679a8aac0e084b023a9fef0bceba46695717bc1adf2c6eebafe465799d5e1322",
+      "defect": "ShellTestHost initializer whitespace; fixed with full-solution dotnet format, then verify-no-changes passed.",
+      "cleanup": "verified_by_runner"
+    },
+    {
+      "scenario": "complete_python_governance",
+      "tier": "targeted_governance",
+      "command": ".venv/Scripts/python.exe -m unittest discover -s tools/tests -p test_*.py",
+      "result": "passed",
+      "passed": 275,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 349.394,
+      "whole_command_seconds": 350.596,
+      "environment": "active_machine_direct_host"
+    },
+    {
+      "scenario": "sandbox_targeted_corrected_transient",
+      "tier": "targeted_including_quick",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Targeted -EvidenceTaskId TL-0113",
+      "result": "passed",
+      "counts": {
+        "core": 83,
+        "inventory": 901,
+        "ui": 43
+      },
+      "ui_repeated_by_targeted": true,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 201.735,
+      "shared_tier_duration_seconds": 144.926,
+      "source_digest": "bae315716f4227c567115ab7d111f6052c65f39c847cc17f4cacb511b4e77d41",
+      "result_sha256": "2135d383e6c4ced8f40e003125b38f41ed3bfae4e949d178f65de4a0ebca8325",
+      "environment": "same_machine_windows_sandbox_4096MiB",
+      "network_reason": "governed_nuget_audit",
+      "cleanup": "verified_by_runner",
+      "limitation": "Transient dirty-source result; committed-source verification follows."
+    },
+    {
+      "scenario": "sandbox_targeted_committed",
+      "tier": "targeted_including_quick",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File eng/run-tl0102-sandbox.ps1 -Phase Targeted -EvidenceTaskId TL-0113 -PersistEvidence",
+      "result": "passed",
+      "source_commit": "518744b751c531680e24a99b964c3b05a9b7c434",
+      "counts": {
+        "core": 83,
+        "inventory": 901,
+        "ui": 43
+      },
+      "ui_repeated_by_targeted": true,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 197.982,
+      "shared_tier_duration_seconds": 142.152,
+      "source_digest": "263de2b7993af873d14ad4f7168dbcb08eadc99bfaa2c63837539b09b900ac42",
+      "result_sha256": "9c56558396248f3e82e1191b6a69e613c0150eae1c1819708a932b2896582b3c",
+      "artifact": "artifacts/audit/TL-0113/targeted-263de2b7993af873d14ad4f7168dbcb08eadc99bfaa2c63837539b09b900ac42-e2e968c249c2358e02bbfc9783b46b78.json",
+      "environment": "same_machine_windows_sandbox_4096MiB",
+      "cleanup": "verified_by_runner",
+      "limitation": "Human keyboard/screen-reader and real display settings remain pending; ActiveMachine xUnit cases intentionally excluded by unchanged filter."
+    },
+    {
+      "scenario": "direct_host_smoke_script_first_invocation",
+      "tier": "targeted",
+      "command": "powershell -NoProfile -File eng/run-ui-smoke.ps1",
+      "result": "blocked_before_launch",
+      "limitation": "Windows PowerShell execution policy rejected the script. The corrected invocation uses the same process-scoped ExecutionPolicy argument as the governed Sandbox harness; no persistent policy setting changes."
+    },
+    {
+      "schema_version": 1,
+      "task": "TL-0113",
+      "date": "2026-10-01",
+      "scenario": "shell_startup_external_uia_navigation",
+      "result": "passed",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File eng/run-ui-smoke.ps1",
+      "source_commit": "518744b751c531680e24a99b964c3b05a9b7c434",
+      "tracked_source_clean": true,
+      "apphost_sha256": "cb2d204146ee7dbb3b2bbffa83495646fdc1832ba859f4b9ea4545618c6955a8",
+      "assembly_sha256": "eab61e2df46c8ef41f845a358f0db5347dae8afc2864742be243e386b4046861",
+      "standard_user_token": true,
+      "rendering": "default_wpf",
+      "cleanup": "normal_exit",
+      "elapsed_to_observation_ms": 2355,
+      "peak_working_set_bytes": 269774848,
+      "cpu_ms": 906.25,
+      "total_elapsed_ms": 2472,
+      "limitation": "Automated UIA status observation only; no human screen-reader or event-callback delivery claim."
+    }
+  ]
+}

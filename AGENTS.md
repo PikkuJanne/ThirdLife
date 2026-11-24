@@ -1,6 +1,6 @@
 # AGENTS.md — ThirdLife Setup Core Codex Operating Contract
 
-**Bundle version:** 0.4.0  
+**Bundle version:** 0.5.0  
 **Project:** ThirdLife Setup Core — Team B / B1  
 **Physical validation scope:** active Codex machine only
 
@@ -102,6 +102,9 @@ approved dependency sequence with a recorded collapse plan.
   hardware, accessibility, benchmark, gate, pilot, or release evidence.
 - The completed TL-0008 transition is historical; current selection comes from live
   `STATUS.md` and `TASKS.yaml`.
+- Within an explicitly assigned sequence, continue from verified updated `main` after each
+  completed task. Pause at prepared human checkpoints, a concrete external blocker, or the
+  end of the assignment. The authorized M1 sequence ends at TL-0116.
 
 ### Evidence-size discipline
 
@@ -142,6 +145,13 @@ When the user names a task, verify the dependency chain first. Do not implement 
 - `human`: Codex may prepare evidence/checklists but never marks the task `done`.
 
 Never fabricate a Windows run, host capability, cold boot, operator/recipient walkthrough, accessibility review, security/privacy approval, licence decision, partner rehearsal, or release sign-off.
+
+Default to automated verification. Request human participation only for a concrete unresolved
+perception, usability or physical observation, or an accountable owner decision. Prepare the
+verified build, starting state, short route and restoration before asking. Codex owns build and
+environment identification, timing, result mapping, troubleshooting and evidence updates. Keep
+automated results, human observations and owner decisions distinct. Reuse valid unchanged
+evidence and request retests only for the affected interaction, failed observation or new flow.
 
 ## 6. Allowed task-state edits
 
@@ -187,7 +197,10 @@ When a test fails:
 5. run the related targeted set; and
 6. rerun a broader tier only when its trigger applies or a shared cause is suspected.
 
-A blind rerun is not evidence. Flaky tests are defects; quarantine requires an owner, task, reason, risk, and removal condition.
+For every repeated diagnostic, record the hypothesis, changed input or expected new
+information. After two materially identical attempts that add no information, change the
+method or record the limitation and continue independent work. Flaky tests are defects.
+Quarantine requires an owner, task, reason, risk, and removal condition.
 
 Never disable analyzers, warnings-as-errors, security/provenance checks, accessibility checks, modest-hardware regression checks, or failing tests merely to obtain green status.
 
@@ -223,7 +236,9 @@ Never disable analyzers, warnings-as-errors, security/provenance checks, accessi
 5. Update task evidence/state and `STATUS.md`.
 6. Use `review` when required human evidence remains; `blocked` for a named blocker; `done` only for complete proof.
 7. Commit and push. Verify the remote contains the reported commit and the worktree is clean or explicitly documented.
-8. Report the next dependency-ready task but do not start it.
+8. Record the next dependency-ready task. Continue an assigned sequence after integration
+   and verification of `main`. At a genuine checkpoint, give the user the prepared check or
+   the specific blocker. A single-task assignment ends after its completion report.
 
 ## 9. Repository verification
 

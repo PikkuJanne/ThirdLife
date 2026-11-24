@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "task": "TL-0113",
+  "date": "2026-10-01",
+  "scenario": "shell_startup_external_uia_navigation",
+  "result": "passed",
+  "command": "powershell -NoProfile -ExecutionPolicy Bypass -File eng/run-ui-smoke.ps1",
+  "source_commit": "518744b751c531680e24a99b964c3b05a9b7c434",
+  "tracked_source_clean": true,
+  "apphost_sha256": "cb2d204146ee7dbb3b2bbffa83495646fdc1832ba859f4b9ea4545618c6955a8",
+  "assembly_sha256": "eab61e2df46c8ef41f845a358f0db5347dae8afc2864742be243e386b4046861",
+  "standard_user_token": true,
+  "rendering": "default_wpf",
+  "cleanup": "normal_exit",
+  "elapsed_to_observation_ms": 2355,
+  "peak_working_set_bytes": 269774848,
+  "cpu_ms": 906.25,
+  "total_elapsed_ms": 2472,
+  "limitation": "Automated UIA status observation only; no human screen-reader or event-callback delivery claim."
+}

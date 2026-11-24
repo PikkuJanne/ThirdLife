@@ -1,38 +1,33 @@
 # ThirdLife Setup Core — Current Handoff Status
 
-**Snapshot date:** 2026-10-01  
-**Bundle baseline:** 0.4.0  
+**Snapshot date:** 2026-11-24  
+**Bundle baseline:** 0.5.0  
 **Runtime authority:** active Codex machine only; remote CI is supplementary  
 **Current milestone:** M1 — Audit-only vertical slice  
-**Current task:** TL-0112 — Implement the read-only assessment orchestrator; done
+**Current task:** TL-0113 — Build the accessible six-stage WPF shell; done
 
 ## Continuity
 
-TL-0111 PR #12 is merged into main `bbdc15f403f6ca28e8ee57e9404c85988a8d5141`.
-Branch `codex/tl-0112-assessment-orchestrator` started from updated main; all dependencies
-are done. Implementation `5e7454e7ca8cb683aae97fad9df6671e6134399c` is pushed and verified.
-Normal PR #13 is open against main; this task is not yet integrated.
-The SSH origin remains unchanged; synchronization uses the process-scoped HTTPS bridge.
-Prior branches and the unrelated untracked Word reference remain untouched.
+PR #14 carries the completed TL-0113
+shell and the [owner-authorized amendment](docs/amendments/2026-11-24-minimal-human-testing.md).
+It began at integrated TL-0112 on `d4ec836719746c659f12ca851f9890d62c76bfa7`. Verify
+PR #14's merge commit on `main` before starting TL-0114. SSH origin, prior branches and
+the unrelated untracked Word reference are preserved.
 
 ## Outcome and evidence
 
-Bounded offline assessment now guards the exact sanitization decision at start, dispatch
-and transactional commits. Provider batches commit independently; interruption/cancellation
-preserves a truthful partial snapshot. Reruns append new identities. Evidence keys have
-exclusive owners; lifecycle revision/date observations remain immutable in history.
+The six-stage unelevated shell separates requirements, evidence and plan. The reviewer
+passed the applicable keyboard, Narrator and display checks in
+[A11Y-001–007](artifacts/evidence/TL-0113/human-walkthrough.md). Windows settings were restored.
 
-Committed-source Sandbox Quick/Targeted passed Core 83, Inventory 901, Persistence 113,
-UI 3 with zero failures/skips: shared tier 165.978s / whole guest 223.462s. Python governance
-passed 268 tests in 317.894s; focused assessment 77 and synthetic concurrency 1/4 metrics
-passed. Full/Extended were not triggered. Host Application Control 0x800711C7 blocks the
-rebuilt Persistence assembly; security policy is unchanged and Sandbox evidence is authoritative
-on this same machine. No human UI or cross-hardware claim is made.
-
-Durable evidence: `artifacts/evidence/TL-0112/report.md` and `artifacts/audit/TL-0112/`.
-New normalized records use existing schema 3; no migration, sibling or released-interface change.
+Active-host Targeted including Quick passed Core 83, Inventory 901 and UI 43 in 101.017s.
+The complete governance suite passed 278 tests in 321.827s. The supplementary hosted run
+hit an unchanged Inventory test's worker-entry deadline. Full and Extended were not
+triggered. [Verification and limitations](artifacts/evidence/TL-0113/amendment-verification.md)
 
 ## Next action
 
-Merge normal PR #13, then synchronize main. The next dependency-ready
-task is TL-0113 — Build the accessible six-stage WPF shell. Do not start it before integration.
+From updated `main`, run the TL-0114 baseline and implement the live audit UI through the
+existing job, sanitization and assessment services with guided manual capture. Proceed
+through TL-0115 reporting and TL-0116 integrated review and owner gate decision. Reuse
+the unchanged shell observations. The assignment ends at evidenced M1.

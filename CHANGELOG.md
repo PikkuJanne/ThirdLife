@@ -1,5 +1,13 @@
 # Roadmap Bundle Changelog
 
+## 0.5.0 — 2026-11-24
+
+- Added D-073 under [AMD-2026-11-24-MINIMAL-HUMAN-TESTING](docs/amendments/2026-11-24-minimal-human-testing.md), authorized by the project owner for the TL-0113 through TL-0116 sequence.
+- Codex prepares and records short human checks for concrete unresolved questions. Automated results, human observations and owner decisions retain separate provenance. Reuse valid unchanged observations and repeat only affected interactions.
+- Continue the assigned M1 work after each integration with one active task and branch. Keep the TL-0113 shell observation and the integrated TL-0116 operator review and owner decision as checkpoints.
+- TL-0114 becomes Codex-owned implementation, adds a direct dependency on TL-0112, and connects the audit workflow to the operator UI. Its operator usability review moves to TL-0116. TL-0115 adds operator UI report generation and opening.
+- Execute each identical project/filter selection in the same verifier invocation and environment once. Preserve zero-test failure detection and triggered quality gates.
+
 ## 0.4.0 — 2026-09-12
 
 Prepared 12 September; approved for application 30 September 2026. Merge remains pending owner review.

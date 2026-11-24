@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Modest-Hardware Engineering and Same-Machine Evidence
 
-**Bundle version:** 0.4.0  
+**Bundle version:** 0.5.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Physical validation scope:** active Codex machine only
 
@@ -101,6 +101,13 @@ A slower result may be acceptable. The following are not acceptable for a suppor
 - requiring a GPU or high concurrency to complete the core journey.
 
 ## 6. Hardware and provider coverage
+
+TL-0113's review shell keeps six fixed stages and one current presentation state, with no
+polling, retained progress history, provider worker or disk growth. Layout switches between
+two columns and a scrollable single column, using wrapped text and native controls.
+Activity counts are bounded to sixteen steps, and changed announcements are coalesced after
+binding updates. Software rendering and enlarged/reduced viewport fixtures are task evidence;
+they do not establish minimum hardware or human assistive-technology conformance.
 
 `TL-0112` limits an assessment to 16 providers and 1–4 workers (default one), retaining
 admission until native cleanup completes. Each provider commits independently, with at most

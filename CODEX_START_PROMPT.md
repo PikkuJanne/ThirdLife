@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Codex Start and Reusable Prompts
 
-**Bundle version:** 0.4.0  
+**Bundle version:** 0.5.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1
 
 ## 1. Prompt selection
@@ -9,16 +9,17 @@
   [approved stabilization](docs/amendments/2026-09-12-repository-stabilization.md)
   from live `STATUS.md` and the [review checklist](docs/reviews/2026-09-12-repository-review.md).
   Stop before merge and do not start `TL-0107` in that session.
-- **Normal product session after stabilization:** use the single-task prompt below.
+- **Normal product session after stabilization:** use the task execution prompt below.
 - **Defect, gate, security, accessibility, resource, recovery, or release work:** use the
   matching specialized prompt.
 
 The TL-0008 transition prompt is historical. Do not select it for normal current work.
 
-## 2. Normal single-task prompt
+## 2. Normal task execution prompt
 
 ```text
-Work on exactly one ThirdLife Setup Core task.
+Work on one ThirdLife Setup Core task at a time. Continue within an explicitly assigned
+sequence from updated main after each completed task is integrated.
 
 Start with DEVELOPMENT_WORKFLOW.md. Verify remote, branch, worktree, HEAD, upstream,
 divergence, and default-branch integration state. Fetch/prune safely.
@@ -55,10 +56,18 @@ Run Full/Extended only when triggered. Reduce failures to focused deterministic 
 Keep STATUS.md concise. Put detailed evidence in committed artifacts and reference it from
 TASKS.yaml.
 
+Ask for human participation only for a concrete unresolved observation or decision.
+Prepare and rehearse the exact build, settings, restoration and short journey. Own all
+metadata, timing, case mapping and evidence updates. Keep automated results, human
+observations and owner decisions distinct. Carry forward valid unchanged evidence.
+
 Commit and push coherent checkpoints. Open/update the task pull request. Do not start the
 next roadmap task until this task is integrated into main.
 
-End with the AGENTS.md report and stop after one task.
+Pause at a prepared human checkpoint, a genuine external blocker or the end of the
+assigned work. Leave the AGENTS.md report and a resumable next action when paused.
+For the authorized M1 continuation, complete TL-0113, TL-0114, TL-0115 and TL-0116 in
+order. After the observed and approved TL-0116 gate is integrated, end the assignment.
 ```
 
 ## 3. Focused defect prompt
@@ -69,8 +78,10 @@ first. Reproduce with the smallest deterministic fixture/scenario. Stop broad ru
 defect is isolated. Add the focused regression, run it first, then the related Targeted set.
 Run Full/Extended only when triggered.
 
-Do not blind-rerun flaky tests. Record durable evidence, compact task reference, branch,
-commit, push, PR, and limitations.
+For each repeat record the changed input or expected new observation. After two materially
+identical uninformative attempts, change the method or record the limitation and continue
+independent work. Record durable evidence, compact task reference, branch, commit, push,
+PR, and limitations.
 ```
 
 ## 4. Milestone or protected-merge prompt
@@ -112,8 +123,9 @@ focus, names/roles/states/relationships, announcements, Narrator/approved NVDA, 
 reduced resolution, high contrast, color independence, plain language, cancellation, and
 recovery.
 
-Use automated checks where possible and human evidence only at named tasks/gates. Record
-exact build, assistive technology, procedure, result, and limitations.
+Automate objective checks. For named human criteria, prepare a short shared journey, record
+each actual result and its exact build, settings, assistive technology and limitations.
+Retest only affected interactions. Preserve required human speech and actual display checks.
 ```
 
 ## 7. Modest-hardware/resource prompt

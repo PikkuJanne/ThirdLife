@@ -3890,9 +3890,9 @@ class TestingDocumentContractTests(unittest.TestCase):
             ),
         )
 
-    def test_live_task_metadata_matches_v040_contract(self) -> None:
-        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.4.0")
-        self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-09-30")
+    def test_live_task_metadata_matches_v050_contract(self) -> None:
+        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.5.0")
+        self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-11-24")
         self.assertEqual(TASK_DOCUMENT["portfolio"]["roadmap_version"], "2.1")
         self.assertEqual(
             TASK_DOCUMENT["portfolio"]["test_tiers"],
@@ -3910,14 +3910,14 @@ class TestingDocumentContractTests(unittest.TestCase):
                 destination.write_bytes(source.read_bytes())
             path = root / "SECURITY.md"
             body = path.read_text(encoding="utf-8")
-            self.assertEqual(body.count("**Bundle version:** 0.4.0"), 1)
+            self.assertEqual(body.count("**Bundle version:** 0.5.0"), 1)
             path.write_text(
                 body.replace(
+                    "**Bundle version:** 0.5.0",
                     "**Bundle version:** 0.4.0",
-                    "**Bundle version:** 0.3.0",
                     1,
                 )
-                + "\n**Bundle version:** 0.4.0\n",
+                + "\n**Bundle version:** 0.5.0\n",
                 encoding="utf-8",
             )
             validation = validate_bundle.Validation()
@@ -3925,8 +3925,8 @@ class TestingDocumentContractTests(unittest.TestCase):
                 validate_bundle.validate_current_bundle_document_markers(validation)
             self.assertIn(
                 "SECURITY.md: 'Bundle version' metadata must be exactly one line "
-                "'**Bundle version:** 0.4.0'; found "
-                "['**Bundle version:** 0.3.0', '**Bundle version:** 0.4.0']",
+                "'**Bundle version:** 0.5.0'; found "
+                "['**Bundle version:** 0.4.0', '**Bundle version:** 0.5.0']",
                 validation.errors,
             )
 
@@ -3954,8 +3954,8 @@ class StabilizationContractTests(unittest.TestCase):
 
     def test_current_stabilization_contract_is_valid(self) -> None:
         self.assertEqual(self.validate_contract().errors, [])
-        self.assertEqual(validate_bundle.CURRENT_DECISION_IDS[-1], "D-072")
-        self.assertEqual(len(validate_bundle.CURRENT_DECISION_IDS), 72)
+        self.assertEqual(validate_bundle.CURRENT_DECISION_IDS[-1], "D-073")
+        self.assertEqual(len(validate_bundle.CURRENT_DECISION_IDS), 73)
 
     def test_each_new_decision_is_required_in_its_own_visible_section(self) -> None:
         decisions = (REPOSITORY_ROOT / "DECISIONS.md").read_text(encoding="utf-8")

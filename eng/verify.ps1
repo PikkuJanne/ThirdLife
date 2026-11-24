@@ -101,16 +101,63 @@ try {
     if ($SupplementaryCi -and $Tier -ne "Quick") {
         throw "Supplementary CI runs only the deterministic Quick selection."
     }
-    foreach ($project in $TestProject) {
-        if ([string]::IsNullOrWhiteSpace($project) -or
-            [System.IO.Path]::GetExtension($project) -ne ".csproj" -or
-            -not (Test-Path -LiteralPath $project -PathType Leaf)) {
-            throw "Each -TestProject must identify an existing test .csproj. Pass multiple projects as a PowerShell array."
-        }
-    }
     if ($SupplementaryCi) {
         Write-Warning "This hosted run is supplementary only. It is not authoritative ThirdLife runtime, hardware, accessibility, milestone, pilot, or release evidence."
     }
+
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+        throw "Missing eng/test-manifest.json."
+    }
+    $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+
+    $requestedProjects = @(
+        if ($Tier -in @("Quick", "Targeted")) {
+            if (-not $manifest.tiers.quick.test_projects) {
+                throw "The Quick selection requires at least one test project."
+            }
+            $manifest.tiers.quick.test_projects
+        }
+        if ($Tier -eq "Targeted") {
+            $selectedFilter = if ([string]::IsNullOrWhiteSpace($Filter)) {
+                [string]$manifest.tiers.targeted.default_filter
+            }
+            else { $Filter }
+            foreach ($project in $TestProject) {
+                [pscustomobject]@{ path = $project; filter = $selectedFilter }
+            }
+        }
+    )
+
+    # Paths resolve from the repository root. The selection lives only in this invocation.
+    $filtersByProject = [System.Collections.Generic.Dictionary[string, System.Collections.Generic.HashSet[string]]]::new(
+        [System.StringComparer]::OrdinalIgnoreCase
+    )
+    $testSelection = @(
+        foreach ($entry in $requestedProjects) {
+            $project = [string]$entry.path
+            if ([string]::IsNullOrWhiteSpace($project) -or
+                [System.IO.Path]::GetExtension($project) -ne ".csproj" -or
+                -not (Test-Path -LiteralPath $project -PathType Leaf)) {
+                throw "Each selected project must identify an existing test .csproj. Pass multiple -TestProject values as a PowerShell array."
+            }
+            $resolvedProject = Resolve-Path -LiteralPath $project
+            if ($resolvedProject.Provider.Name -ne "FileSystem") {
+                throw "Each selected project must be a file system path."
+            }
+            $projectPath = $resolvedProject.ProviderPath
+            if (-not $filtersByProject.ContainsKey($projectPath)) {
+                $filtersByProject[$projectPath] = [System.Collections.Generic.HashSet[string]]::new(
+                    [System.StringComparer]::Ordinal
+                )
+            }
+            if ($filtersByProject[$projectPath].Add([string]$entry.filter)) {
+                $entry
+            }
+        }
+        if ($Tier -eq "Full") {
+            [pscustomobject]@{ path = $solutionPath; filter = $manifest.tiers.full.filter }
+        }
+    )
 
     $dotnetCommand = Get-Command dotnet -ErrorAction SilentlyContinue
     if ($null -eq $dotnetCommand) {
@@ -138,11 +185,6 @@ try {
         }
         $pythonCommand = $systemPython.Source
     }
-
-    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-        throw "Missing eng/test-manifest.json."
-    }
-    $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
 
     Invoke-CheckedCommand `
         -Label "Validate pinned Python toolchain" `
@@ -213,31 +255,11 @@ try {
             "--nologo"
         )
 
-    if ($Tier -in @("Quick", "Targeted")) {
-        foreach ($entry in $manifest.tiers.quick.test_projects) {
-            Invoke-TestProject `
-                -Dotnet $dotnetCommand.Source `
-                -Project ([string]$entry.path) `
-                -TestFilter ([string]$entry.filter)
-        }
-    }
-    if ($Tier -eq "Targeted") {
-        $selectedFilter = if ([string]::IsNullOrWhiteSpace($Filter)) {
-            [string]$manifest.tiers.targeted.default_filter
-        }
-        else { $Filter }
-        foreach ($project in $TestProject) {
-            Invoke-TestProject `
-                -Dotnet $dotnetCommand.Source `
-                -Project $project `
-                -TestFilter $selectedFilter
-        }
-    }
-    elseif ($Tier -eq "Full") {
+    foreach ($entry in $testSelection) {
         Invoke-TestProject `
             -Dotnet $dotnetCommand.Source `
-            -Project $solutionPath `
-            -TestFilter ([string]$manifest.tiers.full.filter)
+            -Project ([string]$entry.path) `
+            -TestFilter ([string]$entry.filter)
     }
 
     $stopwatch.Stop()

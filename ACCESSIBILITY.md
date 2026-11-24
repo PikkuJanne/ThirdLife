@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Accessibility Requirements
 
 **Status:** Binding release baseline  
-**Bundle version:** 0.4.0  
+**Bundle version:** 0.5.0  
 **Validation scope:** Active Codex machine only; no external hardware or assistive-technology device matrix is implied
 
 ## 1. Scope
@@ -30,6 +30,15 @@ The complete **Intake → Inspect → Decide → Prepare → Verify → Handover
 - an expandable expert view for bounded technical evidence.
 
 Use standard WPF controls where practical. Custom controls require explicit UI Automation peers, keyboard behavior, and focused regression tests.
+
+The TL-0113 [review shell](docs/ui/accessible-shell.md) exposes Intake and Inspect,
+three named review regions, textual unavailable-stage criteria and the battery warning.
+Standard controls retain native keyboard focus and automation peers. Navigation and typed
+activity updates use polite live regions; fixtures exercise progress without collecting
+device evidence. The [short shell check](artifacts/evidence/TL-0113/human-walkthrough.md)
+maps a shared human session to the applicable parts of A11Y-001–A11Y-007. TL-0116 owns the
+human review of the integrated audit journey, including manual-capture usability and new
+or changed accessibility interactions.
 
 ## 3. Recipient-controlled accessibility setup
 
@@ -87,7 +96,20 @@ The following coverage must exist by its named task or release gate, not necessa
 - generated workshop and recipient output review;
 - same-machine low-resource run proving that focus, announcements, text alternatives, and cancellation remain available.
 
-Automated accessibility checks supplement but do not replace the later human assistive-technology review explicitly required by the task graph.
+Automate objective accessibility checks. Request human observations for a concrete
+unresolved perception or usability question, including required assistive-technology and
+actual display-setting reviews. Codex prepares the verified build, rehearses the route,
+sets up supported display and assistive-technology settings with restoration, collects
+sanitized metadata and timing, and records the observations against the individual cases.
+The reviewer supplies observations. One keyboard journey with Narrator can cover focus,
+navigation, semantics and announcements. Short checks in actual Windows display modes can
+cover scaling, reduced resolution and high contrast.
+
+Keep automated results, human observations and owner approvals distinct. A UI Automation
+status change or simulated scale transform cannot establish what a reviewer hears or can
+use in the actual Windows settings. Retain the original provenance of valid unchanged
+evidence. Repeat the human check for failed, changed or newly integrated interactions and
+honor fresh coverage explicitly required by the applicable gate. [D-073](DECISIONS.md#d-073)
 
 ## 7. Test-tier placement
 

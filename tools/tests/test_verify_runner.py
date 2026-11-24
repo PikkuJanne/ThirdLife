@@ -54,6 +54,11 @@ class VerificationRunnerTests(unittest.TestCase):
                 "    $global:LASTEXITCODE = 17\n"
                 "    return\n"
                 "}\n"
+                "if ($tool -eq 'dotnet' -and $args[0] -eq 'test' -and $args -contains 'FullyQualifiedName=NoMatchingTest') {\n"
+                "    Write-Output 'No test matches the given testcase filter.'\n"
+                "    if ($args -contains 'RunConfiguration.TreatNoTestsAsError=true') { $global:LASTEXITCODE = 1 }\n"
+                "    return\n"
+                "}\n"
                 "if ($tool -eq 'dotnet' -and $args[0] -eq '--version') {\n"
                 "    Write-Output '10.0.400'\n"
                 "}\n",
@@ -137,10 +142,34 @@ class VerificationRunnerTests(unittest.TestCase):
         self.assertEqual([call[call.index("--filter") + 1] for call in calls], [DEFAULT_FILTER, DEFAULT_FILTER, DEFAULT_FILTER, selected_filter, selected_filter])
         self.assertNotIn("restore", [record["arguments"][0] for record in records])
 
-    def test_targeted_default_excludes_active_observation(self) -> None:
-        result, records = self.run_tier("Targeted", projects=(INVENTORY,))
+    def test_targeted_default_deduplicates_normalized_projects_in_first_occurrence_order(self) -> None:
+        inventory_alias = str(self.root / INVENTORY.upper())
+        ui_alias = r".\tests\ThirdLife.UI.Tests\..\ThirdLife.UI.Tests\ThirdLife.UI.Tests.csproj"
+        result, records = self.run_tier(
+            "Targeted",
+            projects=(inventory_alias, PERSISTENCE, ui_alias, DIAGNOSTICS, PERSISTENCE),
+        )
         self.assert_passed(result)
-        self.assertEqual(self.selected_tests(records)[-1][-4:], ["--filter", DEFAULT_FILTER, "--", "RunConfiguration.TreatNoTestsAsError=true"])
+        calls = self.selected_tests(records)
+        self.assertEqual([call[1] for call in calls], [CORE, INVENTORY, UI, PERSISTENCE, DIAGNOSTICS])
+        for call in calls:
+            self.assertEqual(call[-4:], ["--filter", DEFAULT_FILTER, "--", "RunConfiguration.TreatNoTestsAsError=true"])
+
+    def test_filter_text_remains_case_sensitive_for_the_same_project(self) -> None:
+        selected_filter = DEFAULT_FILTER.lower()
+        result, records = self.run_tier("Targeted", projects=(UI, UI), test_filter=selected_filter)
+        self.assert_passed(result)
+        calls = self.selected_tests(records)
+        self.assertEqual([call[1] for call in calls], [CORE, INVENTORY, UI, UI])
+        self.assertEqual([call[-3] for call in calls], [DEFAULT_FILTER, DEFAULT_FILTER, DEFAULT_FILTER, selected_filter])
+
+    def test_zero_test_discovery_fails_instead_of_reporting_success(self) -> None:
+        selected_filter = "FullyQualifiedName=NoMatchingTest"
+        result, records = self.run_tier("Targeted", projects=(UI,), test_filter=selected_filter)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("No test matches", result.stdout)
+        self.assertNotIn("verification passed", result.stdout)
+        self.assertEqual(self.selected_tests(records)[-1][-4:], ["--filter", selected_filter, "--", "RunConfiguration.TreatNoTestsAsError=true"])
 
     def test_active_observation_requires_explicit_targeted_filter(self) -> None:
         result, records = self.run_tier("Targeted", projects=(INVENTORY,), test_filter="Category=ActiveMachine")
@@ -182,6 +211,15 @@ class VerificationRunnerTests(unittest.TestCase):
                 result, records = self.run_tier(**arguments)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(records, [])
+
+    def test_empty_quick_selection_fails_before_any_tool_runs(self) -> None:
+        manifest_path = self.root / "eng/test-manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["tiers"]["quick"]["test_projects"] = []
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        result, records = self.run_tier()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(records, [])
 
     def test_supplementary_quick_classifies_evidence(self) -> None:
         result, records = self.run_tier(supplementary=True)
