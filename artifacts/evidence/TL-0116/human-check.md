@@ -1,6 +1,6 @@
 # M1 — One complete audit journey
 
-**Status:** The first operator attempt was blocked. Corrections are being verified. Scope acknowledgement and the M1 decision are pending.  
+**Status:** Corrected fixture open at Audit job. The follow-up observations, scope acknowledgement and M1 decision are pending.  
 **Target:** About 10 minutes of participation after preparation.  
 **Scope:** Actual WPF and SQLite workflow on the active Codex machine with synthetic intake, providers and manual unavailable/failure examples.
 
@@ -35,12 +35,13 @@ contrast off and Narrator off.
 ## Your short journey
 
 Start in **ThirdLife Setup Core - M1 audit review (synthetic fixture)**, with Narrator
-running and Windows scaling at 200%. Use Tab or Shift+Tab to move and Enter or Space
-to activate. Insert+Tab reads the focused item. Insert+Space toggles Narrator scan
-mode for reading text outside form controls. Use this sample job to review how the
-app presents its workflow and limits.
+running and Windows scaling at 200%. Listen for the focused control and try a short
+two-finger scroll. Use Tab or Shift+Tab to move and Enter or Space to activate.
+Insert+Tab reads the focused item. Insert+Space toggles Narrator scan mode for
+reading text outside form controls. If speech or scrolling prevents progress,
+report that result and stop there.
 
-1. **Create a job.** Use **Go to audit controls**, then **Create job**. Check that the
+1. **Create a job.** Activate **Create job** in the prepared window. Check that the
    job state and next action make sense when spoken and on screen. Focus should move
    to the prepared confirmation checkbox.
 2. **Save the sample intake.** The window supplies `m1-fixture-operator`,
@@ -127,8 +128,13 @@ opens an isolated store and waits up to 30 minutes for the window to close.
 
 | Evidence field | Recorded value |
 | --- | --- |
-| Candidate source, build and launch | Pending clean-worktree verification |
-| Windows settings and actual speech | Pending preparation and operator observation |
+| Corrected candidate source | `edb9b03ba813f5de67238d84dd424ad6da572257` |
+| Standard-user apphost SHA-256 | `105d0445b6b49c0e9bce86970abe8b6e7b692abab99c45d4738644eca1c327b2` |
+| Review launcher and production assembly SHA-256 | `ThirdLife.UI.Tests.dll` `240f6220ecc12e11f5a9c5c7d6beb97b2e67103ddb0bab8395b1b41f11a2f2bb`, `ThirdLife.UI.dll` `f6028e00339048dd7c879679bee2bc5d1c12fdf842cd5b1f336da1fbaa25d77d`, `ThirdLife.Reports.dll` `c50e97d210a0350baa10a772d3fa2b17b3ed3e35231d18835992df187055a09c` |
+| Candidate fixture | Same `M1AuditFixture.cs` digest `92128eeae83336d1d99d12a1ca85dde8c116c241d526bdb40d58543a0b3a3c0c`. Separate fresh SQLite store and synthetic providers. |
+| Launch receipt | Corrected exact Release build launched at 17:52:00 CET on 24 November 2026. At 17:53:39 CET the fresh fixture showed Audit job and Create job was available. The store had no open job. |
+| Windows settings | Actual 3840×2400 at 59 Hz, 200% scale and contrast off verified at 17:51:48 CET. Enabled Narrator with the primary Windows Settings switch, read the switch back as On, minimized Narrator Home, and left Settings on System → Display. Original restoration baseline is 250%, contrast off and Narrator off. |
+| Narrator transcription | In the fresh fixture, Speech recap showed the ThirdLife window, the audit controls link and the Audit job group. This verifies recognisable screen-reader output. The operator's audio and its clarity remain pending. |
 | Focused retest and remaining integrated observations | Pending |
 
 | Observation | Coverage in this review | Result |
@@ -138,6 +144,7 @@ opens an isolated store and waits up to 30 minutes for the window to close.
 | A11Y-005 | Actual 200% scale on new controls. | Pending |
 | A11Y-006 | Reachability at the supported reduced resolution. | Pending |
 | A11Y-007 | Focus, state and meaning in the actual contrast theme. | Pending |
+| Touchpad follow-up | A short two-finger scroll over the corrected audit view. | Pending |
 | A11Y-008 and A11Y-010 | Plain next steps, one unavailable manual result, labelled unavailable and failure examples, and usable reopen/report interpretation. | Pending |
 | A11Y-009 | Close/reopen context only. This samples recovery navigation. Automated cancellation and process interruption are separate. | Pending |
 | Scenario-limit acknowledgement | Operator's explicit response. | Pending |

@@ -2817,7 +2817,7 @@ tasks:
   workstream: release
   kind: gate
   priority: P0
-  status: in_progress
+  status: review
   size: M
   executor: hybrid
   environment: windows
@@ -2906,6 +2906,16 @@ tasks:
     environment: Active Windows machine, isolated audit fixtures, software wheel-event reproduction.
     reference: artifacts/gates/M1-audit-only.md, corrections after the first attempt.
     limitation: Physical touchpad control and audible Narrator remain operator observations.
+  - summary: Exact corrected clean-worktree Full, standard-user startup and prepared fixture rehearsal.
+    task: TL-0116
+    command_or_review: eng/verify.ps1 -Tier Full -Restore, apphost smoke, exact M1 audit journey.
+    tier: full
+    result: Passed 279 governance and 1342 .NET tests, normal apphost startup and the named M1 journey.
+    date: '2026-11-24'
+    duration: 302.263s Full, 1.767s apphost, 4.329s exact fixture journey.
+    environment: REF-CODEX-001, Windows 11 build 26300, SDK 10.0.400, clean same-machine worktree and isolated synthetic fixture.
+    reference: artifacts/gates/M1-audit-only.md, corrected source edb9b03ba813f5de67238d84dd424ad6da572257.
+    limitation: Operator observations, explicit scenario scope and owner decision remain pending.
   human_evidence_required:
   - Project owner approves the M1 gate record.
   - A representative operator completes the prepared combined audit, manual-capture and accessibility review on the active Codex

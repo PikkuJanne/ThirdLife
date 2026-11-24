@@ -3,11 +3,12 @@
 | Field | Value |
 | --- | --- |
 | Gate task | `TL-0116` |
-| Record state | Corrections in progress |
+| Record state | Review |
 | Verified default-branch base | `7c382bf784c5128ae96a8fcf07724fea35e9bc40`, PR #16 |
 | Gate branch | `codex/tl-0116-m1-audit-gate` |
 | First candidate source | `da746d306623f860ce64cd1143738087486886ca` |
-| Candidate build and evidence digests | [Build and fixture identity](../evidence/TL-0116/human-check.md#codex-only-preparation-and-record) |
+| Corrected candidate source | `edb9b03ba813f5de67238d84dd424ad6da572257` |
+| Candidate build and evidence digests | [First and corrected attempts](../evidence/TL-0116/human-check.md#codex-only-preparation-and-record) |
 | Runtime authority | Active Codex Windows machine, `REF-CODEX-001` revision `2026-08-29.1` |
 | Owner decision | Pending |
 | Integration | Draft PR #17. Gate has not merged. |
@@ -108,10 +109,23 @@ formatting made the next run informative. Targeted including Quick passed in
 and seven explicitly filtered tests passed with zero failures or skips.
 
 Narrator's process was still open on the correct desktop. The operator reported no
-usable speech. The next handoff verifies the Windows Narrator toggle and foreground
-fixture and explicitly samples speech. Recheck the changed or uncompleted portions
-of the audit journey. The corrected UI and automated evidence require a new clean
-candidate run before that handoff.
+usable speech. The corrected handoff verifies the Windows Narrator toggle and
+foreground fixture and explicitly samples speech. Recheck the changed or uncompleted
+portions of the audit journey.
+
+The corrected worktree initially resolved a Python installation without PyYAML and
+stopped at toolchain validation. The complete run explicitly uses the existing
+pinned Python 3.14.7 and PyYAML 6.0.3 environment through its process-local tool path.
+
+`eng/verify.ps1 -Tier Full -Restore` passed against the corrected source in a clean
+same-machine worktree in 302.263s. It passed 279 governance and 1,342 .NET tests
+with zero failures or skips. Windows Release formatting, build and locked restore
+passed. The apphost smoke observed normal unelevated launch and navigation in 1.444s
+and closed normally in 1.767s total. The exact named fixture rehearsal passed in
+4.329s including test startup. It exercised the prefilled inputs including the
+checkbox, disabled and enabled assessment states, keyboard transitions, the
+unavailable manual sample, reopen and restricted report content. The separate
+user-facing review and explicit owner decision remain open.
 
 ## Operator observations and owner decision
 

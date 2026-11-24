@@ -4,7 +4,7 @@
 **Bundle baseline:** 0.5.0  
 **Runtime authority:** active Codex machine only; remote CI is supplementary  
 **Current milestone:** M1 — Audit-only vertical slice  
-**Current task:** TL-0116 — Validate the M1 audit-only gate; corrections in progress
+**Current task:** TL-0116 — Validate the M1 audit-only gate; review
 
 ## Continuity
 
@@ -13,8 +13,8 @@ PR #14 integrated TL-0113 and the
 into `main` at `e88718118e7d6e73e3291879e3053af93fea5afb`. PR #15 integrated TL-0114
 at `ac35205d0295452d806fc494fffc88d39b974738`. PR #16 integrated TL-0115 at
 `7c382bf784c5128ae96a8fcf07724fea35e9bc40`. TL-0116 started from that verified base
-on `codex/tl-0116-m1-audit-gate` in draft PR #17. The first gate candidate source is
-`da746d306623f860ce64cd1143738087486886ca`. SSH origin, prior branches and the
+on `codex/tl-0116-m1-audit-gate` in draft PR #17. Corrected candidate source is
+`edb9b03ba813f5de67238d84dd424ad6da572257`. SSH origin, prior branches and the
 unrelated untracked Word reference are preserved.
 
 ## Outcome and evidence
@@ -38,13 +38,15 @@ assessment, one manual unavailable sample, durable close/reopen and restricted
 report generation/preview. The first operator attempt stopped before assessment.
 The open job had no saved external result. The operator reported unavailable
 Narrator and uncontrollable touchpad scrolling. The isolated fixture was retired
-and the original Windows settings restored. [Gate record](artifacts/gates/M1-audit-only.md)
+and the original Windows settings restored. The corrected UI guides the operator to
+intake and uses proportional wheel movement. Corrected clean-worktree Full passed
+279 governance and 1,342 .NET tests in 302.263s. Standard-user launch and the exact
+prepared fixture rehearsal passed. [Gate record](artifacts/gates/M1-audit-only.md)
 
 ## Next action
 
-Verify the intake navigation and proportional scrolling fixes on the corrected build.
-Open a fresh isolated fixture with verified Windows settings for the
-[prepared operator check](artifacts/evidence/TL-0116/human-check.md). Record actual
-observations, explicit scope acknowledgement and separate owner decision. Restore
-the original settings and verify cleanup. Complete and merge PR #17 once the gate
-is satisfied. The assignment ends at M1.
+Use the corrected fixture and the [prepared operator check](artifacts/evidence/TL-0116/human-check.md)
+for the repaired intake, Narrator, touchpad and remaining audit steps. Record actual
+observations, explicit scope acknowledgement and separate owner decision. Restore the
+original settings and verify cleanup. Complete and merge PR #17 once the gate is
+satisfied. The assignment ends at M1.
