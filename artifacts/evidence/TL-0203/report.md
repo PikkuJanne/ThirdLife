@@ -32,7 +32,9 @@ Active machine `REF-CODEX-001` revision `2026-08-29.1`, Windows 11 x64,
 The added target-traceability regression verifies that an unsupported Windows
 finding and its evidence ID survive when a separate ownership blocker controls
 the disposition. Full and Extended had no trigger for this domain-only change.
-GitHub Actions is supplementary.
+GitHub Actions is supplementary. Verified source
+`d79fbd6edde69af36218ca8fdecdd050a781f7e7` and the completion record use
+[PR #20](https://github.com/PikkuJanne/ThirdLife/pull/20).
 
 ## Scope
 
