@@ -14,10 +14,19 @@ and records the separate capture timestamp. The fixed intake policy identifier i
 `m1-intake-v1`. An explicitly unknown outcome has no event attribution. The gate remains
 blocked for missing, failed, unknown, stale or archived evidence.
 
+Creating a job brings keyboard focus to external intake. **Go to external sanitization**
+beside the blocked assessment returns to the required intake action. When a saved record
+permits assessment, focus advances from the save form to **Start assessment**. Starting
+the assessment still requires a separate action.
+
 The saved record and gate decision are separate durable transactions. If a record commits
 before its decision, reopen the job and complete the saved gate. Reopening alone does not
 grant assessment access. If storage reports an ambiguous error, review the committed job
 before retrying.
+
+Touchpad and mouse-wheel input scroll the viewport in proportion to small wheel
+movements. Scrollable evidence lists and the report preview take the movement while
+they have room. Keyboard navigation remains available throughout the workspace.
 
 Start assessment explicitly after the gate allows it. The job stays open and shell
 navigation is available during collection. Cancellation requested and a committed cancelled

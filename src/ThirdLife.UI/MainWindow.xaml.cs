@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using ThirdLife.Persistence;
 using ThirdLife.UI.Shell;
@@ -13,6 +14,7 @@ public partial class MainWindow : Window
 {
     private readonly ShellViewModel _model;
     private readonly AuditWorkspace? _workspace;
+    private readonly WheelScrolling _wheelScrolling = new();
     private DispatcherOperation? _announcement;
     private bool _statusChanged;
     private bool _activityChanged;
@@ -97,6 +99,8 @@ public partial class MainWindow : Window
     private void ShowInspect(object sender, RoutedEventArgs e) => _model.Navigate(ShellStage.Inspect);
 
     private void OpenAuditWorkspace(object sender, RoutedEventArgs e) => AuditView.FocusWorkspace();
+
+    private void ScrollFromWheel(object sender, MouseWheelEventArgs e) => _wheelScrolling.Scroll(ShellScroll, e);
 
     private void ResizeWorkflow(object sender, SizeChangedEventArgs e)
     {

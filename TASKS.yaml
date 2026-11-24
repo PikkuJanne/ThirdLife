@@ -2530,7 +2530,8 @@ tasks:
   - Test synthetic device trees with missing/error devices.
   - Run on representative webcam/touch variants.
   evidence:
-  - task: TL-0111
+  - summary: Device enumeration, provenance and privacy verification on the active machine and its Sandbox.
+    task: TL-0111
     date: '2026-10-01'
     command: Governed same-machine Sandbox Targeted including Quick; separate unelevated active observation; deterministic device/native/lifecycle fixtures; Python governance; independent boundary review.
     tier: targeted
@@ -2586,7 +2587,8 @@ tasks:
   - Verify deterministic normalization for identical fixtures.
   - Property-test provider order independence and deterministic conflict/freshness handling.
   evidence:
-  - task: TL-0112
+  - summary: Read-only assessment orchestration, normalization and interruption verification.
+    task: TL-0112
     date: '2026-10-01'
     command: Governed same-machine Sandbox Targeted including Quick; focused orchestration/guard tests; three guarded-batch process-termination cases; Python governance; independent boundary review.
     tier: targeted
@@ -2637,7 +2639,8 @@ tasks:
   - Check actual 200% Windows scaling, a supported reduced resolution and a Windows contrast theme with focused interactions.
     Restore the starting settings and record the result for each applicable shell case independently.
   evidence:
-  - task: TL-0113
+  - summary: Loaded WPF shell verification in the same-machine Sandbox and host startup smoke.
+    task: TL-0113
     date: '2026-10-01'
     command: Same-machine Sandbox Targeted including Quick; loaded WPF automation/focus/scaling/activity fixtures; direct-host apphost UIA smoke; Python governance.
     tier: targeted
@@ -2646,7 +2649,8 @@ tasks:
     duration: Committed shared Targeted 142.152s including Quick; whole guest 197.982s; Python 349.394s; host smoke 2.472s. Exact attempts are in runs.json.
     reference: Verified source 518744b751c531680e24a99b964c3b05a9b7c434; artifacts/evidence/TL-0113/report.md, runs.json, inputs.json, host-smoke.json and human-walkthrough.md; artifacts/audit/TL-0113; result SHA256 9c56558396248f3e82e1191b6a69e613c0150eae1c1819708a932b2896582b3c.
     limitation: Review-only shell; no live job/assessment composition. Host xUnit loader blocked by Application Control 0x800711C7; Sandbox components pass. Human keyboard/screen-reader and actual display-setting evidence remains pending; no cross-hardware claim.
-  - task: TL-0113
+  - summary: Amendment and exact verifier-selection regressions with shell handoff preparation.
+    task: TL-0113
     date: '2026-11-24'
     command: Amendment governance regression, active-host Targeted including Quick, zero-discovery canary and shell setup rehearsal.
     tier: targeted
@@ -2655,7 +2659,8 @@ tasks:
     duration: Targeted 101.017s, complete governance 321.827s, discovery canary 3.435s.
     reference: artifacts/evidence/TL-0113/amendment-verification.md and artifacts/evidence/TL-0113/human-walkthrough.md.
     limitation: Human shell observations and post-session restoration are pending. No M1 gate decision or cross-hardware claim.
-  - task: TL-0113
+  - summary: Operator shell accessibility observations and independently verified settings restoration.
+    task: TL-0113
     date: '2026-11-24'
     command: Prepared human shell check mapped to A11Y-001 through A11Y-007 and Codex settings restoration.
     tier: targeted
@@ -2733,7 +2738,8 @@ tasks:
     failure examples for the integrated TL-0116 human usability review.
   - Verify an essential failure remains a blocker candidate and Not available never becomes Pass.
   evidence:
-  - task: TL-0114
+  - summary: Durable audit workflow, guided manual capture and apphost verification.
+    task: TL-0114
     date: '2026-11-24'
     command: Focused manual capture and WPF integration regressions, active-machine Full in an isolated worktree, and standard-user apphost smoke.
     tier: full
@@ -2792,7 +2798,8 @@ tasks:
   - Compare a report with its job record.
   - Verify deterministic generation and opening through the UI on success and on write, destination, collision and opening failures.
   evidence:
-  - task: TL-0115
+  - summary: Deterministic workshop report, guarded publication and preview verification.
+    task: TL-0115
     date: '2026-11-24'
     command: Focused renderer, protected store and WPF report checks, fixture-governance regressions, isolated active-machine Full and apphost smoke.
     tier: full
@@ -2810,7 +2817,7 @@ tasks:
   workstream: release
   kind: gate
   priority: P0
-  status: review
+  status: in_progress
   size: M
   executor: hybrid
   environment: windows
@@ -2858,7 +2865,9 @@ tasks:
   - Run the documented Full gate verification, applicable Quick/Targeted checks and bundle validation.
   - Inspect logs, database, temporary paths, and report for prohibited data and unsupported claims.
   evidence:
-  - command: eng/verify.ps1 -Tier Targeted -Restore -TestProject tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj
+  - summary: Initial candidate active-machine Targeted verification including Quick.
+    task: TL-0116
+    command: eng/verify.ps1 -Tier Targeted -Restore -TestProject tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj
     tier: targeted
     result: Core 110, Inventory 901 and UI 61 passed, with zero failures or skips. Includes Quick.
     date: '2026-11-24'
@@ -2866,7 +2875,9 @@ tasks:
     environment: Active Windows machine, REF-CODEX-001 revision 2026-08-29.1.
     artifact: artifacts/gates/M1-audit-only.md
     limitation: The default UI pair executed once. Focus and automation metadata are objective checks.
-  - command: eng/verify.ps1 -Tier Full -Restore, standard-user shell smoke, exact M1 audit journey test
+  - summary: Initial candidate clean-worktree Full, standard-user shell and isolated journey verification.
+    task: TL-0116
+    command: eng/verify.ps1 -Tier Full -Restore, standard-user shell smoke, exact M1 audit journey test
     tier: full
     result: Full passed with 1,337 .NET tests. Startup and the named integrated fixture journey passed separately.
     date: '2026-11-24'
@@ -2875,6 +2886,26 @@ tasks:
     commit: da746d306623f860ce64cd1143738087486886ca
     artifact: artifacts/gates/M1-audit-only.md
     limitation: The named run uses isolated synthetic intake and providers. Human observations and owner decision are pending.
+  - summary: First operator attempt stopped before assessment and exposed intake, touchpad and Narrator usability issues.
+    task: TL-0116
+    command_or_review: Prepared operator review on the initial synthetic candidate and verified cleanup.
+    tier: human review
+    result: Blocked before assessment. Narrator unavailable to the operator and touchpad scrolling uncontrollable.
+    date: '2026-11-24'
+    duration: 916.662s fixture window lifetime including idle time. Hands-on duration unmeasured.
+    environment: REF-CODEX-001 standard Windows user, isolated synthetic fixture.
+    reference: artifacts/evidence/TL-0116/human-check.md, source da746d306623f860ce64cd1143738087486886ca.
+    limitation: Remaining steps, display samples, scope acknowledgement and the owner decision are outstanding.
+  - summary: Focused accessibility and scroll regressions after the first operator attempt.
+    task: TL-0116
+    command_or_review: Targeted with the M1 journey, audit accessibility and wheel filter. Separate recovery and integrated-journey runs.
+    tier: targeted
+    result: Targeted passed Core 110, Inventory 901, UI 65 and seven filtered tests. Two focused tests passed after the recovery-focus change.
+    date: '2026-11-24'
+    duration: 63.560s Targeted and 8.033s final focused invocation.
+    environment: Active Windows machine, isolated audit fixtures, software wheel-event reproduction.
+    reference: artifacts/gates/M1-audit-only.md, corrections after the first attempt.
+    limitation: Physical touchpad control and audible Narrator remain operator observations.
   human_evidence_required:
   - Project owner approves the M1 gate record.
   - A representative operator completes the prepared combined audit, manual-capture and accessibility review on the active Codex

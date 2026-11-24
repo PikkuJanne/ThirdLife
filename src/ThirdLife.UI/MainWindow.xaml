@@ -26,6 +26,7 @@
     </Style>
   </Window.Resources>
   <ScrollViewer x:Name="ShellScroll" Padding="16"
+                PreviewMouseWheel="ScrollFromWheel"
                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                 Focusable="True" KeyboardNavigation.IsTabStop="False"
                 AutomationProperties.Name="Workflow review, scrollable content">

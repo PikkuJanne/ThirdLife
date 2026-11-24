@@ -4,7 +4,7 @@
 **Bundle baseline:** 0.5.0  
 **Runtime authority:** active Codex machine only; remote CI is supplementary  
 **Current milestone:** M1 — Audit-only vertical slice  
-**Current task:** TL-0116 — Validate the M1 audit-only gate; review
+**Current task:** TL-0116 — Validate the M1 audit-only gate; corrections in progress
 
 ## Continuity
 
@@ -13,7 +13,7 @@ PR #14 integrated TL-0113 and the
 into `main` at `e88718118e7d6e73e3291879e3053af93fea5afb`. PR #15 integrated TL-0114
 at `ac35205d0295452d806fc494fffc88d39b974738`. PR #16 integrated TL-0115 at
 `7c382bf784c5128ae96a8fcf07724fea35e9bc40`. TL-0116 started from that verified base
-on `codex/tl-0116-m1-audit-gate` in draft PR #17. The gate candidate source is
+on `codex/tl-0116-m1-audit-gate` in draft PR #17. The first gate candidate source is
 `da746d306623f860ce64cd1143738087486886ca`. SSH origin, prior branches and the
 unrelated untracked Word reference are preserved.
 
@@ -31,16 +31,20 @@ opens the verified copy in the audit workspace. The isolated active-machine Full
 passed 279 governance and 1,337 .NET tests in 281.624s. Standard-user launch passed.
 [TL-0115 evidence](artifacts/evidence/TL-0115/report.md)
 
-TL-0116 exact-candidate clean-worktree Full passed in 283.547s, including 1,337
+TL-0116 first-candidate clean-worktree Full passed in 283.547s, including 1,337
 .NET tests. The ordinary apphost launched and responded under a standard-user token.
 The isolated named WPF rehearsal passed create, synthetic intake, read-only
 assessment, one manual unavailable sample, durable close/reopen and restricted
-report generation/preview. [Gate record](artifacts/gates/M1-audit-only.md)
+report generation/preview. The first operator attempt stopped before assessment.
+The open job had no saved external result. The operator reported unavailable
+Narrator and uncontrollable touchpad scrolling. The isolated fixture was retired
+and the original Windows settings restored. [Gate record](artifacts/gates/M1-audit-only.md)
 
 ## Next action
 
-Use the [prepared operator check](artifacts/evidence/TL-0116/human-check.md) for
-changed controls. Record the operator's actual observations, explicit scope
-acknowledgement and separate owner decision. Restore the recorded display and
-Narrator state and verify fixture cleanup. Correct and retest any affected part,
-then complete and merge PR #17 once the gate is satisfied. The assignment ends at M1.
+Verify the intake navigation and proportional scrolling fixes on the corrected build.
+Open a fresh isolated fixture with verified Windows settings for the
+[prepared operator check](artifacts/evidence/TL-0116/human-check.md). Record actual
+observations, explicit scope acknowledgement and separate owner decision. Restore
+the original settings and verify cleanup. Complete and merge PR #17 once the gate
+is satisfied. The assignment ends at M1.

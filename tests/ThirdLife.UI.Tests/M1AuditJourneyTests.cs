@@ -3,6 +3,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Input;
 using ThirdLife.Core.Evidence;
@@ -31,7 +32,7 @@ public sealed class M1AuditJourneyTests
 
         ShellTestHost.Run(() =>
         {
-            var window = fixture.CreateWindow(workspace);
+            var window = fixture.CreateWindow(workspace, prefillInputs: true);
             try
             {
                 ShellTestHost.Show(window);
@@ -43,7 +44,9 @@ public sealed class M1AuditJourneyTests
                 Assert.Same(Named<GroupBox>(view, "JobRegion"), Keyboard.FocusedElement);
                 Assert.True(Named<TextBlock>(view, "FixtureNotice").IsVisible);
                 var assessmentStart = Named<Button>(view, "StartAssessmentButton");
+                var goToSanitization = Named<Button>(view, "GoToSanitizationButton");
                 Assert.False(assessmentStart.IsEnabled);
+                Assert.False(goToSanitization.IsVisible);
 
                 var create = Named<Button>(view, "CreateJobButton");
                 Assert.True(create.Focus());
@@ -52,15 +55,23 @@ public sealed class M1AuditJourneyTests
                 var job = Assert.IsType<StoredJob>(workspace.Job);
                 Assert.Equal(job.Job.JobId.Value, Named<TextBox>(view, "CurrentJobId").Text);
                 Assert.False(assessmentStart.IsEnabled);
+                Assert.Same(Named<CheckBox>(view, "ExternalRecordConfirmed"), Keyboard.FocusedElement);
+                Assert.True(goToSanitization.Focus());
+                Invoke(window, goToSanitization);
+                Assert.Same(Named<CheckBox>(view, "ExternalRecordConfirmed"), Keyboard.FocusedElement);
 
                 SaveFixtureIntake(window, view);
-                PumpUntil(window, () => workspace.CanAssess, () => workspace.GateStatus);
+                PumpUntil(window, () => workspace.CanAssess, () =>
+                    $"{Named<TextBlock>(view, "SanitizationInputError").Text} " +
+                    $"{Named<TextBlock>(view, "SavedSanitization").Text} {workspace.GateStatus}");
+                Assert.True(assessmentStart.IsEnabled, workspace.GateStatus);
+                Assert.False(goToSanitization.IsVisible);
                 var intake = Assert.Single(workspace.Job!.SanitizationEvidence);
                 Assert.Equal(ProvenanceKind.SyntheticFixture, intake.Metadata.Provenance.Kind);
                 Assert.Equal(SanitizationState.Verified, intake.SanitizationState);
                 Assert.True(SanitizationGate.Inspect(workspace.Job).AllowsAssessment);
 
-                Assert.True(assessmentStart.Focus());
+                Assert.Same(assessmentStart, Keyboard.FocusedElement);
                 Invoke(window, assessmentStart);
                 PumpUntil(window, () => workspace.Assessment is not null && !workspace.IsBusy,
                     () => workspace.AssessmentStatus);
@@ -146,15 +157,30 @@ public sealed class M1AuditJourneyTests
     {
         var operatorCode = Named<TextBox>(view, "OperatorIdInput");
         Assert.True(operatorCode.Focus());
-        operatorCode.Text = M1AuditFixture.OperatorCode;
+        Assert.Equal(M1AuditFixture.OperatorCode, operatorCode.Text);
         var result = Named<ComboBox>(view, "SanitizationResult");
         NextIs(window, result);
-        result.SelectedValue = SanitizationState.Verified;
-        Named<ComboBox>(view, "SanitizationMethod").SelectedValue = "clear";
-        Named<DatePicker>(view, "SanitizationDate").SelectedDate = M1AuditFixture.FixtureDate.ToDateTime(TimeOnly.MinValue);
-        Named<TextBox>(view, "SanitizationMediaId").Text = M1AuditFixture.MediaCode;
-        Named<CheckBox>(view, "ExternalRecordConfirmed").IsChecked = true;
-        Invoke(window, Named<Button>(view, "RecordSanitizationButton"));
+        Assert.Equal(SanitizationState.Verified, result.SelectedValue);
+        var method = Named<ComboBox>(view, "SanitizationMethod");
+        Assert.True(method.IsVisible);
+        Assert.Equal("clear", method.SelectedValue);
+        var date = Named<DatePicker>(view, "SanitizationDate");
+        Assert.True(date.IsVisible);
+        Assert.Equal(M1AuditFixture.FixtureDate.ToDateTime(TimeOnly.MinValue), date.SelectedDate);
+        var media = Named<TextBox>(view, "SanitizationMediaId");
+        Assert.True(media.IsVisible);
+        Assert.Equal(M1AuditFixture.MediaCode, media.Text);
+
+        var confirmation = Named<CheckBox>(view, "ExternalRecordConfirmed");
+        Assert.True(confirmation.Focus());
+        var peer = new CheckBoxAutomationPeer(confirmation);
+        var toggle = Assert.IsAssignableFrom<IToggleProvider>(peer.GetPattern(PatternInterface.Toggle));
+        Assert.Equal(ToggleState.Off, toggle.ToggleState);
+        toggle.Toggle();
+        Assert.Equal(ToggleState.On, toggle.ToggleState);
+        var save = Named<Button>(view, "RecordSanitizationButton");
+        NextIs(window, save);
+        Invoke(window, save);
     }
 
     private static void AssertFixtureAssessment(
@@ -183,7 +209,7 @@ public sealed class M1AuditJourneyTests
     {
         var check = Named<ComboBox>(view, "ManualCheck");
         Assert.True(check.Focus());
-        check.SelectedItem = Assert.Single(ManualTestCatalog.Cases, static item => item.Id == M1AuditFixture.KeyboardCase);
+        Assert.Equal(M1AuditFixture.KeyboardCase, Assert.IsType<ManualTestCase>(check.SelectedItem).Id);
         Assert.False(Named<ComboBoxItem>(view, "ManualPassOption").IsEnabled);
         Assert.False(Named<ComboBoxItem>(view, "ManualFailOption").IsEnabled);
         var outcome = Named<ComboBox>(view, "ManualOutcome");
@@ -194,7 +220,7 @@ public sealed class M1AuditJourneyTests
         reason.SelectedValue = ManualTestUnavailableReason.EquipmentMissing;
         var notes = Named<TextBox>(view, "ManualNotes");
         NextIs(window, notes);
-        notes.Text = M1AuditFixture.ManualNote;
+        Assert.Equal(M1AuditFixture.ManualNote, notes.Text);
         var save = Named<Button>(view, "SaveManualResultButton");
         NextIs(window, save);
         Invoke(window, save);

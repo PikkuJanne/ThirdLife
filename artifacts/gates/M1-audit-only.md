@@ -3,10 +3,10 @@
 | Field | Value |
 | --- | --- |
 | Gate task | `TL-0116` |
-| Record state | Review |
+| Record state | Corrections in progress |
 | Verified default-branch base | `7c382bf784c5128ae96a8fcf07724fea35e9bc40`, PR #16 |
 | Gate branch | `codex/tl-0116-m1-audit-gate` |
-| Candidate source | `da746d306623f860ce64cd1143738087486886ca` |
+| First candidate source | `da746d306623f860ce64cd1143738087486886ca` |
 | Candidate build and evidence digests | [Build and fixture identity](../evidence/TL-0116/human-check.md#codex-only-preparation-and-record) |
 | Runtime authority | Active Codex Windows machine, `REF-CODEX-001` revision `2026-08-29.1` |
 | Owner decision | Pending |
@@ -45,7 +45,7 @@ approval. GitHub Actions evidence remains supplementary.
 | TL-0115 | [Workshop report](../evidence/TL-0115/report.md) covers deterministic content, privacy, guarded output, keyboard preview and standard-user launch. |
 | TL-0104 | [Structured logging task evidence](../../TASKS.yaml) records the exact sanitized logging contract, diagnostics and redaction checks. |
 
-## Automated evidence and acceptance mapping
+## First candidate automated evidence and acceptance mapping
 
 All 25 transitive prerequisites are complete. The pre-edit audit UI baseline passed
 18 tests. Active-machine `eng/verify.ps1 -Tier Targeted -Restore -TestProject
@@ -81,6 +81,38 @@ name filter and `RunConfiguration.TreatNoTestsAsError=true`. One test passed in
 control state and automation metadata. Actual speech, readability and operator
 judgement have their own record.
 
+## Corrections after the first attempt
+
+The first fixture had one job and no saved sanitization or gate decision. A focused
+rehearsal used the launcher's actual prefilled controls and toggled the confirmation
+before saving. One test passed and enabled the existing gate. The original route
+had assigned the fields itself. The correction brings focus to the required intake
+action on create, offers a route from the blocked assessment, and focuses Start
+assessment after the existing gate allows it. The focused integrated/accessibility
+check passed three tests. The final focus change also covers completion of an
+interrupted saved gate. Two focused tests passed for that recovery and the
+complete prepared route, both using real SQLite fixtures.
+
+The wheel baseline changed delivery timing after a batched-event test coalesced the
+movement. Six spaced wheel pulses of −20 moved the audit window 288 DIPs, while
+one −120 detent moved it 48 DIPs. The update bounds movement, preserves fractional
+offsets, uses pixel-scrolled evidence lists and scrolls the outer view when the
+inner pane is already at a boundary. The app caps a pulse at one detent and three
+lines. The loaded-WPF wheel and shell accessibility set passed 14 tests in 8.663s.
+Physical touchpad feedback remains pending.
+
+The initial Targeted run stopped in formatting when the two new C# files used LF
+instead of the repository's CRLF. Normalizing those files and checking the changed
+formatting made the next run informative. Targeted including Quick passed in
+63.560s before the final recovery-focus change. Core 110, Inventory 901, UI 65
+and seven explicitly filtered tests passed with zero failures or skips.
+
+Narrator's process was still open on the correct desktop. The operator reported no
+usable speech. The next handoff verifies the Windows Narrator toggle and foreground
+fixture and explicitly samples speech. Recheck the changed or uncompleted portions
+of the audit journey. The corrected UI and automated evidence require a new clean
+candidate run before that handoff.
+
 ## Operator observations and owner decision
 
 The [prepared operator check](../evidence/TL-0116/human-check.md) owns the current
@@ -94,7 +126,7 @@ from the operator's actual review.
 
 | Human evidence | Outcome |
 | --- | --- |
-| Representative operator's observations mapped to the current journey | Pending |
+| Representative operator's observations mapped to the current journey | First attempt blocked. The operator reported Narrator unavailable, disabled Start assessment and uncontrollable touchpad scrolling. The [attempt record](../evidence/TL-0116/human-check.md#first-operator-attempt) preserves the observed limits. |
 | Operator's explicit acknowledgement of the machine and fixture scope | Pending |
 | Project owner's explicit M1 decision | Pending |
 

@@ -48,7 +48,7 @@ public partial class AuditWorkspaceView : UserControl
         ManualFailOption.IsEnabled = !workspace.IsFixtureScenario;
         if (workspace.IsFixtureScenario)
         {
-            SanitizationInstructions.Text = "Use the prepared synthetic intake for this isolated job.";
+            SanitizationInstructions.Text = "Select Use this synthetic intake record, then Save external result to enable assessment for this isolated job.";
             ExternalRecordConfirmation.Text = "Use this synthetic intake record";
             AutomationProperties.SetName(ExternalRecordConfirmed, ExternalRecordConfirmation.Text);
             AssessmentInstructions.Text = "Assessment reads the synthetic fixtures and records their findings in this job. It leaves device readiness unknown.";
@@ -77,7 +77,20 @@ public partial class AuditWorkspaceView : UserControl
         target.BringIntoView();
     }
 
-    private async void CreateJob(object sender, RoutedEventArgs e) => await Workspace.CreateJobAsync();
+    private async void CreateJob(object sender, RoutedEventArgs e)
+    {
+        string previousJob = Workspace.JobId;
+        if (JobRegion.IsKeyboardFocusWithin)
+        {
+            JobRegion.Focus();
+        }
+
+        await Workspace.CreateJobAsync();
+        if (JobRegion.IsKeyboardFocused && Workspace.CanEditJob && Workspace.JobId != previousJob)
+        {
+            FocusSanitization();
+        }
+    }
 
     private async void OpenJob(object sender, RoutedEventArgs e) => await Workspace.OpenJobAsync(JobIdInput.Text.Trim());
 
@@ -88,6 +101,24 @@ public partial class AuditWorkspaceView : UserControl
     }
 
     private void RequestStageReturn(object sender, RoutedEventArgs e) => ReturnToStagesRequested?.Invoke(this, EventArgs.Empty);
+
+    private void GoToSanitization(object sender, RoutedEventArgs e) => FocusSanitization();
+
+    private void FocusSanitization()
+    {
+        FrameworkElement target = OperatorIdInput;
+        if (Workspace.CanCompleteSavedSanitization)
+        {
+            target = CompleteSavedSanitizationButton;
+        }
+        else if (Workspace.IsFixtureScenario && ExternalRecordConfirmed.IsVisible)
+        {
+            target = ExternalRecordConfirmed.IsChecked == true ? RecordSanitizationButton : ExternalRecordConfirmed;
+        }
+
+        target.Focus();
+        target.BringIntoView();
+    }
 
     private void GoToWorkshopReport(object sender, RoutedEventArgs e)
     {
@@ -148,7 +179,9 @@ public partial class AuditWorkspaceView : UserControl
 
         if (needsExternalRecord && ExternalRecordConfirmed.IsChecked != true)
         {
-            SetError(SanitizationInputError, "Confirm ownership and the external record before saving this outcome.");
+            SetError(SanitizationInputError, Workspace.IsFixtureScenario
+                ? "Select Use this synthetic intake record before saving."
+                : "Confirm ownership and the external record before saving this outcome.");
             return;
         }
 
@@ -167,14 +200,26 @@ public partial class AuditWorkspaceView : UserControl
             needsExternalRecord && ExternalRecordConfirmed.IsChecked == true,
             UsesMethod(state) ? SanitizationMethod.SelectedValue as string ?? "" : "");
         ExternalRecordConfirmed.IsChecked = false;
-        await Workspace.RecordSanitizationAsync(input);
-        SanitizationInputError.Text = Workspace.Status;
+        await SaveSanitization(() => Workspace.RecordSanitizationAsync(input));
     }
 
-    private async void CompleteSavedSanitization(object sender, RoutedEventArgs e)
+    private async void CompleteSavedSanitization(object sender, RoutedEventArgs e) =>
+        await SaveSanitization(Workspace.CompleteSavedSanitizationAsync);
+
+    private async Task SaveSanitization(Func<Task> save)
     {
-        await Workspace.CompleteSavedSanitizationAsync();
+        if (SanitizationRegion.IsKeyboardFocusWithin)
+        {
+            SanitizationRegion.Focus();
+        }
+
+        await save();
         SanitizationInputError.Text = Workspace.Status;
+        if (SanitizationRegion.IsKeyboardFocused && Workspace.CanAssess)
+        {
+            StartAssessmentButton.Focus();
+            StartAssessmentButton.BringIntoView();
+        }
     }
 
     private void SanitizationResultChanged(object sender, SelectionChangedEventArgs e)
@@ -401,6 +446,7 @@ public partial class AuditWorkspaceView : UserControl
         CreateJobButton.IsEnabled = available;
         JobIdInput.IsEnabled = available;
         OpenJobButton.IsEnabled = available;
+        GoToSanitizationButton.Visibility = VisibleWhen(Workspace.CanEditJob && !Workspace.CanAssess);
         CompleteSavedSanitizationButton.Visibility = VisibleWhen(Workspace.CanCompleteSavedSanitization);
         AuditAssessmentProgress.Visibility = VisibleWhen(Workspace.IsAssessmentRunning);
         CancelReportButton.Visibility = VisibleWhen(Workspace.CanCancelReport);

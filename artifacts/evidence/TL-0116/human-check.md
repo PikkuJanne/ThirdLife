@@ -1,8 +1,36 @@
 # M1 — One complete audit journey
 
-**Status:** Exact-candidate rehearsal passed and the isolated review window is ready. Human observations and the M1 decision are pending.  
+**Status:** The first operator attempt was blocked. Corrections are being verified. Scope acknowledgement and the M1 decision are pending.  
 **Target:** About 10 minutes of participation after preparation.  
 **Scope:** Actual WPF and SQLite workflow on the active Codex machine with synthetic intake, providers and manual unavailable/failure examples.
+
+## First operator attempt
+
+The first review used source `da746d306623f860ce64cd1143738087486886ca` and
+the exact build and fixture identity recorded in preparation commit
+`b4ca16c1cf699b49c23ec1fc14c305fe12d863b4`. The operator reported at approximately
+17:35 CET on 24 November 2026:
+
+> Narrator amazingly off. Stuck at Start assessment, as it is greyed out. Mousepad scrolling is way too fast it is uncontrollable.
+
+The visible fixture had an open job and the prepared inputs. Its status said no
+external result was saved and offered no direct action beside the disabled
+assessment control. Focus was at the job identifier. The isolated store contained
+one job, zero sanitization evidence records and zero gate decisions. The lock
+correctly prevented assessment. The exact prefilled inputs, checkbox and save
+path then passed a focused automated rehearsal. The original rehearsal had
+populated the fields itself, so it did not exercise that preparation path.
+
+Narrator's process and Quick Start window were visible on the same Windows desktop.
+Speech was unavailable to the operator. At follow-up, Windows read 3840×2400 at
+59 Hz, 250% scale and contrast off. That reading does not establish which display
+samples the operator completed. No assessment, manual capture, reopen, report or
+display outcome was reported. Scope acknowledgement and approval were not given.
+
+Codex closed the fixture normally and verified cleanup. The test launcher exited
+successfully after 916.662s of window lifetime, including preparation and waiting.
+At 17:38:10 CET, Windows read back the original 3840×2400 at 59 Hz, 250% scale,
+contrast off and Narrator off.
 
 ## Your short journey
 
@@ -13,12 +41,14 @@ mode for reading text outside form controls. Use this sample job to review how t
 app presents its workflow and limits.
 
 1. **Create a job.** Use **Go to audit controls**, then **Create job**. Check that the
-   job state and next action make sense when spoken and on screen.
+   job state and next action make sense when spoken and on screen. Focus should move
+   to the prepared confirmation checkbox.
 2. **Save the sample intake.** The window supplies `m1-fixture-operator`,
    **Sanitized and verified**, **Clear**, the date 1 October 2026 and
    `m1-fixture-media`. Confirm **Use this synthetic intake record**, then choose
    **Save external result**. Check that the fixture limit and saved gate outcome
-   are clear.
+   are clear and focus advances to **Start assessment**. If assessment is blocked,
+   **Go to external sanitization** leads to the required intake action.
 3. **Run the assessment.** Choose **Start assessment**. Listen for the status and
    open **Assessment evidence**. The synthetic examples include **fixture-keyboard**
    with a collected value, **fixture-unavailable** and **fixture-failed**.
@@ -80,6 +110,8 @@ with `dotnet test`, `--no-build --no-restore`, `RunConfiguration.TreatNoTestsAsE
 and process-local `THIRDLIFE_M1_OPERATOR_REVIEW=1`. The launcher checks its token,
 opens an isolated store and waits up to 30 minutes for the window to close.
 
+### First attempt setup and build
+
 | Evidence field | Recorded value |
 | --- | --- |
 | Tested commit | `da746d306623f860ce64cd1143738087486886ca` |
@@ -88,9 +120,16 @@ opens an isolated store and waits up to 30 minutes for the window to close.
 | Context, reference profile and standard-user token | Active Windows 11 Pro x64 build 26300, `REF-CODEX-001` revision `2026-08-29.1`. Exact-candidate clean worktree, SDK 10.0.400, Release. Independent main apphost smoke and named fixture rehearsal both verified the standard-user token. |
 | Candidate fixture digest and labelled available/unavailable/failure examples | `M1AuditFixture.cs` SHA-256 `92128eeae83336d1d99d12a1ca85dde8c116c241d526bdb40d58543a0b3a3c0c`. Explicitly synthetic intake and three example providers with collected, unavailable and failed outcomes. No donor keyboard sample. |
 | Launch receipt | Exact Release launcher started at 17:22:41+01:00 on 24 November 2026. The active window was observed at 17:23:05+01:00 with Intake selected, no job open and the audit controls link available. |
-| Actual Narrator and display settings before, during and after | Restoration baseline verified at 17:16:13+01:00 on 24 November 2026. 3840×2400 at 59 Hz, 250% scale, contrast off and Narrator off. Starting review verified at 17:22:29+01:00 at the same resolution and refresh rate, 200% scale, contrast off and Narrator on. Settings is open to System → Display. Human display observations and restoration readings are pending. |
-| Operator role, review start/end, duration and exact response | Pending |
-| Replacement or focused retest evidence | Pending if required |
+| Windows settings | Baseline verified at 17:16:13 CET on 24 November 2026. 3840×2400 at 59 Hz, 250% scale, contrast off and Narrator off. At 17:22:29 CET, the same resolution and refresh, 200% scale, contrast off and a running Narrator process were observed. Operator did not hear Narrator. Restoration verified at 17:38:10 CET. |
+| Operator role and response | Project owner acting as operator. See [first operator attempt](#first-operator-attempt). |
+
+### Corrected attempt
+
+| Evidence field | Recorded value |
+| --- | --- |
+| Candidate source, build and launch | Pending clean-worktree verification |
+| Windows settings and actual speech | Pending preparation and operator observation |
+| Focused retest and remaining integrated observations | Pending |
 
 | Observation | Coverage in this review | Result |
 | --- | --- | --- |
