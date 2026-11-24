@@ -3,10 +3,12 @@
 | Field | Value |
 | --- | --- |
 | Gate task | `TL-0208` |
-| Record state | Technical verification in progress |
+| Record state | Review — technical verification complete |
 | Integrated M2 product source | `bf7076ccee9e5c4c438f4706a68a1021e98316b7` |
 | Runtime authority | Active Codex machine, `REF-CODEX-001` revision `2026-08-29.1` |
 | Accountable decision | Policy-owner disposition wording and exception governance |
+| Verified gate checkpoint | `0179b4f989dc2e743d08e463a9ad57fb3d27eb1d` |
+| Review branch | [Draft PR #25](https://github.com/PikkuJanne/ThirdLife/pull/25) |
 
 All seven preceding M2 engineering tasks are integrated into `main` through
 PRs #18–#24. This gate verifies the integrated product and prepares the
@@ -33,6 +35,25 @@ The integrated source includes the Active Codex machine results from PR #24.
 
 `eng/verify.ps1 -Tier Quick` passed 1,112 .NET tests in 56.703 s and built
 the solution with zero warnings or errors.
+
+`eng/verify.ps1 -Tier Full -Restore` passed in 301.624 s in a clean detached
+worktree of the gate checkpoint. It passed 286 governance and 1,572 supported
+.NET tests with zero failures or skips, including the determinism, exception,
+historical replay, repair, report and keyboard suites. Locked restore,
+formatting, and the Release build passed. The gate checkpoint has the same
+product source, tests, runners, and fixtures as integrated `main`.
+
+`eng/run-ui-smoke.ps1` launched the same apphost under a standard-user
+token, reached Inspect with external UI Automation in 1.496 s, and closed
+normally in 1.781 s total. Peak working set was 222,863,360 bytes in this
+one startup observation. The worktree remained clean.
+
+| Smoke input | SHA-256 |
+| --- | --- |
+| `ThirdLife.UI.exe` | `f5a060ab6c80e9a0d6c591b097cb1e2eb5128c574c0cd24d115689aad7913dde` |
+| `ThirdLife.UI.dll` | `0c72171e1ec1cbde2626887ec4a02d84f5d6c7474170e130eb54a4b84695ece7` |
+
+Extended had no trigger. The supplementary check on merged PR #24 passed.
 
 The compiled v2 renderer produced six synthetic workshop reports in 0.294 s.
 Inspection confirmed each of the five disposition headings, the relevant
@@ -65,4 +86,6 @@ pilot, stable-release or deployment authorization.
 The bundled candidate has no exception grants. Synthetic tests exercise
 reason validation and history. The saved decision preserves visible
 exception attribution while private reasons stay out of the captured report.
+The decision proposal SHA-256 is
+`be59861a13d6d0d360cfbb4d92fb1b61c23ff180700540cc5c5eef9db254673d`.
 [Prepared policy-owner decision](../evidence/TL-0208/policy-owner-decision.md)
