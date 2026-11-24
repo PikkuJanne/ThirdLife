@@ -1,0 +1,45 @@
+ThirdLife Setup Core - Workshop audit record
+Classification: WORKSHOP_RESTRICTED
+Schema: workshop-audit-v1
+Job: job-report-fixture
+Device: device-report-fixture
+Job created: 2026-11-24T12:30:00.0000000Z
+Job status: Active
+Scope: Contains synthetic fixture evidence. It does not describe actual device collection or physical function.
+Readiness: Unknown. This audit gives no readiness approval.
+
+Assessment summary
+Incomplete. The saved findings may be partial.
+Started: 2026-11-24T12:30:00.0000000Z
+Finished: Not recorded
+- fixture-camera: Not run. No provider evidence or collection time was recorded.
+
+External sanitization
+Gate: Read-only assessment allowed after verified external sanitization.
+Gate evaluated: 2026-11-24T12:30:00.0000000Z
+- Verified external sanitization. Method: clear. Verification: Verified.
+  Observed. Synthetic fixture. Provider: workshop-intake. Operator code: fixture-operator. Recorded: 2026-11-24T12:30:00.0000000Z.
+  External event: 2026-11-24T12:30:00.0000000Z. Policy: m1-intake-v1.
+  Workshop media reference: fixture-media-1.
+
+Saved observations
+- test.keyboard.value: Yes
+  Observed. Synthetic fixture. Provider: fixture-keyboard. Recorded: 2026-11-24T12:30:00.0000000Z.
+- battery.pack.full_charge_ratio_percent: 84.5 percent
+  Observed. Synthetic fixture. Provider: windows-battery-report. Recorded: 2026-11-24T12:30:00.0000000Z.
+- test.display.failure: Unknown
+  Not available. Synthetic fixture. Provider: fixture-display. Recorded: 2026-11-24T12:30:00.0000000Z.
+  Limitation: provider_unavailable.
+- device.serial_number: SYNTHETIC-SERIAL-42
+  Observed. Synthetic fixture. Provider: windows-system-inventory. Recorded: 2026-11-24T12:30:00.0000000Z.
+
+Manual check records
+- MHT-002: Not available
+  Not available. Synthetic fixture. Provider: manual-test-capture. Operator code: fixture-operator. Recorded: 2026-11-24T12:30:00.0000000Z.
+  Record: manual-report-fixture.
+  Limitation: equipment_missing.
+  Procedure: manual-v1.
+Free-form notes remain in the protected job and are omitted from this record.
+
+Next step
+Review unresolved findings and complete applicable checks before deciding what to do with the device.

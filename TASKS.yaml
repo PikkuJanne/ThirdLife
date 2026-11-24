@@ -2751,7 +2751,7 @@ tasks:
   workstream: reports
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: any
@@ -2791,7 +2791,16 @@ tasks:
   - Scan outputs for prohibited data.
   - Compare a report with its job record.
   - Verify deterministic generation and opening through the UI on success and on write, destination, collision and opening failures.
-  evidence: []
+  evidence:
+  - task: TL-0115
+    date: '2026-11-24'
+    command: Focused renderer, protected store and WPF report checks, fixture-governance regressions, isolated active-machine Full and apphost smoke.
+    tier: full
+    result: Passed 279 governance and 1337 supported .NET tests with zero failures or skips. Reports 17 and UI 61 passed. The exact golden bytes and bounded preview matched durable evidence.
+    environment: REF-CODEX-001 revision 2026-08-29.1 on Windows 11 build 26300, SDK 10.0.400, locked restore and isolated same-machine worktree.
+    duration: Full 281.624s, focused renderer 6.245s, protected store 1.792s, report UI 8.899s and apphost 1.614s.
+    reference: artifacts/evidence/TL-0115/report.md and fixtures/expected-reports/M1/workshop-audit.txt.
+    limitation: Fixture-based reporting and actual standard-user startup. No Extended trigger, human M1 acceptance or release claim.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

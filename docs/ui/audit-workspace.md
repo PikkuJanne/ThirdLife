@@ -56,3 +56,29 @@ tokens, with the historical `not_tested` token displayed as **Not run**. Guided 
 adds an optional details field to the evidence payload. Older prerelease binaries with
 strict payload readers cannot reopen jobs containing the enriched records. Preserve the
 store and use a compatible build to reopen such jobs.
+
+## Workshop report
+
+Use **Go to workshop report** from an open job, then **Generate workshop report**.
+Generation rereads the durable job and writes a deterministic UTF-8 text report.
+The report distinguishes collected findings, unknowns, unrun providers, manual
+results and the latest assessment outcome. Earlier findings retain their own
+timestamps and provenance. Report generation leaves readiness unknown.
+
+Use **Open workshop report** to read the verified generated copy in the keyboard-
+accessible preview. The preview opens the issued artifact for the current job.
+Selecting a different job clears the open action and preview. Earlier saved reports
+remain in the workshop folder and generating again creates a new artifact.
+
+The destination is the protected per-user directory
+`%LOCALAPPDATA%\ThirdLife\SetupCore\WorkshopReports`. The report uses opaque
+filenames and an explicit restricted workshop format. The generated copy may contain
+workshop device identifiers. Unreviewed keys, raw text and free-form manual notes are
+omitted from the report. The underlying workshop records retain the notes.
+
+An inaccessible destination, collision, cancellation before publication, or an
+unreadable or modified saved file produces a textual outcome. The original saved
+bytes are preserved. Rendering is capped at 1,048,576 characters. The store limits
+each artifact to 8 MiB and the folder to 64 files and 64 MiB, with a 4 MiB free-space
+reserve. It does not delete published reports automatically. Explicit retention and
+job deletion remain with the later lifecycle work.

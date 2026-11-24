@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
@@ -9,6 +10,7 @@ using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Inventory.Windows;
 using ThirdLife.Persistence;
+using ThirdLife.Reports.WorkshopReport;
 
 namespace ThirdLife.UI.Shell;
 
@@ -31,11 +33,13 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
     private readonly Func<CancellationToken, Task<IJobStore>> _openStore;
     private readonly IInventoryProvider[] _providers;
     private readonly TimeProvider _timeProvider;
+    private readonly WorkshopReportStore? _reportStore;
     private IJobStore? _store;
     private JobService? _jobs;
     private ManualTestService? _manualTests;
     private AssessmentOrchestrator? _orchestrator;
     private CancellationTokenSource? _assessmentCancellation;
+    private CancellationTokenSource? _reportCancellation;
     private Task _cancellationRequest = Task.CompletedTask;
     private Task _active = Task.CompletedTask;
     private bool _closing;
@@ -44,7 +48,8 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
     public AuditWorkspace(
         Func<CancellationToken, Task<IJobStore>> openStore,
         IReadOnlyList<IInventoryProvider> providers,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        WorkshopReportStore? reportStore = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -57,6 +62,7 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
         _openStore = openStore;
         _providers = providers.ToArray();
         _timeProvider = timeProvider;
+        _reportStore = reportStore;
         IsFixtureScenario = _providers.All(static provider =>
             provider.Descriptor.EvidenceOrigin == ProviderEvidenceOrigin.SyntheticFixture);
         if (!IsFixtureScenario && _providers.Any(static provider =>
@@ -81,6 +87,13 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
     public bool CanCloseJob => Job is not null && !IsBusy && !_closing;
     public bool CanEditJob => CanCloseJob && Job is { IsArchived: false } && !_hasSeparateEvidenceOrigin;
     public bool IsFixtureScenario { get; }
+    public WorkshopReportArtifact? ReportArtifact { get; private set; }
+    public string ReportPreview { get; private set; } = string.Empty;
+    public string ReportStatus { get; private set; } =
+        "Open a job to generate its restricted workshop report.";
+    public bool CanGenerateReport => CanCloseJob && _reportStore is not null && !_hasSeparateEvidenceOrigin;
+    public bool CanOpenReport => CanGenerateReport && ReportArtifact?.JobId == Job?.Job.JobId;
+    public bool CanCancelReport => _reportCancellation is { IsCancellationRequested: false };
 
     private SanitizationGateStatus? Gate => Job is null ? null : SanitizationGate.Inspect(Job);
 
@@ -116,7 +129,16 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
             new StorageProvider(),
             new SystemInventoryProvider(),
         ],
-        TimeProvider.System);
+        TimeProvider.System,
+        RegisteredReportStore());
+
+    private static WorkshopReportStore? RegisteredReportStore()
+    {
+        var localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.IsPathFullyQualified(localData)
+            ? new WorkshopReportStore(Path.Combine(localData, "ThirdLife", "SetupCore", "WorkshopReports"))
+            : null;
+    }
 
     public Task CreateJobAsync() => RunAsync(async () =>
     {
@@ -148,6 +170,7 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
         _hasSeparateEvidenceOrigin = false;
         ManualProgress = null;
         ApplyAssessment(null);
+        ClearReport();
         Status = "Job closed. Reopen it by its workshop job ID.";
         Publish();
     }
@@ -239,6 +262,7 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
     {
         _closing = true;
         CancelAssessment();
+        CancelReport();
         await _active;
         if (_store is { } store)
         {
@@ -248,6 +272,90 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
     }
 
     public ValueTask DisposeAsync() => new(CloseAsync());
+
+    public Task GenerateReportAsync()
+    {
+        if (!CanGenerateReport) { return Task.CompletedTask; }
+        var jobId = Job!.Job.JobId;
+        return RunReportAsync("Generating the workshop report from saved evidence.", async cancellationToken =>
+        {
+            var stored = await LoadJobAsync(jobId, cancellationToken);
+            var artifact = await Task.Run(() =>
+            {
+                if (IsSeparateEvidenceOrigin(stored))
+                {
+                    throw new InvalidOperationException("The job belongs to a separate evidence scenario.");
+                }
+
+                var summary = SummarizeAssessment(AssessmentOrchestrator.ReadLatest(stored));
+                var content = WorkshopReportRenderer.Render(stored, summary, cancellationToken);
+                return _reportStore!.Write(jobId, content, cancellationToken);
+            }, cancellationToken);
+            ReportArtifact = artifact;
+            ReportPreview = string.Empty;
+            ReportStatus = "Workshop report saved. Open it here to review its findings and limits.";
+        });
+    }
+
+    public Task OpenReportAsync()
+    {
+        if (!CanOpenReport) { return Task.CompletedTask; }
+        var artifact = ReportArtifact!;
+        ReportPreview = string.Empty;
+        return RunReportAsync("Opening the saved workshop report.", async cancellationToken =>
+        {
+            ReportPreview = await Task.Run(() => _reportStore!.Read(artifact, cancellationToken), cancellationToken);
+            ReportStatus = "Restricted workshop report opened. Device readiness is unknown.";
+        });
+    }
+
+    public void CancelReport()
+    {
+        if (!CanCancelReport) { return; }
+        _cancellationRequest = _reportCancellation!.CancelAsync();
+        ReportStatus = "Report operation cancellation requested.";
+        Publish();
+    }
+
+    private Task RunReportAsync(string activity, Func<CancellationToken, Task> command)
+    {
+        _reportCancellation = new CancellationTokenSource();
+        var cancellationToken = _reportCancellation.Token;
+        ReportStatus = activity;
+        return RunAsync(async () =>
+        {
+            try
+            {
+                await command(cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                ReportStatus = "Report operation cancelled. Previously saved reports are preserved.";
+            }
+            catch (WorkshopReportStoreException exception)
+            {
+                ReportStatus = exception.Failure switch
+                {
+                    WorkshopReportFailure.NameCollision =>
+                        "A report already uses that filename. Existing output was preserved. Generate a new report to try again.",
+                    WorkshopReportFailure.DestinationUnavailable =>
+                        "The report destination is unavailable. Try again after access is restored.",
+                    WorkshopReportFailure.ArtifactChanged =>
+                        "The saved report has changed. Generate a fresh report from the job.",
+                    WorkshopReportFailure.ReadFailed =>
+                        "The saved report could not be opened. Generate a new report from the job.",
+                    WorkshopReportFailure.ContentTooLarge or WorkshopReportFailure.CapacityExceeded =>
+                        "The report could not be saved within the local storage limits. Existing reports were preserved.",
+                    _ => "The workshop report could not be saved. Previously saved reports were preserved.",
+                };
+            }
+            catch (Exception exception) when (exception is AssessmentException or JobStoreException
+                or ArgumentException or InvalidOperationException)
+            {
+                ReportStatus = "The workshop report could not be generated from this job. Reopen the job and review its saved records.";
+            }
+        });
+    }
 
     private Task RunAsync(Func<Task> command)
     {
@@ -291,6 +399,8 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
             _cancellationRequest = Task.CompletedTask;
             _assessmentCancellation?.Dispose();
             _assessmentCancellation = null;
+            _reportCancellation?.Dispose();
+            _reportCancellation = null;
             IsBusy = false;
             Publish();
         }
@@ -314,9 +424,9 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
         }
     }
 
-    private Task<StoredJob> LoadJobAsync(JobId jobId) => Task.Run(async () =>
-        await _jobs!.ReopenAsync(jobId).ConfigureAwait(false) ??
-        throw new InvalidOperationException("The job is unavailable."));
+    private Task<StoredJob> LoadJobAsync(JobId jobId, CancellationToken cancellationToken = default) => Task.Run(async () =>
+        await _jobs!.ReopenAsync(jobId, cancellationToken).ConfigureAwait(false) ??
+        throw new InvalidOperationException("The job is unavailable."), cancellationToken);
 
     private async Task CompleteGateAsync(JobId jobId, EvidenceId evidenceId)
     {
@@ -381,17 +491,53 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
     {
         var (manual, snapshot, separateOrigin) = await Task.Run(() =>
             (ManualTestService.GetProgress(job), currentRun ?? AssessmentOrchestrator.ReadLatest(job),
-                job.SanitizationEvidence.Any(entry =>
-                    (entry.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) != IsFixtureScenario) ||
-                job.Observations.Any(observation => IsFixtureScenario
-                    ? observation.Metadata.Provenance.Kind is ProvenanceKind.ProviderObservation or ProvenanceKind.ImportedRecord
-                    : observation.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) ||
-                job.HumanTests.Any(attempt =>
-                    (attempt.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) != IsFixtureScenario)));
+                IsSeparateEvidenceOrigin(job)));
+        var jobChanged = Job?.Job.JobId != job.Job.JobId;
         Job = job;
+        if (jobChanged)
+        {
+            ClearReport();
+        }
+
         _hasSeparateEvidenceOrigin = separateOrigin;
         ManualProgress = manual;
         ApplyAssessment(snapshot);
+    }
+
+    private bool IsSeparateEvidenceOrigin(StoredJob job) =>
+        job.SanitizationEvidence.Any(entry =>
+            (entry.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) != IsFixtureScenario) ||
+        job.Observations.Any(observation => IsFixtureScenario
+            ? observation.Metadata.Provenance.Kind is ProvenanceKind.ProviderObservation or ProvenanceKind.ImportedRecord
+            : observation.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) ||
+        job.HumanTests.Any(attempt =>
+            (attempt.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) != IsFixtureScenario);
+
+    private void ClearReport()
+    {
+        ReportArtifact = null;
+        ReportPreview = string.Empty;
+        ReportStatus = _reportStore is null
+            ? "Workshop report storage is unavailable."
+            : Job is null
+                ? "Open a job to generate its restricted workshop report."
+                : "Generate a restricted workshop report from the saved job.";
+    }
+
+    private static WorkshopAssessmentSummary? SummarizeAssessment(AssessmentSnapshot? snapshot)
+    {
+        if (snapshot is null) { return null; }
+        var outcome = snapshot.Outcome switch
+        {
+            AssessmentOutcome.Incomplete => WorkshopAssessmentOutcome.Incomplete,
+            AssessmentOutcome.Completed => WorkshopAssessmentOutcome.Completed,
+            AssessmentOutcome.Cancelled => WorkshopAssessmentOutcome.Cancelled,
+            _ => WorkshopAssessmentOutcome.RequiresReview,
+        };
+        return new WorkshopAssessmentSummary(
+            snapshot.JobId, snapshot.GateDecisionId, snapshot.StartedAtUtc, snapshot.FinishedAtUtc,
+            outcome, snapshot.Providers.Where(provider => provider.Outcome is null)
+                .Select(provider => provider.ProviderId).ToArray());
     }
 
     private void ApplyAssessment(AssessmentSnapshot? snapshot)

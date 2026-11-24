@@ -164,10 +164,10 @@ public sealed class AuditAccessibilityTests
         finally { await workspace.CloseAsync(); }
     }
 
-    private static T Named<T>(FrameworkElement element, string name) where T : FrameworkElement =>
+    internal static T Named<T>(FrameworkElement element, string name) where T : FrameworkElement =>
         Assert.IsAssignableFrom<T>(element.FindName(name));
 
-    private static void CloseWindow(Window window)
+    internal static void CloseWindow(Window window)
     {
         var closed = false;
         window.Closed += (_, _) => closed = true;
@@ -175,14 +175,14 @@ public sealed class AuditAccessibilityTests
         PumpUntil(window, () => closed);
     }
 
-    private static void Invoke(Window window, Button button)
+    internal static void Invoke(Window window, Button button)
     {
         var peer = ShellTestHost.ButtonPeer(button);
         Assert.IsAssignableFrom<IInvokeProvider>(peer.GetPattern(PatternInterface.Invoke)).Invoke();
         ShellTestHost.Drain(window);
     }
 
-    private static void NextIs(Window window, FrameworkElement expected)
+    internal static void NextIs(Window window, FrameworkElement expected)
     {
         MoveNext(window);
         Assert.Same(expected, Keyboard.FocusedElement);
@@ -195,7 +195,7 @@ public sealed class AuditAccessibilityTests
         ShellTestHost.Drain(window);
     }
 
-    private static void PumpUntil(Window window, Func<bool> condition, Func<string>? detail = null)
+    internal static void PumpUntil(Window window, Func<bool> condition, Func<string>? detail = null)
     {
         if (!condition())
         {

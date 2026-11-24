@@ -115,6 +115,9 @@
       "thirdlife.core": {
         "type": "Project"
       },
+      "thirdlife.diagnostics": {
+        "type": "Project"
+      },
       "thirdlife.inventory": {
         "type": "Project",
         "dependencies": {
@@ -129,12 +132,20 @@
           "ThirdLife.Core": "[1.0.0, )"
         }
       },
+      "thirdlife.reports": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Core": "[1.0.0, )",
+          "ThirdLife.Diagnostics": "[1.0.0, )"
+        }
+      },
       "thirdlife.ui": {
         "type": "Project",
         "dependencies": {
           "ThirdLife.Core": "[1.0.0, )",
           "ThirdLife.Inventory": "[1.0.0, )",
-          "ThirdLife.Persistence": "[1.0.0, )"
+          "ThirdLife.Persistence": "[1.0.0, )",
+          "ThirdLife.Reports": "[1.0.0, )"
         }
       },
       "Microsoft.Data.Sqlite.Core": {

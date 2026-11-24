@@ -33,6 +33,7 @@ STABILIZATION_AMENDMENT_PATH = (
 MINIMAL_HUMAN_TESTING_AMENDMENT_PATH = (
     "docs/amendments/2026-11-24-minimal-human-testing.md"
 )
+M1_WORKSHOP_REPORT_FIXTURE = "fixtures/expected-reports/M1/workshop-audit.txt"
 TL0401_WINGET_ADR_PATH = "docs/adr/0009-winget-backend.md"
 TL0401_HUMAN_EVIDENCE = (
     "A maintainer reviews the spike evidence and approves ADR 0009 at "
@@ -129,6 +130,7 @@ REQUIRED_FILES = (
     "docs/privacy/redaction-test-cases.yaml",
     "fixtures/README.md",
     "fixtures/catalog/catalog.yaml",
+    M1_WORKSHOP_REPORT_FIXTURE,
     "fixtures/jobs/assessment-ready.yaml",
     "fixtures/jobs/partial-observations.yaml",
     "fixtures/jobs/sanitization-blocked.yaml",
@@ -3048,7 +3050,7 @@ def validate_pilot_fixtures(
 
     fixture_root = root / "fixtures"
     expected_paths = set(PILOT_FIXTURE_FILES)
-    allowed_paths = expected_paths | {PILOT_FIXTURE_README}
+    allowed_paths = expected_paths | {PILOT_FIXTURE_README, M1_WORKSHOP_REPORT_FIXTURE}
     actual_paths: set[str] = set()
     if fixture_root.is_dir():
         try:
