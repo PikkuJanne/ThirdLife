@@ -36,7 +36,9 @@ Active machine `REF-CODEX-001` revision `2026-08-29.1`, Windows 11 x64,
 | `eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Policy.Tests/ThirdLife.Policy.Tests.csproj` | Passed in 52.714 s. Included Quick, 1,233 .NET tests with zero failures or skips, and the Release build with zero warnings or errors. |
 
 Full and Extended had no trigger. No migrations or dependency changes apply to
-this task. GitHub Actions is supplementary.
+this task. GitHub Actions is supplementary. Verified source
+`6079da400eda959274c93e2670844d522957a9e9` and the completion record use
+[PR #21](https://github.com/PikkuJanne/ThirdLife/pull/21).
 
 ## Privacy and integration scope
 

@@ -3100,7 +3100,7 @@ tasks:
   workstream: policy
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: L
   executor: codex
   environment: any
@@ -3125,7 +3125,12 @@ tasks:
   verification:
   - Test authorization/prohibition cases.
   - Test historical replay after policy changes.
-  evidence: []
+  evidence:
+  - summary: TL-0204 Targeted including Quick passed 1,233 tests in 52.714 s. Focused Core and exception suites verified provenance, grants, replay and reporting.
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400, synthetic exception and manual cases
+    date: '2026-11-24'
+    reference: artifacts/evidence/TL-0204/report.md, source 6079da400eda959274c93e2670844d522957a9e9, PR 21. No candidate grant was adopted.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
