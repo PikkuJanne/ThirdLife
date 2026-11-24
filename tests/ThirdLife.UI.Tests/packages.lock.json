@@ -143,7 +143,8 @@
         "type": "Project",
         "dependencies": {
           "ThirdLife.Core": "[1.0.0, )",
-          "ThirdLife.Diagnostics": "[1.0.0, )"
+          "ThirdLife.Diagnostics": "[1.0.0, )",
+          "ThirdLife.Policy": "[1.0.0, )"
         }
       },
       "thirdlife.ui": {

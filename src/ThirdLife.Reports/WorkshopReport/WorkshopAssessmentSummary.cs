@@ -20,7 +20,8 @@ public sealed record WorkshopAssessmentSummary
         DateTimeOffset startedAtUtc,
         DateTimeOffset? finishedAtUtc,
         WorkshopAssessmentOutcome outcome,
-        IReadOnlyList<ProviderId> unrunProviders)
+        IReadOnlyList<ProviderId> unrunProviders,
+        string? assessmentId = null)
     {
         JobId = jobId ?? throw new ArgumentNullException(nameof(jobId));
         GateDecisionId = gateDecisionId ?? throw new ArgumentNullException(nameof(gateDecisionId));
@@ -38,6 +39,7 @@ public sealed record WorkshopAssessmentSummary
         FinishedAtUtc = finishedAtUtc?.ToUniversalTime();
         Outcome = outcome;
         UnrunProviders = Array.AsReadOnly(unrunProviders.OrderBy(static provider => provider.Value, StringComparer.Ordinal).ToArray());
+        AssessmentId = assessmentId is null ? null : new EvidenceId(assessmentId).Value;
     }
 
     public JobId JobId { get; }
@@ -51,4 +53,6 @@ public sealed record WorkshopAssessmentSummary
     public WorkshopAssessmentOutcome Outcome { get; }
 
     public IReadOnlyList<ProviderId> UnrunProviders { get; }
+
+    public string? AssessmentId { get; }
 }

@@ -3,6 +3,7 @@ using ThirdLife.Core.Repairs;
 using ThirdLife.Inventory;
 using ThirdLife.Policy.Evaluation;
 using ThirdLife.Policy.Schema;
+using ThirdLife.Reports.WorkshopReport;
 
 namespace ThirdLife.UI.Features.Disposition;
 
@@ -38,7 +39,9 @@ internal static class RepairSuggestions
                 if (component is { } affected)
                 {
                     var id = rule.Evidence[0].EvidenceId;
-                    suggestions.TryAdd(id, new(affected, id, $"{ComponentName(affected)} candidate check needs repair and retest. Evidence {id.Value}."));
+                    var caption = WorkshopReportRenderer.SafePolicyPresentation(
+                        $"{ComponentName(affected)} candidate check needs repair and retest. Evidence {id.Value}.");
+                    suggestions.TryAdd(id, new(affected, id, caption));
                 }
             }
         }
@@ -53,8 +56,9 @@ internal static class RepairSuggestions
             }
 
             var id = observation.Metadata.EvidenceId;
-            suggestions.TryAdd(id, new(RepairComponent.SystemStorage, id,
-                $"Review the reported storage health and retest after completed work. Evidence {id.Value}."));
+            var caption = WorkshopReportRenderer.SafePolicyPresentation(
+                $"Review the reported storage health and retest after completed work. Evidence {id.Value}.");
+            suggestions.TryAdd(id, new(RepairComponent.SystemStorage, id, caption));
         }
 
         return Array.AsReadOnly(suggestions.Values

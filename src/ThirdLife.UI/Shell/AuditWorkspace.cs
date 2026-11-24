@@ -172,6 +172,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ManualProgress = null;
         ApplyAssessment(null);
         ClearRepairs();
+        ClearPolicyView();
         ClearReport();
         Status = "Job closed. Reopen it by its workshop job ID.";
         Publish();
@@ -216,6 +217,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _assessmentCancellation = new CancellationTokenSource();
         var cancellationToken = _assessmentCancellation.Token;
         Assessment = null;
+        ClearPolicyView();
         AssessmentStatus = "Read-only assessment is running. Device readiness is unknown.";
         Findings = [];
         RepairCandidates = [];
@@ -295,15 +297,19 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         return RunReportAsync("Generating the workshop report from saved evidence.", async cancellationToken =>
         {
             var stored = await LoadJobAsync(jobId, cancellationToken);
+            if (IsSeparateEvidenceOrigin(stored))
+            {
+                throw new InvalidOperationException("The job belongs to a separate evidence scenario.");
+            }
+
+            var assessment = await Task.Run(() => AssessmentOrchestrator.ReadLatest(stored), cancellationToken);
+            var summary = SummarizeAssessment(assessment);
+            var policy = await FindSavedPolicyAsync(jobId, assessment, cancellationToken);
             var artifact = await Task.Run(() =>
             {
-                if (IsSeparateEvidenceOrigin(stored))
-                {
-                    throw new InvalidOperationException("The job belongs to a separate evidence scenario.");
-                }
-
-                var summary = SummarizeAssessment(AssessmentOrchestrator.ReadLatest(stored));
-                var content = WorkshopReportRenderer.Render(stored, summary, cancellationToken);
+                var content = summary is not null && policy is not null
+                    ? WorkshopReportRenderer.RenderWithPolicy(stored, summary, policy, cancellationToken)
+                    : WorkshopReportRenderer.Render(stored, summary, cancellationToken);
                 return _reportStore!.Write(jobId, content, cancellationToken);
             }, cancellationToken);
             ReportArtifact = artifact;
@@ -320,7 +326,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         return RunReportAsync("Opening the saved workshop report.", async cancellationToken =>
         {
             ReportPreview = await Task.Run(() => _reportStore!.Read(artifact, cancellationToken), cancellationToken);
-            ReportStatus = "Restricted workshop report opened. Device readiness is unknown.";
+            ReportStatus = "Restricted workshop report opened. Review the saved findings and limits.";
         });
     }
 
@@ -519,6 +525,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ManualProgress = manual;
         ApplyAssessment(snapshot);
         ApplyRepairs(repairHistory.Repairs, repairHistory.Retests);
+        await LoadPolicyViewAsync(job.Job.JobId, snapshot);
     }
 
     private bool IsSeparateEvidenceOrigin(StoredJob job) =>
@@ -554,7 +561,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         return new WorkshopAssessmentSummary(
             snapshot.JobId, snapshot.GateDecisionId, snapshot.StartedAtUtc, snapshot.FinishedAtUtc,
             outcome, snapshot.Providers.Where(provider => provider.Outcome is null)
-                .Select(provider => provider.ProviderId).ToArray());
+                .Select(provider => provider.ProviderId).ToArray(), snapshot.AssessmentId.Value);
     }
 
     private void ApplyAssessment(AssessmentSnapshot? snapshot)

@@ -7,6 +7,12 @@
       },
       "thirdlife.diagnostics": {
         "type": "Project"
+      },
+      "thirdlife.policy": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Core": "[1.0.0, )"
+        }
       }
     }
   }

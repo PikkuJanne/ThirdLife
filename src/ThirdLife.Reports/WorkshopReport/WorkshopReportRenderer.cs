@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Sanitization;
+using ThirdLife.Policy.Versioning;
 
 namespace ThirdLife.Reports.WorkshopReport;
 
@@ -17,7 +18,13 @@ public static partial class WorkshopReportRenderer
     public static string Render(
         StoredJob job,
         WorkshopAssessmentSummary? latestAssessment = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) => RenderCore(job, latestAssessment, null, cancellationToken);
+
+    private static string RenderCore(
+        StoredJob job,
+        WorkshopAssessmentSummary? latestAssessment,
+        StoredPolicyDecision? savedDecision,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
         cancellationToken.ThrowIfCancellationRequested();
@@ -35,14 +42,20 @@ public static partial class WorkshopReportRenderer
             throw new ArgumentException("The assessment does not belong to this saved job.", nameof(latestAssessment));
         }
 
+        if (savedDecision is not null)
+        {
+            ValidatePolicyDecision(job, latestAssessment!, savedDecision);
+        }
+
         var hasFixtureEvidence = job.Observations.Any(static item => IsFixture(item.Metadata)) ||
             job.SanitizationEvidence.Any(static item => IsFixture(item.Metadata)) ||
             job.HumanTests.Any(static item => IsFixture(item.Metadata));
         var gate = SanitizationGate.Inspect(job);
         var report = new StringBuilder();
-        Line(report, "ThirdLife Setup Core - Workshop audit record");
+        var showEvidenceIds = savedDecision is not null;
+        Line(report, showEvidenceIds ? "ThirdLife Setup Core - Workshop disposition record" : "ThirdLife Setup Core - Workshop audit record");
         Line(report, "Classification: WORKSHOP_RESTRICTED");
-        Line(report, "Schema: workshop-audit-v1");
+        Line(report, showEvidenceIds ? "Schema: workshop-disposition-v2" : "Schema: workshop-audit-v1");
         Line(report, $"Job: {SafeCode(job.Job.JobId.Value)}");
         Line(report, $"Device: {SafeCode(job.Job.DeviceId.Value)}");
         Line(report, $"Job created: {Timestamp(job.Job.CreatedAtUtc)}");
@@ -52,22 +65,34 @@ public static partial class WorkshopReportRenderer
             Line(report, "Scope: Contains synthetic fixture evidence. It does not describe actual device collection or physical function.");
         }
 
-        Line(report, "Readiness: Unknown. This audit gives no readiness approval.");
+        if (savedDecision is null)
+        {
+            Line(report, "Readiness: Unknown. This audit gives no readiness approval.");
+        }
+
         Line(report, "");
         Line(report, "Assessment summary");
         WriteAssessment(report, gate, latestAssessment);
         Line(report, "");
         Line(report, "External sanitization");
-        WriteSanitization(report, job, gate, cancellationToken);
+        WriteSanitization(report, job, gate, showEvidenceIds, cancellationToken);
         Line(report, "");
         Line(report, "Saved observations");
-        var needsReview = WriteObservations(report, job, cancellationToken);
+        var needsReview = WriteObservations(report, job, showEvidenceIds, cancellationToken);
         Line(report, "");
         Line(report, "Manual check records");
-        needsReview |= WriteManualTests(report, job, cancellationToken);
+        needsReview |= WriteManualTests(report, job, showEvidenceIds, cancellationToken);
         Line(report, "");
-        Line(report, "Next step");
-        Line(report, NextStep(job, gate, latestAssessment, needsReview));
+        if (savedDecision is not null)
+        {
+            WritePolicySections(report, savedDecision, cancellationToken);
+        }
+        else
+        {
+            Line(report, "Next step");
+            Line(report, NextStep(job, gate, latestAssessment, needsReview));
+        }
+
         return report.ToString();
     }
 
@@ -105,7 +130,7 @@ public static partial class WorkshopReportRenderer
     }
 
     private static void WriteSanitization(
-        StringBuilder report, StoredJob job, SanitizationGateStatus gate, CancellationToken cancellationToken)
+        StringBuilder report, StoredJob job, SanitizationGateStatus gate, bool showEvidenceIds, CancellationToken cancellationToken)
     {
         Line(report, $"Gate: {DescribeGate(gate.Reason)}");
         if (gate.Decision is { } decision)
@@ -137,7 +162,7 @@ public static partial class WorkshopReportRenderer
                 _ => "Not available",
             };
             Line(report, $"- {result}. Method: {SafeCode(item.MethodCode)}. Verification: {verification}.");
-            WriteAttribution(report, item.Metadata, item.OperatorId);
+            WriteAttribution(report, item.Metadata, item.OperatorId, showEvidenceIds);
             Line(report, $"  External event: {Timestamp(item.OccurredAtUtc)}. Policy: {SafeCode(item.PolicyVersion)}.");
             if (item.MediaIdentifier is not null)
             {
@@ -146,7 +171,7 @@ public static partial class WorkshopReportRenderer
         }
     }
 
-    private static bool WriteObservations(StringBuilder report, StoredJob job, CancellationToken cancellationToken)
+    private static bool WriteObservations(StringBuilder report, StoredJob job, bool showEvidenceIds, CancellationToken cancellationToken)
     {
         int included = 0;
         int outsideSchema = 0;
@@ -172,7 +197,7 @@ public static partial class WorkshopReportRenderer
             string unit = observation.Unit is { } storedUnit && observation.Value is not null && value != Withheld
                 ? $" {SafeCode(storedUnit)}" : "";
             Line(report, $"- {observation.EvidenceKey.Value}: {value}{unit}");
-            WriteAttribution(report, observation.Metadata, observation.OperatorId);
+            WriteAttribution(report, observation.Metadata, observation.OperatorId, showEvidenceIds);
             WriteLimitation(report, observation.LimitationCode);
             included++;
             unresolved |= observation.Value is null || value == Withheld || observation.LimitationCode is not null;
@@ -192,7 +217,7 @@ public static partial class WorkshopReportRenderer
         return unresolved || outsideSchema != 0;
     }
 
-    private static bool WriteManualTests(StringBuilder report, StoredJob job, CancellationToken cancellationToken)
+    private static bool WriteManualTests(StringBuilder report, StoredJob job, bool showEvidenceIds, CancellationToken cancellationToken)
     {
         if (job.HumanTests.Count == 0)
         {
@@ -219,7 +244,7 @@ public static partial class WorkshopReportRenderer
             };
             var caseName = item.Details?.CaseId ?? "Legacy manual check";
             Line(report, $"- {caseName}: {result}");
-            WriteAttribution(report, item.Metadata, item.OperatorId);
+            WriteAttribution(report, item.Metadata, item.OperatorId, showEvidenceIds);
             Line(report, $"  Record: {SafeCode(item.HumanTestId.Value)}.");
             WriteLimitation(report, item.LimitationCode);
             if (item.Details is { } details)
@@ -238,7 +263,8 @@ public static partial class WorkshopReportRenderer
         return unresolved;
     }
 
-    private static void WriteAttribution(StringBuilder report, EvidenceMetadata metadata, OperatorId? operatorId)
+    private static void WriteAttribution(
+        StringBuilder report, EvidenceMetadata metadata, OperatorId? operatorId, bool showEvidenceId)
     {
         var classification = metadata.EvidenceClassification switch
         {
@@ -262,6 +288,10 @@ public static partial class WorkshopReportRenderer
         }
 
         Line(report, $"  {classification}. {origin}. {attribution}. Recorded: {Timestamp(metadata.CollectedAtUtc)}.");
+        if (showEvidenceId)
+        {
+            Line(report, $"  Evidence ID {SafeCode(metadata.EvidenceId.Value)}.");
+        }
     }
 
     private static void WriteLimitation(StringBuilder report, string? limitation)
