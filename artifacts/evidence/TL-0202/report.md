@@ -38,7 +38,9 @@ full-charge ratio above 100 percent remains comparable to its threshold.
 
 Full and Extended had no trigger. The evaluator adds a deterministic domain
 entry point with the existing project and package graph. GitHub Actions
-provides supplementary verification.
+provides supplementary verification. Verified source
+`30641af942589f49fe7025cae9b05af4fe952484` and the completion record use
+[PR #19](https://github.com/PikkuJanne/ThirdLife/pull/19).
 
 ## Scope
 

@@ -4,25 +4,25 @@
 **Bundle baseline:** 0.6.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
 **Current milestone:** M2 — Explainable disposition engine  
-**Current task:** TL-0201 — Done
+**Current task:** TL-0202 — Done
 
 ## Continuity
 
-The M2 sequence starts from the completed M1 gate. The TL-0201 integration
-record is PR #18 against `main`. Use updated `main` for the next task.
-[M1 gate](artifacts/gates/M1-audit-only.md)
+The M2 sequence started from the completed M1 gate. PR #18 integrated the
+policy schema. PR #19 is the integration record for deterministic evaluation.
+Use updated `main` for the next task. [M1 gate](artifacts/gates/M1-audit-only.md)
 
 The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-The v1 validator accepts all 27 rules in the original candidate through its
-exact JSON projection. The candidate remains pending adoption. Targeted passed
-1,150 tests. Clean-worktree Full passed 286 governance and 1,414 .NET tests on
-source `141000e63b7920e4fee7a6f5521b4d142dc97903` on the active machine.
-[TL-0201 evidence](artifacts/evidence/TL-0201/report.md)
+The evaluator returns stable outcomes and evidence citations for every rule.
+Missing, stale, limited and contradictory evidence stays unresolved. Targeted
+passed 1,187 tests on the active machine, with independent synthetic facts
+covering all 27 rules in the unchanged candidate policy.
+[TL-0202 evidence](artifacts/evidence/TL-0202/report.md)
 
 ## Next action
 
-TL-0202 is the next dependency-ready task. Implement deterministic evaluation
-of immutable evidence from updated `main`.
+TL-0203 is the next dependency-ready task. Map evaluated rules to the five
+dispositions and their explanations from updated `main`.
