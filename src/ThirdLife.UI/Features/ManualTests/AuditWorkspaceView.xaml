@@ -1,6 +1,7 @@
 <UserControl x:Class="ThirdLife.UI.Features.ManualTests.AuditWorkspaceView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:disposition="clr-namespace:ThirdLife.UI.Features.Disposition"
              xmlns:evidence="clr-namespace:ThirdLife.Core.Evidence;assembly=ThirdLife.Core"
              xmlns:manual="clr-namespace:ThirdLife.Core.ManualTests;assembly=ThirdLife.Core"
              xmlns:sanitization="clr-namespace:ThirdLife.Core.Sanitization;assembly=ThirdLife.Core">
@@ -199,6 +200,7 @@
                  AutomationProperties.Name="Restricted workshop report preview" />
       </StackPanel>
     </GroupBox>
+    <disposition:RepairWorkflowView />
     <Button x:Name="ReturnFromAuditButton" Content="Return to workflow stages" Click="RequestStageReturn" />
   </StackPanel>
 </UserControl>

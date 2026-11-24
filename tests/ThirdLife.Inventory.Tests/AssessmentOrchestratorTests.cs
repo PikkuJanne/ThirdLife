@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Repairs;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
@@ -112,19 +113,81 @@ public sealed class AssessmentOrchestratorTests(ITestOutputHelper output)
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task ReservedAssessmentKeysCannotBeClaimedByProviders(bool failureKey)
+    [InlineData("assessment.spoofed", false)]
+    [InlineData("assessment.spoofed", true)]
+    [InlineData("repair.spoofed", false)]
+    [InlineData("repair.spoofed", true)]
+    public async Task ReservedJournalKeysCannotBeClaimedByProviders(string reservedKey, bool failureKey)
     {
         await using var store = new AssessmentTestStore();
         var provider = new FakeInventoryProvider(Descriptor("alpha",
-            key: failureKey ? "test.alpha.value" : "assessment.spoofed",
-            failureKey: failureKey ? "assessment.spoofed" : "test.alpha.failure"),
+            key: failureKey ? "test.alpha.value" : reservedKey,
+            failureKey: failureKey ? reservedKey : "test.alpha.failure"),
             _ => ValueTask.FromResult(ProviderReadResult.Unavailable()));
 
         Assert.ThrowsAny<ArgumentException>(() => new AssessmentOrchestrator(store, [provider]));
 
         Assert.Equal(0, provider.InvocationCount);
+    }
+
+    [Fact]
+    public async Task ReservedRepairJournalProviderCannotJoinAssessmentRoster()
+    {
+        await using var store = new AssessmentTestStore();
+        var descriptor = new InventoryProviderDescriptor(
+            new("repair-journal"), ProviderPrivilegeRequirement.StandardUser,
+            TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(15), ProviderNetworkUse.None,
+            ProviderEvidenceOrigin.SyntheticFixture, [ProviderOperatingSystem.Windows11],
+            new(new("test.alpha.failure"), "source.alpha.failure"),
+            [new(new("test.alpha.value"), EvidenceValueKind.Boolean, null, "source.alpha")]);
+        var provider = new FakeInventoryProvider(descriptor, _ => ValueTask.FromResult(ProviderReadResult.Unavailable()));
+
+        Assert.ThrowsAny<ArgumentException>(() => new AssessmentOrchestrator(store, [provider]));
+        Assert.Equal(0, provider.InvocationCount);
+    }
+
+    [Fact]
+    public async Task FailedRetestStartCannotLeaveUnlinkedAssessmentAndRetryUsesTheSameGuard()
+    {
+        await using var store = new AssessmentTestStore();
+        var key = new EvidenceKey("battery.present");
+        var batteryPresent = false;
+        var provider = new FakeInventoryProvider(Descriptor("battery", key: key.Value), _ =>
+            ValueTask.FromResult(ProviderReadResult.Collected(
+                [NormalizedEvidence.Observed(key, EvidenceValue.FromBoolean(batteryPresent))])));
+        var prior = await new AssessmentOrchestrator(store, [provider], new FixedTimeProvider(Now)).AssessAsync(store.JobId);
+        var failure = Assert.Single(prior.Observations);
+        var repair = await new RepairRetestService(store, new FixedTimeProvider(Now.AddMinutes(1))).RecordAsync(
+            store.JobId, prior.AssessmentId.Value, failure.Metadata.EvidenceId, RepairComponent.Battery,
+            RepairAction.Replaced, new OperatorId("operator-synthetic"));
+        batteryPresent = true;
+        var retestOrchestrator = new AssessmentOrchestrator(store, [provider], new FixedTimeProvider(Now.AddMinutes(2)));
+        store.Fault = AssessmentStoreFault.BeforeCommit;
+        store.FaultSelector = static batch => Contains(batch, "repair.retest_started");
+
+        var error = await Assert.ThrowsAsync<AssessmentException>(() => retestOrchestrator.RetestAsync(store.JobId, repair.RepairId));
+        Assert.Equal("assessment_store_unavailable", error.ResultCode);
+        Assert.NotNull(error.AssessmentId);
+        Assert.Null(await retestOrchestrator.LoadAsync(store.JobId, error.AssessmentId));
+        Assert.DoesNotContain(store.Committed, static batch => Contains(batch, "repair.retest_started"));
+        Assert.Equal(1, provider.InvocationCount);
+
+        var retest = await retestOrchestrator.RetestAsync(store.JobId, repair.RepairId);
+        var startBatch = Assert.Single(store.Committed, static batch => Contains(batch, "repair.retest_started"));
+        Assert.Equal(retest.GateDecisionId, startBatch.ExpectedSanitizationGateDecisionId);
+        Assert.Collection(startBatch.Observations,
+            static observation => Assert.Equal("assessment.start", observation.EvidenceKey.Value),
+            static observation => Assert.Equal("repair.retest_started", observation.EvidenceKey.Value));
+        Assert.All(startBatch.Observations, observation => Assert.Equal(retest.StartedAtUtc, observation.Metadata.CollectedAtUtc));
+        var saved = Assert.IsType<StoredJob>(await store.LoadJobAsync(store.JobId));
+        var link = Assert.Single(RepairJournal.GetRetests(saved));
+        Assert.Equal(repair.RepairId, link.RepairId);
+        Assert.Equal(retest.AssessmentId.Value, link.AssessmentId);
+        Assert.Equal(failure.Metadata.EvidenceId, link.PriorFailureEvidenceId);
+        var updated = Assert.Single(retest.Observations);
+        Assert.True(updated.Value!.BooleanValue);
+        Assert.False(Assert.Single((await retestOrchestrator.LoadAsync(store.JobId, prior.AssessmentId))!.Observations).Value!.BooleanValue);
+        Assert.NotEqual(failure.Metadata.EvidenceId, updated.Metadata.EvidenceId);
     }
 
     [Fact]

@@ -111,13 +111,15 @@ public sealed class JobEvidenceBatch
         IEnumerable<Observation>? observations = null,
         IEnumerable<SanitizationEvidence>? sanitizationEvidence = null,
         IEnumerable<HumanTestEvidence>? humanTests = null,
-        SanitizationGateDecisionId? expectedSanitizationGateDecisionId = null)
+        SanitizationGateDecisionId? expectedSanitizationGateDecisionId = null,
+        bool requireUnarchivedJob = false)
     {
         JobId = jobId ?? throw new ArgumentNullException(nameof(jobId));
         Observations = Copy(observations, nameof(observations));
         SanitizationEvidence = Copy(sanitizationEvidence, nameof(sanitizationEvidence));
         HumanTests = Copy(humanTests, nameof(humanTests));
         ExpectedSanitizationGateDecisionId = expectedSanitizationGateDecisionId;
+        RequireUnarchivedJob = requireUnarchivedJob;
 
         if (ExpectedSanitizationGateDecisionId is not null &&
             (SanitizationEvidence.Count != 0 || HumanTests.Count != 0))
@@ -164,6 +166,8 @@ public sealed class JobEvidenceBatch
     // When supplied, the store must revalidate this exact persisted allowing decision
     // and current job state in the same transaction that appends the observations.
     public SanitizationGateDecisionId? ExpectedSanitizationGateDecisionId { get; }
+
+    public bool RequireUnarchivedJob { get; }
 
     private static IReadOnlyList<T> Copy<T>(IEnumerable<T>? values, string parameterName)
         where T : class

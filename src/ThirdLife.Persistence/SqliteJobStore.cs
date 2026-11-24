@@ -140,6 +140,12 @@ public sealed partial class SqliteJobStore : IJobStore
                         connection, transaction, batch.JobId, batch.ExpectedSanitizationGateDecisionId, token)
                         .ConfigureAwait(false);
                 }
+                else if (batch.RequireUnarchivedJob &&
+                    await ReadArchiveStateAsync(connection, transaction, batch.JobId, token).ConfigureAwait(false))
+                {
+                    throw new JobStoreConflictException();
+                }
+
                 var currentCount = await ReadEvidenceCountAsync(connection, transaction, batch.JobId, token)
                     .ConfigureAwait(false);
                 var proposedCount = batch.Observations.Count + batch.SanitizationEvidence.Count + batch.HumanTests.Count;

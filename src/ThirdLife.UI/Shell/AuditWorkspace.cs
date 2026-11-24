@@ -4,6 +4,7 @@ using System.IO;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
+using ThirdLife.Core.Repairs;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
@@ -25,7 +26,7 @@ internal sealed record SanitizationInput(
 internal sealed record AssessmentFinding(string Name, string Value, string Evidence, string Provider);
 
 /// <summary>Owns one window's open job and serializes commands while the shell stays navigable.</summary>
-internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
+internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
 {
     private const string IntakePolicyVersion = "m1-intake-v1";
     private const string NoAssessment = "No assessment is recorded for this job.";
@@ -170,6 +171,7 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
         _hasSeparateEvidenceOrigin = false;
         ManualProgress = null;
         ApplyAssessment(null);
+        ClearRepairs();
         ClearReport();
         Status = "Job closed. Reopen it by its workshop job ID.";
         Publish();
@@ -191,7 +193,9 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
         return RunAsync(() => CompleteGateAsync(Job!.Job.JobId, Gate!.EvidenceId!));
     }
 
-    public Task StartAssessmentAsync()
+    public Task StartAssessmentAsync() => StartAssessmentAsync(linkedRepairId: null);
+
+    private Task StartAssessmentAsync(EvidenceId? linkedRepairId)
     {
         if (IsBusy || _closing) { return Task.CompletedTask; }
         if (!CanAssess)
@@ -202,17 +206,28 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
         }
 
         var jobId = Job!.Job.JobId;
+        if (linkedRepairId is not null && !RepairJournal.CanRetest(Job, linkedRepairId))
+        {
+            Status = "This repair needs verified current sanitization evidence before a linked retest.";
+            Publish();
+            return Task.CompletedTask;
+        }
+
         _assessmentCancellation = new CancellationTokenSource();
         var cancellationToken = _assessmentCancellation.Token;
         Assessment = null;
         AssessmentStatus = "Read-only assessment is running. Device readiness is unknown.";
         Findings = [];
+        RepairCandidates = [];
         return RunAsync(async () =>
         {
             try
             {
-                var snapshot = await Task.Run(() => _orchestrator!.AssessAsync(jobId, cancellationToken));
+                var snapshot = await Task.Run(() => linkedRepairId is null
+                    ? _orchestrator!.AssessAsync(jobId, cancellationToken)
+                    : _orchestrator!.RetestAsync(jobId, linkedRepairId, cancellationToken));
                 await ApplyJobAsync(await LoadJobAsync(jobId), snapshot);
+                if (linkedRepairId is not null) { ClearReport(); }
                 Status = AssessmentStatus;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -489,19 +504,21 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
 
     private async Task ApplyJobAsync(StoredJob job, AssessmentSnapshot? currentRun = null)
     {
-        var (manual, snapshot, separateOrigin) = await Task.Run(() =>
+        var (manual, snapshot, separateOrigin, repairHistory) = await Task.Run(() =>
             (ManualTestService.GetProgress(job), currentRun ?? AssessmentOrchestrator.ReadLatest(job),
-                IsSeparateEvidenceOrigin(job)));
+                IsSeparateEvidenceOrigin(job), RepairJournal.GetHistory(job)));
         var jobChanged = Job?.Job.JobId != job.Job.JobId;
         Job = job;
         if (jobChanged)
         {
             ClearReport();
+            ClearRepairs();
         }
 
         _hasSeparateEvidenceOrigin = separateOrigin;
         ManualProgress = manual;
         ApplyAssessment(snapshot);
+        ApplyRepairs(repairHistory.Repairs, repairHistory.Retests);
     }
 
     private bool IsSeparateEvidenceOrigin(StoredJob job) =>
