@@ -23,4 +23,8 @@
     <ProjectReference Include="..\..\src\ThirdLife.Reports\ThirdLife.Reports.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\fixtures\expected-reports\M1\workshop-audit.txt" Link="workshop-audit.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

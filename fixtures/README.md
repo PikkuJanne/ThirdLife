@@ -12,6 +12,9 @@ package, an action, system mutation, or a production deployment.
   missing-evidence behavior.
 - `profiles` separates workshop capabilities from recipient-controlled choices.
 - `catalog` maps generic capabilities to non-installable synthetic placeholders.
+- `expected-reports/M1/workshop-audit.txt` pins the synthetic workshop report's
+  expected output. It is checked by the report regression and bundle manifest.
+  The TL-0007 pilot input digest is unchanged.
 
 Each job snapshots an exact candidate profile version and the capabilities active
 for that scenario, so profile-dependent policy rules can be evaluated without an

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.ManualTests;
@@ -18,6 +19,7 @@ public partial class AuditWorkspaceView : UserControl
     private string? _displayedJob;
     private string? _lastStatus;
     private string? _lastAssessmentStatus;
+    private string? _lastReportStatus;
     private bool _sanitizationDateInvalid;
     private ManualTestProgressItem? _displayedManualItem;
 
@@ -38,6 +40,7 @@ public partial class AuditWorkspaceView : UserControl
         DataContext = workspace;
         _lastStatus = workspace.Status;
         _lastAssessmentStatus = workspace.AssessmentStatus;
+        _lastReportStatus = workspace.ReportStatus;
         FixtureNotice.Visibility = VisibleWhen(workspace.IsFixtureScenario);
         FixtureManualNotice.Visibility = FixtureNotice.Visibility;
         ManualPassOption.IsEnabled = !workspace.IsFixtureScenario;
@@ -76,6 +79,47 @@ public partial class AuditWorkspaceView : UserControl
     }
 
     private void RequestStageReturn(object sender, RoutedEventArgs e) => ReturnToStagesRequested?.Invoke(this, EventArgs.Empty);
+
+    private void GoToWorkshopReport(object sender, RoutedEventArgs e)
+    {
+        GenerateReportButton.Focus();
+        GenerateReportButton.BringIntoView();
+    }
+
+    private async void GenerateWorkshopReport(object sender, RoutedEventArgs e)
+    {
+        FocusReportControl(ReportMessage);
+        await Workspace.GenerateReportAsync();
+        if (ReportMessage.IsKeyboardFocused && Workspace.CanOpenReport)
+        {
+            FocusReportControl(OpenReportButton);
+        }
+    }
+
+    private async void OpenWorkshopReport(object sender, RoutedEventArgs e)
+    {
+        FocusReportControl(ReportMessage);
+        await Workspace.OpenReportAsync();
+        if (ReportMessage.IsKeyboardFocused && Workspace.ReportPreview.Length != 0)
+        {
+            FocusReportControl(WorkshopReportPreview);
+        }
+    }
+
+    private void CancelReport(object sender, RoutedEventArgs e)
+    {
+        FocusReportControl(ReportMessage);
+        Workspace.CancelReport();
+    }
+
+    private void FocusReportControl(FrameworkElement target)
+    {
+        if (WorkshopReportRegion.IsKeyboardFocusWithin || Keyboard.FocusedElement is null)
+        {
+            target.Focus();
+            target.BringIntoView();
+        }
+    }
 
     private async void RecordSanitization(object sender, RoutedEventArgs e)
     {
@@ -233,8 +277,10 @@ public partial class AuditWorkspaceView : UserControl
 
         var assessmentChanged = _lastAssessmentStatus != Workspace.AssessmentStatus;
         var statusChanged = _lastStatus != Workspace.Status;
+        var reportChanged = _lastReportStatus != Workspace.ReportStatus;
         _lastAssessmentStatus = Workspace.AssessmentStatus;
         _lastStatus = Workspace.Status;
+        _lastReportStatus = Workspace.ReportStatus;
         if (assessmentChanged && (!statusChanged || Workspace.Status == Workspace.AssessmentStatus || Workspace.IsAssessmentRunning))
         {
             Announce(AssessmentMessage);
@@ -242,6 +288,10 @@ public partial class AuditWorkspaceView : UserControl
         else if (statusChanged)
         {
             Announce(AuditStatus);
+        }
+        else if (reportChanged)
+        {
+            Announce(ReportMessage);
         }
     }
 
@@ -344,6 +394,8 @@ public partial class AuditWorkspaceView : UserControl
         OpenJobButton.IsEnabled = available;
         CompleteSavedSanitizationButton.Visibility = VisibleWhen(Workspace.CanCompleteSavedSanitization);
         AuditAssessmentProgress.Visibility = VisibleWhen(Workspace.IsAssessmentRunning);
+        CancelReportButton.Visibility = VisibleWhen(Workspace.CanCancelReport);
+        WorkshopReportPreview.Visibility = VisibleWhen(Workspace.ReportPreview.Length != 0);
     }
 
     private void SetError(TextBlock region, string text)

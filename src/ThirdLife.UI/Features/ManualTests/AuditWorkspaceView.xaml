@@ -23,6 +23,8 @@
         <Button x:Name="CloseJobButton" Content="Close job" Click="CloseJob" IsEnabled="{Binding CanCloseJob}" />
         <TextBlock x:Name="AuditStatus" Text="{Binding Status}"
                    AutomationProperties.Name="{Binding Status}" AutomationProperties.LiveSetting="Polite" />
+        <Button Content="Go to workshop report" Click="GoToWorkshopReport"
+                IsEnabled="{Binding CanGenerateReport}" />
       </StackPanel>
     </GroupBox>
 
@@ -167,6 +169,25 @@
             <Button x:Name="SaveManualResultButton" Content="Save manual result" Click="SaveManualResult" />
           </StackPanel>
         </StackPanel>
+      </StackPanel>
+    </GroupBox>
+    <GroupBox x:Name="WorkshopReportRegion" Header="Workshop report" AutomationProperties.Name="Workshop report">
+      <StackPanel>
+        <TextBlock Text="Generate a restricted report from this saved job. Keep it with workshop records." />
+        <Button x:Name="GenerateReportButton" Content="Generate workshop report" Click="GenerateWorkshopReport"
+                IsEnabled="{Binding CanGenerateReport}" />
+        <Button x:Name="OpenReportButton" Content="Open workshop report" Click="OpenWorkshopReport"
+                IsEnabled="{Binding CanOpenReport}" />
+        <Button x:Name="CancelReportButton" Content="Cancel report operation" Click="CancelReport"
+                Visibility="Collapsed" />
+        <TextBlock x:Name="ReportMessage" Text="{Binding ReportStatus}" Focusable="True"
+                   KeyboardNavigation.IsTabStop="True" AutomationProperties.Name="{Binding ReportStatus}"
+                   AutomationProperties.LiveSetting="Polite" />
+        <TextBox x:Name="WorkshopReportPreview" Text="{Binding ReportPreview, Mode=OneWay}"
+                 Visibility="Collapsed" IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                 MinHeight="120" MaxHeight="320" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"
+                 AutomationProperties.Name="Restricted workshop report preview" />
       </StackPanel>
     </GroupBox>
     <Button x:Name="ReturnFromAuditButton" Content="Return to workflow stages" Click="RequestStageReturn" />

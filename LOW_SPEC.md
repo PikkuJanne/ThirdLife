@@ -108,6 +108,11 @@ thread. Assessment retains the existing single-worker default. The bounded findi
 list uses virtualization. Closing a job or application preserves committed evidence,
 and the workspace adds no migration, persistent worker, polling or cache.
 
+TL-0115 generates and reads workshop reports off the UI thread on explicit request.
+The destination and each file are bounded. Atomic publication preserves earlier
+artifacts. Preview is a scrollable standard control. The workspace clears its
+preview when changing jobs and retains the latest issued artifact for reopening.
+
 TL-0113's review shell keeps six fixed stages and one current presentation state, with no
 polling, retained progress history, provider worker or disk growth. Layout switches between
 two columns and a scrollable single column, using wrapped text and native controls.

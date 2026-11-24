@@ -100,6 +100,7 @@ class PilotFixtureContractTests(unittest.TestCase):
         )
         self.assertIn(validate_bundle.PILOT_FIXTURE_README, validate_bundle.REQUIRED_FILES)
         self.assertIn("tools/tests/test_pilot_fixtures.py", validate_bundle.REQUIRED_FILES)
+        self.assertIn(validate_bundle.M1_WORKSHOP_REPORT_FIXTURE, validate_bundle.REQUIRED_FILES)
 
         with self.fixture_copy() as root:
             (root / validate_bundle.PILOT_FIXTURE_FILES[0]).unlink()
@@ -107,6 +108,18 @@ class PilotFixtureContractTests(unittest.TestCase):
         with self.fixture_copy() as root:
             extra = root / "fixtures/jobs/unreviewed.yaml"
             extra.write_text("synthetic_data: true\n", encoding="utf-8")
+            self.assert_rejected(root, "unexpected pilot fixture files")
+
+    def test_workshop_golden_output_is_separate_from_the_pilot_digest(self) -> None:
+        with self.fixture_copy() as root:
+            previous = validate_bundle.pilot_fixture_set_digest(root)
+            golden = root / validate_bundle.M1_WORKSHOP_REPORT_FIXTURE
+            golden.write_text("Replacement test output.\n", encoding="utf-8")
+            validation, digest = self.validate(root)
+            self.assertEqual(validation.errors, [])
+            self.assertEqual(digest, previous)
+
+            golden.with_name("unreviewed.txt").write_text("Unreviewed.\n", encoding="utf-8")
             self.assert_rejected(root, "unexpected pilot fixture files")
 
     def test_digest_changes_when_any_fixture_byte_changes(self) -> None:

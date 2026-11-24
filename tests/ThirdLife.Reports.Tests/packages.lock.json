@@ -99,8 +99,18 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
-      "thirdlife.reports": {
+      "thirdlife.core": {
         "type": "Project"
+      },
+      "thirdlife.diagnostics": {
+        "type": "Project"
+      },
+      "thirdlife.reports": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Core": "[1.0.0, )",
+          "ThirdLife.Diagnostics": "[1.0.0, )"
+        }
       }
     }
   }

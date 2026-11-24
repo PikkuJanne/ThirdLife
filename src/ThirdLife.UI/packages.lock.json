@@ -18,6 +18,9 @@
       "thirdlife.core": {
         "type": "Project"
       },
+      "thirdlife.diagnostics": {
+        "type": "Project"
+      },
       "thirdlife.inventory": {
         "type": "Project",
         "dependencies": {
@@ -30,6 +33,13 @@
           "Microsoft.Data.Sqlite.Core": "[10.0.11, )",
           "SQLitePCLRaw.bundle_winsqlite3": "[2.1.11, )",
           "ThirdLife.Core": "[1.0.0, )"
+        }
+      },
+      "thirdlife.reports": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Core": "[1.0.0, )",
+          "ThirdLife.Diagnostics": "[1.0.0, )"
         }
       },
       "Microsoft.Data.Sqlite.Core": {

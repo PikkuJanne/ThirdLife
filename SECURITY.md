@@ -124,6 +124,12 @@ workshop record. Assessment requires a current allowing decision and separately 
 synthetic evidence before any live provider dispatch. Fixture composition has its own
 store and roster. Manual notes are bounded, workshop-restricted data and are not logged.
 
+The TL-0115 [workshop report](docs/ui/audit-workspace.md#workshop-report) uses a separate
+allowlisted workshop projection and protected local output. Opening uses a bounded,
+digest-verified artifact in the built-in preview. It does not open a caller path or
+run a shell handler. Publication never replaces an existing file. Recipient and
+support output policies retain their separate boundaries.
+
 TL-0113's [review shell](docs/ui/accessible-shell.md) requests `asInvoker` and checks the
 current token before constructing the main window. Elevated or unverified sessions receive
 fixed recovery guidance and exit. The shell performs no job-store, provider, network, broker,
