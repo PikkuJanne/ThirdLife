@@ -33,6 +33,7 @@ and governance checks ran on 2026-11-24.
 | `python -m unittest tools.tests.test_pilot_fixtures` | Passed, 21 tests in 19.896 s. The projection rejects duplicate properties, changed scalar types and extra bytes while preserving the approved source digest. |
 | PowerShell `Test-Json -SchemaFile schemas/policy.schema.json` | Passed, 48 candidate and adversarial cases in 0.808 s. The published schema describes structural constraints. The runtime enforces duplicate properties and rule IDs, byte and depth bounds, lexical integer shape, and effective-date order. |
 | `eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Policy.Tests/ThirdLife.Policy.Tests.csproj` | Passed in 54.499 s. Included Quick, the Release build with zero warnings and errors, and 1,150 tests with zero failures or skips. |
+| `eng/verify.ps1 -Tier Full -Restore` in a clean detached worktree | Passed in 300.292 s on source `141000e63b7920e4fee7a6f5521b4d142dc97903`. Passed 286 governance and 1,414 supported .NET tests with zero failures or skips. Locked restore, formatting, and the Release build succeeded. The internal Core project reference triggered Full. |
 
 The first repository Targeted run failed formatting on new C# files with LF
 line endings. The files were converted to the existing repository CRLF style
@@ -42,7 +43,11 @@ The first Full run stopped at a local-workspace failure. A focused supply-chain
 test reproduced that a local ignored `TestResults` file was copied into the
 test's disposable repository, where Git rejected staging it. The clean
 candidate worktree excludes local artifacts and leaves the original workspace
-in place.
+in place. The focused case passed in 5.099 s in that worktree, which remained
+clean after verification.
+
+Extended had no trigger. GitHub Actions is supplementary. The implementation
+and evidence use [PR #18](https://github.com/PikkuJanne/ThirdLife/pull/18).
 
 ## Scope
 

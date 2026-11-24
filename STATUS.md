@@ -3,33 +3,26 @@
 **Snapshot date:** 2026-11-24  
 **Bundle baseline:** 0.6.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
-**Current milestone:** M1 — Audit-only vertical slice complete  
-**Current task:** TL-0116 — Done
+**Current milestone:** M2 — Explainable disposition engine  
+**Current task:** TL-0201 — Done
 
 ## Continuity
 
-PR #17 is the integration record for tested source
-`34c7786f182ad13dcc22574209ea6c2a45bee7d3` and the completion evidence.
-The [owner-authorized policy reset](docs/amendments/2026-11-24-permanent-testing-policy-reset.md)
-supersedes the prior M1 testing and handoff policy and synchronizes future contracts.
-The unrelated untracked Word reference and existing branches are preserved.
+The M2 sequence starts from the completed M1 gate. The TL-0201 integration
+record is PR #18 against `main`. Use updated `main` for the next task.
+[M1 gate](artifacts/gates/M1-audit-only.md)
+
+The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-Enter left the confirmation unchecked in the exact offered fixture, and the rejected
-save kept Start assessment disabled. Enter now explicitly confirms the record. The
-clean candidate passed the launched keyboard route through saved intake, assessment,
-manual capture, reopen and restricted report agreement. The proportional wheel fixes
-cover the unfocused intake dropdown. External UI Automation event delivery passed.
-The historical audible-output failure's cause and physical touchpad behavior remain
-unverified. Clean-worktree Full passed 285 governance and 1,343 .NET tests. The
-normal apphost launched unelevated. [M1 gate](artifacts/gates/M1-audit-only.md)
-
-The earlier [operator check](artifacts/evidence/TL-0116/human-check.md) is withdrawn.
-The original reports and unperformed cases remain on record. No owner QA or M1
-sign-off is pending.
+The v1 validator accepts all 27 rules in the original candidate through its
+exact JSON projection. The candidate remains pending adoption. Targeted passed
+1,150 tests. Clean-worktree Full passed 286 governance and 1,414 .NET tests on
+source `141000e63b7920e4fee7a6f5521b4d142dc97903` on the active machine.
+[TL-0201 evidence](artifacts/evidence/TL-0201/report.md)
 
 ## Next action
 
-This assignment ends at M1. TL-0201 is the next dependency-ready task and awaits
-its own assignment from updated `main`.
+TL-0202 is the next dependency-ready task. Implement deterministic evaluation
+of immutable evidence from updated `main`.
