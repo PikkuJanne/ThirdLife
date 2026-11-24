@@ -2981,7 +2981,7 @@ tasks:
   workstream: policy
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: any
@@ -3008,7 +3008,12 @@ tasks:
   verification:
   - Validate normal and adversarial policies.
   - Fuzz depth, size, duplicate IDs, and path-like strings.
-  evidence: []
+  evidence:
+  - summary: TL-0201 Targeted including Quick passed 1,150 tests in 54.499 s. Clean-worktree Full passed 286 governance and 1,414 .NET tests in 300.292 s.
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400, synthetic candidate fixtures
+    date: '2026-11-24'
+    reference: artifacts/evidence/TL-0201/report.md, source 141000e63b7920e4fee7a6f5521b4d142dc97903, PR 18. Extended had no trigger.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

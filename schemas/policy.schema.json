@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "The runtime also checks the UTF-8 input size and nesting limits, duplicate JSON properties, unique rule IDs, valid UTC calendar dates and chronological effective periods. JSON Schema integer limits apply to numeric values. The runtime requires integers in their integer JSON representation.",
+  "title": "ThirdLife policy v1",
+  "description": "Versioned, declarative requirements for supported Windows 11 x64 devices.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "version",
+    "status",
+    "synthetic_data",
+    "classification",
+    "claim_scope",
+    "effective",
+    "target",
+    "rules"
+  ],
+  "properties": {
+    "schema_version": { "const": "thirdlife.policy.v1" },
+    "policy_id": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$(?![\\s\\S])"
+    },
+    "version": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$(?![\\s\\S])"
+    },
+    "status": { "enum": ["candidate", "effective"] },
+    "synthetic_data": { "type": "boolean" },
+    "classification": { "$ref": "#/$defs/token" },
+    "claim_scope": { "$ref": "#/$defs/token" },
+    "effective": { "$ref": "#/$defs/effective" },
+    "target": { "$ref": "#/$defs/target" },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": { "$ref": "#/$defs/rule" }
+    }
+  },
+  "if": { "properties": { "status": { "const": "candidate" } } },
+  "then": {
+    "properties": {
+      "effective": { "properties": { "status": { "const": "candidate_not_effective" } } }
+    }
+  },
+  "else": {
+    "properties": {
+      "effective": { "properties": { "status": { "const": "effective" } } }
+    }
+  },
+  "$defs": {
+    "token": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*$(?![\\s\\S])"
+    },
+    "utcTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,7})?Z$(?![\\s\\S])"
+    },
+    "effective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "effective_from_utc", "effective_until_utc"],
+      "properties": {
+        "status": { "enum": ["candidate_not_effective", "effective"] },
+        "effective_from_utc": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/utcTimestamp" }] },
+        "effective_until_utc": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/utcTimestamp" }] }
+      },
+      "if": { "properties": { "status": { "const": "candidate_not_effective" } } },
+      "then": {
+        "properties": {
+          "effective_from_utc": { "type": "null" },
+          "effective_until_utc": { "type": "null" }
+        }
+      },
+      "else": {
+        "properties": { "effective_from_utc": { "$ref": "#/$defs/utcTimestamp" } }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operating_system", "support_state", "architecture", "device_class"],
+      "properties": {
+        "operating_system": { "const": "windows_11" },
+        "support_state": { "const": "supported" },
+        "architecture": { "const": "x64" },
+        "device_class": { "enum": ["laptop", "desktop"] }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "requirement_type", "severity", "evidence_key", "condition", "decision"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+$(?![\\s\\S])"
+        },
+        "requirement_type": {
+          "enum": ["blocking", "repairable", "advisory", "profile_dependent", "human_confirmed"]
+        },
+        "severity": { "enum": ["critical", "required", "advisory"] },
+        "evidence_key": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-z][a-z0-9_]*(?:\\.[a-z][a-z0-9_]*)+$(?![\\s\\S])"
+        },
+        "active_for_capability_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
+          }
+        },
+        "condition": { "$ref": "#/$defs/condition" },
+        "decision": { "$ref": "#/$defs/decision" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "requirement_type": { "const": "profile_dependent" } } },
+          "then": { "required": ["active_for_capability_ids"] },
+          "else": { "not": { "required": ["active_for_capability_ids"] } }
+        },
+        {
+          "if": { "properties": { "requirement_type": { "const": "advisory" } } },
+          "then": {
+            "properties": {
+              "severity": { "const": "advisory" },
+              "decision": {
+                "properties": {
+                  "blocks_ready": { "const": false },
+                  "unmet_disposition": { "type": "null" },
+                  "unavailable_disposition": { "type": "null" }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "severity": { "enum": ["required", "critical"] },
+              "decision": {
+                "properties": {
+                  "blocks_ready": { "const": true },
+                  "unmet_disposition": { "$ref": "#/$defs/adverseDisposition" },
+                  "unavailable_disposition": { "const": "human_review_required" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "requirement_type": { "enum": ["repairable", "profile_dependent"] } } },
+          "then": { "properties": { "severity": { "const": "required" } } }
+        },
+        {
+          "if": { "properties": { "requirement_type": { "const": "repairable" } } },
+          "then": {
+            "properties": {
+              "decision": { "properties": { "unmet_disposition": { "const": "repair_and_retest" } } }
+            }
+          }
+        }
+      ]
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "value"],
+          "properties": {
+            "type": { "const": "equals" },
+            "value": {
+              "oneOf": [
+                { "type": "boolean" },
+                { "$ref": "#/$defs/int64" },
+                { "$ref": "#/$defs/token" }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "values"],
+          "properties": {
+            "type": { "const": "one_of" },
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/token" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "value", "unit"],
+          "properties": {
+            "type": { "const": "minimum_integer" },
+            "value": { "$ref": "#/$defs/int64", "minimum": 0 },
+            "unit": { "enum": ["bytes", "percent"] }
+          },
+          "if": { "properties": { "unit": { "const": "percent" } } },
+          "then": { "properties": { "value": { "maximum": 100 } } }
+        }
+      ]
+    },
+    "int64": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blocks_ready", "unmet_disposition", "unavailable_disposition"],
+      "properties": {
+        "blocks_ready": { "type": "boolean" },
+        "unmet_disposition": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/adverseDisposition" }] },
+        "unavailable_disposition": { "enum": [null, "human_review_required"] }
+      }
+    },
+    "adverseDisposition": {
+      "enum": ["repair_and_retest", "human_review_required", "alternative_operating_system_candidate", "do_not_deploy"]
+    }
+  }
+}
