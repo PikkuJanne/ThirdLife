@@ -36,13 +36,19 @@ public sealed record PolicyRuleOutcome(
 
 public sealed class PolicyEvaluation
 {
-    internal PolicyEvaluation(PolicyDocument policy, ImmutableArray<PolicyRuleOutcome> outcomes)
+    internal PolicyEvaluation(
+        PolicyDocument policy,
+        ImmutableArray<PolicyRuleOutcome> outcomes,
+        ImmutableArray<string>? activeCapabilityIds)
     {
         Policy = policy;
         Outcomes = outcomes;
+        ActiveCapabilityIds = activeCapabilityIds;
     }
 
     public PolicyDocument Policy { get; }
 
     public ImmutableArray<PolicyRuleOutcome> Outcomes { get; }
+
+    public ImmutableArray<string>? ActiveCapabilityIds { get; }
 }

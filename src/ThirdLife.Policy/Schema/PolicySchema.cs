@@ -47,6 +47,11 @@ public static partial class PolicySchema
     internal static bool IsCapabilityId(string value) =>
         value.Length <= MaximumCapabilityIdLength && CapabilityIdPattern().IsMatch(value);
 
+    internal static bool IsPolicyId(string value) =>
+        value.Length <= MaximumLowerKebabIdLength && LowerKebabIdPattern().IsMatch(value);
+
+    internal static bool IsPolicyVersion(string value) => value.Length <= 64 && PolicyVersionPattern().IsMatch(value);
+
     private static PolicyDocument ReadPolicy(JsonElement policy, string contentSha256)
     {
         RequireFields(policy,

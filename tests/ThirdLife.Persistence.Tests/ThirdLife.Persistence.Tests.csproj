@@ -24,4 +24,10 @@
     <ProjectReference Include="..\..\src\ThirdLife.Persistence\ThirdLife.Persistence.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\fixtures\policies\community-laptop-policy.json"
+          Link="community-laptop-policy.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

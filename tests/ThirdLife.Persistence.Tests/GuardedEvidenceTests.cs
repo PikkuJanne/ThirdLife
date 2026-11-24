@@ -29,7 +29,9 @@ public sealed class GuardedEvidenceTests
         Assert.Equal(3, actual.Checkpoints.Count);
         Assert.Equal(JobCheckpointKind.EvidenceCommitted, actual.Checkpoints[^1].Kind);
         Assert.Equal(decision, Assert.Single(actual.SanitizationGateDecisions));
-        Assert.Equal(3, SqliteJobStore.CurrentSchemaVersion);
+        Assert.Equal(
+            SqliteJobStore.CurrentSchemaVersion,
+            await SqliteTestControl.ReadUserVersionAsync(reopened.DatabasePath));
     }
 
     [Theory]
