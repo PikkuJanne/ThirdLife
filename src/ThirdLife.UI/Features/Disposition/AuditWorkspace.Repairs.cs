@@ -2,6 +2,7 @@ using System.Globalization;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Repairs;
 using ThirdLife.Policy.Schema;
+using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Features.Disposition;
 
 namespace ThirdLife.UI.Shell;
@@ -94,7 +95,8 @@ internal sealed partial class AuditWorkspace
         var retestsByRepair = retests.ToLookup(retest => retest.RepairId);
         RepairHistory = Array.AsReadOnly(choices.SelectMany(repair =>
             new[] { repair.Caption }.Concat(retestsByRepair[repair.RepairId].Select(retest =>
-                $"Linked retest started for assessment {retest.AssessmentId}. Prior failure evidence {retest.PriorFailureEvidenceId.Value}."))).ToArray());
+                WorkshopReportRenderer.SafePolicyPresentation(
+                    $"Linked retest started for assessment {retest.AssessmentId}. Prior failure evidence {retest.PriorFailureEvidenceId.Value}.")))).ToArray());
     }
 
     private static string DescribeRepair(RepairRecord repair, Observation originalFinding)
@@ -109,7 +111,8 @@ internal sealed partial class AuditWorkspace
             { StringValue: { } token } => token.Replace('_', ' '),
             _ => "recorded",
         };
-        return $"{RepairSuggestions.ComponentName(repair.Component)} {action}. Operator {repair.OperatorId.Value}. " +
-            $"{time}. Prior finding {originalFinding.EvidenceKey.Value} was {evidenceValue}. Evidence {repair.FailedEvidenceId.Value}.";
+        return WorkshopReportRenderer.SafePolicyPresentation(
+            $"{RepairSuggestions.ComponentName(repair.Component)} {action}. Operator {repair.OperatorId.Value}. " +
+            $"{time}. Prior finding {originalFinding.EvidenceKey.Value} was {evidenceValue}. Evidence {repair.FailedEvidenceId.Value}.");
     }
 }

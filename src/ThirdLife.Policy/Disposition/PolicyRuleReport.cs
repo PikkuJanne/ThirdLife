@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using ThirdLife.Policy.Evaluation;
+using ThirdLife.Policy.Exceptions;
 
 namespace ThirdLife.Policy.Decisions;
 
@@ -9,7 +10,7 @@ public static class PolicyRuleReport
 {
     private const int MaximumEvidenceIdsPerRule = 3;
 
-    public static string Render(DispositionDecision decision)
+    public static string Render(DispositionDecision decision, bool includeExceptionAttribution = true)
     {
         ArgumentNullException.ThrowIfNull(decision);
 
@@ -26,17 +27,47 @@ public static class PolicyRuleReport
                 .Append(". ").Append(detail.StatusLabel).Append('.');
             AppendEvidence(report, detail.Outcome.Evidence);
 
-            if (detail.Exception is { } exception)
+            if (includeExceptionAttribution && detail.Exception is { } exception)
             {
-                report.Append("\n  Exception record ").Append(exception.ExceptionId)
-                    .Append(". Authorization ").Append(exception.AuthorizationId)
-                    .Append(". Operator code ").Append(exception.OperatorId.Value)
-                    .Append(". Recorded ").Append(exception.RecordedAtUtc.UtcDateTime.ToString("O", CultureInfo.InvariantCulture))
-                    .Append('.');
+                report.Append("\n  ");
+                AppendExceptionAttribution(report, exception);
             }
         }
 
         return report.ToString();
+    }
+
+    public static string RenderExceptions(DispositionDecision decision)
+    {
+        ArgumentNullException.ThrowIfNull(decision);
+        var report = new StringBuilder();
+        foreach (var detail in decision.RuleDetails)
+        {
+            if (detail.Exception is not { } exception)
+            {
+                continue;
+            }
+
+            if (report.Length > 0)
+            {
+                report.Append('\n');
+            }
+
+            report.Append("- Policy rule ").Append(detail.Outcome.Rule.Requirement.RequirementId.Value)
+                .Append(". Evidence ID ").Append(exception.EvidenceId.Value).Append(". ");
+            AppendExceptionAttribution(report, exception);
+        }
+
+        return report.Length == 0 ? "No authorized exceptions were applied." : report.ToString();
+    }
+
+    private static void AppendExceptionAttribution(StringBuilder report, PolicyExceptionRecord exception)
+    {
+        report.Append("Exception record ").Append(exception.ExceptionId)
+            .Append(". Authorization ").Append(exception.AuthorizationId)
+            .Append(". Operator code ").Append(exception.OperatorId.Value)
+            .Append(". Recorded ").Append(exception.RecordedAtUtc.UtcDateTime.ToString("O", CultureInfo.InvariantCulture))
+            .Append('.');
     }
 
     private static void AppendEvidence(StringBuilder report, ImmutableArray<PolicyEvidenceReference> evidence)

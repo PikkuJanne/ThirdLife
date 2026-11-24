@@ -30,7 +30,8 @@ public sealed class PolicyDecisionRecord
         string title,
         string summary,
         string explanation,
-        string ruleReport)
+        string ruleReport,
+        string? exceptionReport = null)
     {
         DecisionId = RequireId(decisionId, nameof(decisionId));
         JobId = jobId ?? throw new ArgumentNullException(nameof(jobId));
@@ -56,6 +57,7 @@ public sealed class PolicyDecisionRecord
         Summary = RequireReportText(summary, 512, nameof(summary));
         Explanation = RequireReportText(explanation, 8_192, nameof(explanation));
         RuleReport = RequireReportText(ruleReport, MaximumRuleReportCharacters, nameof(ruleReport));
+        ExceptionReport = exceptionReport is null ? null : RequireReportText(exceptionReport, MaximumRuleReportCharacters, nameof(exceptionReport));
     }
 
     public string DecisionId { get; }
@@ -87,6 +89,9 @@ public sealed class PolicyDecisionRecord
     public string Explanation { get; }
 
     public string RuleReport { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ExceptionReport { get; }
 
     [JsonIgnore]
     public bool HasEvaluationProvenance { get; private init; }
@@ -149,7 +154,8 @@ public sealed class PolicyDecisionRecord
             decision.Title,
             decision.Summary,
             decision.Explanation,
-            PolicyRuleReport.Render(decision))
+            PolicyRuleReport.Render(decision, includeExceptionAttribution: false),
+            PolicyRuleReport.RenderExceptions(decision))
         {
             HasEvaluationProvenance = true,
         };

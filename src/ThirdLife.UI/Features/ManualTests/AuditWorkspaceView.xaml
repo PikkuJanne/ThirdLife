@@ -181,6 +181,7 @@
         </StackPanel>
       </StackPanel>
     </GroupBox>
+    <disposition:PolicyDispositionView x:Name="PolicyDispositionPanel" />
     <GroupBox x:Name="WorkshopReportRegion" Header="Workshop report" AutomationProperties.Name="Workshop report">
       <StackPanel>
         <TextBlock Text="Generate a restricted report from this saved job. Keep it with workshop records." />

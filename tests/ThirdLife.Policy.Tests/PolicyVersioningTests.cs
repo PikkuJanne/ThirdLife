@@ -124,7 +124,7 @@ public sealed class PolicyVersioningTests
         Assert.Equal(prior.Title, historicDecision.Title);
         Assert.Equal(prior.Summary, historicDecision.Summary);
         Assert.Equal(prior.Explanation, historicDecision.Explanation);
-        Assert.Equal(prior.RuleReport, PolicyRuleReport.Render(historicDecision));
+        Assert.Equal(prior.RuleReport, PolicyRuleReport.Render(historicDecision, includeExceptionAttribution: false));
         Assert.Equal(originalOutput, JsonSerializer.Serialize(prior));
     }
 
@@ -167,10 +167,19 @@ public sealed class PolicyVersioningTests
         Assert.Equal(ids.OrderBy(id => id.Value, StringComparer.Ordinal), restored.EvidenceIds);
         Assert.Contains("Evidence ID storage-health-unexpected.", restored.RuleReport, StringComparison.Ordinal);
         Assert.Contains("Exception. Evidence ID storage-low.", restored.RuleReport, StringComparison.Ordinal);
-        Assert.Contains("Authorization synthetic-owner-grant.", restored.RuleReport, StringComparison.Ordinal);
+        Assert.DoesNotContain("Authorization synthetic-owner-grant.", restored.RuleReport, StringComparison.Ordinal);
+        Assert.Contains("Authorization synthetic-owner-grant.", restored.ExceptionReport, StringComparison.Ordinal);
         Assert.DoesNotContain(rawObservationValue, json, StringComparison.Ordinal);
         Assert.DoesNotContain(privateReason, json, StringComparison.Ordinal);
         Assert.DoesNotContain("HasEvaluationProvenance", json, StringComparison.Ordinal);
+
+        var exceptionField = $",\"{nameof(PolicyDecisionRecord.ExceptionReport)}\":{JsonSerializer.Serialize(restored.ExceptionReport)}";
+        var previousJson = json.Replace(exceptionField, string.Empty, StringComparison.Ordinal);
+        Assert.DoesNotContain($"\"{nameof(PolicyDecisionRecord.ExceptionReport)}\"", previousJson, StringComparison.Ordinal);
+        var previous = JsonSerializer.Deserialize<PolicyDecisionRecord>(previousJson, DomainJson.CreateStrictOptions());
+        Assert.NotNull(previous);
+        Assert.Null(previous.ExceptionReport);
+        Assert.Equal(previousJson, JsonSerializer.Serialize(previous, DomainJson.CreateStrictOptions()));
         Assert.Equal(json, JsonSerializer.Serialize(restored, options));
 
         var unknownField = JsonNode.Parse(json)!.AsObject();

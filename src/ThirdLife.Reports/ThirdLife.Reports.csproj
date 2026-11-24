@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ThirdLife.Core\ThirdLife.Core.csproj" />
     <ProjectReference Include="..\ThirdLife.Diagnostics\ThirdLife.Diagnostics.csproj" />
+    <ProjectReference Include="..\ThirdLife.Policy\ThirdLife.Policy.csproj" />
   </ItemGroup>
 
 </Project>
