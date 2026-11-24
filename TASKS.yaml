@@ -3023,7 +3023,7 @@ tasks:
   workstream: policy
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: any
@@ -3046,7 +3046,12 @@ tasks:
   verification:
   - Table-test all rule categories and missing-data behavior.
   - Property-test determinism and order independence.
-  evidence: []
+  evidence:
+  - summary: TL-0202 Policy Targeted including Quick passed 1,187 tests in 53.516 s. The 37 focused evaluator tests cover all rule categories and seeded permutations.
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400, synthetic evidence snapshot
+    date: '2026-11-24'
+    reference: artifacts/evidence/TL-0202/report.md, source 30641af942589f49fe7025cae9b05af4fe952484, PR 19. Live evidence mapping is outside this check.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
