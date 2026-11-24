@@ -41,13 +41,15 @@ public sealed record PolicyRule(
     RequirementReference Requirement,
     ImmutableArray<string> ActiveForCapabilityIds,
     PolicyCondition Condition,
-    PolicyRuleDecision Decision);
+    PolicyRuleDecision Decision,
+    string? ExceptionAuthorizationId = null);
 
 public sealed class PolicyDocument
 {
     internal PolicyDocument(
         string policyId,
         string version,
+        string contentSha256,
         PolicyStatus status,
         bool syntheticData,
         string classification,
@@ -58,6 +60,7 @@ public sealed class PolicyDocument
     {
         PolicyId = policyId;
         Version = version;
+        ContentSha256 = contentSha256;
         Status = status;
         SyntheticData = syntheticData;
         Classification = classification;
@@ -72,6 +75,8 @@ public sealed class PolicyDocument
     public string PolicyId { get; }
 
     public string Version { get; }
+
+    public string ContentSha256 { get; }
 
     public PolicyStatus Status { get; }
 

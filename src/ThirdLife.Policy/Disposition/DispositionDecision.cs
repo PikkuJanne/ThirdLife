@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using ThirdLife.Core.Evidence;
+using ThirdLife.Core.Jobs;
 using ThirdLife.Policy.Evaluation;
+using ThirdLife.Policy.Exceptions;
 
 namespace ThirdLife.Policy.Decisions;
 
@@ -16,7 +18,8 @@ public sealed record DispositionCitation(
     EvidenceKey EvidenceKey,
     PolicyRuleState State,
     PolicyRuleReason Reason,
-    ImmutableArray<PolicyEvidenceReference> Evidence);
+    ImmutableArray<PolicyEvidenceReference> Evidence,
+    PolicyExceptionRecord? Exception = null);
 
 public sealed class DispositionDecision
 {
@@ -24,12 +27,18 @@ public sealed class DispositionDecision
         Disposition disposition,
         PolicyEvaluation evaluation,
         ImmutableArray<PolicyRuleOutcome> targetOutcomes,
-        ImmutableArray<DispositionCitation> citations)
+        ImmutableArray<DispositionCitation> citations,
+        ImmutableArray<DispositionRuleDetail> ruleDetails,
+        PolicyExceptionHistory? exceptionHistory,
+        DateTimeOffset? evaluatedAtUtc)
     {
         Disposition = disposition;
         Evaluation = evaluation;
         TargetOutcomes = targetOutcomes;
         Citations = citations;
+        RuleDetails = ruleDetails;
+        ExceptionHistory = exceptionHistory;
+        EvaluatedAtUtc = evaluatedAtUtc;
         (Title, Summary, Explanation) = DispositionExplanation.Describe(disposition, citations);
     }
 
@@ -46,4 +55,12 @@ public sealed class DispositionDecision
     public ImmutableArray<PolicyRuleOutcome> TargetOutcomes { get; }
 
     public ImmutableArray<DispositionCitation> Citations { get; }
+
+    public ImmutableArray<DispositionRuleDetail> RuleDetails { get; }
+
+    public JobId? JobId => ExceptionHistory?.JobId;
+
+    public DateTimeOffset? EvaluatedAtUtc { get; }
+
+    internal PolicyExceptionHistory? ExceptionHistory { get; }
 }

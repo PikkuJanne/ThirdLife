@@ -125,6 +125,7 @@
             "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
           }
         },
+        "exception_authorization_id": { "$ref": "#/properties/policy_id" },
         "condition": { "$ref": "#/$defs/condition" },
         "decision": { "$ref": "#/$defs/decision" }
       },

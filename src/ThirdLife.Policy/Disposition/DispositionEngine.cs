@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Policy.Evaluation;
+using ThirdLife.Policy.Exceptions;
 using ThirdLife.Policy.Schema;
 
 namespace ThirdLife.Policy.Decisions;
@@ -10,26 +11,56 @@ public static class DispositionEngine
     public static DispositionDecision Evaluate(
         PolicyDocument policy,
         IEnumerable<Observation> observations,
-        IEnumerable<string>? activeCapabilityIds)
+        IEnumerable<string>? activeCapabilityIds) =>
+        EvaluateCore(policy, observations, activeCapabilityIds, exceptionHistory: null, evaluatedAtUtc: null);
+
+    public static DispositionDecision Evaluate(
+        PolicyDocument policy,
+        IEnumerable<Observation> observations,
+        IEnumerable<string>? activeCapabilityIds,
+        PolicyExceptionHistory exceptionHistory,
+        DateTimeOffset evaluatedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(exceptionHistory);
+        var utc = evaluatedAtUtc.ToUniversalTime();
+        if (utc == default)
+        {
+            throw new ArgumentException("An evaluation timestamp is required.", nameof(evaluatedAtUtc));
+        }
+
+        return EvaluateCore(policy, observations, activeCapabilityIds, exceptionHistory, utc);
+    }
+
+    private static DispositionDecision EvaluateCore(
+        PolicyDocument policy,
+        IEnumerable<Observation> observations,
+        IEnumerable<string>? activeCapabilityIds,
+        PolicyExceptionHistory? exceptionHistory,
+        DateTimeOffset? evaluatedAtUtc)
     {
         ArgumentNullException.ThrowIfNull(policy);
 
         var (evaluation, target) = PolicyEvaluator.EvaluateWithTarget(
             policy, observations, activeCapabilityIds, TargetRules(policy.Target));
-        var results = target.Select(outcome => (DispositionSource.CoreTarget, outcome))
-            .Concat(evaluation.Outcomes.Select(outcome => (DispositionSource.OrganizationPolicy, outcome)));
+        var details = target.Select(outcome => new DispositionRuleDetail(DispositionSource.CoreTarget, outcome, null))
+            .Concat(evaluation.Outcomes.Select(outcome => new DispositionRuleDetail(
+                DispositionSource.OrganizationPolicy,
+                outcome,
+                exceptionHistory?.FindApplicable(policy, outcome, evaluatedAtUtc!.Value))))
+            .ToImmutableArray();
 
         // The more restrictive disposition controls. Preserve other rule outcomes for review.
         var disposition = Disposition.ReadyToPrepare;
         var citations = ImmutableArray.CreateBuilder<DispositionCitation>();
-        foreach (var (source, outcome) in results)
+        foreach (var detail in details)
         {
+            var outcome = detail.Outcome;
             if (!outcome.Rule.Decision.BlocksReady || outcome.State == PolicyRuleState.Inactive)
             {
                 continue;
             }
 
-            var candidate = RuleDisposition(outcome);
+            var candidate = detail.Exception is null ? RuleDisposition(outcome) : Disposition.ReadyToPrepare;
             if (Priority(candidate) < Priority(disposition))
             {
                 continue;
@@ -42,15 +73,16 @@ public static class DispositionEngine
             }
 
             citations.Add(new DispositionCitation(
-                source,
+                detail.Source,
                 outcome.Rule.Requirement.RequirementId,
                 outcome.Rule.Requirement.EvidenceKey,
                 outcome.State,
                 outcome.Reason,
-                outcome.Evidence));
+                outcome.Evidence,
+                detail.Exception));
         }
 
-        return new DispositionDecision(disposition, evaluation, target, citations.ToImmutable());
+        return new DispositionDecision(disposition, evaluation, target, citations.ToImmutable(), details, exceptionHistory, evaluatedAtUtc);
     }
 
     private static Disposition RuleDisposition(PolicyRuleOutcome outcome) => outcome.State switch

@@ -17,6 +17,8 @@ internal static class DispositionExplanation
     {
         var (title, summary) = disposition switch
         {
+            Disposition.ReadyToPrepare when citations.Any(citation => citation.Exception is not null) => ("Ready to prepare",
+                "The required checks are resolved. Review the authorized exceptions before proceeding."),
             Disposition.ReadyToPrepare => ("Ready to prepare",
                 "The required checks passed for this assessment."),
             Disposition.RepairAndRetest => ("Repair and retest",
@@ -31,7 +33,7 @@ internal static class DispositionExplanation
         };
 
         var explanation = new StringBuilder(summary);
-        foreach (var citation in citations.Take(MaximumPreviewRules))
+        foreach (var citation in citations.OrderByDescending(item => item.Exception is not null).Take(MaximumPreviewRules))
         {
             AppendCitation(explanation, citation);
         }
@@ -57,7 +59,7 @@ internal static class DispositionExplanation
             _ => throw new ArgumentOutOfRangeException(nameof(citation), "The citation source is invalid."),
         };
         explanation.Append('\n').Append(source).Append(citation.RuleId.Value)
-            .Append(' ').Append(DescribeReason(citation.Reason));
+            .Append(' ').Append(citation.Exception is null ? DescribeReason(citation.Reason) : "has an authorized exception.");
 
         if (citation.Evidence.IsDefaultOrEmpty)
         {

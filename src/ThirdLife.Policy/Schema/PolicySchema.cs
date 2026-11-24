@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -14,6 +15,7 @@ public static partial class PolicySchema
     private const int MaximumRules = 128;
     private const int MaximumListItems = 16;
     private const int MaximumCapabilityIdLength = 64;
+    private const int MaximumLowerKebabIdLength = 64;
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     public static PolicyDocument Parse(ReadOnlyMemory<byte> utf8Json)
@@ -25,13 +27,15 @@ public static partial class PolicySchema
 
         try
         {
-            _ = StrictUtf8.GetCharCount(utf8Json.Span);
-            using var document = JsonDocument.Parse(utf8Json, new JsonDocumentOptions
+            var ownedUtf8Json = utf8Json.ToArray();
+            _ = StrictUtf8.GetCharCount(ownedUtf8Json);
+            using var document = JsonDocument.Parse(ownedUtf8Json, new JsonDocumentOptions
             {
                 AllowDuplicateProperties = false,
                 MaxDepth = MaximumDepth,
             });
-            return ReadPolicy(document.RootElement);
+            var contentSha256 = Convert.ToHexStringLower(SHA256.HashData(ownedUtf8Json));
+            return ReadPolicy(document.RootElement, contentSha256);
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException)
         {
@@ -43,7 +47,7 @@ public static partial class PolicySchema
     internal static bool IsCapabilityId(string value) =>
         value.Length <= MaximumCapabilityIdLength && CapabilityIdPattern().IsMatch(value);
 
-    private static PolicyDocument ReadPolicy(JsonElement policy)
+    private static PolicyDocument ReadPolicy(JsonElement policy, string contentSha256)
     {
         RequireFields(policy,
             ["schema_version", "policy_id", "version", "status", "synthetic_data", "classification", "claim_scope", "effective", "target", "rules"]);
@@ -59,8 +63,9 @@ public static partial class PolicySchema
             _ => throw new JsonException(),
         };
         return new PolicyDocument(
-            ReadPattern(policy.GetProperty("policy_id"), PolicyIdPattern(), 64),
+            ReadLowerKebabId(policy.GetProperty("policy_id")),
             ReadPattern(policy.GetProperty("version"), PolicyVersionPattern(), 64),
+            contentSha256,
             status,
             policy.GetProperty("synthetic_data").GetBoolean(),
             ReadPattern(policy.GetProperty("classification"), TokenPattern(), 128),
@@ -138,7 +143,9 @@ public static partial class PolicySchema
     private static PolicyRule ReadRule(JsonElement rule)
     {
         const string capabilitiesField = "active_for_capability_ids";
-        RequireFields(rule, ["id", "requirement_type", "severity", "evidence_key", "condition", "decision"], capabilitiesField);
+        const string exceptionAuthorizationField = "exception_authorization_id";
+        RequireFields(rule, ["id", "requirement_type", "severity", "evidence_key", "condition", "decision"],
+            [capabilitiesField, exceptionAuthorizationField]);
         var type = rule.GetProperty("requirement_type").Deserialize<RequirementType>();
         var severity = rule.GetProperty("severity").Deserialize<RequirementSeverity>();
         var severityMatches = type switch
@@ -162,7 +169,8 @@ public static partial class PolicySchema
                 severity),
             hasCapabilities ? ReadTokens(capabilities, CapabilityIdPattern(), MaximumCapabilityIdLength) : [],
             ReadCondition(rule.GetProperty("condition")),
-            ReadDecision(rule.GetProperty("decision"), type));
+            ReadDecision(rule.GetProperty("decision"), type),
+            rule.TryGetProperty(exceptionAuthorizationField, out var authorization) ? ReadLowerKebabId(authorization) : null);
     }
 
     private static PolicyCondition ReadCondition(JsonElement condition)
@@ -257,7 +265,7 @@ public static partial class PolicySchema
         return count > 0 && count <= maximum ? count : throw new JsonException();
     }
 
-    private static void RequireFields(JsonElement value, ReadOnlySpan<string> required, string? optional = null)
+    private static void RequireFields(JsonElement value, ReadOnlySpan<string> required, ReadOnlySpan<string> optional = default)
     {
         if (value.ValueKind != JsonValueKind.Object)
         {
@@ -272,7 +280,7 @@ public static partial class PolicySchema
             {
                 requiredFound++;
             }
-            else if (!string.Equals(name, optional, StringComparison.Ordinal))
+            else if (!optional.Contains(name))
             {
                 throw new JsonException();
             }
@@ -286,6 +294,9 @@ public static partial class PolicySchema
 
     private static string ReadString(JsonElement value) => value.GetString() ?? throw new JsonException();
 
+    private static string ReadLowerKebabId(JsonElement element) =>
+        ReadPattern(element, LowerKebabIdPattern(), MaximumLowerKebabIdLength);
+
     private static string ReadPattern(JsonElement element, Regex pattern, int maximumLength)
     {
         var value = ReadString(element);
@@ -293,7 +304,7 @@ public static partial class PolicySchema
     }
 
     [GeneratedRegex(@"\A[a-z][a-z0-9]*(?:-[a-z0-9]+)*\z")]
-    private static partial Regex PolicyIdPattern();
+    private static partial Regex LowerKebabIdPattern();
 
     [GeneratedRegex(@"\A(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?\z", RegexOptions.NonBacktracking)]
     private static partial Regex PolicyVersionPattern();

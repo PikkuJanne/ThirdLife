@@ -4,25 +4,25 @@
 **Bundle baseline:** 0.6.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
 **Current milestone:** M2 — Explainable disposition engine  
-**Current task:** TL-0203 — Done
+**Current task:** TL-0204 — Done
 
 ## Continuity
 
-PR #18 integrated the policy schema and PR #19 integrated deterministic
-evaluation. PR #20 is the integration record for dispositions. Use updated
-`main` for the next task. [M1 gate](artifacts/gates/M1-audit-only.md)
+PRs #18 through #20 integrated the schema, evaluation and dispositions.
+PR #21 is the integration record for human confirmations and exceptions.
+Use updated `main` for the next task. [M1 gate](artifacts/gates/M1-audit-only.md)
 
 The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-The engine produces all five dispositions with controlling rules and evidence
-citations. The independent Windows target checks preserve review when support
-evidence is missing or stale. Targeted passed 1,204 tests on the active machine.
-The wording remains ready for the later policy-owner decision.
-[TL-0203 evidence](artifacts/evidence/TL-0203/report.md)
+Saved guided evidence projects into the mapped policy facts with attribution.
+An exception preserves the original failure and is scoped to the exact
+policy, job, evidence and timestamp. Targeted passed 1,233 tests on the active
+machine. The original candidate has no exception authorizations.
+[TL-0204 evidence](artifacts/evidence/TL-0204/report.md)
 
 ## Next action
 
-TL-0204 is the next dependency-ready task. Implement attributable human
-confirmations and governed exceptions from updated `main`.
+TL-0205 is the next dependency-ready task. Persist policy snapshots and
+decision history from updated `main`.
