@@ -129,9 +129,9 @@ apphost observation remains separate from its component tests.
 powershell -NoProfile -ExecutionPolicy Bypass -File eng/run-ui-smoke.ps1
 ```
 
-The TL-0113 shell provides review-only navigation. TL-0114 owns the live audit UI to
-create/open/reopen jobs, record sanitization, start/cancel read-only assessment with
-durable outcomes, and capture guided manual results using the existing services.
+The original TL-0113 shell provides review-only navigation. The TL-0114
+[audit workspace](audit-workspace.md) adds durable job creation and reopening, external
+sanitization, read-only assessment and guided manual results through the existing services.
 TL-0115 owns deterministic workshop report generation and opening it from the operator
 UI. TL-0116 owns the integrated journey rehearsal, human review of new or changed
 interactions, and evidence of the project-owner M1 gate decision.

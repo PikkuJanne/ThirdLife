@@ -102,6 +102,12 @@ A slower result may be acceptable. The following are not acceptable for a suppor
 
 ## 6. Hardware and provider coverage
 
+TL-0114 opens the registered job store only on create or open. One job and one workspace
+command are active at a time. Local I/O and durable job projection run off the UI
+thread. Assessment retains the existing single-worker default. The bounded findings
+list uses virtualization. Closing a job or application preserves committed evidence,
+and the workspace adds no migration, persistent worker, polling or cache.
+
 TL-0113's review shell keeps six fixed stages and one current presentation state, with no
 polling, retained progress history, provider worker or disk growth. Layout switches between
 two columns and a scrollable single column, using wrapped text and native controls.

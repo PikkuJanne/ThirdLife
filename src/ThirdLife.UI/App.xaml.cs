@@ -16,7 +16,7 @@ public partial class App : Application
             return;
         }
 
-        MainWindow = new MainWindow();
+        MainWindow = new MainWindow(new ShellViewModel(), AuditWorkspace.CreateLive());
         MainWindow.Show();
     }
 }

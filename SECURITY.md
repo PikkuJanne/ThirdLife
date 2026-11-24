@@ -118,6 +118,12 @@ The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md)
 
 ## 10. Filesystem and persistence
 
+The TL-0114 [audit workspace](docs/ui/audit-workspace.md) opens the registered local job
+store lazily under the standard-user token. External sanitization is an attributable
+workshop record. Assessment requires a current allowing decision and separately rejects
+synthetic evidence before any live provider dispatch. Fixture composition has its own
+store and roster. Manual notes are bounded, workshop-restricted data and are not logged.
+
 TL-0113's [review shell](docs/ui/accessible-shell.md) requests `asInvoker` and checks the
 current token before constructing the main window. Elevated or unverified sessions receive
 fixed recovery guidance and exit. The shell performs no job-store, provider, network, broker,

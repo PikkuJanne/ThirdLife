@@ -7,7 +7,7 @@ namespace ThirdLife.Core.Tests;
 public sealed class HumanTestAndVocabularyTests
 {
     [Fact]
-    public void HumanTestResultsKeepPassFailNotTestedAndNotAvailableDistinct()
+    public void HumanTestResultsKeepPassFailNotRunAndNotAvailableDistinct()
     {
         var pass = CreateHumanTest(
             HumanTestResult.Pass,
@@ -20,7 +20,7 @@ public sealed class HumanTestAndVocabularyTests
             new OperatorId("operator-001"),
             limitationCode: "key_group_failed");
         var notTested = CreateHumanTest(
-            HumanTestResult.NotTested,
+            HumanTestResult.NotRun,
             CreateMetadata(EvidenceClassification.NotAvailable, ValueAvailability.Unknown, ProvenanceKind.SystemGenerated),
             new OperatorId("operator-001"),
             limitationCode: "test_deferred");
@@ -63,7 +63,7 @@ public sealed class HumanTestAndVocabularyTests
             new OperatorId("operator-001"),
             limitationCode: null));
         Assert.Throws<ArgumentException>(() => CreateHumanTest(
-            HumanTestResult.NotTested,
+            HumanTestResult.NotRun,
             CreateMetadata(EvidenceClassification.Observed, ValueAvailability.NotApplicable, ProvenanceKind.ProviderObservation),
             new OperatorId("operator-001"),
             limitationCode: "test_deferred"));
@@ -103,7 +103,7 @@ public sealed class HumanTestAndVocabularyTests
                                     availability == ValueAvailability.Available &&
                                     classification is EvidenceClassification.Observed or
                                         EvidenceClassification.HumanConfirmed,
-                                HumanTestResult.NotTested =>
+                                HumanTestResult.NotRun =>
                                     availability == ValueAvailability.Unknown &&
                                     classification == EvidenceClassification.NotAvailable &&
                                     hasLimitation,

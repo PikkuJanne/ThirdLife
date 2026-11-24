@@ -31,6 +31,10 @@ public sealed class ShellViewModel : INotifyPropertyChanged
 {
     private int completedWorkUnits;
     private int totalWorkUnits;
+    private bool auditAvailable;
+    private bool auditHasOpenJob;
+    private string auditGateStatus = "";
+    private string auditAssessmentStatus = "";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -38,9 +42,17 @@ public sealed class ShellViewModel : INotifyPropertyChanged
 
     public ShellActivity Activity { get; private set; } = ShellActivity.Idle;
 
+    public string Introduction => auditAvailable
+        ? "Create or open a job in the audit controls. Reviewing a stage does not authorize device changes."
+        : "No job is open. Reviewing a stage does not complete it or authorize device changes.";
+
     public string StageHeading => SelectedStage == ShellStage.Intake ? "Intake" : "Inspect";
 
-    public string StageSummary => SelectedStage == ShellStage.Intake
+    public string StageSummary => auditHasOpenJob
+        ? SelectedStage == ShellStage.Intake
+            ? "Review the starting requirements and the open job's external sanitization record."
+            : "Review the inspection requirements and the assessment evidence saved to the open job."
+        : SelectedStage == ShellStage.Intake
         ? "Review the starting requirements. No job is open and no intake evidence has been recorded."
         : "Review the inspection requirements. No job is open and no assessment has been run.";
 
@@ -48,17 +60,23 @@ public sealed class ShellViewModel : INotifyPropertyChanged
         ? "Record lawful ownership and the external media sanitization result before preparation. Unknown or failed sanitization blocks preparation. Windows installation is an external prerequisite."
         : "Recorded intake and an approved sanitization gate are required before assessment. Missing provider data remains unknown. Hardware function requires human inspection where automated evidence cannot establish it.";
 
-    public string EvidenceText => SelectedStage == ShellStage.Intake
+    public string EvidenceText => auditHasOpenJob
+        ? SelectedStage == ShellStage.Intake ? auditGateStatus : auditAssessmentStatus
+        : SelectedStage == ShellStage.Intake
         ? "Not available: no job or intake evidence is open. Ownership and sanitization have not been confirmed."
         : "Not available: no assessment evidence is open. Device requirements have not been evaluated and no checks have passed.";
 
-    public string PlanText => SelectedStage == ShellStage.Intake
+    public string PlanText => auditAvailable
+        ? "No plan exists. This audit workflow records evidence. Decide, Prepare, Verify, and Handover remain unavailable."
+        : SelectedStage == ShellStage.Intake
         ? "No plan exists. Job entry and sanitization recording are not available in this shell. You can review the Inspect stage."
         : "No plan exists. Assessment collection is not available in this shell. Decide, Prepare, Verify, and Handover remain unavailable until their required evidence and workflows exist.";
 
-    public string StatusText => $"{StageHeading} selected. No job is open. Device readiness is unknown.";
+    public string StatusText => auditHasOpenJob
+        ? $"{StageHeading} selected. An audit job is open. Device readiness is unknown."
+        : $"{StageHeading} selected. No job is open. Device readiness is unknown.";
 
-    public string ActivityText => Activity switch
+    public string ActivityText => auditAvailable ? auditAssessmentStatus : Activity switch
     {
         ShellActivity.Idle => "No operation is running.",
         ShellActivity.Running => totalWorkUnits == 0
@@ -81,6 +99,33 @@ public sealed class ShellViewModel : INotifyPropertyChanged
     public bool IsIndeterminate => IsBusy && totalWorkUnits == 0;
 
     public static bool CanNavigate(ShellStage stage) => stage is ShellStage.Intake or ShellStage.Inspect;
+
+    internal void SetAuditContext(bool hasOpenJob, string gateStatus, string assessmentStatus)
+    {
+        if (auditAvailable && auditHasOpenJob == hasOpenJob &&
+            auditGateStatus == gateStatus && auditAssessmentStatus == assessmentStatus)
+        {
+            return;
+        }
+
+        bool initialized = auditAvailable;
+        string previousStatus = StatusText;
+        string previousActivity = ActivityText;
+        auditAvailable = true;
+        auditHasOpenJob = hasOpenJob;
+        auditGateStatus = gateStatus;
+        auditAssessmentStatus = assessmentStatus;
+        if (!initialized)
+        {
+            Notify(nameof(Introduction));
+            Notify(nameof(PlanText));
+        }
+
+        Notify(nameof(StageSummary));
+        Notify(nameof(EvidenceText));
+        if (StatusText != previousStatus) { Notify(nameof(StatusText)); }
+        if (ActivityText != previousActivity) { Notify(nameof(ActivityText)); }
+    }
 
     public bool Navigate(ShellStage stage)
     {

@@ -286,7 +286,7 @@ public sealed class JobLifecycleTests
             sanitizationGateDecisions: decisions ?? [],
             checkpoints: []);
 
-    private sealed class FixedTimeProvider : TimeProvider
+    internal sealed class FixedTimeProvider : TimeProvider
     {
         private DateTimeOffset _now;
 
@@ -303,7 +303,7 @@ public sealed class JobLifecycleTests
         }
     }
 
-    private sealed class InMemoryJobStore : IJobStore
+    internal sealed class InMemoryJobStore : IJobStore
     {
         private readonly Dictionary<JobId, MutableJob> _jobs = [];
 

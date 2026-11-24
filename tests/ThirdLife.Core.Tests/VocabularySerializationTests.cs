@@ -51,7 +51,7 @@ public sealed class VocabularySerializationTests
         {
             [HumanTestResult.Pass] = "pass",
             [HumanTestResult.Fail] = "fail",
-            [HumanTestResult.NotTested] = "not_tested",
+            [HumanTestResult.NotRun] = "not_tested",
             [HumanTestResult.NotAvailable] = "not_available",
         });
         AssertWireNames(new Dictionary<RequirementType, string>

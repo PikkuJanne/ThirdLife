@@ -1,0 +1,174 @@
+<UserControl x:Class="ThirdLife.UI.Features.ManualTests.AuditWorkspaceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:evidence="clr-namespace:ThirdLife.Core.Evidence;assembly=ThirdLife.Core"
+             xmlns:manual="clr-namespace:ThirdLife.Core.ManualTests;assembly=ThirdLife.Core"
+             xmlns:sanitization="clr-namespace:ThirdLife.Core.Sanitization;assembly=ThirdLife.Core">
+  <StackPanel>
+    <GroupBox x:Name="JobRegion" Header="Audit job" Focusable="True"
+              KeyboardNavigation.IsTabStop="True"
+              AutomationProperties.Name="Audit job">
+      <StackPanel>
+        <TextBlock Text="A job saves workshop evidence locally. Use a job identifier to reopen it. Recipient identity is unnecessary." />
+        <TextBlock x:Name="FixtureNotice" Visibility="Collapsed"
+                   Text="Isolated fixture scenario. Synthetic assessment evidence describes this scenario only." />
+        <Button x:Name="CreateJobButton" Content="Create job" Click="CreateJob" />
+        <Label Target="{Binding ElementName=JobIdInput}" Content="Job identifier to open" />
+        <TextBox x:Name="JobIdInput" MaxLength="80"
+                 AutomationProperties.Name="Job identifier to open" />
+        <Button x:Name="OpenJobButton" Content="Open job" Click="OpenJob" />
+        <Label Target="{Binding ElementName=CurrentJobId}" Content="Current job identifier" />
+        <TextBox x:Name="CurrentJobId" Text="{Binding JobId, Mode=OneWay}" IsReadOnly="True"
+                 AutomationProperties.Name="Current job identifier" />
+        <Button x:Name="CloseJobButton" Content="Close job" Click="CloseJob" IsEnabled="{Binding CanCloseJob}" />
+        <TextBlock x:Name="AuditStatus" Text="{Binding Status}"
+                   AutomationProperties.Name="{Binding Status}" AutomationProperties.LiveSetting="Polite" />
+      </StackPanel>
+    </GroupBox>
+
+    <GroupBox Header="External sanitization" AutomationProperties.Name="External sanitization">
+      <StackPanel>
+        <TextBlock Text="Confirm lawful ownership and record the result from the work done outside ThirdLife. If ownership or sanitization is uncertain, leave assessment blocked." />
+        <TextBlock Text="{Binding GateStatus}" />
+        <TextBlock x:Name="SavedSanitization" />
+        <StackPanel IsEnabled="{Binding CanEditJob}">
+          <Label Target="{Binding ElementName=OperatorIdInput}" Content="Workshop operator code" />
+          <TextBlock Text="Use a short local code. Leave out names, email addresses and other personal details." />
+          <TextBox x:Name="OperatorIdInput" MaxLength="64"
+                   AutomationProperties.Name="Workshop operator code" />
+          <Label Target="{Binding ElementName=SanitizationResult}" Content="External result" />
+          <ComboBox x:Name="SanitizationResult" SelectedValuePath="Tag"
+                    SelectionChanged="SanitizationResultChanged"
+                    AutomationProperties.Name="External sanitization result">
+            <ComboBoxItem Content="Unknown" Tag="{x:Static sanitization:SanitizationState.Unknown}" />
+            <ComboBoxItem Content="Sanitized and verified" Tag="{x:Static sanitization:SanitizationState.Verified}" />
+            <ComboBoxItem Content="Replacement storage verified" Tag="{x:Static sanitization:SanitizationState.ReplacementStorage}" />
+            <ComboBoxItem Content="Verified no donor storage" Tag="{x:Static sanitization:SanitizationState.NoDonorStorage}" />
+            <ComboBoxItem Content="Verification failed" Tag="{x:Static sanitization:SanitizationState.Failed}" />
+          </ComboBox>
+          <StackPanel x:Name="SanitizationMethodFields" Visibility="Collapsed">
+            <Label Target="{Binding ElementName=SanitizationMethod}" Content="External method used" />
+            <ComboBox x:Name="SanitizationMethod" SelectedValuePath="Tag"
+                      AutomationProperties.Name="External sanitization method">
+              <ComboBoxItem Content="Clear" Tag="clear" />
+              <ComboBoxItem Content="Purge" Tag="purge" />
+              <ComboBoxItem Content="Destroy" Tag="destroy" />
+            </ComboBox>
+          </StackPanel>
+          <StackPanel x:Name="SanitizationEventFields" Visibility="Collapsed">
+            <Label Target="{Binding ElementName=SanitizationDate}" Content="Date of external result" />
+            <DatePicker x:Name="SanitizationDate" AutomationProperties.Name="Date of external sanitization result"
+                        DateValidationError="InvalidSanitizationDate" SelectedDateChanged="SanitizationDateChanged" />
+            <StackPanel x:Name="SanitizationMediaFields">
+              <Label Target="{Binding ElementName=SanitizationMediaId}" Content="Workshop media code" />
+              <TextBlock Text="Use an opaque code from the workshop record. Leave out full serial numbers and personal paths." />
+              <TextBox x:Name="SanitizationMediaId" MaxLength="64"
+                       AutomationProperties.Name="Workshop media code" />
+            </StackPanel>
+            <CheckBox x:Name="ExternalRecordConfirmed"
+                      AutomationProperties.Name="Confirm lawful ownership and the external record">
+              <TextBlock Text="I confirmed lawful ownership and checked the external record for this device." />
+            </CheckBox>
+          </StackPanel>
+          <TextBlock x:Name="SanitizationInputError" AutomationProperties.LiveSetting="Polite" />
+          <Button x:Name="RecordSanitizationButton" Content="Save external result" Click="RecordSanitization" />
+        </StackPanel>
+        <Button x:Name="CompleteSavedSanitizationButton" Content="Check saved sanitization record"
+                Click="CompleteSavedSanitization" IsEnabled="{Binding CanCompleteSavedSanitization}"
+                Visibility="Collapsed" />
+      </StackPanel>
+    </GroupBox>
+
+    <GroupBox Header="Read-only assessment" AutomationProperties.Name="Read-only assessment">
+      <StackPanel>
+        <TextBlock Text="Assessment reads device facts and records findings in this job. It leaves system settings unchanged and gives no readiness approval." />
+        <TextBlock Text="{Binding GateStatus}" />
+        <Button x:Name="StartAssessmentButton" Content="Start assessment" Click="StartAssessment"
+                IsEnabled="{Binding CanAssess}" />
+        <Button x:Name="CancelAssessmentButton" Content="Cancel assessment" Click="CancelAssessment"
+                IsEnabled="{Binding CanCancel}" />
+        <TextBlock x:Name="AssessmentMessage" Text="{Binding AssessmentStatus}"
+                   Focusable="True" KeyboardNavigation.IsTabStop="True"
+                   AutomationProperties.Name="{Binding AssessmentStatus}" AutomationProperties.LiveSetting="Polite" />
+        <ProgressBar x:Name="AuditAssessmentProgress" IsIndeterminate="True" Height="12" Margin="0,6"
+                     Visibility="Collapsed" AutomationProperties.Name="Assessment running" />
+        <Expander Header="Assessment evidence">
+          <ListBox x:Name="AssessmentObservations" ItemsSource="{Binding Findings}" MaxHeight="240"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                   AutomationProperties.Name="Read-only assessment evidence">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel>
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Value}" />
+                  <TextBlock Text="{Binding Evidence}" />
+                  <TextBlock Text="{Binding Provider}" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Expander>
+      </StackPanel>
+    </GroupBox>
+
+    <GroupBox Header="Manual hardware checks" AutomationProperties.Name="Manual hardware checks">
+      <StackPanel>
+        <TextBlock Text="Follow a safe applicable check, then record what you observed. Detected hardware alone cannot pass a check." />
+        <TextBlock x:Name="FixtureManualNotice" Visibility="Collapsed"
+                   Text="A fixture job supports Not run or Not available. Simulated hardware cannot provide a real manual result." />
+        <TextBlock Text="Use the workshop operator code from External sanitization. Keep notes free of names, serial numbers, network details and personal content." />
+        <TextBlock x:Name="ManualResumeStatus" />
+        <StackPanel>
+          <Button x:Name="NextManualCheckButton" Content="Go to next unfinished check" Click="SelectNextManualCheck" />
+          <Label Target="{Binding ElementName=ManualCheck}" Content="Manual check" />
+          <ComboBox x:Name="ManualCheck" DisplayMemberPath="Title" SelectionChanged="ManualCheckChanged"
+                    AutomationProperties.Name="Manual hardware check" />
+          <StackPanel x:Name="ManualInstructions" DataContext="{Binding SelectedItem, ElementName=ManualCheck}"
+                      Visibility="Collapsed">
+            <TextBlock Text="Procedure" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Instructions}" />
+            <TextBlock Text="Pass criteria" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding PassCriteria}" />
+            <TextBlock Text="Fail criteria" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding FailCriteria}" />
+            <TextBlock Text="Cleanup" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Cleanup}" />
+          </StackPanel>
+          <TextBlock x:Name="ManualCurrentResult" />
+          <Expander Header="Last 10 saved results">
+            <ListBox x:Name="ManualHistory" MaxHeight="200" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     AutomationProperties.Name="Recent saved results for the selected manual check">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Expander>
+          <StackPanel IsEnabled="{Binding CanEditJob}">
+            <Label Target="{Binding ElementName=ManualOutcome}" Content="Check result" />
+            <ComboBox x:Name="ManualOutcome" SelectedValuePath="Tag" SelectionChanged="ManualOutcomeChanged"
+                      AutomationProperties.Name="Manual check result">
+              <ComboBoxItem x:Name="ManualPassOption" Content="Pass" Tag="{x:Static evidence:HumanTestResult.Pass}" />
+              <ComboBoxItem x:Name="ManualFailOption" Content="Fail" Tag="{x:Static evidence:HumanTestResult.Fail}" />
+              <ComboBoxItem Content="Not run" Tag="{x:Static evidence:HumanTestResult.NotRun}" />
+              <ComboBoxItem Content="Not available" Tag="{x:Static evidence:HumanTestResult.NotAvailable}" />
+            </ComboBox>
+            <StackPanel x:Name="ManualUnavailableFields" Visibility="Collapsed">
+              <Label Target="{Binding ElementName=ManualUnavailableReason}" Content="Reason the check is unavailable" />
+              <ComboBox x:Name="ManualUnavailableReason" SelectedValuePath="Value" DisplayMemberPath="Label"
+                        AutomationProperties.Name="Reason the manual check is unavailable" />
+            </StackPanel>
+            <Label Target="{Binding ElementName=ManualNotes}" Content="Brief observation" />
+            <TextBox x:Name="ManualNotes" MaxLength="{x:Static manual:ManualTestService.MaximumNotesLength}"
+                     TextWrapping="Wrap" AutomationProperties.Name="Brief manual observation" />
+            <TextBlock x:Name="ManualInputError" AutomationProperties.LiveSetting="Polite" />
+            <Button x:Name="SaveManualResultButton" Content="Save manual result" Click="SaveManualResult" />
+          </StackPanel>
+        </StackPanel>
+      </StackPanel>
+    </GroupBox>
+    <Button x:Name="ReturnFromAuditButton" Content="Return to workflow stages" Click="RequestStageReturn" />
+  </StackPanel>
+</UserControl>
