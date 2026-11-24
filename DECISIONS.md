@@ -1,12 +1,12 @@
 # ThirdLife Setup Core — Frozen Decision Register
 
-**Bundle version:** 0.5.0  
+**Bundle version:** 0.6.0  
 **Generated:** 2026-11-24  
 **Status:** Binding for the Team B/B1 ThirdLife Setup Core roadmap
 
 ## Purpose and authority
 
-This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, modest-hardware, testing, continuity, and delivery choices that govern Codex work. Revision 0.5.0 adds the owner's decision on human testing and bounded continuation. Earlier decisions and approved amendments retain their provenance.
+This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, modest-hardware, testing, continuity, and delivery choices that govern Codex work. Revision 0.6.0 establishes permanent Codex ownership of engineering verification under D-074. Earlier decisions and approved amendments retain their provenance.
 
 When implementation pressure conflicts with a decision here, stop, record the conflict, and request an explicit human decision. Do not silently reinterpret a frozen decision.
 
@@ -113,6 +113,7 @@ Codex may propose an amendment, but it may not declare one approved.
 | [D-071](#d-071) | Evidence ownership and deterministic reconciliation |
 | [D-072](#d-072) | Versioned and stale-safe lifecycle knowledge |
 | [D-073](#d-073) | Focused human testing and bounded continuation |
+| [D-074](#d-074) | Codex owns technical verification and accountable decisions remain explicit |
 
 ## Decisions
 
@@ -442,7 +443,7 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Rationale.** A configuration that only works before restart is not complete.
 
-**Implementation constraint.** Final reports distinguish attempted, applied, and verified outcomes. A real host cold boot is performed only at the explicit later task/gate that requires it and only on the active Codex machine; TL-0008 specifies the procedure but does not execute it.
+**Implementation constraint.** Final reports distinguish attempted, applied, and verified outcomes. Under D-074, TL-0509 verifies checkpoint and re-verification behavior with approved same-machine VM cold-start evidence for development. Record any physical host power cycle as unverified unless directly evidenced. Final product acceptance still requires its actual cold boot. Any explicitly required physical development or release evidence must use the active Codex machine and a bounded authorized procedure. TL-0008 only specifies the procedure.
 
 **Revisit trigger.** Only if a stronger reproducible verification model replaces it.
 
@@ -565,6 +566,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** A change requires a human-approved decision/ADR, graph validation, synchronized document updates, and an explicit bundle-version change.
 
 **Approved amendment `AMD-2026-08-22-ADR-0009` — unique TL-0401 ADR number (22 August 2026).** Janne Vuorela, Principal Software Architect & Sole Project Owner, approved preserving the completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md` and reserving the next unoccupied identifier, ADR 0009 for TL-0401 at `docs/adr/0009-winget-backend.md`. The future task's deliverable and human-evidence wording change together; its dependencies, status, evidence, package/security requirements, and separate maintainer approval remain unchanged. The complete impact, alternatives, rollout, rollback, and historical-evidence treatment are recorded in [`docs/amendments/2026-08-22-adr-0009-reservation.md`](docs/amendments/2026-08-22-adr-0009-reservation.md). This amendment changes no product, boundary, runtime, data, licence, or release decision.
+
+D-074 supersedes that separate maintainer approval for a compliant TL-0401 selection. The ADR reservation and applicable trust, privilege, licence and architecture authority still apply.
 
 **Revisit trigger.** Only through a human-approved governance revision.
 
@@ -903,6 +906,8 @@ offline-behavior decision.
 
 ### D-073 — Human testing answers a concrete question and bounded assignments continue through integration
 
+**Historical.** D-074 supersedes this testing and handoff policy prospectively. Completed work and recorded observations retain the contract and provenance under which they were collected.
+
 **Decision.** Automated checks are the default for implementation verification. Ask for human testing only when a concrete unresolved perception, usability or physical-observation question affects a decision. Accountable owner and risk approvals require an actual decision from the designated person. Record automated results, human observations and approvals distinctly.
 
 **Rationale.** Objective checks and technical administration can run before a review. They can establish startup, state transitions and accessibility semantics. Perceived speech, actual display usability and operator judgment need attributable observations where required.
@@ -916,3 +921,23 @@ Each diagnostic repeat identifies the changed input or expected new information.
 **Approved amendment.** On 24 November 2026, project owner Janne Vuorela authorized `AMD-2026-11-24-MINIMAL-HUMAN-TESTING` and routine work through evidenced M1 completion. The [amendment record](docs/amendments/2026-11-24-minimal-human-testing.md) defines the scope, transferred TL-0114 human acceptance and evidence treatment.
 
 **Revisit trigger.** A later bounded assignment may consolidate human procedures while preserving their explicit owners and decisions. A change to a governed acceptance criterion requires an approved synchronized amendment under D-045.
+
+<a id="d-074"></a>
+
+### D-074 — Codex owns technical verification and accountable decisions remain explicit
+
+**Decision.** Codex owns preparation, implementation, functional and regression testing, technical accessibility checks, defect resolution, evidence and integration. Completing engineering creates zero routine human QA assignments or owner sign-offs. Codex finishes objectively verifiable engineering when its acceptance evidence exists and known defects that affect required behavior are resolved. Actual observations, objective results, evidence limits, reported defects and accountable decisions retain distinct provenance.
+
+**Rationale.** Required workflows need demonstrated outcomes through their real entry points. Perceptual and physical limits constrain claims. A candidate can be prepared and verified before a decision about using, accepting or releasing it.
+
+**Implementation constraint.** D-074 supersedes D-073 prospectively, including its M1 observation and approval. TL-0116 is a Codex-owned technical gate for the internal audit-only baseline. Retain earlier failed attempts and unresolved defects, and record the exact coverage and limitations of the repaired route. A known failure of required behavior blocks the affected outcome. A missing perceptual observation creates an evidence limit and never by itself creates QA work for the owner.
+
+Request exceptional human input only when available verification and prior evidence cannot resolve one specific fact, preference or authorization, and the answer changes a consequential decision now. Continue safe authorized work when the uncertainty can be stated. For a usability question, prepare a working result and limit the request to one tiny coherent action and one question under ordinary conditions. A genuine approval request identifies the prepared result, material limits and exact proposed action. Count related requests, retries and setup together. A reported defect creates engineering work and no retest obligation for its reporter.
+
+Preserve product ownership and sanitization confirmation, UAC, recipient settings and credentials, policy and privilege-boundary decisions, and pilot/public-release consent. Codex may administer a task state based on an actual attributable scope-bound decision. A decision required before an action remains a prerequisite for that action. Technical engineering and evidence preparation can proceed where safe before a later decision about the candidate. Retain independent specialist evidence where genuinely required, limit claims within authorized scope, or hold the affected exposure.
+
+TL-0610 is the technical pilot-candidate prerequisite for TL-0701 and TL-0702. TL-0611 remains the explicit controlled-pilot authorization and a direct prerequisite of TL-0710. Preserve required pilot evidence. Integrate under D-067, keep active-machine, Full and named risk checks in force, and end the current execution assignment at M1.
+
+**Approved amendment.** On 24 November 2026, project owner Janne Vuorela directed application of the permanent testing policy reset and M1 completion in the active Codex conversation. The [amendment record](docs/amendments/2026-11-24-permanent-testing-policy-reset.md) records the scope and authority.
+
+**Revisit trigger.** A change to accountable authority, evidence requirements or an exposure prerequisite requires an approved synchronized amendment under D-045.

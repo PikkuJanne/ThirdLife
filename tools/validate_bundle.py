@@ -33,13 +33,13 @@ STABILIZATION_AMENDMENT_PATH = (
 MINIMAL_HUMAN_TESTING_AMENDMENT_PATH = (
     "docs/amendments/2026-11-24-minimal-human-testing.md"
 )
+TESTING_POLICY_RESET_AMENDMENT_PATH = (
+    "docs/amendments/2026-11-24-permanent-testing-policy-reset.md"
+)
 M1_WORKSHOP_REPORT_FIXTURE = "fixtures/expected-reports/M1/workshop-audit.txt"
 TL0401_WINGET_ADR_PATH = "docs/adr/0009-winget-backend.md"
-TL0401_HUMAN_EVIDENCE = (
-    "A maintainer reviews the spike evidence and approves ADR 0009 at "
-    "docs/adr/0009-winget-backend.md before production adapter work begins."
-)
 M0_FOUNDATION_GATE_PATH = "artifacts/gates/M0-foundation.md"
+M1_AUDIT_GATE_PATH = "artifacts/gates/M1-audit-only.md"
 M0_SANDBOX_HOST_PATH = "eng/run-tl0010-sandbox.ps1"
 M0_SANDBOX_GUEST_PATH = "eng/run-tl0010-sandbox-guest.ps1"
 M0_SANDBOX_CANDIDATE = "17975419badd4154b82895d9d92a4a904790c7c0"
@@ -120,6 +120,8 @@ REQUIRED_FILES = (
     ADR_NUMBERING_AMENDMENT_PATH,
     STABILIZATION_AMENDMENT_PATH,
     MINIMAL_HUMAN_TESTING_AMENDMENT_PATH,
+    TESTING_POLICY_RESET_AMENDMENT_PATH,
+    "eng/run-m1-audit-journey.ps1",
     "docs/glossary.md",
     "docs/non-goals.md",
     "docs/product-contract.md",
@@ -151,6 +153,7 @@ REQUIRED_FILES = (
     M0_SANDBOX_GUEST_PATH,
     M0_SANDBOX_HOST_PATH,
     M0_FOUNDATION_GATE_PATH,
+    M1_AUDIT_GATE_PATH,
     ".github/workflows/verify.yml",
     "eng/verify.ps1",
     "eng/test-manifest.json",
@@ -777,9 +780,9 @@ ALLOWED_KIND = {"build", "code", "data", "docs", "gate", "release", "security", 
 ALLOWED_TEST_TIER = {"quick", "targeted", "full", "extended"}
 MUTABLE_FIELDS = ["status", "evidence", "blocked_reason"]
 
-CURRENT_BUNDLE_VERSION = "0.5.0"
+CURRENT_BUNDLE_VERSION = "0.6.0"
 CURRENT_BUNDLE_GENERATED_ON = "2026-11-24"
-CURRENT_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 74))
+CURRENT_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 75))
 CURRENT_TASK_COUNT = 91
 STABILIZATION_CI_CLARIFICATION = {
     "summary": (
@@ -865,7 +868,7 @@ V030_TL0008_PROCEDURE_DIGEST = (
 CURRENT_BUNDLE_DOCUMENT_MARKERS = {
     "ACCESSIBILITY.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
     "AGENTS.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "CHANGELOG.md": "## 0.5.0 — 2026-11-24",
+    "CHANGELOG.md": f"## {CURRENT_BUNDLE_VERSION} — {CURRENT_BUNDLE_GENERATED_ON}",
     "CODEX_START_PROMPT.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
     "DECISIONS.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
     "DEVELOPMENT_WORKFLOW.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
@@ -1872,26 +1875,20 @@ def validate_tl0401_adr_reservation(
             f"{TL0401_WINGET_ADR_PATH!r}"
         )
 
-    human_evidence = task.get("human_evidence_required")
-    if not isinstance(human_evidence, list):
-        human_evidence = []
-    if human_evidence != [TL0401_HUMAN_EVIDENCE]:
+    if task.get("executor") != "codex" or "human_evidence_required" in task:
         validation.error(
-            "TL-0401: human_evidence_required must remain the one exact approved "
-            f"maintainer gate {TL0401_HUMAN_EVIDENCE!r}"
+            "TL-0401: the compliant WinGet backend decision is a Codex task "
+            "without a routine maintainer approval gate"
         )
-    human_text = "\n".join(
-        value for value in human_evidence if isinstance(value, str)
-    )
-    for phrase in ("ADR 0009", TL0401_WINGET_ADR_PATH):
-        if phrase not in human_text:
-            validation.error(
-                f"TL-0401: human evidence must name {phrase!r}"
-            )
 
+    contract_lists = (
+        "deliverables", "acceptance_criteria", "verification", "notes",
+        "human_evidence_required",
+    )
     live_contract_text = "\n".join(
         value
-        for values in (deliverables, human_evidence)
+        for values in (task.get(field) for field in contract_lists)
+        if isinstance(values, list)
         for value in values
         if isinstance(value, str)
     )
@@ -6622,6 +6619,141 @@ def ancestors(task_id: str, dependencies: dict[str, list[str]]) -> set[str]:
     return found
 
 
+def validate_testing_policy_task_contract(
+    validation: Validation,
+    task_doc: dict[str, Any],
+    task_by_id: dict[str, dict[str, Any]],
+    dependency_map: dict[str, list[str]],
+) -> None:
+    # Historical decisions and accepted observations retain their original task contracts.
+    historical_tasks = {"TL-0004", "TL-0005", "TL-0006", "TL-0007", "TL-0010", "TL-0113"}
+    decision_scopes = {
+        "TL-0208": (("new or materially changed", "wording", "exception governance"),),
+        "TL-0314": (("security owner", "privilege boundary", "residual risks"),),
+        "TL-0411": (("product", "security", "first write-capable", "prepared"),),
+        "TL-0508": (("new or materially changed", "policy", "application", "licensing/privacy"),),
+        "TL-0611": (
+            ("controlled-pilot go/no-go", "exact candidate", "exposure"),
+            ("security", "privacy", "accessibility", "licensing", "residual risks"),
+            ("pilot partner", "acceptance", "before exposure"),
+        ),
+        "TL-0710": (
+            ("stable-release go/no-go", "distribution", "exact frozen candidate"),
+            ("security", "privacy", "accessibility", "licensing", "support"),
+            ("portfolio owner", "release-interface", "scam explainer"),
+        ),
+    }
+    legacy_qa = re.compile(
+        r"\b(?:operator|recipient|proxy|partner)\s+walkthroughs?\b"
+        r"|\b(?:representative operator|recipient/proxy|pilot partner/operator)"
+        r"\s+(?:completes?|rehearses?)\b"
+        r"|\b(?:owners?|reviewers?|maintainer)\s+(?:signs?\b|"
+        r"approves? (?:the )?(?:M[1-7] gate record|ADR 0009)|"
+        r"reviews? the spike evidence)"
+        r"|\b(?:accessibility|independent|human|security) reviewer\s+"
+        r"(?:signs?|inspects?)\b"
+        r"|\bwith the pilot policy owner\b",
+        re.IGNORECASE,
+    )
+
+    for task_id, task in task_by_id.items():
+        if task_id in historical_tasks and task.get("status") == "done":
+            continue
+        scopes = decision_scopes.get(task_id)
+        executor = "hybrid" if scopes else "codex"
+        if task.get("executor") != executor:
+            validation.error(f"{task_id}: D-074 executor must be {executor}")
+        evidence = task.get("human_evidence_required")
+        if scopes:
+            if (
+                not isinstance(evidence, list)
+                or len(evidence) != len(scopes)
+                or any(
+                    not isinstance(entry, str)
+                    or any(phrase not in entry.casefold() for phrase in required)
+                    for entry, required in zip(evidence, scopes)
+                )
+            ):
+                validation.error(
+                    f"{task_id}: D-074 evidence must retain only its accountable decision scopes"
+                )
+        elif "human_evidence_required" in task:
+            validation.error(f"{task_id}: D-074 engineering work cannot require routine human evidence")
+
+        for field in (
+            "objective", "deliverables", "acceptance_criteria", "verification",
+            "notes", "human_evidence_required",
+        ):
+            values = task.get(field)
+            entries = [values] if isinstance(values, str) else values
+            if isinstance(entries, list) and any(
+                isinstance(entry, str) and legacy_qa.search(entry) for entry in entries
+            ):
+                validation.error(f"{task_id}: {field} reintroduces a superseded human QA gate")
+
+    for task_id in ("TL-0701", "TL-0702"):
+        if "TL-0610" not in dependency_map.get(task_id, []):
+            validation.error(
+                f"{task_id}: must directly depend on the technical pilot candidate TL-0610"
+            )
+        if "TL-0611" in ancestors(task_id, dependency_map):
+            validation.error(
+                f"{task_id}: technical onboarding work cannot depend on pilot exposure authorization TL-0611"
+            )
+    if "TL-0611" not in dependency_map.get("TL-0710", []):
+        validation.error("TL-0710: must directly depend on controlled-pilot authorization TL-0611")
+
+    workflow = task_doc.get("workflow")
+    workflow = workflow if isinstance(workflow, dict) else {}
+    for field, phrases in {
+        "ready_rule": (
+            "required before the next action", "later decision on a prepared candidate",
+        ),
+        "human_completion_rule": (
+            "without routine human qa", "actual attributable decision", "administer task state",
+        ),
+    }.items():
+        wording = workflow.get(field)
+        if not isinstance(wording, str) or any(phrase not in wording.casefold() for phrase in phrases):
+            validation.error(
+                f"TASKS.yaml: workflow.{field} must distinguish engineering from authorization under D-074"
+            )
+
+    definitions = {
+        "definition_of_ready": (
+            "authorization needed before the next action",
+            "later candidate approval is a condition of the action it governs",
+        ),
+        "definition_of_done": (
+            "objective engineering evidence",
+            "a known defect in a required workflow blocks completion",
+            "attributable, scope-bound, and recorded",
+            "no routine human qa",
+        ),
+    }
+    for field, phrases in definitions.items():
+        entries = task_doc.get(field)
+        if not isinstance(entries, list):
+            entries = []
+        wording = " ".join(entry for entry in entries if isinstance(entry, str))
+        if any(phrase not in wording.casefold() for phrase in phrases):
+            validation.error(
+                f"TASKS.yaml: {field} must preserve D-074 engineering and authorization criteria"
+            )
+
+    milestones = task_doc.get("milestones")
+    if not isinstance(milestones, list):
+        return
+    for milestone in milestones:
+        if not isinstance(milestone, dict) or milestone.get("id") == "M0":
+            continue
+        wording = milestone.get("exit_criteria")
+        if isinstance(wording, list) and any(
+            isinstance(entry, str) and legacy_qa.search(entry) for entry in wording
+        ):
+            validation.error(f"{milestone.get('id')}: exit criteria reintroduce a superseded human QA gate")
+
+
 def validate() -> int:
     validation = Validation()
 
@@ -6951,11 +7083,15 @@ def validate() -> int:
                 for task_id, task in task_by_id.items()
                 if task.get("milestone") == milestone_id
             ):
-                if previous_gate not in ancestors(task_id, dependency_map):
+                prerequisite = (
+                    "TL-0610" if task_id in {"TL-0701", "TL-0702"} else previous_gate
+                )
+                if prerequisite not in ancestors(task_id, dependency_map):
                     validation.error(
-                        f"{task_id}: does not depend transitively on prior gate {previous_gate}"
+                        f"{task_id}: does not depend transitively on milestone prerequisite {prerequisite}"
                     )
 
+    validate_testing_policy_task_contract(validation, task_doc, task_by_id, dependency_map)
     validate_governance_documents(validation)
     validate_architecture_decision_records(validation, task_by_id, decision_set)
     validate_tl0401_adr_reservation(validation, task_by_id)
@@ -7052,7 +7188,7 @@ def validate() -> int:
         and task_by_id[task_id].get("status") in {"ready", "backlog"}
     ]
     if not codex_ready and len(done) < len(task_by_id):
-        validation.warn("No Codex-ready task exists; check blockers, review tasks, or human gates")
+        validation.warn("No Codex-ready task exists; check blockers, review tasks, or accountable decisions")
 
     return report(
         validation,

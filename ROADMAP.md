@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Binding Development Roadmap
 
-**Bundle version:** 0.5.0  
+**Bundle version:** 0.6.0  
 **Portfolio roadmap:** ThirdLife Software Portfolio v2.1 (15 August 2026)  
 **Project / queue:** ThirdLife Setup Core — Team B / B1  
 **Pilot target:** v0.1 controlled partner pilot at `TL-0611`  
@@ -126,7 +126,7 @@ A change to **Owns** or **Does not own** requires an explicit portfolio-owner de
 | Stage | Gate | Meaning | Does not mean |
 |---|---|---|---|
 | Architecture-proving write slice | `TL-0411` | One trusted package can be planned, elevated, installed, recovered, and independently verified end to end. | Pilot readiness or product completion. |
-| Full machine profile | `TL-0511` | The reference profile converges through packages, updates, restarts, security checks, and cold-boot verification. | Handover authorization. |
+| Full machine profile | `TL-0511` | The reference profile converges through packages, updates, restarts, security checks and approved same-machine VM cold-start verification. | Handover authorization. |
 | Controlled v0.1 pilot | `TL-0611` | Named humans approve a bounded partner pilot with finalization, reports, audits, package, and runbook. | Team B/B1 exit, stable 1.0, or permission for sibling integration. |
 | Standalone Core 1.0 | `TL-0710` | Product lifecycle, recipient-controlled accessibility/basic backup, release evidence, artifacts, and black-box interface are frozen. | B4 suite assembly or synchronized sibling releases. |
 
@@ -198,7 +198,7 @@ Default dependency direction is inward toward domain contracts. UI and infrastru
 - The entire primary operator journey works with keyboard only, visible focus, logical order, named controls, status announcements, scalable text, high contrast, and no color-only meaning.
 - Long operations expose phase, progress, uncertainty, cancellation, and recovery.
 - Recipient accessibility choices are made by the present recipient or authorized organization, with scope, preview/reversal limits, verification, and sealed-handover deferral visible.
-- Limitations remain documented; no generated narrative substitutes for NVDA, Narrator, scaling, and human evidence.
+- Technical checks cover keyboard, UI Automation, assistive-technology integration and layout as supported. Record the exercised settings and tools, known defects and any unverified perceptual behavior.
 
 ### 8.4 Modest-hardware engineering and graceful degradation
 
@@ -217,11 +217,13 @@ The core action states are **planned, approved, started, applied, verified, fail
 
 `TASKS.yaml` contains the executable DAG. Unless a user names a valid task, Codex selects one dependency-ready task using `AGENTS.md`. Every task declares an expected quick, targeted, full, or extended test tier plus any broader triggers. Normal implementation sessions may edit only `status`, `evidence`, and `blocked_reason` in existing task entries.
 
-The strict milestone chain is:
+The milestone sequence is:
 
 `M0 → M1 → M2 → M3 → M4 → M5 → M6 → M7`
 
-Every milestone gate transitively depends on all work in that milestone. Every task in a later milestone transitively depends on the previous milestone gate. Human and hybrid tasks remain at `review` or `blocked` until declared human evidence exists.
+Every milestone gate transitively depends on all work in that milestone. Later tasks depend on the previous milestone gate except TL-0701 and TL-0702, which depend on technical pilot candidate TL-0610. TL-0611 remains required before actual controlled-pilot exposure and is a direct prerequisite of the stable gate TL-0710. Preserve required pilot evidence. The exception separates engineering from exposure and authorizes neither M7 execution nor release.
+
+Under [D-074](DECISIONS.md#d-074), engineering readiness depends on technical prerequisites and authorizations needed for the work itself. A later decision on a prepared candidate does not block its preparation or verification. Codex closes technical work when objective criteria are satisfied. A task with a genuinely required accountable decision remains open for that decision after the evidence is ready. Record the actual person's scope and disposition. Ordinary technical completion creates no routine human QA or sign-off.
 
 ## 10. Milestones and binding task sequence
 
@@ -260,8 +262,8 @@ Every milestone gate transitively depends on all work in that milestone. Every t
 
 - The normal flow makes no system changes and runs unelevated.
 - Missing evidence remains unknown and normalized observations are deterministic.
-- A representative operator completes the integrated audit flow with accessible UI and privacy-safe persistence and logging.
-- The TL-0116 review samples one applicable manual observation, checks labelled unavailable and failure examples, and confirms pause/resume or close/reopen usability. Automated verification covers the remaining variants and transitions. The operator acknowledges the limits of the tested active-machine scenario, and the project owner separately decides the M1 gate.
+- The isolated, actually launched WPF route starts with a fresh store and proves job creation, confirmed and saved intake, enabled Start assessment, completed read-only assessment, an attributable persisted manual fixture result, close/reopen and report agreement.
+- Technical accessibility, privacy-safe persistence and logging, safe cancellation/interruption and the triggered Full gate have objective evidence. Reported defects in required behavior are resolved. Record separate limits for physical and perceptual coverage. M1 establishes an internal audit-only baseline.
 
 | Task | Deliverable | Executor | Direct dependencies |
 |---|---|---|---|
@@ -280,11 +282,11 @@ Every milestone gate transitively depends on all work in that milestone. Every t
 | `TL-0113` | Build the accessible six-stage WPF shell | `hybrid` | `TL-0002`, `TL-0103`, `TL-0105` |
 | `TL-0114` | Implement manual hardware-test capture | `codex` | `TL-0101`, `TL-0111`, `TL-0112`, `TL-0113` |
 | `TL-0115` | Generate the audit-only workshop report | `codex` | `TL-0112`, `TL-0114`, `TL-0104` |
-| `TL-0116` | Validate the M1 audit-only gate | `hybrid` | `TL-0112`, `TL-0113`, `TL-0114`, `TL-0115` |
+| `TL-0116` | Validate the M1 audit-only gate | `codex` | `TL-0112`, `TL-0113`, `TL-0114`, `TL-0115` |
 
-TL-0113 retains its focused shell accessibility observation. TL-0114 connects durable job create/open/reopen, external sanitization capture, read-only assessment and guided manual capture to the operator UI, with automated implementation verification. TL-0115 renders the deterministic workshop report from durable job evidence and adds the operator UI path to generate and open that report.
+TL-0113's completed shell observations retain their original provenance. TL-0114 connects durable job create/open/reopen, external sanitization capture, read-only assessment and guided manual capture to the operator UI, with automated implementation verification. TL-0115 renders the deterministic workshop report from durable job evidence and adds the operator UI path to generate and open that report.
 
-**Gate:** `TL-0116` — Validate the M1 audit-only gate. The gate owns the operator usability review transferred from TL-0114, the integrated manual-capture and new or changed accessibility observations, and the owner decision. Carry applicable unchanged TL-0113 observations forward with their provenance. The Full gate and all declared evidence are required. [D-073](DECISIONS.md#d-073) governs the prepared handoffs and the assigned continuation through M1.
+**Gate:** `TL-0116` — Validate the M1 audit-only gate. Codex owns the launched-route regression and technical acceptance under [D-074](DECISIONS.md#d-074). Retain earlier failures and applicable unchanged observations with their provenance. The current assignment ends with this gate's verified integration.
 
 ### M2 — Explainable disposition engine
 
@@ -295,6 +297,7 @@ TL-0113 retains its focused shell accessibility observation. TL-0114 connects du
 - Every disposition cites evidence and policy.
 - Blocking failures cannot silently pass; exceptions remain attributable and visible.
 - Historical jobs preserve the policy/result originally used.
+- New or materially changed disposition wording and exception governance receive an attributable policy-owner decision on prepared technical evidence.
 
 | Task | Deliverable | Executor | Direct dependencies |
 |---|---|---|---|
@@ -307,7 +310,7 @@ TL-0113 retains its focused shell accessibility observation. TL-0114 connects du
 | `TL-0207` | Upgrade reports and UI to separate facts from decisions | `codex` | `TL-0203`, `TL-0204`, `TL-0205`, `TL-0115` |
 | `TL-0208` | Validate the M2 explainable-disposition gate | `hybrid` | `TL-0204`, `TL-0205`, `TL-0206`, `TL-0207` |
 
-**Gate:** `TL-0208` — Validate the M2 explainable-disposition gate. The gate is not complete until its automated verification and every declared human evidence item are attached.
+**Gate:** `TL-0208` — Validate the M2 explainable-disposition gate. Codex verifies the behavior and presents only applicable policy choices for decision.
 
 ### M3 — Safe planning and privilege boundary
 
@@ -318,6 +321,7 @@ TL-0113 retains its focused shell accessibility observation. TL-0114 connects du
 - Profiles/catalog entries cannot execute arbitrary commands.
 - Approval binds resolved content and material changes require reapproval.
 - The broker protocol, IPC, journal, and reboot checkpoints fail closed under adversarial tests.
+- Accountable authority records one privilege-boundary disposition on the prepared evidence and residual risks before the authorized scope is used.
 
 | Task | Deliverable | Executor | Direct dependencies |
 |---|---|---|---|
@@ -331,12 +335,12 @@ TL-0113 retains its focused shell accessibility observation. TL-0114 connects du
 | `TL-0308` | Implement the durable action journal | `codex` | `TL-0303`, `TL-0102` |
 | `TL-0309` | Implement reboot checkpoints and resume tokens | `codex` | `TL-0308`, `TL-0102` |
 | `TL-0310` | Define the versioned broker protocol | `codex` | `TL-0303`, `TL-0009` |
-| `TL-0311` | Implement the ephemeral broker and authenticated IPC | `hybrid` | `TL-0310`, `TL-0002` |
-| `TL-0312` | Add focused broker security tests | `hybrid` | `TL-0311`, `TL-0004` |
+| `TL-0311` | Implement the ephemeral broker and authenticated IPC | `codex` | `TL-0310`, `TL-0002` |
+| `TL-0312` | Add focused broker security tests | `codex` | `TL-0311`, `TL-0004` |
 | `TL-0313` | Connect approval, journal, UAC, broker, and result flow | `codex` | `TL-0306`, `TL-0308`, `TL-0311` |
 | `TL-0314` | Validate the M3 safe-planning gate | `hybrid` | `TL-0307`, `TL-0309`, `TL-0312`, `TL-0313` |
 
-**Gate:** `TL-0314` — Validate the M3 safe-planning gate. The gate is not complete until its automated verification and every declared human evidence item are attached.
+**Gate:** `TL-0314` — Validate the M3 safe-planning gate. Record technical acceptance and the actual privilege-boundary authorization here.
 
 ### M4 — One package installation vertical slice
 
@@ -347,10 +351,11 @@ TL-0113 retains its focused shell accessibility observation. TL-0114 connects du
 - Exact package identity/source/trust data is enforced without localized table parsing or hash bypass.
 - Installer success is not accepted until independent verification passes.
 - UAC decline, network loss, process termination, reboot, and retry are recoverable and idempotent.
+- The actual first-write-capable product/security decision uses prepared isolated lifecycle, verification and recovery evidence. Any authorization required to execute a particular action still precedes that action.
 
 | Task | Deliverable | Executor | Direct dependencies |
 |---|---|---|---|
-| `TL-0401` | Spike structured WinGet integration paths and record ADR 0009 | `hybrid` | `TL-0314`, `TL-0006` |
+| `TL-0401` | Spike structured WinGet integration paths and record ADR 0009 | `codex` | `TL-0314`, `TL-0006` |
 | `TL-0402` | Implement the production package-manager adapter | `codex` | `TL-0401` |
 | `TL-0403` | Enforce package resolution and trust policy | `codex` | `TL-0402`, `TL-0301`, `TL-0307` |
 | `TL-0404` | Implement one approved machine-wide package action | `codex` | `TL-0403`, `TL-0313` |
@@ -359,23 +364,24 @@ TL-0113 retains its focused shell accessibility observation. TL-0114 connects du
 | `TL-0407` | Classify package failures and emit sanitized diagnostics | `codex` | `TL-0405`, `TL-0406`, `TL-0005` |
 | `TL-0408` | Resume a package action safely after reboot or process loss | `codex` | `TL-0309`, `TL-0406`, `TL-0407` |
 | `TL-0409` | Make package execution idempotent and safely retryable | `codex` | `TL-0408` |
-| `TL-0410` | Complete the first write-capable end-to-end slice | `hybrid` | `TL-0409` |
+| `TL-0410` | Complete the first write-capable end-to-end slice | `codex` | `TL-0409` |
 | `TL-0411` | Validate the M4 package-installation gate | `hybrid` | `TL-0410` |
 
-Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md` and reserves ADR 0009 for the future TL-0401 backend decision at `docs/adr/0009-winget-backend.md`; see the [approved bundle 0.3.1 numbering amendment](docs/amendments/2026-08-22-adr-0009-reservation.md). The reservation does not select a backend or satisfy TL-0401's spike, verification, or maintainer-approval requirements.
+Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md` and reserves ADR 0009 for the future TL-0401 backend decision at `docs/adr/0009-winget-backend.md`. TL-0401 selects a compliant structured implementation based on the spike and verification. An actual trust, privilege, licensing or frozen-architecture change requires the applicable authority. [Approved numbering amendment](docs/amendments/2026-08-22-adr-0009-reservation.md)
 
-**Gate:** `TL-0411` — Validate the M4 package-installation gate. The gate is not complete until its automated verification and every declared human evidence item are attached.
+**Gate:** `TL-0411` — Validate the M4 package-installation gate. Codex prepares and verifies the candidate. Record the accountable first-write-capable product/security decision on that evidence.
 
 ### M5 — Full machine profile
 
-**Objective:** Apply the reviewed pilot profile across Windows Update, multiple packages, security checks, restart phases, cold-boot verification on the active Codex machine, and risk-relevant same-machine constrained scenarios.
+**Objective:** Apply the reviewed pilot profile across Windows Update, multiple packages, security checks, restart phases, cold-start verification in the approved same-machine environment, and risk-relevant constrained scenarios.
 
 **Exit criteria:**
 
 - The job-seeker machine profile converges on supported clean Windows environments hosted on the active Codex machine.
 - Essential failures and resource or ownership blockers prevent ready status.
 - Same-machine offline, low-space, no-GPU, reduced-concurrency, interruption, and failure scenarios preserve state and recovery.
-- Final cold-boot verification on the active Codex machine records exact versions and unresolved limitations.
+- Checkpoint and approved VM cold-start verification record exact versions and environment. State any unverified physical power cycle explicitly and retain genuinely required physical product/release conditions.
+- New or materially changed catalogue content retains applicable policy, application-selection, licensing and privacy decisions. Security baseline and pilot-scope dispositions belong to TL-0611.
 - Evidence describes the reference machine and constraints and does not imply cross-hardware certification.
 
 | Task | Deliverable | Executor | Direct dependencies |
@@ -383,16 +389,16 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 | `TL-0501` | Execute dependency-aware multi-action plans | `codex` | `TL-0411` |
 | `TL-0502` | Implement essential and optional action semantics | `codex` | `TL-0501`, `TL-0203` |
 | `TL-0503` | Preflight disk, power, and resource requirements | `codex` | `TL-0501`, `TL-0305` |
-| `TL-0504` | Implement a structured Windows Update workflow | `hybrid` | `TL-0503`, `TL-0004` |
+| `TL-0504` | Implement a structured Windows Update workflow | `codex` | `TL-0503`, `TL-0004` |
 | `TL-0505` | Coordinate maintenance phases and restart checkpoints | `codex` | `TL-0502`, `TL-0504`, `TL-0309` |
-| `TL-0506` | Implement the v0.1 security baseline providers | `hybrid` | `TL-0505`, `TL-0112`, `TL-0004` |
+| `TL-0506` | Implement the v0.1 security baseline providers | `codex` | `TL-0505`, `TL-0112`, `TL-0004` |
 | `TL-0507` | Verify the complete machine profile | `codex` | `TL-0505`, `TL-0506` |
 | `TL-0508` | Finalize the pilot catalog, policy, and profiles | `hybrid` | `TL-0502`, `TL-0503`, `TL-0403`, `TL-0006` |
-| `TL-0509` | Require final cold-boot verification | `hybrid` | `TL-0507` |
-| `TL-0510` | Run the full-profile and failure-injection matrix | `hybrid` | `TL-0503`, `TL-0505`, `TL-0507`, `TL-0508`, `TL-0509` |
-| `TL-0511` | Validate the M5 full-machine-profile gate | `hybrid` | `TL-0510` |
+| `TL-0509` | Require final cold-boot verification | `codex` | `TL-0507` |
+| `TL-0510` | Run the full-profile and failure-injection matrix | `codex` | `TL-0503`, `TL-0505`, `TL-0507`, `TL-0508`, `TL-0509` |
+| `TL-0511` | Validate the M5 full-machine-profile gate | `codex` | `TL-0510` |
 
-**Gate:** `TL-0511` — Validate the M5 full-machine-profile gate. The gate is not complete until its automated verification and every declared human evidence item are attached.
+**Gate:** `TL-0511` — Validate the M5 full-machine-profile gate. Codex owns integration, fault and resource evidence and records blockers and coverage limits.
 
 ### M6 — Handover and controlled pilot
 
@@ -402,7 +408,8 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 
 - Workshop, recipient, and diagnostic outputs respect their distinct data boundaries.
 - Finalization and sign-off cannot be bypassed while blockers remain.
-- The reproducible pilot package, runbook, audits, and named human approvals support a controlled partner pilot.
+- Codex completes recipient-guide checks, technical audits and the exact pilot package lifecycle, rollback and runbook before seeking consent for exposure.
+- The prepared evidence and required pilot records support one coordinated go/no-go packet at TL-0611, with actual security, privacy, accessibility, licensing, release and partner decisions attributed by scope.
 - The gate record states that Core 1.0 completion and portfolio handoff remain in M7.
 
 | Task | Deliverable | Executor | Direct dependencies |
@@ -411,15 +418,15 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 | `TL-0602` | Detect bounded workshop artifacts | `codex` | `TL-0601`, `TL-0005`, `TL-0506` |
 | `TL-0603` | Support assisted and sealed handover models | `codex` | `TL-0601` |
 | `TL-0604` | Generate the technical workshop record | `codex` | `TL-0601`, `TL-0507` |
-| `TL-0605` | Generate the plain-language recipient guide | `hybrid` | `TL-0603`, `TL-0508` |
+| `TL-0605` | Generate the plain-language recipient guide | `codex` | `TL-0603`, `TL-0508` |
 | `TL-0606` | Build a previewable sanitized diagnostic bundle | `codex` | `TL-0602`, `TL-0407`, `TL-0604` |
 | `TL-0607` | Enforce final sign-off and the blocking handover gate | `codex` | `TL-0602`, `TL-0603`, `TL-0604`, `TL-0605`, `TL-0606` |
-| `TL-0608` | Complete the v0.1 accessibility audit | `hybrid` | `TL-0605`, `TL-0607`, `TL-0510` |
-| `TL-0609` | Complete the v0.1 security and privacy release review | `hybrid` | `TL-0606`, `TL-0607`, `TL-0510` |
-| `TL-0610` | Package the controlled pilot and operating runbook | `hybrid` | `TL-0607`, `TL-0608`, `TL-0609` |
-| `TL-0611` | Validate the M6 and v0.1 controlled-pilot gate | `human` | `TL-0610` |
+| `TL-0608` | Complete the v0.1 accessibility audit | `codex` | `TL-0605`, `TL-0607`, `TL-0510` |
+| `TL-0609` | Complete the v0.1 security and privacy release review | `codex` | `TL-0606`, `TL-0607`, `TL-0510` |
+| `TL-0610` | Package the controlled pilot and operating runbook | `codex` | `TL-0607`, `TL-0608`, `TL-0609` |
+| `TL-0611` | Validate the M6 and v0.1 controlled-pilot gate | `hybrid` | `TL-0610` |
 
-**Gate:** `TL-0611` — Validate the M6 and v0.1 controlled-pilot gate. The gate is not complete until its automated verification and every declared human evidence item are attached.
+**Gate:** `TL-0611` — Validate the M6 and v0.1 controlled-pilot gate. Actual pilot exposure requires the scoped go/no-go and partner consent. Reuse valid unchanged decisions and preserve required pilot evidence.
 
 ### M7 — Core 1.0 standalone release and portfolio handoff
 
@@ -431,22 +438,23 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 - Recipient accessibility and basic operating-system backup choices remain recipient-controlled, reversible where applicable, and do not leak recovery material.
 - Offline core behavior, same-machine modest-hardware evidence, security/privacy, accessibility, update, repair, uninstall, migration, and data-preservation evidence pass the stable-release matrix.
 - Exact artifacts, hashes, source revision, SBOM, licence evidence, known limitations, sanitized samples, and RELEASE_INTERFACE.md are frozen.
+- Codex verifies the frozen standalone candidate before exposure. TL-0710 records actual stable-release and security/privacy/accessibility/licensing/support/portfolio decisions on the candidate and required pilot evidence.
 - Team B/B1 is complete and the next project is Scam Explainer; no B4 sibling adapter work is authorized by this gate.
 
 | Task | Deliverable | Executor | Direct dependencies |
 |---|---|---|---|
-| `TL-0701` | Implement recipient-controlled accessibility setup | `hybrid` | `TL-0611` |
-| `TL-0702` | Implement basic operating-system backup onboarding and restore verification | `hybrid` | `TL-0611` |
+| `TL-0701` | Implement recipient-controlled accessibility setup | `codex` | `TL-0610` |
+| `TL-0702` | Implement basic operating-system backup onboarding and restore verification | `codex` | `TL-0610` |
 | `TL-0703` | Finalize standalone data ownership, profile export, and uninstall semantics | `codex` | `TL-0611` |
-| `TL-0704` | Harden install, update, repair, uninstall, and data preservation | `hybrid` | `TL-0701`, `TL-0702`, `TL-0703` |
-| `TL-0705` | Finalize stable security, accessibility, low-spec, and support documentation | `hybrid` | `TL-0701`, `TL-0702`, `TL-0704` |
-| `TL-0706` | Complete the minimal release interface and black-box samples | `hybrid` | `TL-0703`, `TL-0704`, `TL-0705` |
-| `TL-0707` | Run the Core 1.0 standalone stable-release matrix | `hybrid` | `TL-0701`, `TL-0702`, `TL-0704`, `TL-0705`, `TL-0706` |
-| `TL-0708` | Freeze ThirdLife Setup Core 1.0 release artifacts | `hybrid` | `TL-0706`, `TL-0707` |
-| `TL-0709` | Review standalone integrity and portfolio-boundary compliance | `hybrid` | `TL-0708` |
-| `TL-0710` | Validate the M7 and ThirdLife Setup Core 1.0 standalone release gate | `human` | `TL-0709` |
+| `TL-0704` | Harden install, update, repair, uninstall, and data preservation | `codex` | `TL-0701`, `TL-0702`, `TL-0703` |
+| `TL-0705` | Finalize stable security, accessibility, low-spec, and support documentation | `codex` | `TL-0701`, `TL-0702`, `TL-0704` |
+| `TL-0706` | Complete the minimal release interface and black-box samples | `codex` | `TL-0703`, `TL-0704`, `TL-0705` |
+| `TL-0707` | Run the Core 1.0 standalone stable-release matrix | `codex` | `TL-0701`, `TL-0702`, `TL-0704`, `TL-0705`, `TL-0706` |
+| `TL-0708` | Freeze ThirdLife Setup Core 1.0 release artifacts | `codex` | `TL-0706`, `TL-0707` |
+| `TL-0709` | Review standalone integrity and portfolio-boundary compliance | `codex` | `TL-0708` |
+| `TL-0710` | Validate the M7 and ThirdLife Setup Core 1.0 standalone release gate | `hybrid` | `TL-0709`, `TL-0611` |
 
-**Gate:** `TL-0710` — Validate the M7 and ThirdLife Setup Core 1.0 standalone release gate. The gate is not complete until its automated verification and every declared human evidence item are attached.
+**Gate:** `TL-0710` — Validate the M7 and ThirdLife Setup Core 1.0 standalone release gate. Use prepared technical evidence, pilot evidence, known limits and the exact frozen candidate for the attributable stable-release and portfolio-transition decisions.
 
 ## 11. Verification and evidence matrix
 
@@ -454,13 +462,13 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 |---|---|---|
 | Quick | Formatting/static checks, bundle/schema validation, changed unit/component tests, smallest regression, shortest smoke path. | Codex |
 | Targeted | Changed subsystem, nearby integrations, and only the affected Windows/data/privilege/security/accessibility/resource cases. | Codex |
-| Full | Complete supported layers and core journeys in clean/upgraded environments hosted on the active machine; migration/recovery/export/repair/uninstall where applicable. | Codex + named reviewers |
-| Extended | Individually invokable, risk-triggered large/adversarial, interruption, cold-boot, restore, endurance, and resource scenarios. | Codex + named reviewers |
+| Full | Complete supported layers and core journeys in clean/upgraded environments hosted on the active machine; migration/recovery/export/repair/uninstall where applicable. | Codex |
+| Extended | Individually invokable, risk-triggered large/adversarial, interruption, cold-start, restore, endurance, and resource scenarios. | Codex |
 | Provider/hardware variants | Deterministic synthetic/captured provider fixtures, bounded active-machine observation, truthful unavailable states, and explicit unverified limitations. | Codex |
-| Security/adversarial | Unknown actions, replay/expiry, other-user IPC, oversized input, path traversal/junctions, package-source substitution, hash mismatch, unsafe metadata, secret-bearing fixtures. | Codex + security reviewer |
-| Accessibility/user evidence | Keyboard/focus/semantics/Narrator/NVDA/scaling/contrast/recovery plus representative operator/recipient/proxy walkthroughs on the active machine. | Codex + reviewer/user |
-| Modest-hardware | Active reference-machine measurements and same-machine no-GPU/concurrency/priority/storage/network/workload constraints with claim boundaries. | Codex + release reviewer |
-| Release/portfolio | Clean clone, installer/hash/source/SBOM/licence, test manifest, offline behavior, update/repair/uninstall/data preservation, samples, known limits, `RELEASE_INTERFACE.md`, boundary review. | Release owner + portfolio owner |
+| Security/adversarial | Unknown actions, replay/expiry, other-user IPC, oversized input, path traversal/junctions, package-source substitution, hash mismatch, unsafe metadata, secret-bearing fixtures. | Codex, with accountable decisions at designated gates |
+| Accessibility | Keyboard, focus, semantics, supported assistive-technology integration and layout, recovery, technical output checks and evidence limits. | Codex |
+| Modest-hardware | Active reference-machine measurements and same-machine no-GPU/concurrency/priority/storage/network/workload constraints with claim boundaries. | Codex |
+| Release/portfolio | Prepared technical evidence for clean clone, installer/hash/source/SBOM/licence, test manifest, offline behavior, lifecycle and data preservation, samples, limits, release interface and boundary audit. | Codex prepares evidence. Release and portfolio authorities decide exposure and transition. |
 
 Evidence names task, branch/commit, tier, exact command or procedure, duration, reference-machine profile, environment/constraint, fixture/workload hash, result, cleanup, defect/limitation, and durable artifact. Completion reports state every broader tier not run and why. No evidence layer implies a physical device lab or cross-hardware certification.
 
@@ -471,7 +479,7 @@ Before `TL-0710`, freeze at minimum:
 - exact installer/package, package size, cryptographic hash, signature/verification method, source revision, and dependency lock;
 - SBOM, licence/redistribution review, third-party notices, and vulnerability-review record;
 - migration, update, repair, rollback/non-rollback, uninstall, and data-preservation evidence;
-- security, privacy, offline, same-machine modest-hardware, accessibility, hostile-input, failure-injection, active-machine cold-boot, and targeted rerun results;
+- security, privacy, offline, same-machine modest-hardware, accessibility, hostile-input, failure-injection, cold-start coverage and targeted rerun results, with separately evidenced physical cold-boot conditions where required;
 - sanitized support-bundle sample and proof that prohibited categories are excluded;
 - non-sensitive sample job/input/output artifacts and hashes;
 - active reference-machine profile, test-tier manifest, constraint settings, workload hashes, skipped scenarios, and limits on hardware claims;

@@ -107,7 +107,7 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
         : Gate?.Reason switch
         {
             null => "Open a job to record external sanitization evidence.",
-            SanitizationGateReason.SanitizationEvidenceMissing => "Record external sanitization before starting assessment.",
+            SanitizationGateReason.SanitizationEvidenceMissing => "Save the external sanitization result before starting assessment.",
             SanitizationGateReason.GateDecisionMissing or SanitizationGateReason.GateDecisionStale =>
                 "The latest sanitization record is saved. Complete its gate to check assessment access.",
             SanitizationGateReason.SanitizationUnknown => "Sanitization is unknown. Review the external record before assessment.",
@@ -145,7 +145,7 @@ internal sealed class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
         await OpenStoreAsync();
         var created = await Task.Run(() => _jobs!.CreateAsync(DeviceId.New()));
         await ApplyJobAsync(await LoadJobAsync(created.JobId));
-        Status = "Job created. Keep its workshop job ID to reopen it.";
+        Status = "Job created. Save the external sanitization result before starting assessment.";
     });
 
     public Task OpenJobAsync(string jobId) => RunAsync(async () =>

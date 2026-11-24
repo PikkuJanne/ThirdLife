@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Development and GitHub Continuity Workflow
 
-**Bundle version:** 0.5.0  
+**Bundle version:** 0.6.0  
 **Continuity source of truth:** GitHub repository  
 **Authoritative runtime hardware:** active Codex machine only  
 **Remote CI classification:** supplementary
@@ -85,9 +85,9 @@ Do not begin the next roadmap task on top of an unmerged completed-task stack.
 
 For an explicitly assigned sequence, verify each merge and continue from updated `main`
 without waiting for a conversational handoff. Use one active task and branch at a time.
-The [approved M1 amendment](docs/amendments/2026-11-24-minimal-human-testing.md) authorizes
-the synchronized contract changes and narrow verifier fix within PR #14. TL-0114 starts
-after TL-0113 integrates. The assignment ends at the completed TL-0116 gate.
+The [permanent testing policy reset](docs/amendments/2026-11-24-permanent-testing-policy-reset.md)
+authorizes the synchronized contract changes and M1 repair, verification and routine integration
+in PR #17. The assignment ends at the integrated TL-0116 technical gate.
 
 ### 3.3 Temporary stacked-work exception
 
@@ -113,7 +113,7 @@ Commit and push coherent buildable checkpoints:
 - before pausing or ending a session;
 - before changing machines/worktrees;
 - before a risky migration or mutating test;
-- before human review;
+- before presenting an applicable accountable decision;
 - before updating a cumulative pull request.
 
 A checkpoint:
@@ -169,12 +169,15 @@ git rev-parse @{upstream}
 
 `STATUS.md` is a current snapshot, not an archive.
 
-Before a human checkpoint, Codex rehearses the route, binds the verified build and sanitized
-environment, and prepares settings and restoration. The reviewer supplies the observation or
-decision required by the task. Codex records timing, maps actual results to each criterion,
-updates evidence and retains failed or unperformed cases. Record automated results, human
-observations and owner approvals separately. A short handoff includes the concrete question,
-starting point, actions, time estimate, decision affected and retest trigger.
+Codex owns technical verification, from preparing the verified build and isolated starting
+state to running, diagnosing, repairing, cleaning up and mapping results to criteria. Record
+technical results, actual human observations, unobserved behavior, reported defects and
+scope-bound decisions with distinct provenance. Preserve failed cases and known blockers.
+
+Use [D-074](DECISIONS.md#d-074) for an exceptional request. A required later decision
+does not block safe preparation and verification of the candidate. Present the prepared
+result, material limits and the exact proposed action when requesting real authorization.
+Finishing engineering creates no routine human QA or technical sign-off.
 
 New detailed evidence belongs in:
 
@@ -200,7 +203,7 @@ Do not paste raw logs, secrets, personal data, or multi-page design analysis int
 `TASKS.yaml`.
 
 Carry forward evidence with its original provenance when relevant inputs remain unchanged.
-If an interaction changes or an observation fails, recheck the affected part. When a session
+If an interaction changes or a result fails, Codex rechecks the affected part. When a session
 must pause, record one resumable handoff with the authorization, current evidence and next
 executable action.
 
@@ -224,7 +227,7 @@ This proves source continuity, not multi-hardware support.
 
 All authoritative implementation and validation occur on the active Codex machine, including
 host checks, clean clones/worktrees, Windows Sandbox, VMs, containers, virtual disks,
-constraints, and human walkthroughs.
+constraints, and any exceptional observations under D-074.
 
 Do not create dependencies on:
 
@@ -245,7 +248,7 @@ build, static, and deterministic tests, but it cannot satisfy:
 
 - active-machine runtime evidence;
 - hardware/provider observation;
-- accessibility walkthroughs;
+- active-machine accessibility evidence;
 - performance/resource evidence;
 - milestone/pilot/stable gates;
 - release authorization.

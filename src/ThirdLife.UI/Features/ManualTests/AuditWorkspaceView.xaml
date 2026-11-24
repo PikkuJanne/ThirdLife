@@ -28,9 +28,11 @@
       </StackPanel>
     </GroupBox>
 
-    <GroupBox Header="External sanitization" AutomationProperties.Name="External sanitization">
+    <GroupBox x:Name="SanitizationRegion" Header="External sanitization" Focusable="True"
+              KeyboardNavigation.IsTabStop="False" AutomationProperties.Name="External sanitization">
       <StackPanel>
-        <TextBlock Text="Confirm lawful ownership and record the result from the work done outside ThirdLife. If ownership or sanitization is uncertain, leave assessment blocked." />
+        <TextBlock x:Name="SanitizationInstructions"
+                   Text="Confirm lawful ownership and record the result from the work done outside ThirdLife. If ownership or sanitization is uncertain, leave assessment blocked." />
         <TextBlock Text="{Binding GateStatus}" />
         <TextBlock x:Name="SavedSanitization" />
         <StackPanel IsEnabled="{Binding CanEditJob}">
@@ -68,8 +70,10 @@
                        AutomationProperties.Name="Workshop media code" />
             </StackPanel>
             <CheckBox x:Name="ExternalRecordConfirmed"
+                      KeyboardNavigation.AcceptsReturn="True"
                       AutomationProperties.Name="Confirm lawful ownership and the external record">
-              <TextBlock Text="I confirmed lawful ownership and checked the external record for this device." />
+              <TextBlock x:Name="ExternalRecordConfirmation"
+                         Text="I confirmed lawful ownership and checked the external record for this device." />
             </CheckBox>
           </StackPanel>
           <TextBlock x:Name="SanitizationInputError" AutomationProperties.LiveSetting="Polite" />
@@ -83,8 +87,11 @@
 
     <GroupBox Header="Read-only assessment" AutomationProperties.Name="Read-only assessment">
       <StackPanel>
-        <TextBlock Text="Assessment reads device facts and records findings in this job. It leaves system settings unchanged and gives no readiness approval." />
+        <TextBlock x:Name="AssessmentInstructions"
+                   Text="Assessment reads device facts and records findings in this job. It leaves system settings unchanged and gives no readiness approval." />
         <TextBlock Text="{Binding GateStatus}" />
+        <Button x:Name="GoToSanitizationButton" Content="Go to external sanitization"
+                Click="GoToSanitization" Visibility="Collapsed" />
         <Button x:Name="StartAssessmentButton" Content="Start assessment" Click="StartAssessment"
                 IsEnabled="{Binding CanAssess}" />
         <Button x:Name="CancelAssessmentButton" Content="Cancel assessment" Click="CancelAssessment"
@@ -98,6 +105,7 @@
           <ListBox x:Name="AssessmentObservations" ItemsSource="{Binding Findings}" MaxHeight="240"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                    VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                   VirtualizingPanel.ScrollUnit="Pixel"
                    AutomationProperties.Name="Read-only assessment evidence">
             <ListBox.ItemTemplate>
               <DataTemplate>
@@ -140,6 +148,7 @@
           <TextBlock x:Name="ManualCurrentResult" />
           <Expander Header="Last 10 saved results">
             <ListBox x:Name="ManualHistory" MaxHeight="200" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     VirtualizingPanel.ScrollUnit="Pixel"
                      AutomationProperties.Name="Recent saved results for the selected manual check">
               <ListBox.ItemTemplate>
                 <DataTemplate>

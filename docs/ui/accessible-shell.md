@@ -78,15 +78,13 @@ new notification. Closing detaches the model listener and aborts a pending annou
 
 The task's automated checks inspect compiled WPF controls, automation peers, focus,
 announcement behavior and bounded layout fixtures. A component scale transform and long
-string fixture are useful deterministic checks; they do not substitute for a human review
-with Windows scaling and assistive technology.
+string fixture establish their tested layout conditions. Windows scaling, assistive
+technology and perceived output have separate evidence limits.
 
-The source-bound [short shell check](../../artifacts/evidence/TL-0113/human-walkthrough.md)
-uses one keyboard/Narrator journey and short actual display-mode checks. Codex prepares
-and rehearses the build, settings and route, then maps the reviewer's observations to
-independent `A11Y-001` through `A11Y-007` case results. The reviewer passed the applicable
-shell portions on 24 November 2026. Valid unchanged results carry forward to
-TL-0116 with their original provenance. Failed or changed interactions get focused retests.
+The completed [shell observation](../../artifacts/evidence/TL-0113/human-walkthrough.md)
+recorded a keyboard/Narrator journey and display-mode checks. The reviewer passed the
+applicable shell portions of `A11Y-001` through `A11Y-007` on 24 November 2026. Valid
+unchanged results carry forward to TL-0116 with their original provenance.
 
 ## Privacy and resources
 
@@ -133,7 +131,7 @@ The original TL-0113 shell provides review-only navigation. The TL-0114
 [audit workspace](audit-workspace.md) adds durable job creation and reopening, external
 sanitization, read-only assessment and guided manual results through the existing services.
 TL-0115 owns deterministic workshop report generation and opening it from the operator
-UI. TL-0116 owns the integrated journey rehearsal, human review of new or changed
-interactions, and evidence of the project-owner M1 gate decision.
+UI. TL-0116 owns technical verification of the actual integrated launcher, changed
+interactions and accessibility evidence limits under D-074.
 
 There is no data migration, sibling integration or verified release-interface addition.

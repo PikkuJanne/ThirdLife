@@ -1,5 +1,9 @@
 # Approved amendment — Minimal, meaningful human testing
 
+**Historical.** The [permanent testing policy reset](2026-11-24-permanent-testing-policy-reset.md)
+supersedes this prospective policy and withdraws the M1 walkthrough. Completed work and
+earlier observations retain their original provenance.
+
 | Field | Approved value |
 | --- | --- |
 | Amendment | `AMD-2026-11-24-MINIMAL-HUMAN-TESTING` |

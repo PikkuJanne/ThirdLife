@@ -1,6 +1,6 @@
 # AGENTS.md — ThirdLife Setup Core Codex Operating Contract
 
-**Bundle version:** 0.5.0  
+**Bundle version:** 0.6.0  
 **Project:** ThirdLife Setup Core — Team B / B1  
 **Physical validation scope:** active Codex machine only
 
@@ -71,7 +71,7 @@ The active Codex machine is the only physical machine used for:
 - benchmarks;
 - clean clones/worktrees;
 - VMs, Windows Sandbox, containers, and virtual disks;
-- human operator/recipient/proxy walkthroughs; and
+- any exceptional direct observation under D-074; and
 - cold-boot evidence at explicit later tasks.
 
 Do not require or seek:
@@ -103,8 +103,8 @@ approved dependency sequence with a recorded collapse plan.
 - The completed TL-0008 transition is historical; current selection comes from live
   `STATUS.md` and `TASKS.yaml`.
 - Within an explicitly assigned sequence, continue from verified updated `main` after each
-  completed task. Pause at prepared human checkpoints, a concrete external blocker, or the
-  end of the assignment. The authorized M1 sequence ends at TL-0116.
+  completed task. Pause when an action genuinely requires a decision, at a concrete external
+  blocker, or at the end of the assignment. The authorized M1 sequence ends at TL-0116.
 
 ### Evidence-size discipline
 
@@ -130,7 +130,7 @@ Unless the user names a task:
 1. parse `TASKS.yaml`;
 2. exclude `done` and `cancelled` tasks;
 3. require every dependency to be `done`;
-4. require `executor` to be `codex` or `hybrid`;
+4. require `executor` to be `codex` or `hybrid` for ordinary work selection;
 5. require the task to be verifiable on the active machine or through deterministic fixtures;
 6. prefer `ready`, otherwise an eligible `backlog` task;
 7. choose the lowest milestone, then P0 before lower priorities, then the lowest numeric task ID; and
@@ -140,18 +140,24 @@ When the user names a task, verify the dependency chain first. Do not implement 
 
 ### Executors
 
-- `codex`: Codex may mark `done` only when the complete task contract is evidenced.
-- `hybrid`: Codex implements the automatable part and leaves `review` or `blocked` until every `human_evidence_required` item exists.
-- `human`: Codex may prepare evidence/checklists but never marks the task `done`.
+- `codex`: Codex owns engineering and may mark `done` when objective acceptance evidence exists and required behavior works.
+- `hybrid`: Codex prepares and verifies the result. A genuinely applicable decision recorded in `human_evidence_required` must exist before the task is `done`.
+- `human`: The accountable person owns the decision. Codex may prepare and verify the evidence before the decision, and may record the actual attributable, scope-bound decision and administer task state afterward.
 
 Never fabricate a Windows run, host capability, cold boot, operator/recipient walkthrough, accessibility review, security/privacy approval, licence decision, partner rehearsal, or release sign-off.
 
-Default to automated verification. Request human participation only for a concrete unresolved
-perception, usability or physical observation, or an accountable owner decision. Prepare the
-verified build, starting state, short route and restoration before asking. Codex owns build and
-environment identification, timing, result mapping, troubleshooting and evidence updates. Keep
-automated results, human observations and owner decisions distinct. Reuse valid unchanged
-evidence and request retests only for the affected interaction, failed observation or new flow.
+[D-074](DECISIONS.md#d-074) establishes zero routine human QA. Plan no owner walkthrough,
+confirmation, retest or technical sign-off for engineering completion. Codex owns preparation,
+diagnosis, verification, repair, cleanup and evidence. Reuse valid unchanged evidence with
+its provenance. Record known defects and unobserved behavior separately.
+
+Ask only when verification and prior answers leave one specific fact, preference or real
+authorization unresolved, the answer changes a consequential decision now, and the total
+burden including earlier requests is minimal. Continue safe authorized work with its limits
+when it can proceed. Present a working result under ordinary conditions. A usability request
+is one tiny coherent action and one question. A decision request gives the prepared result,
+material limits and exact action. Keep product consent and genuine exposure authorization in
+force. A later decision about a candidate does not prevent preparing or verifying it.
 
 ## 6. Allowed task-state edits
 
@@ -166,10 +172,10 @@ Do not silently change task IDs, dependencies, milestone, priority, executor, en
 Use states truthfully:
 
 - `backlog`: specified but not selected;
-- `ready`: dependencies and required inputs are available;
+- `ready`: dependencies and inputs needed for the engineering or authorized preparation are available;
 - `in_progress`: implementation has begun;
 - `blocked`: a concrete technical, environmental, decision, input, or human-evidence blocker exists;
-- `review`: implementation is complete but required verification/human evidence remains;
+- `review`: implementation is complete and required verification or an applicable accountable decision remains;
 - `done`: every deliverable, criterion, verification, and required evidence is satisfied;
 - `cancelled`: only after an authorized human scope decision.
 
@@ -209,7 +215,7 @@ Never disable analyzers, warnings-as-errors, security/provenance checks, accessi
 ### Before editing
 
 1. Identify the selected task and objective.
-2. Read dependencies, decisions, deliverables, criteria, verification, test tier/triggers, environment, human evidence, and prior evidence.
+2. Read dependencies, decisions, deliverables, criteria, verification, test tier/triggers, environment, applicable authorizations, and prior evidence.
 3. Check `PROJECT_BOUNDARY.md` and current `STATUS.md`.
 4. Inspect existing code/tests; reuse a suitable abstraction rather than creating a parallel one.
 5. Run the narrowest baseline and record pre-existing failures.
@@ -234,10 +240,10 @@ Never disable analyzers, warnings-as-errors, security/provenance checks, accessi
 3. Inspect the diff for secrets/PII, unsafe logging, broad permissions, arbitrary commands/paths/URLs, path traversal/junction issues, unbounded inputs/outputs, accidental telemetry/network use, sibling-data access, unsupported hardware claims, and broadened scope.
 4. Confirm accessibility and modest-hardware impact, including background work, concurrency, memory/temp/cache/database growth, cancellation, and UI semantics.
 5. Update task evidence/state and `STATUS.md`.
-6. Use `review` when required human evidence remains; `blocked` for a named blocker; `done` only for complete proof.
+6. Use `review` when required verification or an applicable decision remains. Use `blocked` for a named blocker. Use `done` only for complete proof. Known broken required behavior blocks completion.
 7. Commit and push. Verify the remote contains the reported commit and the worktree is clean or explicitly documented.
 8. Record the next dependency-ready task. Continue an assigned sequence after integration
-   and verification of `main`. At a genuine checkpoint, give the user the prepared check or
+   and verification of `main`. At a genuine checkpoint, give the user the prepared decision or
    the specific blocker. A single-task assignment ends after its completion report.
 
 ## 9. Repository verification

@@ -7,6 +7,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 using ThirdLife.Core.Evidence;
+using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.Inventory;
@@ -110,6 +111,49 @@ public sealed class AuditAccessibilityTests
 
                 Invoke(window, Named<Button>(view, "ReturnFromAuditButton"));
                 Assert.Same(window.FindName("IntakeButton"), Keyboard.FocusedElement);
+            }
+            finally { CloseWindow(window); }
+        });
+    }
+
+    [Fact]
+    public async Task CompletingAnInterruptedSanitizationGateKeepsFocusInTheAuditRoute()
+    {
+        using var fixture = new M1AuditFixture();
+        await using var workspace = fixture.CreateWorkspace();
+        await workspace.CreateJobAsync();
+        var job = Assert.IsType<StoredJob>(workspace.Job).Job;
+        var eventDate = new DateTimeOffset(M1AuditFixture.FixtureDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var metadata = new EvidenceMetadata(EvidenceId.New(), PrivacyClassification.WorkshopRestricted,
+            EvidenceClassification.Observed, new ProviderId("workshop-intake"), eventDate,
+            new EvidenceProvenance(ProvenanceKind.SyntheticFixture, "m1-intake"), ValueAvailability.Available);
+        var record = new SanitizationEvidence(metadata, SanitizationState.Verified, "clear",
+            new OperatorId(M1AuditFixture.OperatorCode), eventDate, new MediaIdentifier(M1AuditFixture.MediaCode),
+            SanitizationVerificationState.Verified, "m1-intake-v1");
+
+        await using (var store = await fixture.OpenSqliteAsync())
+        {
+            await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [record]));
+        }
+
+        await workspace.OpenJobAsync(job.JobId.Value);
+        Assert.True(workspace.CanCompleteSavedSanitization, workspace.GateStatus);
+        Assert.False(workspace.CanAssess);
+
+        ShellTestHost.Run(() =>
+        {
+            var window = fixture.CreateWindow(workspace);
+            try
+            {
+                ShellTestHost.Show(window);
+                var view = Named<FrameworkElement>(window, "AuditView");
+                Invoke(window, Named<Button>(view, "GoToSanitizationButton"));
+                var complete = Named<Button>(view, "CompleteSavedSanitizationButton");
+                Assert.Same(complete, Keyboard.FocusedElement);
+                Invoke(window, complete);
+                PumpUntil(window, () => workspace.CanAssess, () => workspace.Status);
+                Assert.Same(Named<Button>(view, "StartAssessmentButton"), Keyboard.FocusedElement);
+                Assert.Null(workspace.Assessment);
             }
             finally { CloseWindow(window); }
         });

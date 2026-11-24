@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Testing Strategy and Execution Contract
 
-**Bundle version:** 0.5.0  
+**Bundle version:** 0.6.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Authoritative runtime hardware:** active Codex machine only  
 **Remote CI:** supplementary
@@ -18,26 +18,31 @@ ThirdLife needs fast feedback and complete risk-relevant evidence.
 
 The machine-readable tier/budget selection lives in `eng/test-manifest.json`.
 
-### Human evidence and reuse
+### Engineering ownership, evidence and reuse
 
-Automate verification of objective behavior. Ask a human only for a concrete unresolved
-perception, usability or physical observation, or an accountable approval decision. Prepare
-the verified build, starting state and short steps. State the question, expected duration,
-decision affected and retest trigger. Codex rehearses the route, prepares supported settings
-and restoration, captures build/environment identity and timing, and maps each actual result
-to its criterion. The reviewer supplies observations or decisions. Keep these distinct from
-automated results, and keep failed, unavailable and unperformed cases explicit.
+Codex owns preparation, functional and regression tests, technical accessibility, diagnosis,
+repair, cleanup and evidence. Exercise required behavior through real entry points and use
+deterministic regressions to isolate defects. Finishing work creates zero routine human QA,
+repair confirmation, retest or owner sign-off. Follow [D-074](DECISIONS.md#d-074) before an
+exceptional request. Continue safe engineering with any applicable uncertainty recorded.
+
+Keep objective results, actual observations, reported defects, unexercised behavior and
+accountable decisions distinct. A known failure of a required workflow blocks completion.
+A missing physical or perceptual observation limits claims. A later decision on a prepared
+candidate does not block its preparation or verification. Authorizations required for an
+action remain prerequisites to that action.
 
 Reuse earlier results when the applicable gate allows and relevant code, tests, runner,
 profile, dependencies, environment, configuration and workload are unchanged. Retain the
 original command, tested commit, artifact, environment, result and limitation. Record the
-basis for reuse and retest only changed interactions, failed observations or new flows.
+basis for reuse. Codex rechecks changed interactions, failed cases and new flows.
 Documentation and evidence changes receive applicable governance validation. Contract
 changes also receive their focused regressions and final complete governance regression.
 
 Before a diagnostic repeat, record the hypothesis and the changed input or expected new
 observation. After two materially identical attempts that add no information, change the
-method or record the limitation and continue other work. Preserve any unresolved failure.
+method or record the limitation and continue other work. Preserve the reported failure and
+record evidence of its resolution or an explicit justified disposition.
 
 ## 2. Quick tier
 
@@ -329,6 +334,23 @@ A new large task-specific runner requires:
 - owner;
 - retirement/replacement condition.
 
+TL-0116 adds an independently invokable, unelevated Windows desktop scenario. From the
+verified Release checkout, run:
+
+```powershell
+pwsh -NoProfile -File eng/run-m1-audit-journey.ps1 -VerifyAccessibility
+```
+
+The driver opens the isolated WPF fixture, sends keyboard input to its owned window and
+waits for saved intake, assessment, manual-result, reopen and report outcomes. The optional
+probe observes real cross-process UI Automation events and proportional Win32 wheel input.
+The runner emits bounded JSON with source and binary digests, outcomes, duration and cleanup.
+The standard-user product shell smoke checks startup only. The reusable Sandbox verifier
+cannot exercise the offered interactive desktop route or a standard-user token. Codex owns
+this driver and will retire it when a shared externally driven WPF harness covers the same
+ordinary-input, persistence, isolation and artifact assertions. Keep the in-process tests for
+deterministic failure and recovery coverage. No Windows settings changes are needed.
+
 ## 7. Required layers
 
 | Layer | Responsibility |
@@ -339,7 +361,7 @@ A new large task-specific runner requires:
 | Accessibility | Keyboard, focus, names/roles/states, announcements, scaling, contrast, plain language, cancellation/recovery. |
 | Modest hardware | Same-machine constraints, bounded memory/temp/cache/database, no-GPU, conservative concurrency, graceful degradation. |
 | Security/privacy | Threat cases, privilege/IPC, malicious input, path/link attacks, secrets, update provenance, support sanitization, no telemetry. |
-| User evidence | Representative operator/recipient/proxy walkthroughs, terminology, recovery, usefulness. |
+| Observations and decisions | Preserve actual prior or exceptional observations under D-074. Record applicable accountable decisions and technical limits with their provenance. |
 
 ## 8. Deterministic fixtures and provider facts
 
@@ -390,12 +412,13 @@ Guided hardware tests remain a product feature. Development does not require eve
 class.
 
 - Deterministically test state, pause/resume, unavailable/failure, evidence, and cleanup.
-- Walk through only capabilities available on the active machine when a named task requires it.
+- Use relevant bounded active-machine observations and approved same-machine scenarios.
 - Represent absent capabilities truthfully with fixtures.
 - A workflow pass is not hardware certification.
 
-Human accessibility evidence runs on the active machine at named tasks/gates and records
-assistive technology, build, procedure, result, and limitations.
+Codex runs technical accessibility checks. Record any actual historical or exceptional
+observation with assistive technology, build, procedure, result and limits. Missing
+perceptual evidence limits the claim and creates no routine human QA assignment.
 
 ## 12. Remote CI
 

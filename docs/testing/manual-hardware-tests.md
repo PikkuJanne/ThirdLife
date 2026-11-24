@@ -11,14 +11,12 @@ This document specifies how ThirdLife Setup Core will guide a volunteer or staff
 
 Variant and risk coverage is recorded in the [Capability and risk coverage matrix](capability-risk-matrix.md). That matrix is not a device inventory. Development uses deterministic fixtures, sanitized captured provider samples, safe same-machine constraints, and later bounded observation of capabilities actually available on the active Codex machine. There is no device pool, equipment-acquisition gate, second PC, or required hardware class.
 
-TL-0114 owns the product capture workflow and deterministic verification of its supported
-variants and transitions. TL-0116 owns the human usability review in the integrated M1
-scenario. The reviewer checks one representative applicable manual observation, labelled
-unavailable and failure examples, and pause/resume or close/reopen. Codex prepares the
-scenario and records the case mapping and limitations. The operator acknowledges the
-single-machine and scenario limits. The development sample leaves the product's full
-manual-test catalogue and its pass criteria in force. Fixtures verify application behavior
-and cannot establish physical function.
+TL-0114 owns the product capture workflow and deterministic verification of supported
+variants and transitions. TL-0116 verifies the integrated M1 launcher with an explicitly
+synthetic manual unavailable result, labelled provider failure and unavailable states, and
+durable close/reopen. The fixture establishes application behavior and leaves physical
+function unverified. The product's full manual-test catalogue and pass criteria apply
+to actual device checks.
 
 The workflow does not erase donor media, repair an existing personal computer, certify a device, diagnose every intermittent fault, or prove future service life. Automation, fixtures, constraints, and a single manual run cannot prove long-term hardware reliability or cross-hardware compatibility. A result describes only the exact job, machine, environment, specification revision, time, procedure, and evidence recorded.
 
@@ -121,7 +119,11 @@ Unless a row states otherwise, evidence is `Observed` or attributable `Human con
 
 ## 7. Cold-boot procedure
 
-`MHT-019` is a separate verification phase, not another name for restart. It is defined now but is **not run for `TL-0008`**. The earliest named execution trigger is `TL-0509`; later pilot/stable gates may require a bounded repeat. Any development/release observation uses the active Codex machine only and proves only that recorded build/environment.
+`MHT-019` specifies a physical product verification phase. The development scenario at
+TL-0509 verifies checkpoint and re-verification in an approved same-machine VM cold start.
+A physical development or release observation requires an explicit applicable condition
+and authorized bounded procedure on the active Codex machine. Record the actual tested
+environment. The procedure below remains the product's physical cold-boot workflow.
 
 1. Confirm `MHT-001` still permits safe operation and the device is on approved power.
 2. Save a durable pre-boot checkpoint containing device ID, run ID, procedure/source revisions, timestamp with offset, completed results, known failures, and selected post-boot rechecks.
@@ -175,8 +177,8 @@ The workflow contract is verified in layers. Deterministic application tests may
 |---|---|---|---|---|
 | Quick | Document/schema/static checks; stable ID and allowed-state coverage | Revised `TL-0008` and normal iteration | Repository quick command; no `MHT-*` physical action | Definition checked; all scenarios remain `Not run` |
 | Targeted | One deterministic state path or the changed manual-workflow subsystem | `TL-0114` implementation and later changes to the workflow/evidence/report contract | The owning task must publish an exact filterable command for each affected ID, such as a test case tagged `MHT-002`; run the smallest case first | Not run at `TL-0008` |
-| Full | Complete implemented manual-test journey, output, persistence, accessibility baseline, and recovery | Named milestone/pilot/stable gate, including `TL-0116`, `TL-0608` or `TL-0707`, when their dependency chain is complete | Governed full-tier command plus manifest of included `MHT-*` cases. TL-0116 uses the bounded M1 human sample above. | Not run at `TL-0008`; no full-tier trigger |
-| Extended | Only the named slow, interruption, physical cold-boot, or resource-risk scenario | `MHT-019` at `TL-0509`, or a later task/gate whose `extended_test_triggers` names the risk | Independently invokable scenario command/procedure with checkpoint, abort, cleanup, and scenario-level result | Not run at `TL-0008`; no extended trigger |
+| Full | Complete implemented manual-test journey, output, persistence, accessibility baseline, and recovery | Named milestone/pilot/stable gate, including `TL-0116`, `TL-0608` or `TL-0707`, when their dependency chain is complete | Governed Full command and applicable named scenarios. TL-0116 exercises the launched synthetic M1 route. | Not run at `TL-0008`; no full-tier trigger |
+| Extended | Only the named slow, interruption, cold-start, or resource-risk scenario | VM cold start at `TL-0509`, or a later task/gate whose `extended_test_triggers` names the risk | Independently invokable scenario command/procedure with checkpoint, abort, cleanup, and scenario-level result | Not run at `TL-0008`; no extended trigger |
 
 Before an implementing task can execute a command, it must replace any command placeholder with a checked-in, reviewable, independently invokable command or human procedure. A later failure is rerun first at its single scenario ID, then at related targeted scope. Broad reruns occur only when the governing tier trigger applies or a shared cause is suspected.
 

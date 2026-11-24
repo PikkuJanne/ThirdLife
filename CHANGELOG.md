@@ -1,5 +1,11 @@
 # Roadmap Bundle Changelog
 
+## 0.6.0 — 2026-11-24
+
+- Added D-074 under the [owner-authorized permanent testing policy reset](docs/amendments/2026-11-24-permanent-testing-policy-reset.md). Codex owns routine engineering verification, evidence and integration. Preserve applicable accountable decisions and distinctly record absent or failed observations.
+- Converted TL-0116 to a technical internal audit-only gate and withdrew the operator walkthrough. Synchronized future tasks, milestone exits and validators while preserving completed evidence.
+- Replaced the TL-0611 development dependency with TL-0610 for TL-0701 and TL-0702. Kept TL-0611 as the consent gate for exposure and a direct TL-0710 prerequisite, with required pilot evidence preserved.
+
 ## 0.5.0 — 2026-11-24
 
 - Added D-073 under [AMD-2026-11-24-MINIMAL-HUMAN-TESTING](docs/amendments/2026-11-24-minimal-human-testing.md), authorized by the project owner for the TL-0113 through TL-0116 sequence.

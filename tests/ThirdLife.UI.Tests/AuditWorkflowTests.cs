@@ -435,8 +435,10 @@ public sealed class AuditWorkflowTests
     {
         private readonly DirectoryInfo _directory = Directory.CreateTempSubdirectory("ThirdLife-TL0114-");
 
+        internal string Root => _directory.FullName;
+
         public Task<SqliteJobStore> OpenSqliteAsync(CancellationToken cancellationToken = default) =>
-            SqliteJobStore.OpenAsync(Path.Combine(_directory.FullName, "store"), cancellationToken);
+            SqliteJobStore.OpenAsync(Path.Combine(Root, "store"), cancellationToken);
 
         public AuditWorkspace OpenWorkspace(IReadOnlyList<IInventoryProvider> providers, TimeProvider? timeProvider = null) =>
             new(async cancellationToken => await OpenSqliteAsync(cancellationToken).ConfigureAwait(false),

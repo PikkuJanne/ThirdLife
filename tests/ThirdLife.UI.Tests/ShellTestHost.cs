@@ -17,7 +17,7 @@ public sealed class ShellWindowChecks
 
 internal static class ShellTestHost
 {
-    public static void Run(Action check)
+    public static void Run(Action check, TimeSpan? timeout = null)
     {
         ExceptionDispatchInfo? failure = null;
         var thread = new Thread(() =>
@@ -38,7 +38,7 @@ internal static class ShellTestHost
         { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
-        Assert.True(thread.Join(TimeSpan.FromSeconds(20)), "The bounded STA shell check did not finish.");
+        Assert.True(thread.Join(timeout ?? TimeSpan.FromSeconds(20)), "The bounded STA shell check did not finish.");
         failure?.Throw();
     }
 
