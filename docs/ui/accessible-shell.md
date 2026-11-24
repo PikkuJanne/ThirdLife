@@ -84,8 +84,8 @@ with Windows scaling and assistive technology.
 The source-bound [short shell check](../../artifacts/evidence/TL-0113/human-walkthrough.md)
 uses one keyboard/Narrator journey and short actual display-mode checks. Codex prepares
 and rehearses the build, settings and route, then maps the reviewer's observations to
-independent `A11Y-001` through `A11Y-007` case results. TL-0113 remains `review` while
-the required human observations are pending. Valid unchanged results carry forward to
+independent `A11Y-001` through `A11Y-007` case results. The reviewer passed the applicable
+shell portions on 24 November 2026. Valid unchanged results carry forward to
 TL-0116 with their original provenance. Failed or changed interactions get focused retests.
 
 ## Privacy and resources

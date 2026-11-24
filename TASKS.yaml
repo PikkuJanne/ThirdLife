@@ -2604,7 +2604,7 @@ tasks:
   workstream: ui
   kind: code
   priority: P0
-  status: review
+  status: done
   size: L
   executor: hybrid
   environment: windows
@@ -2655,6 +2655,15 @@ tasks:
     duration: Targeted 101.017s, complete governance 321.827s, discovery canary 3.435s.
     reference: artifacts/evidence/TL-0113/amendment-verification.md and artifacts/evidence/TL-0113/human-walkthrough.md.
     limitation: Human shell observations and post-session restoration are pending. No M1 gate decision or cross-hardware claim.
+  - task: TL-0113
+    date: '2026-11-24'
+    command: Prepared human shell check mapped to A11Y-001 through A11Y-007 and Codex settings restoration.
+    tier: targeted
+    result: The shell reviewer confirmed all four groups passed, including both display modes. Codex verified the original settings restored.
+    environment: REF-CODEX-001 revision 2026-08-29.1, standard-user Windows 11 build 26300, built-in Narrator, 200% scale, reduced resolution and Aquatic contrast.
+    duration: About 10 minutes handoff to confirmation and 55 seconds settings restoration. Hands-on review time unmeasured.
+    reference: artifacts/evidence/TL-0113/human-walkthrough.md, verified shell source 518744b751c531680e24a99b964c3b05a9b7c434.
+    limitation: Shell scope only. NVDA unavailable. Integrated operator flow, live progress and M1 owner decision are outside this observation.
   human_evidence_required:
   - A human observes the prepared keyboard-only and Narrator journey and the actual display-setting checks for the applicable
     shell portions of A11Y-001 through A11Y-007. Codex maps the real observations to individual cases and records any limitations.

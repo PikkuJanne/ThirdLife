@@ -1,7 +1,7 @@
 # TL-0113 — Short shell check
 
 **Procedure revision:** 2  
-**Execution state:** Pending human observation. Every applicable case is currently `Not run`.  
+**Execution state:** Applicable shell observations passed on 24 November 2026.  
 **Scope:** Review-only audit shell on the active Codex machine  
 **Participation estimate:** 5–8 minutes, including any settings changes or restoration that need your attention.
 
@@ -93,11 +93,16 @@ procedure and pending record at [TL-0113 procedure revision 1](https://github.co
   The native resolution, 250% and contrast off were verified after setup rehearsal.
   Treat the scale and reduced modes as separate observations. After the human session,
   verify restoration of the original resolution, scale, theme and Narrator state.
-- **Session specifics:** Launch starts from the prepared File Explorer selection and the
-  open shell. The shell interaction uses compiled empty-state text. Reviewer role,
-  timestamps with timezone, durations, actual observations and post-session restoration
-  verification are pending. Record only sanitized metadata and bounded observations.
-  Exclude machine names, usernames, personal paths, screenshots and speech recordings.
+- **Session specifics:** The operator-facing check started from the prepared File Explorer
+  selection and the open shell at Intake. The shell used compiled empty-state text.
+  Codex verified actual 200% Windows scaling and Windows Narrator before handoff, with
+  preparation recorded at 16:25:54+01:00. The project owner performed the check as the
+  shell reviewer and confirmed all four groups by 16:35:31+01:00. These timestamps bound
+  the handoff to about 10 minutes. The user's hands-on time was unmeasured.
+- **Restoration:** At 16:35:37+01:00 the resolution and contrast were already back at
+  baseline. Codex restored scaling from 200% to 250% and exited Narrator. Independent
+  readback at 16:36:32+01:00 confirmed 3840×2400 at 59 Hz, 250%, contrast off and
+  Narrator off. Cleanup took about 55 seconds.
 
 ### Case mapping
 
@@ -110,15 +115,20 @@ separately at TL-0116.
 
 | Case | Observation needed | Result | Evidence class |
 | --- | --- | --- | --- |
-| A11Y-001 keyboard journey | Reach each relevant region, page, close and reopen without a mouse. | Not run | Not available |
-| A11Y-002 focus and order | Visible Intake focus, logical order, working skip and return, no trap. | Not run | Not available |
-| A11Y-003 Narrator semantics | Meaningful stage, role, expansion, disabled state, evidence and warning speech. | Not run | Not available |
-| A11Y-004 navigation announcements | Changed stage is intelligible with neither silence nor needless repetition. | Not run | Not available |
+| A11Y-001 keyboard journey | Reach each relevant region, page, close and reopen without a mouse. | Pass | Human confirmed |
+| A11Y-002 focus and order | Visible Intake focus, logical order, working skip and return, no trap. | Pass | Human confirmed |
+| A11Y-003 Narrator semantics | Meaningful stage, role, expansion, disabled state, evidence and warning speech. | Pass | Human confirmed |
+| A11Y-004 navigation announcements | Changed stage is intelligible with neither silence nor needless repetition. | Pass | Human confirmed |
 | A11Y-004 live operation progress | This shell exposes no live operation, cancellation or recovery. Activity fixtures are separate. | Not run | Not available |
-| A11Y-005 200% Windows scaling | Essential controls and text remain usable at actual 200% scale. | Not run | Not available |
-| A11Y-006 supported reduced resolution | Logical keyboard scrolling reaches essential controls and text. | Not run | Not available |
-| A11Y-007 high contrast | Focus, state, warning and unavailable-stage explanations remain perceivable. | Not run | Not available |
+| A11Y-005 200% Windows scaling | Essential controls and text remain usable at actual 200% scale. | Pass | Human confirmed |
+| A11Y-006 supported reduced resolution | Logical keyboard scrolling at the prepared 1920×1200 mode reaches essential controls and text. | Pass | Human confirmed |
+| A11Y-007 high contrast | Focus, state, warning and unavailable-stage explanations remain perceivable in the prepared Aquatic contrast theme. | Pass | Human confirmed |
 | Conditional NVDA | Repeat only if an approved installation is available. | Not available | Not available |
+
+The reviewer wrote, “All four checked and passed,” in reply to the prepared Keyboard,
+Speech, Display and Contrast groups. Display covered the separate 200% and
+reduced-resolution steps. The summary gives one result per group and reports no
+defect. It is the source of the mapped shell results above.
 
 The resulting claims apply to the recorded build, active machine and settings. TL-0116
 carries forward valid unchanged observations and checks the new or changed integrated

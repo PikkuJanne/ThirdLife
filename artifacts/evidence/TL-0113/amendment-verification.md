@@ -48,5 +48,16 @@ Verified runner SHA-256
 The [original task report](report.md) and [runs](runs.json) retain their tested commits
 and environment limits. Application source, .NET tests, build configuration, and the
 prepared apphost and UI assembly hashes match the original verified shell. The
-[short shell card](human-walkthrough.md) binds that build, records rehearsal and leaves
-each human case pending.
+[short shell card](human-walkthrough.md) binds that build and records rehearsal and the
+subsequent human results. The completion diff updates governance and evidence text.
+The tested runtime, tests, verifier inputs and artifact hashes still match.
+
+The [supplementary Windows run](https://github.com/PikkuJanne/ThirdLife/actions/runs/45425128015)
+stopped at 98.857s when the unchanged
+`SystemInventoryProviderTests.ObserveAsyncYieldsBeforeABlockingSourceCompletes` test hit
+its one-second wait for the synthetic provider worker. Core passed, Inventory had one
+failure and UI did not execute. The complete active-machine Targeted run passed the
+same Inventory project. The runner, provider and test diff inspection found the same
+ordered Quick selection and no change to the provider or scheduling guard. The exact
+cause of the hosted delay is unverified. GitHub reported no required branch rules for
+this supplementary check.
