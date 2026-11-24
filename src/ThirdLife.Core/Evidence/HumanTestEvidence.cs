@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.ManualTests;
 
 namespace ThirdLife.Core.Evidence;
 
@@ -13,7 +14,7 @@ public enum HumanTestResult
     Fail,
 
     [JsonStringEnumMemberName("not_tested")]
-    NotTested,
+    NotRun,
 
     [JsonStringEnumMemberName("not_available")]
     NotAvailable,
@@ -30,7 +31,8 @@ public sealed record HumanTestEvidence
         EvidenceMetadata metadata,
         HumanTestResult testResult,
         OperatorId? operatorId,
-        string? limitationCode)
+        string? limitationCode,
+        ManualTestDetails? details = null)
     {
         HumanTestId = humanTestId ?? throw new ArgumentNullException(nameof(humanTestId));
         JobId = jobId ?? throw new ArgumentNullException(nameof(jobId));
@@ -41,6 +43,12 @@ public sealed record HumanTestEvidence
             nameof(operatorId),
             "Every human-test result requires an attributable operator.");
         LimitationCode = DomainValue.OptionalCode(limitationCode, nameof(limitationCode));
+        Details = details;
+
+        if (Details?.RetestOf == HumanTestId)
+        {
+            throw new ArgumentException("A manual retest cannot reference itself.", nameof(details));
+        }
 
         ValidateResultAndEvidence(TestResult, Metadata, OperatorId, LimitationCode);
     }
@@ -65,6 +73,10 @@ public sealed record HumanTestEvidence
 
     [JsonPropertyName("limitation_code")]
     public string? LimitationCode { get; }
+
+    [JsonPropertyName("details")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ManualTestDetails? Details { get; }
 
     private static void ValidateResultAndEvidence(
         HumanTestResult testResult,
@@ -91,11 +103,11 @@ public sealed record HumanTestEvidence
                 }
 
                 break;
-            case HumanTestResult.NotTested:
+            case HumanTestResult.NotRun:
                 if (metadata.ValueAvailability != ValueAvailability.Unknown ||
                     metadata.EvidenceClassification != EvidenceClassification.NotAvailable)
                 {
-                    throw new ArgumentException("Not-tested results require unknown, not-available evidence.");
+                    throw new ArgumentException("Not-run results require unknown, not-available evidence.");
                 }
 
                 RequireLimitation(limitationCode);

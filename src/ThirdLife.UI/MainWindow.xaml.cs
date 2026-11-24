@@ -4,6 +4,7 @@ using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using ThirdLife.Persistence;
 using ThirdLife.UI.Shell;
 
 namespace ThirdLife.UI;
@@ -11,30 +12,91 @@ namespace ThirdLife.UI;
 public partial class MainWindow : Window
 {
     private readonly ShellViewModel _model;
+    private readonly AuditWorkspace? _workspace;
     private DispatcherOperation? _announcement;
     private bool _statusChanged;
     private bool _activityChanged;
+    private bool _closingWorkspace;
+    private bool _workspaceClosed;
 
     public MainWindow() : this(new ShellViewModel()) { }
 
-    public MainWindow(ShellViewModel model)
+    public MainWindow(ShellViewModel model) : this(model, null) { }
+
+    internal MainWindow(ShellViewModel model, AuditWorkspace? workspace)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));
+        _workspace = workspace;
         InitializeComponent();
         DataContext = model;
         model.PropertyChanged += ModelChanged;
+        if (workspace is not null)
+        {
+            AuditView.Bind(workspace);
+            AuditView.ReturnToStagesRequested += ReturnFromAudit;
+            AuditView.Visibility = Visibility.Visible;
+            OpenAuditWorkspaceButton.Visibility = Visibility.Visible;
+            workspace.PropertyChanged += WorkspaceChanged;
+            UpdateAuditPresentation();
+        }
+
         UpdateNavigation();
+    }
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        base.OnClosing(e);
+        if (e.Cancel || _workspace is null || _workspaceClosed)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        if (!_closingWorkspace)
+        {
+            _closingWorkspace = true;
+            _ = CloseWorkspaceAsync(_workspace);
+        }
+    }
+
+    private async Task CloseWorkspaceAsync(AuditWorkspace workspace)
+    {
+        await Dispatcher.Yield(DispatcherPriority.Background);
+        try
+        {
+            await workspace.CloseAsync();
+        }
+        catch (Exception ex) when (ex is JobStoreException or InvalidOperationException)
+        {
+            MessageBox.Show(this,
+                "ThirdLife could not finish releasing the local job store. Reopen the job and check its saved records before continuing.",
+                "Audit job recovery", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            _workspaceClosed = true;
+            Close();
+        }
     }
 
     protected override void OnClosed(EventArgs e)
     {
         _model.PropertyChanged -= ModelChanged;
+        if (_workspace is not null)
+        {
+            _workspace.PropertyChanged -= WorkspaceChanged;
+            AuditView.ReturnToStagesRequested -= ReturnFromAudit;
+            AuditView.Unbind();
+        }
+
         _announcement?.Abort();
         base.OnClosed(e);
     }
 
     private void ShowIntake(object sender, RoutedEventArgs e) => _model.Navigate(ShellStage.Intake);
     private void ShowInspect(object sender, RoutedEventArgs e) => _model.Navigate(ShellStage.Inspect);
+
+    private void OpenAuditWorkspace(object sender, RoutedEventArgs e) => AuditView.FocusWorkspace();
 
     private void ResizeWorkflow(object sender, SizeChangedEventArgs e)
     {
@@ -53,6 +115,12 @@ public partial class MainWindow : Window
     }
 
     private void ReturnToStages(object sender, RoutedEventArgs e)
+        => FocusStage();
+
+    private void ReturnFromAudit(object? sender, EventArgs e)
+        => FocusStage();
+
+    private void FocusStage()
     {
         var target = _model.SelectedStage == ShellStage.Intake ? IntakeButton : InspectButton;
         target.Focus();
@@ -64,7 +132,7 @@ public partial class MainWindow : Window
         if (e.PropertyName is not (nameof(ShellViewModel.StatusText) or nameof(ShellViewModel.ActivityText)))
         { return; }
         _statusChanged |= e.PropertyName == nameof(ShellViewModel.StatusText);
-        _activityChanged |= e.PropertyName == nameof(ShellViewModel.ActivityText);
+        _activityChanged |= _workspace is null && e.PropertyName == nameof(ShellViewModel.ActivityText);
         // Coalesce updates and let bindings settle before notifying assistive technology.
         _announcement?.Abort();
         _announcement = Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
@@ -75,6 +143,22 @@ public partial class MainWindow : Window
             _statusChanged = false;
             _activityChanged = false;
         }));
+    }
+
+    private void WorkspaceChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        UpdateAuditPresentation();
+    }
+
+    private void UpdateAuditPresentation()
+    {
+        if (_workspace is { } workspace)
+        {
+            _model.SetAuditContext(workspace.Job is not null, workspace.GateStatus, workspace.AssessmentStatus);
+            OpenAuditWorkspaceButton.Content = workspace.IsAssessmentRunning
+                ? "Go to assessment controls"
+                : "Go to audit controls";
+        }
     }
 
     private void UpdateNavigation()

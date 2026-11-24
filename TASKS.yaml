@@ -2676,7 +2676,7 @@ tasks:
   workstream: ui
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -2732,7 +2732,16 @@ tasks:
   - Run keyboard and UI Automation checks for the reachable controls. Prepare the operator scenario and labelled unavailable and
     failure examples for the integrated TL-0116 human usability review.
   - Verify an essential failure remains a blocker candidate and Not available never becomes Pass.
-  evidence: []
+  evidence:
+  - task: TL-0114
+    date: '2026-11-24'
+    command: Focused manual capture and WPF integration regressions, active-machine Full in an isolated worktree, and standard-user apphost smoke.
+    tier: full
+    result: Passed 278 governance and 1315 supported .NET tests without failures or skips. Core 110, Inventory 901, Persistence 113 and UI 55 passed. Focused manual 27 and WPF audit 12 passed.
+    environment: REF-CODEX-001 revision 2026-08-29.1, Windows 11 build 26300, SDK 10.0.400, locked restore, isolated same-machine worktree and SQLite fixtures.
+    duration: Full 284.726s, governance 198.497s included, focused manual 4.466s and WPF audit 7.113s, apphost 1.827s.
+    reference: artifacts/evidence/TL-0114/report.md and docs/ui/audit-workspace.md.
+    limitation: Fixture workflow and actual standard-user startup verified. Live device collection and integrated operator usability remain at TL-0116. No Extended trigger or M1 approval.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

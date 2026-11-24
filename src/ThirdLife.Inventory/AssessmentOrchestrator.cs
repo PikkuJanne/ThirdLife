@@ -18,6 +18,7 @@ public sealed class AssessmentOrchestrator
     private readonly InventoryProviderRunner _runner;
     private readonly RegisteredProvider[] _providers;
     private readonly int _maximumConcurrency;
+    private readonly bool _hasLiveProviders;
     private int _inProgress;
     private int _cleanupBlocked;
     private Task<ProviderReadResult>[] _operations = [];
@@ -60,6 +61,11 @@ public sealed class AssessmentOrchestrator
 
             return new RegisteredProvider(provider, descriptor);
         }).OrderBy(static provider => provider.Descriptor.ProviderId.Value, StringComparer.Ordinal).ToArray();
+        _hasLiveProviders = _providers.Any(static provider =>
+            provider.Descriptor.EvidenceOrigin == ProviderEvidenceOrigin.ActiveMachine);
+        if (_hasLiveProviders && _providers.Any(static provider =>
+            provider.Descriptor.EvidenceOrigin == ProviderEvidenceOrigin.SyntheticFixture))
+        { throw new ArgumentException("Fixture providers cannot share a run with live providers.", nameof(providers)); }
     }
 
     public async Task<AssessmentSnapshot> AssessAsync(JobId jobId, CancellationToken cancellationToken = default)
@@ -83,6 +89,11 @@ public sealed class AssessmentOrchestrator
             var access = SanitizationGate.Inspect(storedJob);
             if (!access.AllowsAssessment)
             { throw new AssessmentException("assessment_gate_blocked", null); }
+            if (_hasLiveProviders && (storedJob.SanitizationEvidence.Any(static item =>
+                item.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) ||
+                storedJob.Observations.Any(static item => item.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) ||
+                storedJob.HumanTests.Any(static item => item.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture)))
+            { throw new AssessmentException("assessment_fixture_gate_blocked", null); }
 
             cancellationToken.ThrowIfCancellationRequested();
             assessmentId = AssessmentId.New();
@@ -163,6 +174,8 @@ public sealed class AssessmentOrchestrator
         var storedJob = await ReadJobAsync(jobId, assessmentId, cancellationToken).ConfigureAwait(false);
         return AssessmentJournal.Read(storedJob, assessmentId);
     }
+
+    public static AssessmentSnapshot? ReadLatest(StoredJob storedJob) => AssessmentJournal.ReadLatest(storedJob);
 
     private async Task<StoredJob> ReadJobAsync(JobId jobId, AssessmentId? assessmentId, CancellationToken cancellationToken)
     {

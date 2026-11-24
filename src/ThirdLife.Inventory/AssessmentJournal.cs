@@ -102,6 +102,46 @@ internal static class AssessmentJournal
         }, recordedAtUtc);
     }
 
+    internal static AssessmentSnapshot? ReadLatest(StoredJob storedJob)
+    {
+        ArgumentNullException.ThrowIfNull(storedJob);
+        if (storedJob.Observations.Count > MaximumStoredObservations)
+        {
+            throw new AssessmentException("assessment_data_invalid");
+        }
+
+        Observation? latestStart = null;
+        var hasJournalEvidence = false;
+        foreach (var observation in storedJob.Observations)
+        {
+            if (observation is null)
+            {
+                throw new AssessmentException("assessment_data_invalid");
+            }
+
+            hasJournalEvidence |= observation.EvidenceKey.Value.StartsWith(ReservedKeyPrefix, StringComparison.Ordinal) ||
+                observation.Metadata.ProviderId.Value == ReservedProviderId;
+            if (observation.EvidenceKey.Value == StartKey)
+            {
+                latestStart = observation;
+            }
+        }
+
+        if (latestStart is null)
+        {
+            return hasJournalEvidence ? throw new AssessmentException("assessment_data_invalid") : null;
+        }
+
+        try
+        {
+            return Read(storedJob, new AssessmentId(latestStart.Metadata.Provenance.SourceReference));
+        }
+        catch (ArgumentException)
+        {
+            throw new AssessmentException("assessment_data_invalid");
+        }
+    }
+
     internal static AssessmentSnapshot? Read(StoredJob storedJob, AssessmentId assessmentId)
     {
         ArgumentNullException.ThrowIfNull(storedJob);
