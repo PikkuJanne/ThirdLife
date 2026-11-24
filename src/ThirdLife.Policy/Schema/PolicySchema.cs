@@ -13,6 +13,7 @@ public static partial class PolicySchema
     public const int MaximumDepth = 8;
     private const int MaximumRules = 128;
     private const int MaximumListItems = 16;
+    private const int MaximumCapabilityIdLength = 64;
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     public static PolicyDocument Parse(ReadOnlyMemory<byte> utf8Json)
@@ -38,6 +39,9 @@ public static partial class PolicySchema
             throw new JsonException("Policy input does not satisfy the ThirdLife policy v1 schema.");
         }
     }
+
+    internal static bool IsCapabilityId(string value) =>
+        value.Length <= MaximumCapabilityIdLength && CapabilityIdPattern().IsMatch(value);
 
     private static PolicyDocument ReadPolicy(JsonElement policy)
     {
@@ -156,7 +160,7 @@ public static partial class PolicySchema
                 new EvidenceKey(ReadPattern(rule.GetProperty("evidence_key"), EvidenceKeyPattern(), 128)),
                 type,
                 severity),
-            hasCapabilities ? ReadTokens(capabilities, CapabilityIdPattern(), 64) : [],
+            hasCapabilities ? ReadTokens(capabilities, CapabilityIdPattern(), MaximumCapabilityIdLength) : [],
             ReadCondition(rule.GetProperty("condition")),
             ReadDecision(rule.GetProperty("decision"), type));
     }
