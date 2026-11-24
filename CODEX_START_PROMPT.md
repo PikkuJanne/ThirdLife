@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Codex Start and Reusable Prompts
 
-**Bundle version:** 0.5.0  
+**Bundle version:** 0.6.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1
 
 ## 1. Prompt selection
@@ -29,7 +29,7 @@ that case stop and perform only the named stabilization/integration work.
 
 Read STATUS.md and the binding documents in AGENTS.md order. Parse the selected TASKS.yaml
 entry, including dependencies, decisions, deliverables, criteria, verification, test tier,
-triggers, prior evidence, and human evidence.
+triggers, prior evidence, and applicable accountable decisions.
 
 If the task is not dependency-ready, stop. Do not implement around it.
 
@@ -56,18 +56,19 @@ Run Full/Extended only when triggered. Reduce failures to focused deterministic 
 Keep STATUS.md concise. Put detailed evidence in committed artifacts and reference it from
 TASKS.yaml.
 
-Ask for human participation only for a concrete unresolved observation or decision.
-Prepare and rehearse the exact build, settings, restoration and short journey. Own all
-metadata, timing, case mapping and evidence updates. Keep automated results, human
-observations and owner decisions distinct. Carry forward valid unchanged evidence.
+Codex owns preparation, verification, diagnosis, repair and evidence under D-074.
+Use real entry points. Carry forward valid unchanged evidence. Distinguish objective
+results, actual observations, evidence limits, reported defects and scope-bound decisions.
+Plan zero routine human QA, confirmation, retests or owner sign-off. Apply the D-074
+exceptional-input criteria and continue safe preparation before a later decision.
 
 Commit and push coherent checkpoints. Open/update the task pull request. Do not start the
 next roadmap task until this task is integrated into main.
 
-Pause at a prepared human checkpoint, a genuine external blocker or the end of the
+Pause when an action genuinely requires a decision, at a concrete external blocker or at the end of the
 assigned work. Leave the AGENTS.md report and a resumable next action when paused.
-For the authorized M1 continuation, complete TL-0113, TL-0114, TL-0115 and TL-0116 in
-order. After the observed and approved TL-0116 gate is integrated, end the assignment.
+For the authorized M1 continuation, complete and integrate the TL-0116 technical gate,
+then end the assignment.
 ```
 
 ## 3. Focused defect prompt
@@ -87,7 +88,7 @@ PR, and limitations.
 ## 4. Milestone or protected-merge prompt
 
 ```text
-Prepare the named gate; do not fabricate human approval.
+Prepare and verify the named gate. Preserve actual authorization and its scope.
 
 Verify graph closure, branch/default integration, clean-clone continuity, and all predecessor
 evidence. Run bundle/repository validation, active-machine Full, and only triggered Extended
@@ -97,7 +98,8 @@ Create an evidence index mapping every criterion to a durable artifact. Record r
 machine, constraints, workload hashes, durations, skipped scenarios, defects, claim limits,
 commit, tag/artifact state, and PR/merge state.
 
-Leave human gates at review/blocked until signed.
+Complete technical gates from verified evidence. Leave genuine decision gates at review
+or blocked when an applicable decision is still missing. Record the actual decision only.
 ```
 
 ## 5. Security/privacy prompt
@@ -123,9 +125,10 @@ focus, names/roles/states/relationships, announcements, Narrator/approved NVDA, 
 reduced resolution, high contrast, color independence, plain language, cancellation, and
 recovery.
 
-Automate objective checks. For named human criteria, prepare a short shared journey, record
-each actual result and its exact build, settings, assistive technology and limitations.
-Retest only affected interactions. Preserve required human speech and actual display checks.
+Automate objective checks and record each result with its exact build, settings,
+assistive technology and limitations. Investigate reported failures through the relevant
+route. Preserve actual prior observations with provenance. UI Automation and layout
+checks do not establish perceived speech or usability. Apply D-074 to exceptional input.
 ```
 
 ## 7. Modest-hardware/resource prompt
@@ -173,5 +176,6 @@ privileged service.
 Verify data preservation, support sanitization, offline behavior, security/privacy,
 accessibility, modest-hardware evidence, lifecycle, SBOM/licences, clean clone, test manifest,
 known limitations, and release interface. Run active-machine Full and only triggered Extended
-scenarios. Human approval remains human.
+scenarios. Use the prepared evidence and limits for the actual release and portfolio
+decisions at TL-0710.
 ```

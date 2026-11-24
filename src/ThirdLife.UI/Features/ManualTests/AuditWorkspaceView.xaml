@@ -70,6 +70,7 @@
                        AutomationProperties.Name="Workshop media code" />
             </StackPanel>
             <CheckBox x:Name="ExternalRecordConfirmed"
+                      KeyboardNavigation.AcceptsReturn="True"
                       AutomationProperties.Name="Confirm lawful ownership and the external record">
               <TextBlock x:Name="ExternalRecordConfirmation"
                          Text="I confirmed lawful ownership and checked the external record for this device." />

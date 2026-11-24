@@ -3,20 +3,20 @@
 | Field | Value |
 | --- | --- |
 | Gate task | `TL-0116` |
-| Record state | Review |
+| Record state | Verification in progress under D-074 |
 | Verified default-branch base | `7c382bf784c5128ae96a8fcf07724fea35e9bc40`, PR #16 |
 | Gate branch | `codex/tl-0116-m1-audit-gate` |
 | First candidate source | `da746d306623f860ce64cd1143738087486886ca` |
-| Corrected candidate source | `edb9b03ba813f5de67238d84dd424ad6da572257` |
-| Candidate build and evidence digests | [First and corrected attempts](../evidence/TL-0116/human-check.md#codex-only-preparation-and-record) |
+| Prior wheel-correction source | `edb9b03ba813f5de67238d84dd424ad6da572257` |
+| Prior candidate digests and actual observations | [Historical attempt record](../evidence/TL-0116/human-check.md) |
 | Runtime authority | Active Codex Windows machine, `REF-CODEX-001` revision `2026-08-29.1` |
-| Owner decision | Pending |
-| Integration | Draft PR #17. Gate has not merged. |
+| Integration | [PR #17](https://github.com/PikkuJanne/ThirdLife/pull/17) |
 
-The owner-authorized [minimal human testing amendment](../../docs/amendments/2026-11-24-minimal-human-testing.md)
-assigns the integrated operator review and the M1 decision to this gate. The amendment
-authorizes routine integration once the gate is evidenced. The [roadmap](../../ROADMAP.md#m1--audit-only-vertical-slice)
-and [task graph](../../TASKS.yaml) govern the acceptance criteria.
+The owner-authorized [permanent testing policy reset](../../docs/amendments/2026-11-24-permanent-testing-policy-reset.md)
+defines TL-0116 as a Codex-owned technical gate and authorizes routine integration once
+the gate and repository requirements are satisfied. The [roadmap](../../ROADMAP.md#m1--audit-only-vertical-slice)
+and [task graph](../../TASKS.yaml) govern acceptance. The former operator request is
+withdrawn. Its failed and unperformed criteria retain their historical results.
 
 ## Scope and safety
 
@@ -25,16 +25,15 @@ SQLite persistence, and workshop report generation and opening. It uses a separa
 synthetic workspace with an empty store, an explicitly synthetic intake record and
 available, unavailable and failing synthetic providers. The applicable keyboard
 hardware check is recorded as **Not available** because the fixture has no donor keyboard
-to test. The operator's observations concern usability of the workflow. The review
-uses the active machine because a clean standard-user guest without donor storage
-could not be established. Live-device collection and physical hardware function are
-outside the fixture evidence.
+to test. The fixture uses the active machine because a clean standard-user guest
+without donor storage could not be established. It provides no evidence of live-device
+collection or physical hardware function.
 
 The normal product's standard-user startup is independently checked against the exact
 candidate. The fixture never opens the registered live workshop store or authorizes
 assessment of the real host. Output stays local and restricted. The tested scope is
-audit only, with no inference of readiness or later product, release or hardware
-approval. GitHub Actions evidence remains supplementary.
+audit only. Representative usability, perceived accessibility, later product readiness
+and release authorization are outside this gate. GitHub Actions remains supplementary.
 
 ## Integrated predecessors
 
@@ -46,7 +45,7 @@ approval. GitHub Actions evidence remains supplementary.
 | TL-0115 | [Workshop report](../evidence/TL-0115/report.md) covers deterministic content, privacy, guarded output, keyboard preview and standard-user launch. |
 | TL-0104 | [Structured logging task evidence](../../TASKS.yaml) records the exact sanitized logging contract, diagnostics and redaction checks. |
 
-## First candidate automated evidence and acceptance mapping
+## Historical first-candidate evidence and acceptance mapping
 
 All 25 transitive prerequisites are complete. The pre-edit audit UI baseline passed
 18 tests. Active-machine `eng/verify.ps1 -Tier Targeted -Restore -TestProject
@@ -70,17 +69,18 @@ Supplementary Windows clean-checkout run `45435029912` passed on the candidate.
 | Deterministic observations, unknowns, fixture isolation | Full passed deterministic observation normalization, gate and orchestrator tests, including rejection of synthetic intake for live providers. The named run preserved explicit synthetic collected, unavailable and failed outcomes, with readiness unknown after reopen. |
 | Durable job, cancellation and interruption | The named run created, saved, closed and reopened a SQLite job. Full passed the partial-evidence cancellation test and Persistence's 113 tests, including `TransactionInterruptionTests`. Those tests terminate owned children around job creation, commit, gate recording and guarded provider batch writes, then reopen the store. TL-0112 documents the prior assessment interruption work. |
 | Privacy in logs, SQLite, temporary output and report | Full passed structured diagnostics, privacy and deterministic report tests. The named run checked the SQLite fixture, absence of normal log and staging artifacts in that workspace, restricted output with an opaque name, byte equality with the opened report and exclusion of the private failure marker and free-text note from the report. No raw data was exported. |
-| Keyboard route and accessibility groundwork | The named run verified focus movement, live-region semantics and the read-only report preview. The applicable earlier shell observations are carried forward below. Human review of changed controls is pending. |
+| Keyboard route and accessibility groundwork | The named run verified focus movement, live-region semantics and the read-only report preview in process. Applicable earlier shell observations carry their original provenance. |
 | Clean-worktree continuity and triggered gate checks | Active-machine Targeted including Quick and exact-candidate Full passed. The separate standard-user smoke and named fixture rehearsal passed. No Extended trigger applied. |
 
-The integrated route runs through the named
+The separate in-process route ran through the named
 `ThirdLife.UI.Tests.M1AuditJourneyTests.OperatorRouteReopensSavedFixtureAndPreviewsItsWorkshopReport`
 test. The explicit `ActiveMachine` invocation is separate from the default Full
 selection. `dotnet test` used Release with `--no-build --no-restore`, the exact test
 name filter and `RunConfiguration.TreatNoTestsAsError=true`. One test passed in
 3.734s total with zero failures or skips. The automated assertions cover UI focus,
-control state and automation metadata. Actual speech, readability and operator
-judgement have their own record.
+control state and automation metadata. The prior external launcher primarily proved
+that its window opened and closed before timeout. Neither run established the
+ordinary-input journey through the actually offered launcher.
 
 ## Corrections after the first attempt
 
@@ -100,7 +100,7 @@ one −120 detent moved it 48 DIPs. The update bounds movement, preserves fracti
 offsets, uses pixel-scrolled evidence lists and scrolls the outer view when the
 inner pane is already at a boundary. The app caps a pulse at one detent and three
 lines. The loaded-WPF wheel and shell accessibility set passed 14 tests in 8.663s.
-Physical touchpad feedback remains pending.
+No later physical touchpad observation was established.
 
 The initial Targeted run stopped in formatting when the two new C# files used LF
 instead of the repository's CRLF. Normalizing those files and checking the changed
@@ -109,9 +109,8 @@ formatting made the next run informative. Targeted including Quick passed in
 and seven explicitly filtered tests passed with zero failures or skips.
 
 Narrator's process was still open on the correct desktop. The operator reported no
-usable speech. The corrected handoff verifies the Windows Narrator toggle and
-foreground fixture and explicitly samples speech. Recheck the changed or uncompleted
-portions of the audit journey.
+usable speech. The later transcription establishes some screen-reader consumption of
+WPF semantics. It does not establish audio playback.
 
 The corrected worktree initially resolved a Python installation without PyYAML and
 stopped at toolchain validation. The complete run explicitly uses the existing
@@ -124,28 +123,36 @@ passed. The apphost smoke observed normal unelevated launch and navigation in 1.
 and closed normally in 1.767s total. The exact named fixture rehearsal passed in
 4.329s including test startup. It exercised the prefilled inputs including the
 checkbox, disabled and enabled assessment states, keyboard transitions, the
-unavailable manual sample, reopen and restricted report content. The separate
-user-facing review and explicit owner decision remain open.
+unavailable manual sample, reopen and restricted report content in process. The later
+owner report still described a disabled Start assessment through the supplied route.
 
-## Operator observations and owner decision
+## Reported defects and technical disposition
 
-The [prepared operator check](../evidence/TL-0116/human-check.md) owns the current
-keyboard and Narrator journey, display samples on the changed controls, review of
-labelled unavailable/failure examples, and confirmation of close/reopen and report
-usability. Reuse TL-0113 `A11Y-001`–`A11Y-007` for the unchanged portions of the shell
-only. Review the added job, sanitization, assessment, manual capture and report controls
-with the exact candidate. TL-0113 does not supply integrated speech, progress, manual or
-report observations. The automated cancellation and owned-child checks remain distinct
-from the operator's actual review.
+The [withdrawn operator record](../evidence/TL-0116/human-check.md) preserves both
+reports. The exact corrected build reproduced the repeated functional blocker with
+the documented Enter route. WPF left the confirmation unchecked, so the save rejected
+the intake and `CanAssess` correctly stayed false. The scoped repair enables Enter on
+the checkbox. The evidence establishes a defect in the offered route. The exact input
+used in the historical operator attempt was unrecorded. [Exact-build reproduction and verification](../evidence/TL-0116/fixture-route.md)
 
-| Human evidence | Outcome |
-| --- | --- |
-| Representative operator's observations mapped to the current journey | First attempt blocked. The operator reported Narrator unavailable, disabled Start assessment and uncontrollable touchpad scrolling. The [attempt record](../evidence/TL-0116/human-check.md#first-operator-attempt) preserves the observed limits. |
-| Operator's explicit acknowledgement of the machine and fixture scope | Pending |
-| Project owner's explicit M1 decision | Pending |
+The [technical accessibility record](../evidence/TL-0116/accessibility-technical.md)
+records the wheel overtravel cause and correction, and the separate observation of
+cross-process UI Automation events. The historical speech report remains a reported
+failure whose audible-output cause is unresolved. The checked application semantics
+and event delivery worked. No Windows settings were changed for the investigation.
+Physical touchpad behavior, actual audible output and representative comprehension for
+this integrated candidate have no new direct observations. TL-0113 A11Y-001–007
+observations cover the unchanged shell portions under their original settings and build.
 
-Record the actual response, observed cases, restoration, and any focused correction
-before final disposition. A failed or unperformed check stays visible. Keep the gate
-in review when the current observations or decision are missing. Integration requires
-the triggered automated evidence and all human evidence above. The current assignment
-ends with evidenced M1 completion.
+## Current technical verification
+
+The changed-surface Targeted verifier included Quick, locked restore, format and a
+warnings-as-errors Release build. It passed Core 110, Inventory 901, UI 67 and the
+18 explicitly filtered accessibility and wheel checks in 65.452s, with zero failures
+and skips. The formatter recorded a workspace-load notice and returned success. The
+Release build reported zero warnings and errors. The 34 focused governance and ADR
+regressions passed in 9.294s. The bundle validator passed with its customary pinned
+PyYAML structural check.
+
+Final clean-worktree and launched-route evidence will be added here before completion.
+The current assignment ends at verified M1 integration.

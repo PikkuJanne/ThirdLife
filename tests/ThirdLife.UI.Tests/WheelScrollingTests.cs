@@ -59,6 +59,49 @@ public sealed class WheelScrollingTests
     }
 
     [Fact]
+    public void WheelOverAnUnfocusedIntakeChoiceScrollsTheShellProportionally()
+    {
+        ShellTestHost.Run(() =>
+        {
+            var window = new MainWindow { Width = 500, Height = 320 };
+            try
+            {
+                var auditView = ShellTestHost.Element<AuditWorkspaceView>(window, "AuditView");
+                auditView.Visibility = Visibility.Visible;
+                var choice = Assert.IsType<ComboBox>(auditView.FindName("SanitizationResult"));
+                choice.SelectedIndex = 1;
+                ShellTestHost.Show(window);
+                choice.BringIntoView();
+                ShellTestHost.Drain(window);
+                Assert.False(choice.IsKeyboardFocusWithin);
+                var outer = ShellTestHost.Element<ScrollViewer>(window, "ShellScroll");
+                var before = outer.VerticalOffset;
+
+                SendWheel(choice, -20);
+                ShellTestHost.Drain(window);
+
+                double minimum = SystemParameters.WheelScrollLines == 0 ? 0 : 0.5;
+                Assert.InRange(outer.VerticalOffset - before, minimum, 8.5d);
+                Assert.Equal(1, choice.SelectedIndex);
+
+                Assert.True(choice.Focus());
+                ShellTestHost.Drain(window);
+                before = outer.VerticalOffset;
+
+                SendWheel(choice, -20);
+                ShellTestHost.Drain(window);
+
+                Assert.Equal(before, outer.VerticalOffset);
+                Assert.Equal(2, choice.SelectedIndex);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public void WheelOverEvidenceMovesOnlyThePixelScrolledList()
     {
         ShellTestHost.Run(() =>

@@ -2348,10 +2348,10 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
                 "WinGet ADR deliverable must be exactly",
             ),
             (
-                "human_evidence_required",
+                "verification",
                 "ADR 0009",
                 "ADR-004",
-                "human evidence must name 'ADR 0009'",
+                "superseded ADR 0004 marker is not permitted",
             ),
         )
         for field, old, new, expected in mutations:
@@ -2367,7 +2367,7 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
                 matching_indexes = [
                     index for index, value in enumerate(values) if old in value
                 ]
-                self.assertEqual(matching_indexes, [0])
+                self.assertEqual(len(matching_indexes), 1)
                 index = matching_indexes[0]
                 values[index] = values[index].replace(old, new, 1)
                 task[field] = values
@@ -2434,8 +2434,9 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
             self.copy_architecture_documents(root)
             task_by_id = dict(TASK_BY_ID)
             task = dict(TASK_BY_ID["TL-0401"])
-            task["human_evidence_required"] = [
-                task["human_evidence_required"][0] + " Legacy alias: ADR-0004."
+            task["notes"] = [
+                *task["notes"],
+                "Legacy alias: ADR-0004.",
             ]
             task_by_id["TL-0401"] = task
             validation = self.validate_documents(root, task_by_id)
@@ -2464,9 +2465,9 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
                 self.copy_architecture_documents(root)
                 task_by_id = dict(TASK_BY_ID)
                 task = dict(TASK_BY_ID["TL-0401"])
-                task["human_evidence_required"] = [
-                    task["human_evidence_required"][0]
-                    + f" Superseded alias: {alias}."
+                task["notes"] = [
+                    *task["notes"],
+                    f"Superseded alias: {alias}.",
                 ]
                 task_by_id["TL-0401"] = task
                 validation = self.validate_documents(root, task_by_id)
@@ -2478,32 +2479,26 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
                     validation.errors,
                 )
 
-    def test_tl0401_preserves_exact_maintainer_approval_gate(self) -> None:
+    def test_tl0401_rejects_a_reintroduced_maintainer_approval_gate(self) -> None:
         mutations = (
-            [
-                "ADR 0009 at docs/adr/0009-winget-backend.md does not require "
-                "maintainer review or approval."
-            ],
-            [
-                validate_bundle.TL0401_HUMAN_EVIDENCE,
-                "No maintainer approval is actually required.",
-            ],
+            {"executor": "hybrid"},
+            {"human_evidence_required": ["A maintainer approves ADR 0009."]},
         )
-        for human_evidence in mutations:
+        for mutation in mutations:
             with (
-                self.subTest(human_evidence=human_evidence),
+                self.subTest(mutation=mutation),
                 tempfile.TemporaryDirectory() as temporary_directory,
             ):
                 root = Path(temporary_directory)
                 self.copy_architecture_documents(root)
                 task_by_id = dict(TASK_BY_ID)
                 task = dict(TASK_BY_ID["TL-0401"])
-                task["human_evidence_required"] = human_evidence
+                task.update(mutation)
                 task_by_id["TL-0401"] = task
                 validation = self.validate_documents(root, task_by_id)
                 self.assertTrue(
                     any(
-                        "must remain the one exact approved maintainer gate" in error
+                        "without a routine maintainer approval gate" in error
                         for error in validation.errors
                     ),
                     validation.errors,
@@ -3890,8 +3885,8 @@ class TestingDocumentContractTests(unittest.TestCase):
             ),
         )
 
-    def test_live_task_metadata_matches_v050_contract(self) -> None:
-        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.5.0")
+    def test_live_task_metadata_matches_v060_contract(self) -> None:
+        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.6.0")
         self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-11-24")
         self.assertEqual(TASK_DOCUMENT["portfolio"]["roadmap_version"], "2.1")
         self.assertEqual(
@@ -3910,14 +3905,14 @@ class TestingDocumentContractTests(unittest.TestCase):
                 destination.write_bytes(source.read_bytes())
             path = root / "SECURITY.md"
             body = path.read_text(encoding="utf-8")
-            self.assertEqual(body.count("**Bundle version:** 0.5.0"), 1)
+            self.assertEqual(body.count("**Bundle version:** 0.6.0"), 1)
             path.write_text(
                 body.replace(
+                    "**Bundle version:** 0.6.0",
                     "**Bundle version:** 0.5.0",
-                    "**Bundle version:** 0.4.0",
                     1,
                 )
-                + "\n**Bundle version:** 0.5.0\n",
+                + "\n**Bundle version:** 0.6.0\n",
                 encoding="utf-8",
             )
             validation = validate_bundle.Validation()
@@ -3925,10 +3920,88 @@ class TestingDocumentContractTests(unittest.TestCase):
                 validate_bundle.validate_current_bundle_document_markers(validation)
             self.assertIn(
                 "SECURITY.md: 'Bundle version' metadata must be exactly one line "
-                "'**Bundle version:** 0.5.0'; found "
-                "['**Bundle version:** 0.4.0', '**Bundle version:** 0.5.0']",
+                "'**Bundle version:** 0.6.0'; found "
+                "['**Bundle version:** 0.5.0', '**Bundle version:** 0.6.0']",
                 validation.errors,
             )
+
+
+class TestingPolicyResetContractTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.task_doc = copy.deepcopy(TASK_DOCUMENT)
+        self.tasks = {task["id"]: task for task in self.task_doc["tasks"]}
+
+    def validate_contract(self) -> list[str]:
+        validation = validate_bundle.Validation()
+        dependencies = {task_id: task["depends_on"] for task_id, task in self.tasks.items()}
+        validate_bundle.validate_testing_policy_task_contract(
+            validation, self.task_doc, self.tasks, dependencies
+        )
+        return validation.errors
+
+    def test_current_contract_preserves_decisions_and_historical_evidence(self) -> None:
+        self.assertEqual(self.validate_contract(), [])
+        self.assertIn("human_evidence_required", self.tasks["TL-0113"])
+        self.assertNotIn("human_evidence_required", self.tasks["TL-0116"])
+
+    def test_reintroduced_operator_test_fails_in_task_or_milestone(self) -> None:
+        m1 = next(milestone for milestone in self.task_doc["milestones"] if milestone["id"] == "M1")
+        m1["exit_criteria"].append("A representative operator completes the audit.")
+        self.tasks["TL-0116"]["verification"].append("Require an operator walkthrough.")
+        self.tasks["TL-0116"]["human_evidence_required"] = ["Operator signs the audit."]
+        self.assertEqual(self.validate_contract(), [
+            "TL-0116: D-074 engineering work cannot require routine human evidence",
+            "TL-0116: verification reintroduces a superseded human QA gate",
+            "M1: exit criteria reintroduce a superseded human QA gate",
+        ])
+
+    def test_release_decision_cannot_drop_required_scope_or_add_routine_qa(self) -> None:
+        self.tasks["TL-0611"]["human_evidence_required"].pop()
+        self.tasks["TL-0710"]["human_evidence_required"].append("Require a proxy walkthrough.")
+        self.assertEqual(self.validate_contract(), [
+            "TL-0611: D-074 evidence must retain only its accountable decision scopes",
+            "TL-0710: D-074 evidence must retain only its accountable decision scopes",
+            "TL-0710: human_evidence_required reintroduces a superseded human QA gate",
+        ])
+
+    def test_candidate_dependencies_do_not_require_pilot_exposure_but_stable_gate_does(self) -> None:
+        self.tasks["TL-0701"]["depends_on"] = ["TL-0611"]
+        self.tasks["TL-0710"]["depends_on"].remove("TL-0611")
+        errors = self.validate_contract()
+        self.assertIn(
+            "TL-0701: must directly depend on the technical pilot candidate TL-0610",
+            errors,
+        )
+        self.assertIn(
+            "TL-0701: technical onboarding work cannot depend on pilot exposure authorization TL-0611",
+            errors,
+        )
+        self.assertIn(
+            "TL-0710: must directly depend on controlled-pilot authorization TL-0611",
+            errors,
+        )
+
+    def test_readiness_distinguishes_candidate_preparation_from_authorization(self) -> None:
+        self.task_doc["workflow"]["ready_rule"] = "All human input is required before preparation."
+        self.task_doc["definition_of_ready"] = ["All human input is required before preparation."]
+        self.assertIn(
+            "TASKS.yaml: workflow.ready_rule must distinguish engineering from authorization under D-074",
+            self.validate_contract(),
+        )
+        self.assertIn(
+            "TASKS.yaml: definition_of_ready must preserve D-074 engineering and authorization criteria",
+            self.validate_contract(),
+        )
+
+    def test_known_required_workflow_defect_cannot_become_a_validation_limit(self) -> None:
+        self.task_doc["definition_of_done"] = [
+            entry for entry in self.task_doc["definition_of_done"]
+            if "known defect" not in entry
+        ]
+        self.assertIn(
+            "TASKS.yaml: definition_of_done must preserve D-074 engineering and authorization criteria",
+            self.validate_contract(),
+        )
 
 
 class StabilizationContractTests(unittest.TestCase):
@@ -3954,8 +4027,8 @@ class StabilizationContractTests(unittest.TestCase):
 
     def test_current_stabilization_contract_is_valid(self) -> None:
         self.assertEqual(self.validate_contract().errors, [])
-        self.assertEqual(validate_bundle.CURRENT_DECISION_IDS[-1], "D-073")
-        self.assertEqual(len(validate_bundle.CURRENT_DECISION_IDS), 73)
+        self.assertEqual(validate_bundle.CURRENT_DECISION_IDS[-1], "D-074")
+        self.assertEqual(len(validate_bundle.CURRENT_DECISION_IDS), 74)
 
     def test_each_new_decision_is_required_in_its_own_visible_section(self) -> None:
         decisions = (REPOSITORY_ROOT / "DECISIONS.md").read_text(encoding="utf-8")

@@ -128,6 +128,18 @@ EXPECTED_TEST_MANIFEST = {
             ],
         },
     },
+    "active_machine_scenarios": {
+        "tl0116_audit_journey": {
+            "task_id": "TL-0116",
+            "tier": "Targeted",
+            "driver": "eng/run-m1-audit-journey.ps1",
+            "test_project": "tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj",
+            "filter": "FullyQualifiedName=ThirdLife.UI.Tests.M1FixtureWindowTests.ExternalAuditJourneyPersistsItsReport",
+            "environment": "active_machine_unelevated_interactive_windows",
+            "risk_trigger": "m1_gate_or_changed_audit_input_path",
+            "target_seconds": 120,
+        },
+    },
     "sandbox_profiles": {
         "tl0107_quick": {
             "task_id": "TL-0107",

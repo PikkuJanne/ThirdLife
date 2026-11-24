@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Accessibility Requirements
 
 **Status:** Binding release baseline  
-**Bundle version:** 0.5.0  
+**Bundle version:** 0.6.0  
 **Validation scope:** Active Codex machine only; no external hardware or assistive-technology device matrix is implied
 
 ## 1. Scope
@@ -35,10 +35,10 @@ The TL-0113 [review shell](docs/ui/accessible-shell.md) exposes Intake and Inspe
 three named review regions, textual unavailable-stage criteria and the battery warning.
 Standard controls retain native keyboard focus and automation peers. Navigation and typed
 activity updates use polite live regions; fixtures exercise progress without collecting
-device evidence. The [short shell check](artifacts/evidence/TL-0113/human-walkthrough.md)
-maps a shared human session to the applicable parts of A11Y-001–A11Y-007. TL-0116 owns the
-human review of the integrated audit journey, including manual-capture usability and new
-or changed accessibility interactions.
+device evidence. The [completed shell observations](artifacts/evidence/TL-0113/human-walkthrough.md)
+retain their coverage and provenance for applicable A11Y-001–A11Y-007 cases. TL-0116 owns
+technical checks of the real integrated audit route, including manual capture and new or
+changed controls. The M1 record states the exact limits of this evidence.
 
 ## 3. Recipient-controlled accessibility setup
 
@@ -71,21 +71,21 @@ Evidence may use:
 
 - automated UI Automation inspection and focused component tests;
 - deterministic view-model/state fixtures for progress, warning, blocker, cancellation, resume, and error states;
-- keyboard-only walkthroughs on the active Codex machine;
-- Windows Narrator on the active Codex machine;
+- automated keyboard-only journeys on the active Codex machine;
+- Windows Narrator integration and available technical evidence on the active Codex machine;
 - NVDA on the active Codex machine when the named test task installs or provides it through an approved, reproducible procedure;
 - same-machine scaling, high-contrast, reduced-resolution, long-string, and low-resource scenarios;
 - generated-report structure review using non-sensitive fixtures.
 
-A missing assistive technology or device capability is recorded as a limitation or deferred named test, not silently treated as passed. It does not authorize a broad claim that the product has been tested across assistive technologies or hardware configurations.
+A missing assistive technology, device capability or perceptual observation limits the validated scope. Record which evidence was absent and preserve known defects in supported behavior. A technical audit cannot certify perceptual accessibility or coverage across assistive technologies or hardware configurations.
 
 ## 6. Required test coverage
 
 The following coverage must exist by its named task or release gate, not necessarily during revised `TL-0008`:
 
 - complete keyboard-only primary workflow;
-- Windows Narrator primary-path review;
-- NVDA primary-path review where the approved test environment is available on the active Codex machine;
+- programmatic semantics and announcement delivery for the Narrator primary path;
+- technical NVDA checks where the approved test environment is available on the active Codex machine;
 - 200% scaling and large text;
 - Windows high-contrast modes;
 - reduced screen resolution;
@@ -96,20 +96,17 @@ The following coverage must exist by its named task or release gate, not necessa
 - generated workshop and recipient output review;
 - same-machine low-resource run proving that focus, announcements, text alternatives, and cancellation remain available.
 
-Automate objective accessibility checks. Request human observations for a concrete
-unresolved perception or usability question, including required assistive-technology and
-actual display-setting reviews. Codex prepares the verified build, rehearses the route,
-sets up supported display and assistive-technology settings with restoration, collects
-sanitized metadata and timing, and records the observations against the individual cases.
-The reviewer supplies observations. One keyboard journey with Narrator can cover focus,
-navigation, semantics and announcements. Short checks in actual Windows display modes can
-cover scaling, reduced resolution and high contrast.
+Codex runs objective keyboard, automation-peer, state/event and layout checks and records
+their exact environments. Use supported isolated settings profiles where available. Preserve
+the original provenance of valid unchanged observations. A UI Automation event or screen
+reader transcription does not establish audible speech. Synthetic input does not establish
+physical touchpad behavior. A simulated layout does not establish usability in a real display
+mode. Record those limits separately from known defects and accountable release decisions.
 
-Keep automated results, human observations and owner approvals distinct. A UI Automation
-status change or simulated scale transform cannot establish what a reviewer hears or can
-use in the actual Windows settings. Retain the original provenance of valid unchanged
-evidence. Repeat the human check for failed, changed or newly integrated interactions and
-honor fresh coverage explicitly required by the applicable gate. [D-073](DECISIONS.md#d-073)
+Engineering completion creates no routine human accessibility session. The exceptional-input
+criteria in [D-074](DECISIONS.md#d-074) apply to a concrete unresolved question that changes
+a consequential decision now. Pilot and stable scope dispositions belong at TL-0611 and
+TL-0710 on prepared technical evidence and any genuinely required specialist evidence.
 
 ## 7. Test-tier placement
 

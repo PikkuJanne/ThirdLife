@@ -54,7 +54,7 @@ Core 1.0 includes recipient-controlled accessibility setup and basic operating-s
 
 - `SECURITY.md` defines the security objective, trust boundaries, privileged-broker invariants, supply-chain controls, and release evidence.
 - `docs/privacy/privacy-model.md` and `docs/privacy/logging-standard.md` define the three audience classes, excluded data, approved retention guidance, prohibited diagnostics, and support allowlist; the named privacy-owner approval is commit-bound and evidenced in `TL-0005`, while runtime implementation remains separately owned by later tasks.
-- `ACCESSIBILITY.md` defines the operator and recipient accessibility baseline and the required human evidence.
+- `ACCESSIBILITY.md` defines operator and recipient accessibility requirements, technical verification and evidence limits under D-074.
 - `LOW_SPEC.md` defines bounded-resource and graceful-degradation rules; numerical support claims require measurements.
 - `RELEASE_INTERFACE.md` is populated only from verified preview or frozen release behavior. It is not a shared API or an early adapter contract.
 - `docs/non-goals.md` records the product and portfolio exclusions that ordinary tasks may not erode.

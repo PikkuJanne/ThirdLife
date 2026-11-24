@@ -3,26 +3,24 @@
 This repository develops ThirdLife Setup Core: a local-first, auditable Windows refurbishment workflow for volunteer and staff refurbishers. Development follows the frozen decisions, standalone Team B/B1 boundary, and dependency-ordered task graph checked into this repository.
 
 **Current project:** Team B / B1 — ThirdLife Setup Core  
-**Roadmap bundle:** 0.5.0 / ThirdLife Software Portfolio v2.1  
+**Roadmap bundle:** 0.6.0 / ThirdLife Software Portfolio v2.1  
 **Physical validation scope:** active Codex machine only  
 **Pilot gate:** `TL-0611` — controlled v0.1 partner pilot  
 **Standalone release gate:** `TL-0710` — ThirdLife Setup Core 1.0  
 **Next Team B project after stable:** Scam Explainer  
 **Future integration project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
 
-The governed roadmap contains **91 tasks**, **8 milestone gates**, and **73 frozen decisions**. Current progress and the next dependency-ready work are recorded in `TASKS.yaml` and `STATUS.md`.
+The governed roadmap contains **91 tasks**, **8 milestone gates**, and **74 frozen decisions**. Current progress and the next dependency-ready work are recorded in `TASKS.yaml` and `STATUS.md`.
 
-## What changed in governed bundle 0.5.0
+## What changed in governed bundle 0.6.0
 
-- Automates setup and objective checks and reserves human review for concrete observations
-  or owner decisions. Valid unchanged evidence carries forward.
-- Keeps the TL-0113 shell review and combines integrated M1 operator, manual-capture and
-  accessibility review in TL-0116. TL-0114 owns the live audit UI, and TL-0115 owns the
-  report and its generate/open action.
-- Executes identical project/filter selections once per verifier invocation. Assigned work
-  continues after each verified merge until a genuine checkpoint or assignment end.
+- Codex owns engineering verification and evidence with zero routine human QA.
+- TL-0116 verifies the launched M1 audit route as an internal technical gate. Historical
+  TL-0113 observations and failed M1 attempts retain their provenance.
+- Technical candidate preparation can precede an accountable exposure decision. Actual
+  pilot and stable-release decisions remain at TL-0611 and TL-0710.
 
-See the [minimal human testing amendment](docs/amendments/2026-11-24-minimal-human-testing.md).
+See the [permanent testing policy reset](docs/amendments/2026-11-24-permanent-testing-policy-reset.md).
 
 ## What changed in governed bundle 0.4.0
 
@@ -183,7 +181,7 @@ For development, read the authority files in the required authority order and us
 | Milestone | Increment | Gate |
 |---|---|---|
 | M0 | Foundation, governance, project boundary, and quality baselines | `TL-0010` |
-| M1 | Audit-only job, evidence, inventory, human tests, and report | `TL-0116` |
+| M1 | Internal audit-only job, inventory, manual result capture and report | `TL-0116` |
 | M2 | Explainable policy and disposition engine | `TL-0208` |
 | M3 | Declarative planning, journal, and narrow privilege boundary | `TL-0314` |
 | M4 | One-package write-capable vertical slice | `TL-0411` |
@@ -255,14 +253,14 @@ Do not weaken dependencies, decision references, executor, acceptance criteria, 
 | State | Meaning |
 |---|---|
 | `backlog` | Specified, not selected. |
-| `ready` | Dependencies and required inputs are available. |
+| `ready` | Dependencies and inputs needed for engineering or authorized preparation are available. |
 | `in_progress` | Active session owns the task. |
 | `blocked` | A concrete blocker and unblock condition are recorded. |
-| `review` | Implementation exists but verification or human evidence remains. |
+| `review` | Implementation exists and required verification or an applicable decision remains. |
 | `done` | Complete task contract and evidence exist. |
 | `cancelled` | Authorized human scope removal. |
 
-## Human evidence
+## Evidence and decisions
 
 Codex cannot manufacture:
 
@@ -273,7 +271,11 @@ Codex cannot manufacture:
 - partner pilot authorization; or
 - Core 1.0 release authorization.
 
-For `hybrid` tasks, Codex completes the automatable portion and leaves `review` or `blocked`. For `human` tasks, it may prepare an evidence index/checklist but never mark the gate complete.
+Codex completes and integrates technical work on objective evidence. For decision-bearing
+tasks, Codex prepares and verifies the candidate, then records any actual attributable
+scope-bound decision and administers the task state. A decision required before an action
+remains a prerequisite to that action. A known broken required workflow blocks completion.
+Record unperformed observations as evidence limits. Apply D-074 before exceptional requests.
 
 ## Repository verification
 

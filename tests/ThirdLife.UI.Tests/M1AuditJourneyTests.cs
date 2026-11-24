@@ -112,7 +112,11 @@ public sealed class M1AuditJourneyTests
             finally { CloseWindow(window); }
         });
 
-        var completed = Assert.IsType<JourneyResult>(result);
+        await AssertDurableFixtureResultAsync(fixture, Assert.IsType<JourneyResult>(result));
+    }
+
+    internal static async Task AssertDurableFixtureResultAsync(M1AuditFixture fixture, JourneyResult completed)
+    {
         StoredJob saved;
         string databasePath;
         await using (var durable = await fixture.OpenSqliteAsync())
@@ -121,8 +125,18 @@ public sealed class M1AuditJourneyTests
             databasePath = durable.DatabasePath;
         }
 
-        Assert.Equal(completed.AssessmentId, AssessmentOrchestrator.ReadLatest(saved)!.AssessmentId);
-        Assert.Single(saved.HumanTests);
+        var assessment = Assert.IsType<AssessmentSnapshot>(AssessmentOrchestrator.ReadLatest(saved));
+        Assert.Equal(completed.AssessmentId, assessment.AssessmentId);
+        var intake = Assert.Single(saved.SanitizationEvidence);
+        Assert.Equal(ProvenanceKind.SyntheticFixture, intake.Metadata.Provenance.Kind);
+        Assert.Equal(SanitizationState.Verified, intake.SanitizationState);
+        Assert.True(SanitizationGate.Inspect(saved).AllowsAssessment);
+        var manual = Assert.Single(saved.HumanTests);
+        Assert.Equal(HumanTestResult.NotAvailable, manual.TestResult);
+        Assert.Equal(ProvenanceKind.SyntheticFixture, manual.Metadata.Provenance.Kind);
+        Assert.Equal(M1AuditFixture.KeyboardCase, manual.Details!.CaseId);
+        Assert.Equal(M1AuditFixture.ManualNote, manual.Details.Notes);
+        Assert.Equal("equipment_missing", manual.LimitationCode);
         Assert.Contains(completed.JobId.Value, completed.Preview, StringComparison.Ordinal);
         Assert.Contains(saved.Job.DeviceId.Value, completed.Preview, StringComparison.Ordinal);
         Assert.Contains("WORKSHOP_RESTRICTED", completed.Preview, StringComparison.Ordinal);
@@ -183,7 +197,7 @@ public sealed class M1AuditJourneyTests
         Invoke(window, save);
     }
 
-    private static void AssertFixtureAssessment(
+    internal static void AssertFixtureAssessment(
         AssessmentSnapshot assessment,
         IReadOnlyList<AssessmentFinding> findings)
     {
@@ -249,5 +263,5 @@ public sealed class M1AuditJourneyTests
         return new JourneyResult(jobId, assessmentId, preview.Text, artifact.FileName);
     }
 
-    private sealed record JourneyResult(JobId JobId, AssessmentId AssessmentId, string Preview, string FileName);
+    internal sealed record JourneyResult(JobId JobId, AssessmentId AssessmentId, string Preview, string FileName);
 }

@@ -28,7 +28,7 @@ internal sealed class WheelScrolling
 
         for (DependencyObject? element = source; element is not null; element = ParentOf(element))
         {
-            if (element is ComboBox or Calendar)
+            if (element is ComboBox { IsDropDownOpen: true } or ComboBox { IsKeyboardFocusWithin: true } or Calendar)
             {
                 return;
             }
