@@ -2,6 +2,7 @@ using System.Text.Json;
 using ThirdLife.Core;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Repairs;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
@@ -48,14 +49,15 @@ public sealed class AssessmentOrchestrator
             var descriptor = provider.Descriptor ?? throw new ArgumentException("A provider descriptor is required.", nameof(providers));
             if (descriptor.MinimumPrivilege != ProviderPrivilegeRequirement.StandardUser ||
                 descriptor.NetworkUse != ProviderNetworkUse.None ||
-                descriptor.ProviderId.Value == "assessment-orchestrator" ||
+                descriptor.ProviderId.Value is AssessmentJournal.ReservedProviderId or RepairJournal.ReservedProviderId ||
                 !identities.Add(descriptor.ProviderId))
             { throw new ArgumentException("The provider roster violates the read-only assessment contract.", nameof(providers)); }
 
             foreach (var key in descriptor.EvidenceDefinitions.Select(static definition => definition.EvidenceKey)
                 .Append(descriptor.FailureDefinition.EvidenceKey))
             {
-                if (key.Value.StartsWith("assessment.", StringComparison.Ordinal) || !keys.Add(key))
+                if (key.Value.StartsWith(AssessmentJournal.ReservedKeyPrefix, StringComparison.Ordinal) ||
+                    key.Value.StartsWith(RepairJournal.ReservedKeyPrefix, StringComparison.Ordinal) || !keys.Add(key))
                 { throw new ArgumentException("Every evidence key must have one exclusive provider owner.", nameof(providers)); }
             }
 
@@ -68,7 +70,18 @@ public sealed class AssessmentOrchestrator
         { throw new ArgumentException("Fixture providers cannot share a run with live providers.", nameof(providers)); }
     }
 
-    public async Task<AssessmentSnapshot> AssessAsync(JobId jobId, CancellationToken cancellationToken = default)
+    public Task<AssessmentSnapshot> AssessAsync(JobId jobId, CancellationToken cancellationToken = default) =>
+        AssessCoreAsync(jobId, repairId: null, cancellationToken);
+
+    public Task<AssessmentSnapshot> RetestAsync(
+        JobId jobId, EvidenceId repairId, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(repairId);
+        return AssessCoreAsync(jobId, repairId, cancellationToken);
+    }
+
+    private async Task<AssessmentSnapshot> AssessCoreAsync(
+        JobId jobId, EvidenceId? repairId, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(jobId);
         cancellationToken.ThrowIfCancellationRequested();
@@ -98,9 +111,13 @@ public sealed class AssessmentOrchestrator
             cancellationToken.ThrowIfCancellationRequested();
             assessmentId = AssessmentId.New();
             var gateId = access.Decision!.DecisionId;
+            var startedAtUtc = _timeProvider.GetUtcNow();
             var start = AssessmentJournal.CreateStart(jobId, assessmentId, gateId,
-                _providers.Select(static provider => provider.Descriptor.ProviderId).ToArray(), _timeProvider.GetUtcNow());
-            await CommitAsync(jobId, assessmentId, gateId, [start], cancellationToken).ConfigureAwait(false);
+                _providers.Select(static provider => provider.Descriptor.ProviderId).ToArray(), startedAtUtc);
+            Observation[] startBatch = repairId is null
+                ? [start]
+                : [start, CreateRetestStartMarker(storedJob, repairId, assessmentId, gateId, startedAtUtc)];
+            await CommitAsync(jobId, assessmentId, gateId, startBatch, cancellationToken).ConfigureAwait(false);
 
             var active = new List<PendingProvider>();
             var nextProvider = 0;
@@ -176,6 +193,21 @@ public sealed class AssessmentOrchestrator
     }
 
     public static AssessmentSnapshot? ReadLatest(StoredJob storedJob) => AssessmentJournal.ReadLatest(storedJob);
+
+    private static Observation CreateRetestStartMarker(
+        StoredJob job, EvidenceId repairId, AssessmentId assessmentId,
+        SanitizationGateDecisionId gateId, DateTimeOffset startedAtUtc)
+    {
+        var repair = RepairJournal.GetRepairs(job).SingleOrDefault(item => item.RepairId == repairId);
+        if (repair is null ||
+            AssessmentJournal.Read(job, new AssessmentId(repair.PriorAssessmentId))?.Observations.Any(observation =>
+                observation.Metadata.EvidenceId == repair.FailedEvidenceId && observation.EvidenceKey == repair.EvidenceKey) != true)
+        {
+            throw new AssessmentException("assessment_repair_evidence_mismatch", assessmentId);
+        }
+
+        return RepairJournal.CreateRetestMarker(job, repairId, assessmentId.Value, gateId, startedAtUtc);
+    }
 
     private async Task<StoredJob> ReadJobAsync(JobId jobId, AssessmentId? assessmentId, CancellationToken cancellationToken)
     {

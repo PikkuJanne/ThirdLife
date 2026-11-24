@@ -4,24 +4,24 @@
 **Bundle baseline:** 0.6.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
 **Current milestone:** M2 — Explainable disposition engine  
-**Current task:** TL-0205 — Done
+**Current task:** TL-0206 — Done
 
 ## Continuity
 
-PRs #18 through #21 integrated the schema, evaluation, dispositions and
-governed exceptions. PR #22 is the policy-history integration record.
+PRs #18 through #22 integrated policy schema, evaluation, dispositions,
+governed exceptions and history. PR #23 integrates repair and retest.
 Use updated `main` for the next task. [M1 gate](artifacts/gates/M1-audit-only.md)
 
 The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-SQLite v4 stores exact policy bytes, evidence linkage and historical report
-output. Explicit reevaluation appends a decision without changing an earlier
-record. Clean-worktree Full passed 286 governance and 1,537 .NET tests on the
-active machine. [TL-0205 evidence](artifacts/evidence/TL-0205/report.md)
+Recorded storage replacement invalidates the old gate. A fresh verified
+replacement gate permits linked read-only retest and preserves the original
+failure. Clean-worktree Full passed 286 governance and 1,551 .NET tests on the
+active machine. [TL-0206 evidence](artifacts/evidence/TL-0206/report.md)
 
 ## Next action
 
-TL-0206 is the next dependency-ready task. Implement device class, repair
-recording and linked retest from updated `main`.
+TL-0207 is the next dependency-ready task. Present facts, saved candidate
+policy and decisions in the workspace and workshop report from updated `main`.

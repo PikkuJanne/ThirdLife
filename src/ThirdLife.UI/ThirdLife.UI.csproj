@@ -11,12 +11,15 @@
 
   <ItemGroup>
     <EmbeddedResource Include="app.manifest" LogicalName="ThirdLife.UI.app.manifest" />
+    <EmbeddedResource Include="..\..\fixtures\policies\community-laptop-policy.json"
+                      LogicalName="ThirdLife.UI.community-laptop-policy.json" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ThirdLife.Core\ThirdLife.Core.csproj" />
     <ProjectReference Include="..\ThirdLife.Inventory\ThirdLife.Inventory.csproj" />
     <ProjectReference Include="..\ThirdLife.Persistence\ThirdLife.Persistence.csproj" />
+    <ProjectReference Include="..\ThirdLife.Policy\ThirdLife.Policy.csproj" />
     <ProjectReference Include="..\ThirdLife.Reports\ThirdLife.Reports.csproj" />
   </ItemGroup>
 

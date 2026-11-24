@@ -103,6 +103,30 @@ public sealed class GuardedEvidenceTests
         Assert.Equal(before.SanitizationGateDecisions, after.SanitizationGateDecisions);
     }
 
+    [Fact]
+    public async Task ArchivedJobRejectsMixedEvidenceBatchWithoutAppendingEitherRecord()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        await using var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        var (job, gate) = await PrepareAsync(store, "repair-archive");
+        var invalidation = PersistenceTestData.CreateSanitization(
+            SanitizationState.Unknown, "repair-invalidation", PersistenceTestData.Timestamp);
+        var proposed = new JobEvidenceBatch(job.JobId,
+            observations: Batch(job, gate.DecisionId).Observations,
+            sanitizationEvidence: [invalidation],
+            requireUnarchivedJob: true);
+
+        await store.SetArchiveStateAsync(job.JobId, true, PersistenceTestData.Timestamp);
+        var archived = (await store.LoadJobAsync(job.JobId))!;
+
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => store.AppendEvidenceAsync(proposed));
+
+        var saved = (await store.LoadJobAsync(job.JobId))!;
+        Assert.Equal(archived.Observations, saved.Observations);
+        Assert.Equal(archived.SanitizationEvidence, saved.SanitizationEvidence);
+        Assert.Equal(archived.Checkpoints, saved.Checkpoints);
+    }
+
     [Theory]
     [InlineData(true, false)]
     [InlineData(false, false)]
