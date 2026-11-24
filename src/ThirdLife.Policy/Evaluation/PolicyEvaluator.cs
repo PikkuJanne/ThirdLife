@@ -16,19 +16,33 @@ public static class PolicyEvaluator
     public static PolicyEvaluation Evaluate(
         PolicyDocument policy,
         IEnumerable<Observation> observations,
-        IEnumerable<string>? activeCapabilityIds)
+        IEnumerable<string>? activeCapabilityIds) =>
+        EvaluateWithTarget(policy, observations, activeCapabilityIds, []).Evaluation;
+
+    internal static (PolicyEvaluation Evaluation, ImmutableArray<PolicyRuleOutcome> Target) EvaluateWithTarget(
+        PolicyDocument policy,
+        IEnumerable<Observation> observations,
+        IEnumerable<string>? activeCapabilityIds,
+        ImmutableArray<TargetRule> targetRules)
     {
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentNullException.ThrowIfNull(observations);
 
-        var referencedKeys = policy.Rules.Select(rule => rule.Requirement.EvidenceKey).ToHashSet();
+        var referencedKeys = policy.Rules.Select(rule => rule.Requirement.EvidenceKey)
+            .Concat(targetRules.Select(target => target.Rule.Requirement.EvidenceKey))
+            .ToHashSet();
         var observationsByKey = IndexByKey(observations, referencedKeys);
         var capabilities = activeCapabilityIds is null ? null : CollectCapabilities(activeCapabilityIds);
         var outcomes = policy.Rules
             .OrderBy(rule => rule.Requirement.RequirementId.Value, StringComparer.Ordinal)
             .Select(rule => EvaluateRule(rule, observationsByKey.GetValueOrDefault(rule.Requirement.EvidenceKey), capabilities))
             .ToImmutableArray();
-        return new PolicyEvaluation(policy, outcomes);
+        var targetOutcomes = targetRules
+            .OrderBy(target => target.Rule.Requirement.RequirementId.Value, StringComparer.Ordinal)
+            .Select(target => EvaluateRule(
+                target.Rule, observationsByKey.GetValueOrDefault(target.Rule.Requirement.EvidenceKey), capabilities, target.KnownValues))
+            .ToImmutableArray();
+        return (new PolicyEvaluation(policy, outcomes), targetOutcomes);
     }
 
     private static Dictionary<EvidenceKey, IndexedEvidence> IndexByKey(
@@ -98,7 +112,8 @@ public static class PolicyEvaluator
     private static PolicyRuleOutcome EvaluateRule(
         PolicyRule rule,
         IndexedEvidence? input,
-        HashSet<string>? capabilities)
+        HashSet<string>? capabilities,
+        ImmutableArray<string> knownValues = default)
     {
         if (rule.Requirement.RequirementType == RequirementType.ProfileDependent)
         {
@@ -144,6 +159,12 @@ public static class PolicyEvaluator
         if (!available || evidence.LimitationCode is not null)
         {
             return new(rule, PolicyRuleState.Unavailable, PolicyRuleReason.EvidenceUnavailable, cited);
+        }
+
+        if (!knownValues.IsDefaultOrEmpty &&
+            (evidence.Value?.StringValue is not { } token || !knownValues.Contains(token, StringComparer.Ordinal)))
+        {
+            return new(rule, PolicyRuleState.Unavailable, PolicyRuleReason.EvidenceValueUnrecognized, cited);
         }
 
         return Matches(rule.Condition, evidence) switch
@@ -206,4 +227,6 @@ public static class PolicyEvaluator
     }
 
     private sealed record IndexedEvidence(Observation? Single, ImmutableArray<PolicyEvidenceReference> References);
+
+    internal sealed record TargetRule(PolicyRule Rule, ImmutableArray<string> KnownValues);
 }

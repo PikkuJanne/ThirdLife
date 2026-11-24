@@ -25,6 +25,7 @@ public enum PolicyRuleReason
     HumanConfirmationRequired,
     CapabilitySelectionUnavailable,
     CapabilityInactive,
+    EvidenceValueUnrecognized,
 }
 
 public sealed record PolicyEvidenceReference(
