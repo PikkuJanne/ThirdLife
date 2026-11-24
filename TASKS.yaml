@@ -2839,7 +2839,7 @@ tasks:
   workstream: release
   kind: gate
   priority: P0
-  status: in_progress
+  status: done
   size: M
   executor: codex
   environment: windows
@@ -2939,6 +2939,29 @@ tasks:
     environment: REF-CODEX-001, Windows 11 build 26300, SDK 10.0.400, clean same-machine worktree and isolated synthetic fixture.
     reference: artifacts/gates/M1-audit-only.md, corrected source edb9b03ba813f5de67238d84dd424ad6da572257.
     limitation: Operator observations, explicit scenario scope and owner decision remain pending.
+  - summary: Later owner report on the previously corrected launch.
+    task: TL-0116
+    command_or_review: Owner's report in the permanent testing policy reset and M1 continuation instruction.
+    tier: human report
+    result: Start assessment remained disabled.
+    date: '2026-11-24'
+    environment: Previously offered isolated M1 fixture. Exact input event was unrecorded.
+    duration: Not measured.
+    reference: artifacts/evidence/TL-0116/human-check.md and artifacts/evidence/TL-0116/fixture-route.md.
+    limitation: Report retained as a failed outcome. The previous operator check is withdrawn.
+  - summary: Exact-candidate Full, external keyboard journey with accessibility probes, and standard-user apphost startup.
+    task: TL-0116
+    command_or_review: eng/verify.ps1 -Tier Full -Restore, eng/run-m1-audit-journey.ps1 -VerifyAccessibility and eng/run-ui-smoke.ps1.
+    tier: full
+    result: 285 governance and 1343 .NET tests passed. The named launched route verified confirmed intake, read-only assessment,
+      persisted manual capture, reopen and report agreement. The separate unelevated apphost smoke passed.
+    date: '2026-11-24'
+    environment: Clean same-machine worktree, REF-CODEX-001 2026-08-29.1, Windows build 26300 and SDK 10.0.400.
+    duration: 305.251s Full, 9.635s launched fixture and 1.749s apphost.
+    commit: 34c7786f182ad13dcc22574209ea6c2a45bee7d3
+    artifact: artifacts/evidence/TL-0116/clean-candidate.json
+    limitation: Audit-only internal scope. The reported audible-output failure's cause remains unknown. Physical touchpad and
+      representative comprehension have no new direct observations. No Extended trigger.
   notes:
   - A launcher timeout/close check is lifecycle evidence. The in-process journey complements outcome assertions through
     the actual offered launcher.

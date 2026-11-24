@@ -3,11 +3,12 @@
 | Field | Value |
 | --- | --- |
 | Gate task | `TL-0116` |
-| Record state | Verification in progress under D-074 |
+| Record state | Done — internal audit-only technical baseline under D-074 |
 | Verified default-branch base | `7c382bf784c5128ae96a8fcf07724fea35e9bc40`, PR #16 |
 | Gate branch | `codex/tl-0116-m1-audit-gate` |
 | First candidate source | `da746d306623f860ce64cd1143738087486886ca` |
 | Prior wheel-correction source | `edb9b03ba813f5de67238d84dd424ad6da572257` |
+| Verified candidate source | `34c7786f182ad13dcc22574209ea6c2a45bee7d3` |
 | Prior candidate digests and actual observations | [Historical attempt record](../evidence/TL-0116/human-check.md) |
 | Runtime authority | Active Codex Windows machine, `REF-CODEX-001` revision `2026-08-29.1` |
 | Integration | [PR #17](https://github.com/PikkuJanne/ThirdLife/pull/17) |
@@ -136,13 +137,15 @@ the checkbox. The evidence establishes a defect in the offered route. The exact 
 used in the historical operator attempt was unrecorded. [Exact-build reproduction and verification](../evidence/TL-0116/fixture-route.md)
 
 The [technical accessibility record](../evidence/TL-0116/accessibility-technical.md)
-records the wheel overtravel cause and correction, and the separate observation of
-cross-process UI Automation events. The historical speech report remains a reported
-failure whose audible-output cause is unresolved. The checked application semantics
-and event delivery worked. No Windows settings were changed for the investigation.
-Physical touchpad behavior, actual audible output and representative comprehension for
-this integrated candidate have no new direct observations. TL-0113 A11Y-001–007
-observations cover the unchanged shell portions under their original settings and build.
+records the wheel overtravel cause and correction, including a remaining jump over a
+closed, unfocused intake dropdown. The historical speech report remains an audible
+failure with an undetermined cause. External UI Automation received the tested
+application events. The result establishes the programmatic announcement delivery
+required by the technical gate. Audible output remains unresolved and carries no
+pass. No Windows settings were changed for the investigation. Physical touchpad
+behavior, real display-mode perception and representative comprehension have no
+new direct observations on this candidate. TL-0113 A11Y-001–007 observations apply
+to unchanged shell portions under their original settings and build.
 
 ## Current technical verification
 
@@ -154,5 +157,26 @@ Release build reported zero warnings and errors. The 34 focused governance and A
 regressions passed in 9.294s. The bundle validator passed with its customary pinned
 PyYAML structural check.
 
-Final clean-worktree and launched-route evidence will be added here before completion.
-The current assignment ends at verified M1 integration.
+The active Windows 11 Pro x64 machine was at build 26300, `REF-CODEX-001`
+revision `2026-08-29.1`. A clean detached worktree used SDK 10.0.400 and the existing
+pinned Python 3.14.7/PyYAML 6.0.3 environment via a process-local tool path.
+`eng/verify.ps1 -Tier Full -Restore` passed in 305.251s. It passed 285 governance
+and 1,343 supported .NET tests with zero failures or skips and verified the bundle,
+repository controls, locked restore, format and Release build. The formatter notice
+did not abort the run. The Release build reported zero warnings and errors. The
+separate active-machine route and startup smoke used those exact clean binaries.
+The same worktree was clean after all checks.
+
+| Acceptance area | Evidence on the verified candidate |
+| --- | --- |
+| Actual offered workflow | `pwsh -NoProfile -File eng/run-m1-audit-journey.ps1 -VerifyAccessibility` passed in 9.635s. The isolated window started with no job. Normal Tab, Shift+Tab and Enter created the job, toggled explicit confirmation, saved intake and started assessment only after the button enabled. The completed read-only assessment correctly required review. The same job reopened with the persisted unavailable manual result and a matching report preview/file. The launcher checked actual outcomes before normal cleanup. |
+| Safety and unknowns | The external route began blocked, saved an explicitly synthetic record, and used only the three isolated providers. Deterministic Full tests cover missing, failed and unsaved intake, synthetic evidence rejection for live providers, and normalized collected/unavailable/failure results. The completed fixture and report keep readiness unknown. |
+| Persistence, interruption and privacy | The launched-route assertions reopened SQLite and verified intake, assessment, the manual result, the same job in the preview and exact report bytes. They checked the restricted output label, opaque filename, bounded database, and absence of raw failure text or unexpected log and staging files. Supported Full tests cover cancellation, owned-child interruption and durable recovery. |
+| Accessibility and wheel behavior | The scripted keyboard journey used the real window and external UI Automation received four distinct workflow events. Six native fractional wheel messages and one detent each moved 2.22990% in the measured viewport. The focused dropdown regression and Full component checks cover proportional movement, focus, keyboard recovery, reduced viewport and double-scale layout. |
+| Unelevated normal startup and resource observation | `eng/run-ui-smoke.ps1` passed against the ordinary apphost, opened Inspect and proved a responsive standard-user UI. The observation took 1.445s and normal exit completed in 1.749s. Peak process working set was 222,076,928 bytes. This is a bounded observation of one startup. |
+| Governance and integration | The 28 affected task contracts preserve earlier evidence and completed records. The roadmap and graph agree, including the two TL-0610 onboarding edges and the explicit stable-gate requirement for TL-0611. Supplementary clean-checkout workflow run `45452635193` passed on the tested candidate. No Extended trigger applied. |
+
+[Source-bound test receipt](../evidence/TL-0116/clean-candidate.json). The candidate
+and the evidence-only completion commit are integrated through PR #17. This gate
+establishes the internal audit-only baseline. Controlled-pilot and stable-release
+authorization remain at their later gates. The assignment ends at M1.

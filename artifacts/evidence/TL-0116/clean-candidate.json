@@ -1,0 +1,79 @@
+{
+  "launched_fixture": {
+    "schema_version": 1,
+    "scenario": "m1_external_audit_journey",
+    "result": "passed",
+    "source_commit": "34c7786f182ad13dcc22574209ea6c2a45bee7d3",
+    "tracked_source_clean": true,
+    "fixture_sha256": "d6d361446ba0cd7094b93950d4ec86e42bc1aa02dfa0ccaefc2ebca22eccddb7",
+    "ui_sha256": "fea40f9ac866c95eb63bd9207117b395066e2d92791d8616305e66f44cf3d7ed",
+    "reports_sha256": "779454cbe25c4fd1c1d01375a0a25ee0b5d869a2000959f902492c9226a2aace",
+    "steps": [
+      "empty_fixture_and_disabled_assessment",
+      "created_job_requires_explicit_confirmation",
+      "enter_confirmation_and_save_enable_assessment",
+      "read_only_assessment_requires_review",
+      "manual_unavailable_result_saved",
+      "closed_and_reopened_same_job_assessment_and_manual_result",
+      "generated_and_opened_matching_report",
+      "durable_intake_assessment_manual_and_report_agree"
+    ],
+    "cleanup": "normal_test_runner_exit",
+    "live_region_events": [
+      "Job created.",
+      "Sanitization permits read-only assessment.",
+      "Assessment needs review.",
+      "Workshop report saved."
+    ],
+    "wheel": {
+      "fractional_percent": [
+        0.37164992435375493,
+        0.7432998487075099,
+        1.1149497730612647,
+        1.4865996974150197,
+        1.8582496217687747,
+        2.2298995461225295
+      ],
+      "detent_percent": 2.2298995461225295
+    },
+    "test_exit_code": 0,
+    "total_elapsed_ms": 9635
+  },
+  "product_apphost": {
+    "schema_version": 1,
+    "scenario": "shell_startup_external_uia_navigation",
+    "result": "passed",
+    "source_commit": "34c7786f182ad13dcc22574209ea6c2a45bee7d3",
+    "tracked_source_clean": true,
+    "apphost_sha256": "d09614f158c5f07390aaeb6bf13404ec1da75f8836a95f9aa5e149a9258b1983",
+    "assembly_sha256": "fea40f9ac866c95eb63bd9207117b395066e2d92791d8616305e66f44cf3d7ed",
+    "standard_user_token": true,
+    "rendering": "default_wpf",
+    "cleanup": "normal_exit",
+    "claim": "Automated active-machine observation; no human screen-reader or cross-hardware claim.",
+    "elapsed_to_observation_ms": 1445,
+    "peak_working_set_bytes": 222076928,
+    "cpu_ms": 953.125,
+    "total_elapsed_ms": 1749
+  },
+  "full": {
+    "command": "eng/verify.ps1 -Tier Full -Restore",
+    "source_commit": "34c7786f182ad13dcc22574209ea6c2a45bee7d3",
+    "result": "passed",
+    "elapsed_seconds": 305.251,
+    "governance_tests": 285,
+    "dotnet_tests": 1343,
+    "failed": 0,
+    "skipped": 0
+  },
+  "environment": {
+    "date": "2026-11-24",
+    "profile": "REF-CODEX-001 2026-08-29.1",
+    "windows_build": 26300,
+    "architecture": "x64",
+    "dotnet_sdk": "10.0.400",
+    "checkout": "clean detached worktree on the active Codex machine",
+    "fixture_source_sha256": "92128eeae83336d1d99d12a1ca85dde8c116c241d526bdb40d58543a0b3a3c0c",
+    "driver_sha256": "67f745e97d93d1c23783712ebbb3d9ec059c7968e6cdbdc09c85ad8574a8219d"
+  }
+}
