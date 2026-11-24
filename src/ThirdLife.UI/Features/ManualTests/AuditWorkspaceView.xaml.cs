@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -45,6 +46,14 @@ public partial class AuditWorkspaceView : UserControl
         FixtureManualNotice.Visibility = FixtureNotice.Visibility;
         ManualPassOption.IsEnabled = !workspace.IsFixtureScenario;
         ManualFailOption.IsEnabled = !workspace.IsFixtureScenario;
+        if (workspace.IsFixtureScenario)
+        {
+            SanitizationInstructions.Text = "Use the prepared synthetic intake for this isolated job.";
+            ExternalRecordConfirmation.Text = "Use this synthetic intake record";
+            AutomationProperties.SetName(ExternalRecordConfirmed, ExternalRecordConfirmation.Text);
+            AssessmentInstructions.Text = "Assessment reads the synthetic fixtures and records their findings in this job. It leaves device readiness unknown.";
+        }
+
         workspace.PropertyChanged += WorkspaceChanged;
         RefreshWorkspace();
     }

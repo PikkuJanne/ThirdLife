@@ -40,6 +40,7 @@ TL0401_HUMAN_EVIDENCE = (
     "docs/adr/0009-winget-backend.md before production adapter work begins."
 )
 M0_FOUNDATION_GATE_PATH = "artifacts/gates/M0-foundation.md"
+M1_AUDIT_GATE_PATH = "artifacts/gates/M1-audit-only.md"
 M0_SANDBOX_HOST_PATH = "eng/run-tl0010-sandbox.ps1"
 M0_SANDBOX_GUEST_PATH = "eng/run-tl0010-sandbox-guest.ps1"
 M0_SANDBOX_CANDIDATE = "17975419badd4154b82895d9d92a4a904790c7c0"
@@ -151,6 +152,7 @@ REQUIRED_FILES = (
     M0_SANDBOX_GUEST_PATH,
     M0_SANDBOX_HOST_PATH,
     M0_FOUNDATION_GATE_PATH,
+    M1_AUDIT_GATE_PATH,
     ".github/workflows/verify.yml",
     "eng/verify.ps1",
     "eng/test-manifest.json",
