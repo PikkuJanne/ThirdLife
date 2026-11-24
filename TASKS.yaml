@@ -3140,7 +3140,7 @@ tasks:
   workstream: policy
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: M
   executor: codex
   environment: any
@@ -3164,7 +3164,12 @@ tasks:
   - Migrations preserve prior policy snapshots.
   verification:
   - Test upgrades, downgrades, hash mismatch, and historical replay.
-  evidence: []
+  evidence:
+  - summary: TL-0205 Targeted including Quick passed 1,386 tests in 87.852 s. Clean-worktree Full passed 286 governance and 1,537 .NET tests in 301.530 s.
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400, disposable SQLite stores
+    date: '2026-11-24'
+    reference: artifacts/evidence/TL-0205/report.md, source b33c1a65db3587ad00aa3436217af741b25692f7, PR 22. Exact live assessment binding belongs to the caller.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

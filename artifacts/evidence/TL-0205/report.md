@@ -29,11 +29,15 @@ stores on this machine.
 | Policy with `FullyQualifiedName~PolicyVersioningTests` | 29 focused cases passed in 3.207 s. The added capability replay case also passed in Targeted, bringing the new tests to 30. Coverage includes exact bytes and hash mismatch, version ordering, immutable decision capture, safe report replay and scope validation. |
 | Persistence with `FullyQualifiedName~PolicyHistoryStoreTests` | 10 passed in 5.383 s. Includes the v3-to-v4 migration, crash-window convergence, reopen, version conflict, immutable evidence linkage, retry and corruption cases. |
 | `eng/verify.ps1 -Tier Targeted` with the Policy and Persistence test projects | Passed in 87.852 s. Included Quick and 1,386 .NET tests with zero failures or skips. |
+| `eng/verify.ps1 -Tier Full -Restore` in a clean detached worktree | Passed in 301.530 s on source `b33c1a65db3587ad00aa3436217af741b25692f7`. Passed 286 governance and 1,537 .NET tests with zero failures or skips. Locked restore, format and Release build succeeded. The migration and internal project reference triggered Full. |
 
 The first Targeted run reached an older oversized-ledger fixture that
 hardcoded schema version 4 as an invalid extra migration. The fixture now
 inserts one above the current version and retains the corruption and
 no-mutation assertions. Its isolated rerun passed in 3.791 s.
+
+Extended had no trigger. GitHub Actions is supplementary. The source and
+completion evidence use [PR #22](https://github.com/PikkuJanne/ThirdLife/pull/22).
 
 ## Data and claim limits
 
