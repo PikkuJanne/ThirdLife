@@ -13,8 +13,7 @@ package, an action, system mutation, or a production deployment.
 - `profiles` separates workshop capabilities from recipient-controlled choices.
 - `catalog` maps generic capabilities to non-installable synthetic placeholders.
 - `expected-reports/M1/workshop-audit.txt` pins the synthetic workshop report's
-  expected output. It is checked by the report regression and bundle manifest.
-  The TL-0007 pilot input digest is unchanged.
+  expected output. The report regression and bundle manifest check it.
 
 Each job snapshots an exact candidate profile version and the capabilities active
 for that scenario, so profile-dependent policy rules can be evaluated without an
@@ -39,3 +38,34 @@ catalog, supply-chain, and human-review process.
 The candidate policy thresholds are pilot proposals, not universal hardware
 requirements or cross-hardware certification. Missing required evidence remains
 unknown and cannot satisfy a requirement.
+
+## Candidate policy JSON
+
+The policy validator reads UTF-8 JSON using the
+[v1 policy schema](../schemas/policy.schema.json). The
+[JSON fixture](policies/community-laptop-policy.json) encodes the exact data from
+the [approved candidate YAML](policies/community-laptop-policy.yaml) for runtime
+tests. Bundle validation checks the projection byte for byte. TL-0007 approval
+and its digest continue to cover the original YAML inputs.
+
+Run this from the repository root with the pinned Python environment to
+regenerate the test projection.
+
+```powershell
+@'
+from tools.validate_bundle import (
+    PILOT_POLICY_JSON,
+    PILOT_POLICY_YAML,
+    ROOT,
+    Validation,
+    load_unique_key_yaml,
+    pilot_policy_json_bytes,
+)
+
+validation = Validation()
+policy = load_unique_key_yaml(ROOT / PILOT_POLICY_YAML, validation)
+if validation.errors:
+    raise SystemExit("\n".join(validation.errors))
+(ROOT / PILOT_POLICY_JSON).write_bytes(pilot_policy_json_bytes(policy))
+'@ | .\.venv\Scripts\python.exe -
+```

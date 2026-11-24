@@ -37,6 +37,8 @@ TESTING_POLICY_RESET_AMENDMENT_PATH = (
     "docs/amendments/2026-11-24-permanent-testing-policy-reset.md"
 )
 M1_WORKSHOP_REPORT_FIXTURE = "fixtures/expected-reports/M1/workshop-audit.txt"
+PILOT_POLICY_YAML = "fixtures/policies/community-laptop-policy.yaml"
+PILOT_POLICY_JSON = "fixtures/policies/community-laptop-policy.json"
 TL0401_WINGET_ADR_PATH = "docs/adr/0009-winget-backend.md"
 M0_FOUNDATION_GATE_PATH = "artifacts/gates/M0-foundation.md"
 M1_AUDIT_GATE_PATH = "artifacts/gates/M1-audit-only.md"
@@ -136,9 +138,11 @@ REQUIRED_FILES = (
     "fixtures/jobs/assessment-ready.yaml",
     "fixtures/jobs/partial-observations.yaml",
     "fixtures/jobs/sanitization-blocked.yaml",
+    PILOT_POLICY_JSON,
     "fixtures/policies/community-laptop-policy.yaml",
     "fixtures/profiles/basic.yaml",
     "fixtures/profiles/job-seeker.yaml",
+    "schemas/policy.schema.json",
     "docs/security/abuse-cases.md",
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
@@ -558,7 +562,7 @@ PILOT_FIXTURE_FILES = (
     "fixtures/jobs/assessment-ready.yaml",
     "fixtures/jobs/partial-observations.yaml",
     "fixtures/jobs/sanitization-blocked.yaml",
-    "fixtures/policies/community-laptop-policy.yaml",
+    PILOT_POLICY_YAML,
     "fixtures/profiles/basic.yaml",
     "fixtures/profiles/job-seeker.yaml",
 )
@@ -2820,6 +2824,31 @@ def pilot_fixture_set_digest(root: Path = ROOT) -> str:
     return digest.hexdigest()
 
 
+def pilot_policy_json_bytes(policy: dict[str, Any]) -> bytes:
+    """Encode the exact fixture data in insertion order as UTF-8 JSON with LF."""
+    return (json.dumps(policy, indent=2, ensure_ascii=False, allow_nan=False) + "\n").encode(
+        "utf-8"
+    )
+
+
+def _validate_pilot_policy_projection(
+    root: Path, policy: dict[str, Any], validation: Validation
+) -> None:
+    path = root / PILOT_POLICY_JSON
+    try:
+        path.resolve(strict=True).relative_to(root.resolve(strict=True))
+        if path.is_symlink():
+            return  # The fixture inventory already rejected the link.
+        expected = pilot_policy_json_bytes(policy)
+        with path.open("rb") as stream:
+            actual = stream.read(len(expected) + 1)
+    except (OSError, RuntimeError, TypeError, ValueError):
+        validation.error(f"{PILOT_POLICY_JSON}: cannot compare the policy fixture projection")
+        return
+    if actual != expected:
+        validation.error(f"{PILOT_POLICY_JSON}: must exactly encode {PILOT_POLICY_YAML}")
+
+
 def _pilot_mapping(
     value: Any, owner: str, validation: Validation
 ) -> dict[str, Any]:
@@ -3046,7 +3075,7 @@ def validate_pilot_fixtures(
     """Validate the bounded TL-0007 candidate contract, not later final schemas."""
 
     fixture_root = root / "fixtures"
-    expected_paths = set(PILOT_FIXTURE_FILES)
+    expected_paths = {*PILOT_FIXTURE_FILES, PILOT_POLICY_JSON}
     allowed_paths = expected_paths | {PILOT_FIXTURE_README, M1_WORKSHOP_REPORT_FIXTURE}
     actual_paths: set[str] = set()
     if fixture_root.is_dir():
@@ -3250,8 +3279,10 @@ def validate_pilot_fixtures(
             f"{catalog_path}: applications must match the exact approved synthetic catalog tuples"
         )
 
-    policy_path = "fixtures/policies/community-laptop-policy.yaml"
+    policy_path = PILOT_POLICY_YAML
     policy = _pilot_mapping(documents.get(policy_path), policy_path, validation)
+    if policy and PILOT_POLICY_JSON in actual_paths:
+        _validate_pilot_policy_projection(root, policy, validation)
     _pilot_fields(
         policy,
         policy_path,
