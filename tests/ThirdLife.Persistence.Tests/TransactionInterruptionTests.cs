@@ -124,8 +124,9 @@ public sealed class TransactionInterruptionTests
             Assert.Equal(PersistenceTestData.CreateObservation("guarded-next-second"), actual.Observations[3]);
             Assert.Equal(JobCheckpointKind.EvidenceCommitted, actual.Checkpoints[^1].Kind);
         }
-        Assert.Equal(3, SqliteJobStore.CurrentSchemaVersion);
-        Assert.Equal(3, await SqliteTestControl.ReadUserVersionAsync(reopened.DatabasePath));
+        Assert.Equal(
+            SqliteJobStore.CurrentSchemaVersion,
+            await SqliteTestControl.ReadUserVersionAsync(reopened.DatabasePath));
     }
 
     [Theory]

@@ -42,7 +42,8 @@ public static class PolicyEvaluator
             .Select(target => EvaluateRule(
                 target.Rule, observationsByKey.GetValueOrDefault(target.Rule.Requirement.EvidenceKey), capabilities, target.KnownValues))
             .ToImmutableArray();
-        return (new PolicyEvaluation(policy, outcomes), targetOutcomes);
+        var savedCapabilities = capabilities?.OrderBy(id => id, StringComparer.Ordinal).ToImmutableArray();
+        return (new PolicyEvaluation(policy, outcomes, savedCapabilities), targetOutcomes);
     }
 
     private static Dictionary<EvidenceKey, IndexedEvidence> IndexByKey(

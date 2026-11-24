@@ -12,7 +12,7 @@ using ThirdLife.Core.Sanitization;
 namespace ThirdLife.Persistence;
 
 [SupportedOSPlatform("windows")]
-public sealed class SqliteJobStore : IJobStore
+public sealed partial class SqliteJobStore : IJobStore
 {
     public const int MaximumCheckpointsPerJob = 10_000;
     public const int MaximumGateDecisionsPerJob = 10_000;
@@ -946,10 +946,10 @@ public sealed class SqliteJobStore : IJobStore
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private Payload SerializePayload<T>(T value)
+    private Payload SerializePayload<T>(T value, int maximumBytes = MaximumPayloadBytes)
     {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(value, _jsonOptions);
-        if (bytes.Length is < 2 or > MaximumPayloadBytes)
+        if (bytes.Length < 2 || bytes.Length > maximumBytes)
         {
             throw new ArgumentOutOfRangeException(nameof(value), "The normalized record exceeds the persistence byte limit.");
         }
@@ -959,11 +959,11 @@ public sealed class SqliteJobStore : IJobStore
             Convert.ToHexStringLower(SHA256.HashData(bytes)));
     }
 
-    private T DeserializePayload<T>(string json, string expectedSha256)
+    private T DeserializePayload<T>(string json, string expectedSha256, int maximumBytes = MaximumPayloadBytes)
         where T : class
     {
         var bytes = Encoding.UTF8.GetBytes(json);
-        if (bytes.Length is < 2 or > MaximumPayloadBytes ||
+        if (bytes.Length < 2 || bytes.Length > maximumBytes ||
             expectedSha256.Length != 64 ||
             !CryptographicOperations.FixedTimeEquals(
                 Encoding.ASCII.GetBytes(Convert.ToHexStringLower(SHA256.HashData(bytes))),

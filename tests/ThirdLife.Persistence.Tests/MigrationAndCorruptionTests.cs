@@ -607,13 +607,14 @@ public sealed class MigrationAndCorruptionTests
                 schema_sha256,
                 applied_at_utc)
             SELECT
-                4,
-                '004_unapproved.sql',
+                version + 1,
+                printf('%03d_unapproved.sql', version + 1),
                 script_sha256,
                 schema_sha256,
                 applied_at_utc
             FROM schema_migrations
-            WHERE version = 3;
+            ORDER BY version DESC
+            LIMIT 1;
             """);
         var before = SqliteTestControl.HashFile(databasePath);
 
