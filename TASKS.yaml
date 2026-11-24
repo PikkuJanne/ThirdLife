@@ -3219,7 +3219,7 @@ tasks:
   workstream: reports
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: M
   executor: codex
   environment: windows
@@ -3248,7 +3248,12 @@ tasks:
   verification:
   - Golden-test five dispositions and exception states.
   - Keyboard-test explanation expansion and focus.
-  evidence: []
+  evidence:
+  - summary: TL-0207 Targeted including Quick passed 1,175 tests in 56.640 s. Clean-worktree Full passed 286 governance and 1,572 .NET tests in 302.340 s.
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400, synthetic report and WPF fixtures
+    date: '2026-11-24'
+    reference: artifacts/evidence/TL-0207/report.md, source 7979f53c2893683a5b32306eb81d8e433ab284ea, PR 24. Expired live lifecycle data remains unavailable.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

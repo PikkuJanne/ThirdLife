@@ -45,6 +45,7 @@ isolated synthetic data.
 | UI with `PolicyWorkflowTests` | Two passed in 5.866 s. Verified SQLite-backed capture, report, reopen and explicit reevaluation. The mounted WPF panel passed keyboard expansion and focus return. |
 | UI with `AuditPolicyEvidenceTests` | 11 passed in 7.827 s. Checked scoped aliases, exact intake, saved manual confirmations, expiry, invalid revisions, architecture conflict and non-overlapping provenance. |
 | `eng/verify.ps1 -Tier Targeted` with the Reports and Policy filters | Passed 1,175 .NET tests including Quick in 56.640 s. Build succeeded with zero warnings or errors. |
+| `eng/verify.ps1 -Tier Full -Restore` in a clean detached worktree | Passed 286 governance and 1,572 .NET tests in 302.340 s on `7979f53c2893683a5b32306eb81d8e433ab284ea`. The direct Reports policy reference triggered Full. |
 
 A direct render of the same saved synthetic Ready fixture produced the
 expected captured disposition and verified the report-generation path.
@@ -52,6 +53,11 @@ expected captured disposition and verified the report-generation path.
 The isolated compatibility test now removes the new optional field without
 changing the legacy JSON encoding. It verifies that older policy decisions
 reopen and retain the same serialized bytes.
+
+Extended had no trigger. GitHub Actions is supplementary. The source and
+completion evidence use [PR #24](https://github.com/PikkuJanne/ThirdLife/pull/24).
+The branch publication was verified after a repository-server push error
+recovered with a non-thin HTTPS retry.
 
 The current workshop store and output paths stay in use. Additional report
 fields are workbench-only policy identity, rule states, opaque evidence IDs
