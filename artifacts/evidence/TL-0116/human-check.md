@@ -1,6 +1,6 @@
 # M1 — One complete audit journey
 
-**Status:** Prepared procedure awaiting exact-candidate rehearsal. Human observations and the M1 decision are pending.  
+**Status:** Exact-candidate rehearsal passed and the isolated review window is ready. Human observations and the M1 decision are pending.  
 **Target:** About 10 minutes of participation after preparation.  
 **Scope:** Actual WPF and SQLite workflow on the active Codex machine with synthetic intake, providers and manual unavailable/failure examples.
 
@@ -73,12 +73,22 @@ records only attributable responses, verifies cleanup and restores the environme
 Carry forward matching TL-0113 shell observations and retest a changed or failed
 interaction only.
 
+To open a fresh review window after expiry, Codex uses the verified Release build of
+the recorded source and invokes only
+`ThirdLife.UI.Tests.M1OperatorReviewTests.OpenPreparedFixtureForOperatorReview`
+with `dotnet test`, `--no-build --no-restore`, `RunConfiguration.TreatNoTestsAsError=true`
+and process-local `THIRDLIFE_M1_OPERATOR_REVIEW=1`. The launcher checks its token,
+opens an isolated store and waits up to 30 minutes for the window to close.
+
 | Evidence field | Recorded value |
 | --- | --- |
-| Tested commit, build hashes and launch receipt | Pending |
-| Context, reference profile and standard-user token | Pending exact-candidate verification |
-| Candidate fixture digest and labelled available/unavailable/failure examples | Pending exact-candidate verification |
-| Actual Narrator and display settings before, during and after | Pending |
+| Tested commit | `da746d306623f860ce64cd1143738087486886ca` |
+| Standard-user apphost SHA-256 | `8c3c9f5fed5e8c27b343626073f7f319be0b1fccc0b06f06e59a0ddfdb7e7824` |
+| Review launcher and production assembly SHA-256 | `ThirdLife.UI.Tests.dll` `3c1bc6f7059f3f6a0c4a34c3e0ca93687c2bff4619638df69e3d951a1bf30886`, `ThirdLife.UI.dll` `f5cac0f7d32a6d4dffb5fdc4b40d806a69c82b30492d2212697611c89b7f6379`, `ThirdLife.Reports.dll` `7d8500be732862bf8a44a104df0027b3c4aeb1bcd1ed8758953a3d9a4a20db1d` |
+| Context, reference profile and standard-user token | Active Windows 11 Pro x64 build 26300, `REF-CODEX-001` revision `2026-08-29.1`. Exact-candidate clean worktree, SDK 10.0.400, Release. Independent main apphost smoke and named fixture rehearsal both verified the standard-user token. |
+| Candidate fixture digest and labelled available/unavailable/failure examples | `M1AuditFixture.cs` SHA-256 `92128eeae83336d1d99d12a1ca85dde8c116c241d526bdb40d58543a0b3a3c0c`. Explicitly synthetic intake and three example providers with collected, unavailable and failed outcomes. No donor keyboard sample. |
+| Launch receipt | Exact Release launcher started at 17:22:41+01:00 on 24 November 2026. The active window was observed at 17:23:05+01:00 with Intake selected, no job open and the audit controls link available. |
+| Actual Narrator and display settings before, during and after | Restoration baseline verified at 17:16:13+01:00 on 24 November 2026. 3840×2400 at 59 Hz, 250% scale, contrast off and Narrator off. Starting review verified at 17:22:29+01:00 at the same resolution and refresh rate, 200% scale, contrast off and Narrator on. Settings is open to System → Display. Human display observations and restoration readings are pending. |
 | Operator role, review start/end, duration and exact response | Pending |
 | Replacement or focused retest evidence | Pending if required |
 

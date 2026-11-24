@@ -2810,7 +2810,7 @@ tasks:
   workstream: release
   kind: gate
   priority: P0
-  status: in_progress
+  status: review
   size: M
   executor: hybrid
   environment: windows
@@ -2857,7 +2857,24 @@ tasks:
     report accuracy and unelevated operation automatically where possible.
   - Run the documented Full gate verification, applicable Quick/Targeted checks and bundle validation.
   - Inspect logs, database, temporary paths, and report for prohibited data and unsupported claims.
-  evidence: []
+  evidence:
+  - command: eng/verify.ps1 -Tier Targeted -Restore -TestProject tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj
+    tier: targeted
+    result: Core 110, Inventory 901 and UI 61 passed, with zero failures or skips. Includes Quick.
+    date: '2026-11-24'
+    duration: 54.258s
+    environment: Active Windows machine, REF-CODEX-001 revision 2026-08-29.1.
+    artifact: artifacts/gates/M1-audit-only.md
+    limitation: The default UI pair executed once. Focus and automation metadata are objective checks.
+  - command: eng/verify.ps1 -Tier Full -Restore, standard-user shell smoke, exact M1 audit journey test
+    tier: full
+    result: Full passed with 1,337 .NET tests. Startup and the named integrated fixture journey passed separately.
+    date: '2026-11-24'
+    duration: 283.547s Full, 1.569s startup, 3.734s named fixture
+    environment: Clean exact-candidate worktree on REF-CODEX-001, standard Windows user.
+    commit: da746d306623f860ce64cd1143738087486886ca
+    artifact: artifacts/gates/M1-audit-only.md
+    limitation: The named run uses isolated synthetic intake and providers. Human observations and owner decision are pending.
   human_evidence_required:
   - Project owner approves the M1 gate record.
   - A representative operator completes the prepared combined audit, manual-capture and accessibility review on the active Codex

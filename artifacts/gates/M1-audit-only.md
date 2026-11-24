@@ -3,13 +3,14 @@
 | Field | Value |
 | --- | --- |
 | Gate task | `TL-0116` |
-| Record state | Candidate |
+| Record state | Review |
 | Verified default-branch base | `7c382bf784c5128ae96a8fcf07724fea35e9bc40`, PR #16 |
 | Gate branch | `codex/tl-0116-m1-audit-gate` |
-| Candidate build, source, evidence digests | Pending exact-candidate verification |
+| Candidate source | `da746d306623f860ce64cd1143738087486886ca` |
+| Candidate build and evidence digests | [Build and fixture identity](../evidence/TL-0116/human-check.md#codex-only-preparation-and-record) |
 | Runtime authority | Active Codex Windows machine, `REF-CODEX-001` revision `2026-08-29.1` |
 | Owner decision | Pending |
-| Integration | Pending |
+| Integration | Draft PR #17. Gate has not merged. |
 
 The owner-authorized [minimal human testing amendment](../../docs/amendments/2026-11-24-minimal-human-testing.md)
 assigns the integrated operator review and the M1 decision to this gate. The amendment
@@ -47,24 +48,38 @@ approval. GitHub Actions evidence remains supplementary.
 ## Automated evidence and acceptance mapping
 
 All 25 transitive prerequisites are complete. The pre-edit audit UI baseline passed
-18 tests. Active-machine Targeted including Quick passed Core 110, Inventory 901 and
-UI 61 with zero failures or skips in 54.258s. The identical default UI selection ran
-once. The first named integrated rehearsal passed under a standard-user token. Final
-verification uses a clean worktree of the exact gate candidate below.
+18 tests. Active-machine `eng/verify.ps1 -Tier Targeted -Restore -TestProject
+tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj` included Quick and passed Core 110,
+Inventory 901 and UI 61 with zero failures or skips in 54.258s. The identical default
+UI selection ran once. The first named integrated rehearsal passed under a
+standard-user token. Final verification used a clean, detached worktree of the exact
+candidate on Windows 11 Pro x64 build 26300 with SDK 10.0.400.
+
+`eng/verify.ps1 -Tier Full -Restore` passed in 283.547s. It checked bundle and
+repository integrity, governance regressions, locked restore, format, Release build
+with warnings as errors and 1,337 .NET tests with zero failures or skips. Extended
+had no named trigger. `eng/run-ui-smoke.ps1` confirmed the exact apphost opened and
+responded under a standard-user token in 1.314s and closed normally in 1.569s total.
+The clean worktree stayed clean. No source, fixture or binary changed for handoff.
+Supplementary Windows clean-checkout run `45435029912` passed on the candidate.
 
 | Acceptance area | Current candidate evidence |
 | --- | --- |
-| Unelevated launch and audit-only behaviour | Pending exact-build standard-user startup and fixture route rehearsal. Check the scenario uses only typed fixture providers, writes only to its isolated store/report, and offers no system-changing audit action. |
-| Deterministic observations, unknowns, fixture isolation | Pending integrated rehearsal, applicable existing deterministic regressions and final Full. Confirm synthetic intake cannot permit live collection, unavailable and failed evidence are explicit and readiness stays unknown. |
-| Durable job, cancellation and interruption | Pending fresh integrated create, save, close and reopen. Carry forward TL-0112's actual owned-child interruption evidence and revalidate the existing `TransactionInterruptionTests` with the candidate. Those tests kill the owned process around job creation, gate recording and guarded provider batch commits, then reopen the temporary store. They cover process termination separately from the in-window close/reopen check. |
-| Privacy in logs, SQLite, temporary output and report | Pending candidate inspection and end-to-end report check. Verify the restricted report matches the committed fixture, protected output stays inside the owned workspace, sensitive values are filtered, and no normal log or unexpected temporary artifact contains prohibited data. Record sanitized results only. |
-| Keyboard route and accessibility groundwork | Pending new or changed controls rehearsal. Use applicable earlier observations below only on unchanged shell interactions and record current human observations separately. |
-| Clean-worktree continuity and triggered gate checks | Pending clean checkout of the candidate on the active machine, locked restore, Release build/start, bundle and repository validation, applicable Quick and Targeted selection and Full. Extended has no named trigger. Record commands, durations, counts, artifact digests and actual outcomes. |
+| Unelevated launch and audit-only behaviour | The normal apphost and the fixture rehearsal ran under a standard-user token. The fixture constructs only the three typed synthetic providers and writes job history and the restricted report within its isolated workspace. |
+| Deterministic observations, unknowns, fixture isolation | Full passed deterministic observation normalization, gate and orchestrator tests, including rejection of synthetic intake for live providers. The named run preserved explicit synthetic collected, unavailable and failed outcomes, with readiness unknown after reopen. |
+| Durable job, cancellation and interruption | The named run created, saved, closed and reopened a SQLite job. Full passed the partial-evidence cancellation test and Persistence's 113 tests, including `TransactionInterruptionTests`. Those tests terminate owned children around job creation, commit, gate recording and guarded provider batch writes, then reopen the store. TL-0112 documents the prior assessment interruption work. |
+| Privacy in logs, SQLite, temporary output and report | Full passed structured diagnostics, privacy and deterministic report tests. The named run checked the SQLite fixture, absence of normal log and staging artifacts in that workspace, restricted output with an opaque name, byte equality with the opened report and exclusion of the private failure marker and free-text note from the report. No raw data was exported. |
+| Keyboard route and accessibility groundwork | The named run verified focus movement, live-region semantics and the read-only report preview. The applicable earlier shell observations are carried forward below. Human review of changed controls is pending. |
+| Clean-worktree continuity and triggered gate checks | Active-machine Targeted including Quick and exact-candidate Full passed. The separate standard-user smoke and named fixture rehearsal passed. No Extended trigger applied. |
 
-The integrated route is exercised by
-`ThirdLife.UI.Tests.M1AuditJourneyTests.OperatorRouteReopensSavedFixtureAndPreviewsItsWorkshopReport`.
-Its automation result is pending. It is separate from both an earlier accepted shell
-observation and a current human observation.
+The integrated route runs through the named
+`ThirdLife.UI.Tests.M1AuditJourneyTests.OperatorRouteReopensSavedFixtureAndPreviewsItsWorkshopReport`
+test. The explicit `ActiveMachine` invocation is separate from the default Full
+selection. `dotnet test` used Release with `--no-build --no-restore`, the exact test
+name filter and `RunConfiguration.TreatNoTestsAsError=true`. One test passed in
+3.734s total with zero failures or skips. The automated assertions cover UI focus,
+control state and automation metadata. Actual speech, readability and operator
+judgement have their own record.
 
 ## Operator observations and owner decision
 
