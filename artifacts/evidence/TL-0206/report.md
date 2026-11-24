@@ -33,9 +33,13 @@ Active machine `REF-CODEX-001` revision `2026-08-29.1`, Windows 11 x64,
 | Persistence archived mixed-batch check | Passed. The existing stored history and checkpoint remained intact when the repair and invalidation append was rejected. |
 | UI with `FullyQualifiedName~RepairWorkflowTests` | Two passed in 6.789 s. Used a disposable SQLite job and a loaded WPF window to check both assessment routes, new evidence, retained history, keyboard navigation, automation names and the polite validation status. |
 | `eng/verify.ps1 -Tier Targeted` with the Policy class and Persistence guarded-evidence filters | Passed 1,124 .NET tests including Quick in 59.641 s. Build succeeded with zero warnings or errors. |
+| `eng/verify.ps1 -Tier Full -Restore` in a clean detached worktree | Passed 286 governance and 1,551 .NET tests in 302.408 s, on source `07353aab2585d5dfee7e8f1d1e6541e20cb13b3b`. The direct UI policy reference triggered Full. |
 
 The first repository check caught import order in the audit workspace. The
 existing import convention was restored before the passing rerun.
+
+Extended had no trigger. GitHub Actions is supplementary. The source and
+completion record use [PR #23](https://github.com/PikkuJanne/ThirdLife/pull/23).
 
 ## Data and scope
 
