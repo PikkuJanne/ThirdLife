@@ -30,6 +30,9 @@ ADR_NUMBERING_AMENDMENT_PATH = (
 STABILIZATION_AMENDMENT_PATH = (
     "docs/amendments/2026-09-12-repository-stabilization.md"
 )
+MINIMAL_HUMAN_TESTING_AMENDMENT_PATH = (
+    "docs/amendments/2026-11-24-minimal-human-testing.md"
+)
 TL0401_WINGET_ADR_PATH = "docs/adr/0009-winget-backend.md"
 TL0401_HUMAN_EVIDENCE = (
     "A maintainer reviews the spike evidence and approves ADR 0009 at "
@@ -115,6 +118,7 @@ REQUIRED_FILES = (
     "docs/change-control.md",
     ADR_NUMBERING_AMENDMENT_PATH,
     STABILIZATION_AMENDMENT_PATH,
+    MINIMAL_HUMAN_TESTING_AMENDMENT_PATH,
     "docs/glossary.md",
     "docs/non-goals.md",
     "docs/product-contract.md",
@@ -771,9 +775,9 @@ ALLOWED_KIND = {"build", "code", "data", "docs", "gate", "release", "security", 
 ALLOWED_TEST_TIER = {"quick", "targeted", "full", "extended"}
 MUTABLE_FIELDS = ["status", "evidence", "blocked_reason"]
 
-CURRENT_BUNDLE_VERSION = "0.4.0"
-CURRENT_BUNDLE_GENERATED_ON = "2026-09-30"
-CURRENT_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 73))
+CURRENT_BUNDLE_VERSION = "0.5.0"
+CURRENT_BUNDLE_GENERATED_ON = "2026-11-24"
+CURRENT_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 74))
 CURRENT_TASK_COUNT = 91
 STABILIZATION_CI_CLARIFICATION = {
     "summary": (
@@ -859,7 +863,7 @@ V030_TL0008_PROCEDURE_DIGEST = (
 CURRENT_BUNDLE_DOCUMENT_MARKERS = {
     "ACCESSIBILITY.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
     "AGENTS.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "CHANGELOG.md": "## 0.4.0 — 2026-09-12",
+    "CHANGELOG.md": "## 0.5.0 — 2026-11-24",
     "CODEX_START_PROMPT.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
     "DECISIONS.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
     "DEVELOPMENT_WORKFLOW.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
@@ -6723,7 +6727,7 @@ def validate() -> int:
         )
     if tuple(decision_ids) != CURRENT_DECISION_IDS:
         validation.error(
-            "DECISIONS.md: current bundle must contain exactly D-001 through D-072"
+            f"DECISIONS.md: current bundle must contain exactly D-001 through {CURRENT_DECISION_IDS[-1]}"
         )
 
     milestones = task_doc.get("milestones")

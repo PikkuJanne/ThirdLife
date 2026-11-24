@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Development and GitHub Continuity Workflow
 
-**Bundle version:** 0.4.0  
+**Bundle version:** 0.5.0  
 **Continuity source of truth:** GitHub repository  
 **Authoritative runtime hardware:** active Codex machine only  
 **Remote CI classification:** supplementary
@@ -83,6 +83,12 @@ A product task is not ready for handoff to the next product task until:
 
 Do not begin the next roadmap task on top of an unmerged completed-task stack.
 
+For an explicitly assigned sequence, verify each merge and continue from updated `main`
+without waiting for a conversational handoff. Use one active task and branch at a time.
+The [approved M1 amendment](docs/amendments/2026-11-24-minimal-human-testing.md) authorizes
+the synchronized contract changes and narrow verifier fix within PR #14. TL-0114 starts
+after TL-0113 integrates. The assignment ends at the completed TL-0116 gate.
+
 ### 3.3 Temporary stacked-work exception
 
 A stack is allowed only for a named recovery, cumulative stabilization, or approved
@@ -163,6 +169,13 @@ git rev-parse @{upstream}
 
 `STATUS.md` is a current snapshot, not an archive.
 
+Before a human checkpoint, Codex rehearses the route, binds the verified build and sanitized
+environment, and prepares settings and restoration. The reviewer supplies the observation or
+decision required by the task. Codex records timing, maps actual results to each criterion,
+updates evidence and retains failed or unperformed cases. Record automated results, human
+observations and owner approvals separately. A short handoff includes the concrete question,
+starting point, actions, time estimate, decision affected and retest trigger.
+
 New detailed evidence belongs in:
 
 ```text
@@ -185,6 +198,11 @@ A task evidence entry remains compact and contains:
 
 Do not paste raw logs, secrets, personal data, or multi-page design analysis into
 `TASKS.yaml`.
+
+Carry forward evidence with its original provenance when relevant inputs remain unchanged.
+If an interaction changes or an observation fails, recheck the affected part. When a session
+must pause, record one resumable handoff with the authorization, current evidence and next
+executable action.
 
 ## 8. Clean-clone continuation
 

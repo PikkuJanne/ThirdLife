@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Testing Strategy and Execution Contract
 
-**Bundle version:** 0.4.0  
+**Bundle version:** 0.5.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Authoritative runtime hardware:** active Codex machine only  
 **Remote CI:** supplementary
@@ -17,6 +17,27 @@ ThirdLife needs fast feedback and complete risk-relevant evidence.
 - Do not convert one-machine, VM, fixture, or constraint evidence into broad hardware claims.
 
 The machine-readable tier/budget selection lives in `eng/test-manifest.json`.
+
+### Human evidence and reuse
+
+Automate verification of objective behavior. Ask a human only for a concrete unresolved
+perception, usability or physical observation, or an accountable approval decision. Prepare
+the verified build, starting state and short steps. State the question, expected duration,
+decision affected and retest trigger. Codex rehearses the route, prepares supported settings
+and restoration, captures build/environment identity and timing, and maps each actual result
+to its criterion. The reviewer supplies observations or decisions. Keep these distinct from
+automated results, and keep failed, unavailable and unperformed cases explicit.
+
+Reuse earlier results when the applicable gate allows and relevant code, tests, runner,
+profile, dependencies, environment, configuration and workload are unchanged. Retain the
+original command, tested commit, artifact, environment, result and limitation. Record the
+basis for reuse and retest only changed interactions, failed observations or new flows.
+Documentation and evidence changes receive applicable governance validation. Contract
+changes also receive their focused regressions and final complete governance regression.
+
+Before a diagnostic repeat, record the hypothesis and the changed input or expected new
+observation. After two materially identical attempts that add no information, change the
+method or record the limitation and continue other work. Preserve any unresolved failure.
 
 ## 2. Quick tier
 
@@ -75,11 +96,22 @@ integration/failure checks.
 
 Pass several projects as a PowerShell array to `-TestProject`. A filter matching no tests
 fails verification. Without an explicit filter, Targeted uses the deterministic default in
-the manifest. Governance changes also run this independently invokable Targeted set:
+the manifest. In one invocation Quick entries execute first, followed by distinct Targeted
+selections. Paths are resolved against the repository root and compared using Windows path
+semantics. Filter text is compared exactly. Only identical project and filter pairs in that
+invocation are deduplicated. Separate environments, invocations and risk scenarios retain
+their own evidence. Report executed results once.
+
+During governance iteration, run the affected validator or test class first, then related
+checks. Retain direct bundle and repository validation for governed files. Run the complete
+governance regression once for the final relevant governance change:
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tools/tests -p "test_*.py"
 ```
+
+This is a Targeted governance check. The .NET Full tier retains its separate triggers.
+After further changes, select checks for the affected behavior and shared validation risk.
 
 Required before pushing a feature/fix and after changes to:
 

@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Binding Development Roadmap
 
-**Bundle version:** 0.4.0  
+**Bundle version:** 0.5.0  
 **Portfolio roadmap:** ThirdLife Software Portfolio v2.1 (15 August 2026)  
 **Project / queue:** ThirdLife Setup Core — Team B / B1  
 **Pilot target:** v0.1 controlled partner pilot at `TL-0611`  
@@ -260,7 +260,8 @@ Every milestone gate transitively depends on all work in that milestone. Every t
 
 - The normal flow makes no system changes and runs unelevated.
 - Missing evidence remains unknown and normalized observations are deterministic.
-- A representative volunteer completes the flow with accessible UI and privacy-safe persistence/logging.
+- A representative operator completes the integrated audit flow with accessible UI and privacy-safe persistence and logging.
+- The TL-0116 review samples one applicable manual observation, checks labelled unavailable and failure examples, and confirms pause/resume or close/reopen usability. Automated verification covers the remaining variants and transitions. The operator acknowledges the limits of the tested active-machine scenario, and the project owner separately decides the M1 gate.
 
 | Task | Deliverable | Executor | Direct dependencies |
 |---|---|---|---|
@@ -277,11 +278,13 @@ Every milestone gate transitively depends on all work in that milestone. Every t
 | `TL-0111` | Implement network and key-device enumeration | `codex` | `TL-0105`, `TL-0104` |
 | `TL-0112` | Implement the read-only assessment orchestrator | `codex` | `TL-0103`, `TL-0104`, `TL-0106`, `TL-0107`, `TL-0108`, `TL-0109`, `TL-0110`, `TL-0111` |
 | `TL-0113` | Build the accessible six-stage WPF shell | `hybrid` | `TL-0002`, `TL-0103`, `TL-0105` |
-| `TL-0114` | Implement manual hardware-test capture | `hybrid` | `TL-0101`, `TL-0111`, `TL-0113` |
+| `TL-0114` | Implement manual hardware-test capture | `codex` | `TL-0101`, `TL-0111`, `TL-0112`, `TL-0113` |
 | `TL-0115` | Generate the audit-only workshop report | `codex` | `TL-0112`, `TL-0114`, `TL-0104` |
 | `TL-0116` | Validate the M1 audit-only gate | `hybrid` | `TL-0112`, `TL-0113`, `TL-0114`, `TL-0115` |
 
-**Gate:** `TL-0116` — Validate the M1 audit-only gate. The gate is not complete until its automated verification and every declared human evidence item are attached.
+TL-0113 retains its focused shell accessibility observation. TL-0114 connects durable job create/open/reopen, external sanitization capture, read-only assessment and guided manual capture to the operator UI, with automated implementation verification. TL-0115 renders the deterministic workshop report from durable job evidence and adds the operator UI path to generate and open that report.
+
+**Gate:** `TL-0116` — Validate the M1 audit-only gate. The gate owns the operator usability review transferred from TL-0114, the integrated manual-capture and new or changed accessibility observations, and the owner decision. Carry applicable unchanged TL-0113 observations forward with their provenance. The Full gate and all declared evidence are required. [D-073](DECISIONS.md#d-073) governs the prepared handoffs and the assigned continuation through M1.
 
 ### M2 — Explainable disposition engine
 

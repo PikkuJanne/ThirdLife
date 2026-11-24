@@ -11,6 +11,15 @@ This document specifies how ThirdLife Setup Core will guide a volunteer or staff
 
 Variant and risk coverage is recorded in the [Capability and risk coverage matrix](capability-risk-matrix.md). That matrix is not a device inventory. Development uses deterministic fixtures, sanitized captured provider samples, safe same-machine constraints, and later bounded observation of capabilities actually available on the active Codex machine. There is no device pool, equipment-acquisition gate, second PC, or required hardware class.
 
+TL-0114 owns the product capture workflow and deterministic verification of its supported
+variants and transitions. TL-0116 owns the human usability review in the integrated M1
+scenario. The reviewer checks one representative applicable manual observation, labelled
+unavailable and failure examples, and pause/resume or close/reopen. Codex prepares the
+scenario and records the case mapping and limitations. The operator acknowledges the
+single-machine and scenario limits. The development sample leaves the product's full
+manual-test catalogue and its pass criteria in force. Fixtures verify application behavior
+and cannot establish physical function.
+
 The workflow does not erase donor media, repair an existing personal computer, certify a device, diagnose every intermittent fault, or prove future service life. Automation, fixtures, constraints, and a single manual run cannot prove long-term hardware reliability or cross-hardware compatibility. A result describes only the exact job, machine, environment, specification revision, time, procedure, and evidence recorded.
 
 The normal target is supported Windows 11 x64. An unsupported operating system, processor, TPM state, Secure Boot state, activation state, ownership control, or management state must remain visible and may block normal readiness. This procedure never authorizes a bypass.
@@ -55,7 +64,7 @@ Apply these rules:
 
 An interrupted run retains completed records and the last durable checkpoint. On resume, the operator re-identifies the device and environment, reviews prior results, repeats any test whose state may have changed, and never silently converts an incomplete result to a pass.
 
-`Not run` is the planning/checklist label in these TL-0008 documents. When the future `TL-0114` implementation persists a manual-test result, it maps exactly to that task's `not tested` value; `Pass`, `Fail`, and `Not available` map without a semantic change. No persisted result may invent a fifth outcome or turn this mapping into a pass.
+`Not run` is the planning/checklist label in these TL-0008 documents. In TL-0114, `Not run` is also the canonical persisted result and is the meaning of the earlier task wording `not tested`. The four stored results are `Pass`, `Fail`, `Not run`, and `Not available`.
 
 Every run separately records hardware environment (`Physical` or `Virtual`), execution context (`Interactive active-machine`, `Hosted active-machine`, or `Automated`), constraint profile (`None` or a named safe same-machine constraint), and evidence source (`Direct human observation`, named provider, or `Synthetic deterministic fixture`). A hosted or constrained environment remains hosted/constrained evidence. It never becomes physical observation or proof about untested hardware.
 
@@ -166,7 +175,7 @@ The workflow contract is verified in layers. Deterministic application tests may
 |---|---|---|---|---|
 | Quick | Document/schema/static checks; stable ID and allowed-state coverage | Revised `TL-0008` and normal iteration | Repository quick command; no `MHT-*` physical action | Definition checked; all scenarios remain `Not run` |
 | Targeted | One deterministic state path or the changed manual-workflow subsystem | `TL-0114` implementation and later changes to the workflow/evidence/report contract | The owning task must publish an exact filterable command for each affected ID, such as a test case tagged `MHT-002`; run the smallest case first | Not run at `TL-0008` |
-| Full | Complete implemented manual-test journey, output, persistence, accessibility baseline, and recovery | Named milestone/pilot/stable gate, including `TL-0608` or `TL-0707`, when their dependency chain is complete | Governed full-tier command plus manifest of included `MHT-*` cases | Not run at `TL-0008`; no full-tier trigger |
+| Full | Complete implemented manual-test journey, output, persistence, accessibility baseline, and recovery | Named milestone/pilot/stable gate, including `TL-0116`, `TL-0608` or `TL-0707`, when their dependency chain is complete | Governed full-tier command plus manifest of included `MHT-*` cases. TL-0116 uses the bounded M1 human sample above. | Not run at `TL-0008`; no full-tier trigger |
 | Extended | Only the named slow, interruption, physical cold-boot, or resource-risk scenario | `MHT-019` at `TL-0509`, or a later task/gate whose `extended_test_triggers` names the risk | Independently invokable scenario command/procedure with checkpoint, abort, cleanup, and scenario-level result | Not run at `TL-0008`; no extended trigger |
 
 Before an implementing task can execute a command, it must replace any command placeholder with a checked-in, reviewable, independently invokable command or human procedure. A later failure is rerun first at its single scenario ID, then at related targeted scope. Broad reruns occur only when the governing tier trigger applies or a shared cause is suspected.

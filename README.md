@@ -3,14 +3,26 @@
 This repository develops ThirdLife Setup Core: a local-first, auditable Windows refurbishment workflow for volunteer and staff refurbishers. Development follows the frozen decisions, standalone Team B/B1 boundary, and dependency-ordered task graph checked into this repository.
 
 **Current project:** Team B / B1 — ThirdLife Setup Core  
-**Roadmap bundle:** 0.4.0 / ThirdLife Software Portfolio v2.1  
+**Roadmap bundle:** 0.5.0 / ThirdLife Software Portfolio v2.1  
 **Physical validation scope:** active Codex machine only  
 **Pilot gate:** `TL-0611` — controlled v0.1 partner pilot  
 **Standalone release gate:** `TL-0710` — ThirdLife Setup Core 1.0  
 **Next Team B project after stable:** Scam Explainer  
 **Future integration project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
 
-The governed roadmap contains **91 tasks**, **8 milestone gates**, and **66 frozen decisions**. Current implementation progress and the next dependency-ready work are recorded in `TASKS.yaml` and `STATUS.md`; do not infer them from this README.
+The governed roadmap contains **91 tasks**, **8 milestone gates**, and **73 frozen decisions**. Current progress and the next dependency-ready work are recorded in `TASKS.yaml` and `STATUS.md`.
+
+## What changed in governed bundle 0.5.0
+
+- Automates setup and objective checks and reserves human review for concrete observations
+  or owner decisions. Valid unchanged evidence carries forward.
+- Keeps the TL-0113 shell review and combines integrated M1 operator, manual-capture and
+  accessibility review in TL-0116. TL-0114 owns the live audit UI, and TL-0115 owns the
+  report and its generate/open action.
+- Executes identical project/filter selections once per verifier invocation. Assigned work
+  continues after each verified merge until a genuine checkpoint or assignment end.
+
+See the [minimal human testing amendment](docs/amendments/2026-11-24-minimal-human-testing.md).
 
 ## What changed in governed bundle 0.4.0
 

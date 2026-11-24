@@ -81,10 +81,12 @@ announcement behavior and bounded layout fixtures. A component scale transform a
 string fixture are useful deterministic checks; they do not substitute for a human review
 with Windows scaling and assistive technology.
 
-The source-bound [human walkthrough](../../artifacts/evidence/TL-0113/human-walkthrough.md)
-covers the applicable shell portions of `A11Y-001` through `A11Y-007`. It records each case
-independently. TL-0113 remains `review` while its required human keyboard and screen-reader
-evidence is missing. Automated results cannot be recorded as human confirmation.
+The source-bound [short shell check](../../artifacts/evidence/TL-0113/human-walkthrough.md)
+uses one keyboard/Narrator journey and short actual display-mode checks. Codex prepares
+and rehearses the build, settings and route, then maps the reviewer's observations to
+independent `A11Y-001` through `A11Y-007` case results. TL-0113 remains `review` while
+the required human observations are pending. Valid unchanged results carry forward to
+TL-0116 with their original provenance. Failed or changed interactions get focused retests.
 
 ## Privacy and resources
 
@@ -127,10 +129,11 @@ apphost observation remains separate from its component tests.
 powershell -NoProfile -ExecutionPolicy Bypass -File eng/run-ui-smoke.ps1
 ```
 
-The shell does not yet compose a durable operator audit journey. Before the TL-0116 M1
-gate can pass, the application still needs an evidenced path to create/reopen a job, record
-sanitization, run a read-only assessment, capture the owning manual tests and produce the
-workshop report. TL-0113's accessible navigation and empty regions do not prove that gate.
-Later task work must retain the existing domain ownership and prove the completed flow.
+The TL-0113 shell provides review-only navigation. TL-0114 owns the live audit UI to
+create/open/reopen jobs, record sanitization, start/cancel read-only assessment with
+durable outcomes, and capture guided manual results using the existing services.
+TL-0115 owns deterministic workshop report generation and opening it from the operator
+UI. TL-0116 owns the integrated journey rehearsal, human review of new or changed
+interactions, and evidence of the project-owner M1 gate decision.
 
 There is no data migration, sibling integration or verified release-interface addition.
