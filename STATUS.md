@@ -4,22 +4,23 @@
 **Bundle baseline:** 0.6.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
 **Current milestone:** M3 — Safe planning and privilege boundary  
-**Current task:** TL-0303 — Done
+**Current task:** TL-0304 — In progress
 
 ## Continuity
 
-PR #27 integrated the [profile schemas](artifacts/evidence/TL-0302/report.md)
-into `main` at `c91c201`. The `codex/tl-0303-compiled-action-registry`
-branch contains the completed TL-0303 work and evidence.
+PR #28 integrated the [action registry](artifacts/evidence/TL-0303/report.md)
+into `main` at `6fce451`. TL-0304 starts there on
+`codex/tl-0304-deterministic-plan-resolution`.
 
 The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-The closed registry describes a synthetic no-op and a typed package request
-for plan review. The v1 codec rejects undeclared action kinds and parameters.
-Targeted passed 1,148 tests. [TL-0303 evidence](artifacts/evidence/TL-0303/report.md)
+The resolver binds the selected capabilities and current evidence to the exact
+profile, catalog, policy and sanitization decision. It keeps recipient choices
+deferred and yields an empty action list when a prerequisite blocks preparation.
+Verification is in progress.
 
 ## Next action
 
-Start TL-0304 after verifying TL-0303 integration on updated `main`.
+Finish Targeted and Full verification before integrating TL-0304.

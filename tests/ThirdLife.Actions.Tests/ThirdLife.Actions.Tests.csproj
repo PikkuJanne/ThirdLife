@@ -23,4 +23,16 @@
     <ProjectReference Include="..\..\src\ThirdLife.Actions\ThirdLife.Actions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\fixtures\catalog\catalog.json"
+          Link="catalog.json"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\fixtures\profiles\basic.json"
+          Link="basic.json"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\fixtures\profiles\job-seeker.json"
+          Link="job-seeker.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
