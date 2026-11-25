@@ -95,7 +95,7 @@ if ($Prepare) {
         [IO.File]::WriteAllText((Join-Path $content 'source.txt'), $source)
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         [IO.Compression.ZipFile]::CreateFromDirectory($content, $archive)
-        if (Test-Path -LiteralPath $payload) { [IO.File]::Replace($archive, $payload, $null) }
+        if (Test-Path -LiteralPath $payload) { [IO.File]::Replace($archive, $payload, [NullString]::Value) }
         else { [IO.File]::Move($archive, $payload) }
         [pscustomobject]@{ TestSource = $source; PayloadSha256 = (Get-FileHash -LiteralPath $payload).Hash.ToLowerInvariant() }
     }
