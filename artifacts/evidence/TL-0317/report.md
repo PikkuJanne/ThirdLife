@@ -72,7 +72,8 @@ $admission = .\eng\run-thirdlife-hyperv.ps1 -Scenario Inspect -Credential $guest
 
 Run each selected scenario with `$payloadSha256` set to the exact value printed
 by the trusted preparation. The runner keeps the authenticated connection for
-the transfer, guest commands and result collection within each scenario. The
+the transfer, guest commands and result collection within each scenario. If the
+session closes after staging, the runner reconnects once for owned cleanup. The
 guest driver checks transferred digests, uses the reviewed protected provisioner
 and calls `VerifyOnly`. It schedules the UI test in the signed-in account's
 interactive session with the limited token. The distinct-account test uses the
@@ -118,6 +119,8 @@ evidence before any justified rollback.
 | Focused provisioner, `tools.tests.test_broker_deployment` | Six checks passed on the active Windows host. | Local validator and provisioning fixtures. |
 | Focused UI broker client and installed launcher tests | Thirty checks passed on the active Windows host. | Deterministic result mapping and launch guards. |
 | Targeted, Broker, Broker Security and UI projects | Passed in 81.295 s on the active Windows host. Included Quick and 81 selected broker tests. | Deterministic suite. Named guest cases remain separate. |
+| Full, `eng/verify.ps1 -Tier Full -Restore` | Passed in 351.353 s in the isolated active-machine worktree. The runtime test sources at `029107f` passed 303 Python governance and 2,025 .NET tests, locked restore, formatting and the warnings-as-errors Release build. | Default Full excludes the interactive and distinct-account guest cases. |
+| `eng/run-thirdlife-hyperv.ps1 -Prepare` and private-runtime smoke | Built locked Release fixtures and staged the reviewed broker from `029107f`. Host bundle SHA-256 `d4a8222003ed306fc3d51c2cc9908ed146f764fb77d9a2d8ed06f6004b470091`. A clean extraction of the SDK and staged UI assembly ran the deterministic decline-mapping test in 11.701 s wall time. | Uses the pinned private Windows Desktop runtime. The guest transfer, installed candidate and UAC dialog remain unobserved. |
 | Hyper-V distinct-account admission, physical-host negative case | Refused at the guest identity check. The count of owned test account names was unchanged. | Exercises the negative guard before any account action. |
 | Console helper parser and synthetic CIM fixture | Passed in PowerShell 7 and Windows PowerShell 5.1. The fixture decoded a known RGB565 pixel and verified rejection of a changed frame, missing observation and the wrong VM. The matching frame issued one simulated Escape. | Hyper-V and secure-desktop calls were mocked. The Windows PowerShell run used the exact script text in a ScriptBlock under existing execution policy. |
 

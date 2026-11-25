@@ -4284,6 +4284,16 @@ tasks:
     duration: Host diagnostic invocation 2.731 s
     reference: artifacts/evidence/TL-0317/report.md, integrated base 634b49c
     limitation: VM startup and guest sign-in were reported by the owner. Guest identity, checkpoint, authentication and scenario outcomes still require direct observation.
+  - task: TL-0317
+    summary: The deterministic Full suite and Release build passed with the Hyper-V test fixtures and runner present.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Isolated active Windows 11 native x64 worktree, runtime test sources 029107f
+    date: '2026-11-25'
+    duration: 351.353 s
+    reference: artifacts/evidence/TL-0317/report.md
+    limitation: 303 governance and 2025 .NET tests passed. The default suite excludes ActiveMachine guest cases.
   expected_test_tier: full
   full_test_triggers:
   - Run the full tier for qualification of the protected privilege boundary.

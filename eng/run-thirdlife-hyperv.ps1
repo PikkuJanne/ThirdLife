@@ -143,9 +143,24 @@ $uacPolicy = $null
 $consoleSession = -1
 $testName = ''
 $testSource = ''
+$provisioned = $null
 $observed = $null
 $runStarted = [DateTime]::UtcNow
 $failedPhase = 'Connection'
+
+function Connect-Guest {
+    $direct.Commands.Clear()
+    $null = $direct.AddCommand('New-PSSession').AddParameter('VMId', $vm.Id).AddParameter('Credential', $Credential).
+        AddParameter('ErrorAction', 'Stop')
+    $pending = $direct.BeginInvoke()
+    if (-not $pending.AsyncWaitHandle.WaitOne(20000)) {
+        $null = $direct.BeginStop($null, $null)
+        throw 'The PowerShell Direct connection did not authenticate within 20 seconds.'
+    }
+    $connections = $direct.EndInvoke($pending)
+    if ($connections.Count -ne 1) { throw 'The PowerShell Direct endpoint did not return one authenticated session.' }
+    $connections[0].PSObject.BaseObject
+}
 
 function Invoke-Guest([string] $Mode, [int] $TimeoutSeconds = 20) {
     $job = Invoke-Command -Session $session -ScriptBlock $guest -AsJob -ArgumentList @(
@@ -180,16 +195,7 @@ try {
     try { $ownsLease = $lease.WaitOne(0) }
     catch [Threading.AbandonedMutexException] { $ownsLease = $true }
     if (-not $ownsLease) { throw 'A qualification run already owns this VM from this host session.' }
-    $null = $direct.AddCommand('New-PSSession').AddParameter('VMId', $vm.Id).AddParameter('Credential', $Credential).
-        AddParameter('ErrorAction', 'Stop')
-    $pending = $direct.BeginInvoke()
-    if (-not $pending.AsyncWaitHandle.WaitOne(20000)) {
-        $null = $direct.BeginStop($null, $null)
-        throw 'The PowerShell Direct connection did not authenticate within 20 seconds.'
-    }
-    $connections = $direct.EndInvoke($pending)
-    if ($connections.Count -ne 1) { throw 'The PowerShell Direct endpoint did not return one authenticated session.' }
-    $session = $connections[0].BaseObject
+    $session = Connect-Guest
     $failedPhase = 'Guest admission'
     $identity = Invoke-Guest Inspect
     $consoleSession = $identity.ConsoleSession
@@ -243,6 +249,10 @@ try {
 finally {
     try {
         if ($staged) {
+            if ($session.State -ne 'Opened') {
+                Remove-PSSession -Session $session -ErrorAction SilentlyContinue
+                $session = Connect-Guest
+            }
             Invoke-Guest Cleanup 45
             $cleaned = $true
         }
@@ -263,6 +273,8 @@ finally {
                 brokerSha256 = $profile.brokerSha256; payloadSha256 = $PayloadSha256; sdkSha512 = $profile.sdkSha512
                 durationSeconds = [Math]::Round(([DateTime]::UtcNow - $runStarted).TotalSeconds, 3)
                 startedUtc = $runStarted.ToString('o'); stoppedAt = $failedPhase; cleanupVerified = $cleaned
+                possibleGuestResidue = $staged -and -not $cleaned
+                protectedBrokerVerified = [bool]($provisioned -and $provisioned.ProtectedBrokerVerified)
                 guestBuild = $guestBuild; uacPolicy = $uacPolicy
                 testResult = $testResult; consoleObservation = $consoleObservation; observations = @($observations)
             }
