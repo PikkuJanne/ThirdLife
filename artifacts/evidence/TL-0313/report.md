@@ -69,3 +69,49 @@ Ordinary dispatch additionally requires TL-0314's
 candidate-scoped privilege decision. A successful no-op reply remains `Applied`
 until independent postcondition evidence exists. `Applied` and `RequiresReview`
 continue to prevent another execution approval in the affected job until resolved.
+
+## Controlled application qualification
+
+The TL-0313 cases use the dedicated Windows 11 Hyper-V guest and the pinned
+Native AOT broker from TL-0317. The guest runner verifies the retained protected
+installation and stages the checked-in fixture under its existing protected
+test root. The interactive test runs at medium integrity and uses the normal
+WPF approval and execution controls, the production broker adapter and a
+disposable SQLite job. Synthetic intake and policy data resolve the Basic profile's
+three essential capabilities, document editing, PDF reading and web browsing, to
+compiled no-ops. The batch installs no packages and changes no settings.
+
+Prepare the archive from the clean, committed candidate checkout. Use that same
+checkout and work directory for execution. Retain the VM identity and payload
+digest returned by the admitted guest and the preparation locally.
+
+```powershell
+$work = Join-Path $env:LOCALAPPDATA 'ThirdLife\HyperV-TL0313-Application'
+$bundle = .\eng\run-thirdlife-hyperv.ps1 -Prepare -WorkDirectory $work
+$guest = .\eng\run-thirdlife-hyperv.ps1 -Scenario Inspect -WorkDirectory $work
+$binding = @{
+    ExpectedVMId = $guest.VMId
+    PayloadSha256 = $bundle.PayloadSha256
+    WorkDirectory = $work
+}
+.\eng\run-thirdlife-hyperv.ps1 -Scenario ApplicationPreview @binding
+```
+
+`ApplicationPreview` loads the displayed plan and verifies its identity and
+reopen behavior without saving approval or requesting elevation. For the live
+cases, start `ApplicationAccept`, `ApplicationDecline` or `ApplicationCancel`
+with the same runner and binding in an attended Basic VMConnect session. Each run creates its own job and
+reports the plan and impact hashes. The operator reviews the displayed plan,
+enters their operator code, saves approval and chooses **Run approved no-op**.
+After the runner reports the consent process, the operator makes the Windows consent choice for the displayed
+`ThirdLife.Broker.exe` prompt. The saved approval belongs to that exact run.
+Keep the guest result local and record the visible Windows choice and the
+observed journal and reopen outcomes with their respective provenance.
+
+Application acceptance expects one correlated `Applied` result per action. Decline
+expects pre-dispatch authorization failures, a reopened job and an available
+fresh approval. Cancellation uses Windows **Yes** to reach the authenticated
+pre-dispatch pause, where the fixture invokes the WPF Cancel control. The broker
+reply carries no independent postcondition verification.
+The ordinary product startup remains gated by qualification and the applicable
+TL-0314 privilege decision.

@@ -349,6 +349,15 @@ the default Full filter. Follow the [runner procedure and case
 criteria](artifacts/evidence/TL-0317/report.md) for the reviewed candidate,
 guest admission, interactive consent observations and cleanup.
 
+TL-0313 reuses the same guest runner for the durable application flow. Its
+application cases use an isolated WPF and SQLite fixture, the protected installed
+broker and the synthetic Basic profile's three essential no-ops. The preview case
+exercises plan construction and reopening without an approval or dispatch. The interactive
+cases require the operator to approve the exact displayed plan in WPF and
+make the separate Windows consent choice in the Basic console. Follow the
+[TL-0313 procedure](artifacts/evidence/TL-0313/report.md) for the candidate
+binding, case selection and evidence limits.
+
 TL-0116 adds an independently invokable, unelevated Windows desktop scenario. From the
 verified Release checkout, run:
 

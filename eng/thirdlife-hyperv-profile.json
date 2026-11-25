@@ -18,6 +18,10 @@
     "Interrupt": "ThirdLife.UI.Tests.ProtectedBrokerRehearsalTests.TerminatingTheInstalledBrokerBeforeDispatchLeavesNoTerminalAction",
     "Timeout": "ThirdLife.UI.Tests.ProtectedBrokerRehearsalTests.InstalledBrokerTimesOutAfterAuthenticatedHello",
     "Disconnect": "ThirdLife.UI.Tests.ProtectedBrokerRehearsalTests.InstalledBrokerExitsWhenAuthenticatedClientDisconnects",
-    "RetainObservation": "ThirdLife.UI.Tests.ProtectedBrokerRehearsalTests.InstalledBrokerClientRetainsAnObservationWhenItsReceiveLoopIsInterrupted"
+    "RetainObservation": "ThirdLife.UI.Tests.ProtectedBrokerRehearsalTests.InstalledBrokerClientRetainsAnObservationWhenItsReceiveLoopIsInterrupted",
+    "ApplicationPreview": "ThirdLife.UI.Tests.PlanReviewTests.ProtectedNoOpApplicationPreviewsWithoutApproval",
+    "ApplicationAccept": "ThirdLife.UI.Tests.PlanReviewTests.ProtectedNoOpApplicationAcceptsWithSavedApproval",
+    "ApplicationDecline": "ThirdLife.UI.Tests.PlanReviewTests.ProtectedNoOpApplicationDeclinesWithSavedApproval",
+    "ApplicationCancel": "ThirdLife.UI.Tests.PlanReviewTests.ProtectedNoOpApplicationCancelsBeforeDispatch"
   }
 }

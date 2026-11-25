@@ -26,7 +26,7 @@ using static ThirdLife.UI.Tests.AuditWorkflowTests;
 namespace ThirdLife.UI.Tests;
 
 [Collection(ShellWindowChecks.Name)]
-public sealed class PlanReviewTests
+public sealed partial class PlanReviewTests
 {
     private static readonly DateTimeOffset EvaluationTime = new(2026, 10, 1, 14, 0, 0, TimeSpan.Zero);
     private static readonly PolicySnapshot ReadyPolicy = PolicySnapshot.Parse("""

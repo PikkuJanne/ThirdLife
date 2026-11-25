@@ -76,10 +76,23 @@ if ($Mode -eq 'Inspect') {
 
 if ($RunId -cnotmatch '\A[0-9a-f]{32}\z') { throw 'Invalid run identifier.' }
 if ($Mode -in @('Start','Status','RunTest') -and
-    ($Scenario -cnotin @('Verify','DistinctAccount','Accept','Decline','Interrupt','Timeout','Disconnect','RetainObservation') -or
+    ($Scenario -cnotin @('Verify','DistinctAccount','Accept','Decline','Interrupt','Timeout','Disconnect','RetainObservation',
+        'ApplicationPreview','ApplicationAccept','ApplicationDecline','ApplicationCancel') -or
         $TestName -cnotmatch '\AThirdLife\.(?:Broker|UI)\.Tests\.[A-Za-z][A-Za-z0-9.]+\z')) {
     throw 'Invalid qualification scenario or test selection.'
 }
+$applicationTests = @{
+    ApplicationPreview = 'ProtectedNoOpApplicationPreviewsWithoutApproval'
+    ApplicationAccept = 'ProtectedNoOpApplicationAcceptsWithSavedApproval'
+    ApplicationDecline = 'ProtectedNoOpApplicationDeclinesWithSavedApproval'
+    ApplicationCancel = 'ProtectedNoOpApplicationCancelsBeforeDispatch'
+}
+$applicationScenario = $Scenario -in $applicationTests.Keys
+if ($applicationScenario -and $Mode -in @('Start','Status','RunTest') -and
+    $TestName -cne ('ThirdLife.UI.Tests.PlanReviewTests.' + $applicationTests[$Scenario])) {
+    throw 'The test selection does not match the application case.'
+}
+$evidenceTask = if ($applicationScenario) { 'TL-0313' } else { 'TL-0317' }
 $programFiles = [Environment]::GetFolderPath('ProgramFiles')
 $programFilesItem = Get-Item -LiteralPath $programFiles -Force
 if (-not $programFilesItem.PSIsContainer -or ($programFilesItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
@@ -91,7 +104,7 @@ $stage = Join-Path $root $RunId
 $results = Join-Path $stage 'result'
 $tracePath = Join-Path $results 'trace.jsonl'
 $requestPath = Join-Path $stage 'run-request.json'
-$taskName = "ThirdLife-TL0317-$RunId"
+$taskName = "ThirdLife-$($evidenceTask.Replace('-', ''))-$RunId"
 $installedBroker = Join-Path $programFiles 'ThirdLife\Broker\ThirdLife.Broker.exe'
 $sdkRoot = Join-Path $stage 'sdk'
 $sdk = Join-Path $sdkRoot 'dotnet.exe'
@@ -168,6 +181,47 @@ function Get-ResultFile([string] $Name) {
     $item.FullName
 }
 
+function Get-ApplicationObservations([object[]] $Lines) {
+    $allowed = @('CandidateReady', 'Result')
+    if ($Scenario -cne 'ApplicationPreview') {
+        $allowed += @('ApprovalSaved', 'RequestingConsent')
+        if ($Scenario -ceq 'ApplicationCancel') { $allowed += 'AwaitingCancellation' }
+    }
+    foreach ($line in $Lines) {
+        if ($line.stage -isnot [string] -or $line.stage -cnotin $allowed -or
+            $line.scenario -cne $Scenario.ToLowerInvariant()) {
+            throw 'An unexpected application qualification stage was reported.'
+        }
+        $entry = [ordered]@{ stage = $line.stage; scenario = $Scenario.ToLowerInvariant() }
+        $timestamp = $line.PSObject.Properties['timestampUtc']
+        if ($timestamp -and $null -ne $timestamp.Value) {
+            $utc = [DateTimeOffset]::MinValue
+            if ($timestamp.Value -is [DateTime]) { $utc = [DateTimeOffset]$timestamp.Value }
+            elseif ($timestamp.Value -isnot [string] -or $timestamp.Value.Length -gt 40 -or
+                -not [DateTimeOffset]::TryParse($timestamp.Value, [Globalization.CultureInfo]::InvariantCulture,
+                    [Globalization.DateTimeStyles]::AssumeUniversal, [ref]$utc)) {
+                throw 'An application qualification timestamp was invalid.'
+            }
+            $entry.timestampUtc = $utc.UtcDateTime.ToString('o')
+        }
+        foreach ($field in @('clientUnelevated', 'reopened')) {
+            $value = $line.PSObject.Properties[$field]
+            if ($value -and $value.Value -is [bool]) { $entry[$field] = $value.Value }
+        }
+        if ($line.stage -ceq 'Result') {
+            if ($line.status -isnot [string] -or
+                $line.status -cnotin @('Previewed', 'Completed', 'Declined', 'Cancelled') -or
+                ($line.terminalCount -isnot [int] -and $line.terminalCount -isnot [long]) -or
+                $line.terminalCount -notin @(0, 3)) {
+                throw 'An unexpected application result was reported.'
+            }
+            $entry.status = $line.status
+            $entry.terminalCount = [int]$line.terminalCount
+        }
+        [pscustomobject]$entry
+    }
+}
+
 function Initialize-PrivateDotNet([string] $CliHome) {
     Get-ChildItem Env: | Where-Object Name -match '^(DOTNET_|CORECLR_|COR_|COMPLUS_|VSTEST_|MSBUILD)' |
         ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }
@@ -218,7 +272,9 @@ switch ($Mode) {
         }
         Push-Location -LiteralPath ([Environment]::SystemDirectory)
         try {
-            & $provisioner -BrokerArtifact $candidate -ExpectedSha256 $BrokerHash | Out-Null
+            if (-not $applicationScenario) {
+                & $provisioner -BrokerArtifact $candidate -ExpectedSha256 $BrokerHash | Out-Null
+            }
             & $provisioner -VerifyOnly -ExpectedSha256 $BrokerHash | Out-Null
         }
         finally { Pop-Location }
@@ -245,7 +301,7 @@ switch ($Mode) {
         }
         if (Test-Path -LiteralPath $results) { throw 'The qualification scenario already has a result directory.' }
         New-ProtectedDirectory $results $true
-        [IO.File]::WriteAllText($requestPath, (@{ task_id = 'TL-0317'; scenario = $Scenario; run_id = $RunId } | ConvertTo-Json -Compress))
+        [IO.File]::WriteAllText($requestPath, (@{ task_id = $evidenceTask; scenario = $Scenario; run_id = $RunId } | ConvertTo-Json -Compress))
         $acl = Get-Acl -LiteralPath $requestPath
         $acl.SetOwner($admins)
         Set-Acl -LiteralPath $requestPath -AclObject $acl
@@ -268,7 +324,8 @@ exit `$LASTEXITCODE
         $action = New-ScheduledTaskAction -Execute $powershell -Argument "-NoProfile -NonInteractive -EncodedCommand $encoded" -WorkingDirectory $stage
         $level = if ($Scenario -eq 'DistinctAccount') { 'Highest' } else { 'Limited' }
         $principal = New-ScheduledTaskPrincipal -UserId "$Computer\$Account" -LogonType Interactive -RunLevel $level
-        $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::FromMinutes(3)) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+        $taskMinutes = if ($applicationScenario -and $Scenario -cne 'ApplicationPreview') { 6 } else { 3 }
+        $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::FromMinutes($taskMinutes)) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
         Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Settings $settings | Out-Null
         Start-ScheduledTask -TaskName $taskName
     }
@@ -283,6 +340,7 @@ exit `$LASTEXITCODE
         $env:THIRDLIFE_TL0311_CONSENT_REHEARSAL = $Scenario.ToLowerInvariant()
         $env:THIRDLIFE_TL0317_TRACE_PATH = $tracePath
         if ($Scenario -eq 'DistinctAccount') { $env:THIRDLIFE_HYPERV_BROKER_ACL_RUN_ID = $RunId }
+        if ($applicationScenario) { $env:THIRDLIFE_TL0313_HYPERV_RUN_ID = $RunId }
         $assembly = if ($Scenario -eq 'DistinctAccount') { 'ThirdLife.Broker.Tests' } else { 'ThirdLife.UI.Tests' }
         $test = Join-Path $stage "payload\$assembly\$assembly.dll"
         & $sdk vstest $test "/TestCaseFilter:FullyQualifiedName=$TestName" `
@@ -304,8 +362,43 @@ exit `$LASTEXITCODE
             finally { $stream.Dispose() }
             $lastLine = $content.LastIndexOf("`n")
             if ($lastLine -ge 0) {
-                $lines = @($content.Substring(0, $lastLine).Split("`n") | Select-Object -First 12 |
-                    ForEach-Object { ConvertFrom-Json $_ })
+                $rows = $content.Substring(0, $lastLine).Split("`n")
+                if ($applicationScenario -and $rows.Count -gt 12) { throw 'Too many application observations.' }
+                $lines = @($rows | Select-Object -First 12 | ForEach-Object { ConvertFrom-Json $_ })
+            }
+        }
+        $applicationPlan = $null
+        $observations = if ($applicationScenario) { @(Get-ApplicationObservations $lines) }
+            else { @($lines | Select-Object stage, scenario, timestampUtc, status, terminalCount, clientUnelevated, exitCode) }
+        if ($applicationScenario) {
+            $candidates = @($lines | Where-Object stage -ceq 'CandidateReady')
+            if ($candidates.Count -gt 1) { throw 'The application reported multiple candidate plans.' }
+            if ($candidates.Count -eq 1) {
+                $candidate = $candidates[0]
+                $capabilities = @('document_editing', 'pdf_reading', 'web_browsing')
+                if ($candidate.scenario -cne $Scenario.ToLowerInvariant() -or
+                    $candidate.clientUnelevated -isnot [bool] -or -not $candidate.clientUnelevated -or
+                    $candidate.actionCount -ne 3 -or $candidate.capabilities -isnot [array] -or
+                    $candidate.capabilities.Count -ne 3 -or
+                    (($candidate.capabilities -join ',') -cne ($capabilities -join ',')) -or
+                    $candidate.planSha256 -isnot [string] -or $candidate.planSha256 -cnotmatch '\A[0-9a-f]{64}\z' -or
+                    $candidate.impactSha256 -isnot [string] -or $candidate.impactSha256 -cnotmatch '\A[0-9a-f]{64}\z') {
+                    throw 'The application plan observation does not match the reviewed qualification format.'
+                }
+                $applicationPlan = [pscustomobject]@{
+                    PlanSha256 = $candidate.planSha256
+                    ImpactSha256 = $candidate.impactSha256
+                    ActionCount = 3
+                    Capabilities = $capabilities
+                    ClientUnelevated = $true
+                }
+            }
+            $approvals = @($lines | Where-Object stage -ceq 'ApprovalSaved')
+            if ($approvals.Count -gt 1 -or ($approvals.Count -eq 1 -and
+                (-not $applicationPlan -or
+                    $approvals[0].planSha256 -cne $applicationPlan.PlanSha256 -or
+                    $approvals[0].impactSha256 -cne $applicationPlan.ImpactSha256))) {
+                throw 'The saved approval does not match the candidate plan and impact digests.'
             }
         }
         if ($Scenario -eq 'Interrupt') {
@@ -342,7 +435,7 @@ exit `$LASTEXITCODE
         $passed = $false
         $testFailure = $null
         $testNativeErrorCode = $null
-        $classifyFailure = $Scenario -cin @('DistinctAccount', 'RetainObservation')
+        $classifyFailure = $applicationScenario -or $Scenario -cin @('DistinctAccount', 'RetainObservation')
         if ($trx -and $null -ne $testExit) {
             $xmlSettings = [Xml.XmlReaderSettings]::new()
             $xmlSettings.DtdProcessing = [Xml.DtdProcessing]::Prohibit
@@ -359,7 +452,13 @@ exit `$LASTEXITCODE
                         # Only fixed classification tokens leave the guest. TRX can contain local paths and identities.
                         $messageNode = $case[0].SelectSingleNode(".//*[local-name()='ErrorInfo']/*[local-name()='Message']")
                         $message = if ($messageNode) { $messageNode.InnerText } else { '' }
-                        if ($Scenario -ceq 'RetainObservation') {
+                        if ($applicationScenario) {
+                            $testFailure = switch -Regex ($message) {
+                                'OperationCanceledException|TaskCanceledException|TimeoutException' { 'CaseDeadlineElapsed'; break }
+                                default { 'ApplicationFixtureAssertionFailed' }
+                            }
+                        }
+                        elseif ($Scenario -ceq 'RetainObservation') {
                             $testFailure = switch -Regex ($message) {
                                 'Expected:\s*typeof\(System\.Diagnostics\.Process\)' { 'BrokerProcessUnavailable'; break }
                                 'could not be authenticated|Elevated process changed the initiating user' { 'BrokerPeerRejected'; break }
@@ -421,6 +520,31 @@ exit `$LASTEXITCODE
             finally { $reader.Dispose() }
         }
         elseif ($exitFile -and $classifyFailure) { $testFailure = 'TestResultMissing' }
+        if ($passed -and $applicationScenario) {
+            $expectedStatus = @{
+                ApplicationPreview = 'Previewed'; ApplicationAccept = 'Completed'
+                ApplicationDecline = 'Declined'; ApplicationCancel = 'Cancelled'
+            }[$Scenario]
+            $expectedTerminals = if ($Scenario -ceq 'ApplicationPreview') { 0 } else { 3 }
+            $expectedStages = @('CandidateReady')
+            if ($Scenario -cne 'ApplicationPreview') {
+                $expectedStages += @('ApprovalSaved', 'RequestingConsent')
+                if ($Scenario -ceq 'ApplicationCancel') { $expectedStages += 'AwaitingCancellation' }
+            }
+            $expectedStages += 'Result'
+            $actualStages = @($observations | ForEach-Object stage)
+            $applicationResults = @($observations | Where-Object stage -ceq 'Result')
+            if (-not $applicationPlan -or ($actualStages -join ',') -cne ($expectedStages -join ',') -or
+                $applicationResults.Count -ne 1 -or
+                $applicationResults[0].scenario -cne $Scenario.ToLowerInvariant() -or
+                $applicationResults[0].status -cne $expectedStatus -or
+                $applicationResults[0].terminalCount -ne $expectedTerminals -or
+                $applicationResults[0].clientUnelevated -isnot [bool] -or -not $applicationResults[0].clientUnelevated -or
+                $applicationResults[0].reopened -isnot [bool] -or -not $applicationResults[0].reopened) {
+                $passed = $false
+                $testFailure = 'ApplicationResultUnexpected'
+            }
+        }
         [pscustomobject]@{
             State = [string]$state
             HasExit = [bool]$exitFile
@@ -431,7 +555,8 @@ exit `$LASTEXITCODE
             TaskLastResult = $taskLastResult
             BrokerRemaining = [bool](Get-Process -Name 'ThirdLife.Broker' -ErrorAction SilentlyContinue)
             ConsentProcess = [bool](Get-Process -Name 'consent' -ErrorAction SilentlyContinue | Where-Object SessionId -eq $ConsoleSession)
-            Observations = @($lines | Select-Object stage, scenario, timestampUtc, status, terminalCount, clientUnelevated, exitCode)
+            ApplicationPlan = $applicationPlan
+            Observations = @($observations)
         }
     }
     'Cleanup' {

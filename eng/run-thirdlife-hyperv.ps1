@@ -6,7 +6,8 @@ param(
         (Join-Path ([Environment]::GetFolderPath('ProgramFiles')) 'ThirdLife\Broker\ThirdLife.Broker.exe'),
     [Parameter(ParameterSetName = 'Prepare')][string] $SdkArchive,
     [Parameter(Mandatory, ParameterSetName = 'Run')]
-    [ValidateSet('Inspect','Verify','DistinctAccount','Accept','Decline','Interrupt','Timeout','Disconnect','RetainObservation')]
+    [ValidateSet('Inspect','Verify','DistinctAccount','Accept','Decline','Interrupt','Timeout','Disconnect','RetainObservation',
+        'ApplicationPreview','ApplicationAccept','ApplicationDecline','ApplicationCancel')]
     [string] $Scenario,
     [Parameter(ParameterSetName = 'Run')][pscredential] $Credential,
     [Parameter(ParameterSetName = 'Run')][switch] $PromptForCredential,
@@ -18,6 +19,17 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $profile = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'thirdlife-hyperv-profile.json') -Raw | ConvertFrom-Json
+if ($Scenario -and $Scenario -ine 'Inspect') {
+    $scenarioEntry = $profile.scenarios.PSObject.Properties[$Scenario]
+    if (-not $scenarioEntry) { throw 'The scenario is missing from the pinned profile.' }
+    $Scenario = $scenarioEntry.Name
+}
+$applicationScenario = $Scenario -cin @('ApplicationPreview', 'ApplicationAccept', 'ApplicationDecline', 'ApplicationCancel')
+$requiresApplicationConsent = $applicationScenario -and $Scenario -cne 'ApplicationPreview'
+$evidenceTask = if ($applicationScenario) { 'TL-0313' } else { $profile.task }
+if ($applicationScenario -and $ExpectedVMId -eq [guid]::Empty) {
+    throw 'Bind the application case to the exact VMId returned by Inspect.'
+}
 $repo = Split-Path -Parent $PSScriptRoot
 $driverPath = Join-Path $PSScriptRoot 'run-thirdlife-hyperv-guest.ps1'
 $work = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($WorkDirectory)
@@ -152,6 +164,8 @@ $testName = ''
 $testSource = ''
 $provisioned = $null
 $observed = $null
+$applicationPlan = $null
+$announced = $false
 $runStarted = [DateTime]::UtcNow
 $failedPhase = 'Connection'
 
@@ -213,14 +227,22 @@ try {
         [pscustomobject]@{ VMId = $vm.Id; GuestBuild = $identity.Build; CredentialVerified = $true; UacPolicy = $uacPolicy }
         return
     }
+    if ($requiresApplicationConsent -and ($uacPolicy.EnableLUA -ne 1 -or
+        $uacPolicy.PromptOnSecureDesktop -ne 1 -or $uacPolicy.ConsentPromptBehaviorAdmin -notin @(2, 5))) {
+        throw 'The application case requires Windows consent on the secure desktop.'
+    }
     $failedPhase = 'Bundle verification'
     if (-not $PayloadSha256) { throw 'Pass the exact PayloadSha256 printed by the trusted host preparation.' }
     Assert-Digest $payload SHA256 $PayloadSha256
     Assert-Digest $sdk SHA512 $profile.sdkSha512
     $testSource = & git -C $repo rev-parse HEAD
     if ($LASTEXITCODE -ne 0 -or $testSource -cnotmatch '\A[0-9a-f]{40}\z') { throw 'Cannot identify the test source.' }
-    $testName = $profile.scenarios.$Scenario
-    if (-not $testName) { throw 'The scenario is missing from the pinned profile.' }
+    if ($applicationScenario) {
+        $dirty = & git -C $repo status --porcelain --untracked-files=no
+        if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'Run the application case from the committed payload checkout.' }
+    }
+    $testName = [string]$scenarioEntry.Value
+    if (-not $testName) { throw 'The scenario has no test in the pinned profile.' }
 
     $failedPhase = 'Guest stage'
     $stage = Invoke-Guest Initialize
@@ -238,17 +260,42 @@ try {
     $failedPhase = 'Interactive scenario'
     Invoke-Guest Start
     $limit = [Diagnostics.Stopwatch]::StartNew()
-    $announced = $false
-    while ($limit.Elapsed.TotalSeconds -lt 160) {
+    $timeLimit = if ($requiresApplicationConsent) { 300 } else { 160 }
+    $cancelAnnounced = $false
+    while ($limit.Elapsed.TotalSeconds -lt $timeLimit) {
         $observed = Invoke-Guest Status 10
+        if ($applicationScenario -and -not $applicationPlan -and $observed.ApplicationPlan) {
+            $applicationPlan = $observed.ApplicationPlan
+            Write-Host "The application displays the exact three-action no-op batch for $Scenario."
+            Write-Host ($applicationPlan.Capabilities -join ', ')
+            Write-Host "Plan SHA-256 $($applicationPlan.PlanSha256)"
+            Write-Host "Impact SHA-256 $($applicationPlan.ImpactSha256)"
+            if ($requiresApplicationConsent) {
+                Write-Host 'In the Basic guest console, review the batch, enter your operator code and choose Approve, then Run approved no-op.'
+            }
+        }
         if (-not $announced -and $observed.ConsentProcess) {
             Write-Host "Consent process observed for $Scenario in the admitted console. Verify the actual prompt in that console before acting."
             $announced = $true
+            if ($requiresApplicationConsent) {
+                $windowsChoice = if ($Scenario -ceq 'ApplicationDecline') { 'No' } else { 'Yes' }
+                Write-Host "The operator selects $windowsChoice on the reviewed ThirdLife.Broker.exe prompt for $Scenario."
+            }
         }
-        if ($observed.HasExit -and $observed.State -ne 'Running') { break }
+        if ($Scenario -ceq 'ApplicationPreview' -and $announced) {
+            throw 'Unexpected Windows consent during the approval-free application preview.'
+        }
+        if ($Scenario -ceq 'ApplicationCancel' -and -not $cancelAnnounced -and
+            ($observed.Observations | Where-Object stage -ceq 'AwaitingCancellation')) {
+            Write-Host 'The application fixture reached its authenticated pre-dispatch cancellation check.'
+            $cancelAnnounced = $true
+        }
+        if ($observed.HasExit -and $observed.State -notin @('Running', 'Queued') -and
+            (-not $applicationScenario -or -not $observed.BrokerRemaining)) { break }
         Start-Sleep -Milliseconds 500
     }
-    if (-not $observed.Passed -or $observed.State -eq 'Running' -or $observed.BrokerRemaining) {
+    if (-not $observed.Passed -or $observed.State -in @('Running', 'Queued') -or $observed.BrokerRemaining -or
+        ($applicationScenario -and (-not $applicationPlan -or $requiresApplicationConsent -ne $announced))) {
         throw 'The expected scenario was not verified with one passing case and no surviving broker.'
     }
     $failedPhase = ''
@@ -273,7 +320,7 @@ finally {
             $null = [IO.Directory]::CreateDirectory($work)
             $testResult = if (-not $failedPhase -and $cleaned) { 'passed' }
                 elseif ($observed -and $observed.HasExit) { 'failed' } else { 'unobserved' }
-            $consoleObservation = if ($Scenario -in @('Verify', 'DistinctAccount')) { 'not_required' } else { 'collect_separately' }
+            $consoleObservation = if ($Scenario -in @('Verify', 'DistinctAccount', 'ApplicationPreview')) { 'not_required' } else { 'collect_separately' }
             $observations = if ($observed) { @($observed.Observations) } else { @() }
             $testFailure = $testExitCode = $taskLastResult = $testNativeErrorCode = $null
             if ($observed) {
@@ -283,7 +330,7 @@ finally {
                 $testNativeErrorCode = $observed.TestNativeErrorCode
             }
             $record = [ordered]@{
-                task = $profile.task; scenario = $Scenario; brokerSource = $profile.brokerSource; testSource = $testSource
+                task = $evidenceTask; scenario = $Scenario; brokerSource = $profile.brokerSource; testSource = $testSource
                 brokerSha256 = $profile.brokerSha256; payloadSha256 = $PayloadSha256; sdkSha512 = $profile.sdkSha512
                 durationSeconds = [Math]::Round(([DateTime]::UtcNow - $runStarted).TotalSeconds, 3)
                 startedUtc = $runStarted.ToString('o'); stoppedAt = $failedPhase; cleanupVerified = $cleaned
@@ -293,6 +340,11 @@ finally {
                 testResult = $testResult; consoleObservation = $consoleObservation; observations = @($observations)
                 testFailure = $testFailure; testExitCode = $testExitCode; taskLastResult = $taskLastResult
                 testNativeErrorCode = $testNativeErrorCode
+            }
+            if ($applicationScenario) {
+                $record.applicationPlan = $applicationPlan
+                $record.consentProcessObserved = $announced
+                $record.brokerRemainingAtLastStatus = if ($observed) { $observed.BrokerRemaining } else { $null }
             }
             $outcome = Join-Path $work "$id.$Scenario.json"
             [IO.File]::WriteAllText($outcome, ($record | ConvertTo-Json -Depth 5))
