@@ -108,7 +108,11 @@
         }
       },
       "thirdlife.broker": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Actions": "[1.0.0, )",
+          "ThirdLife.Broker.Protocol": "[1.0.0, )"
+        }
       },
       "thirdlife.broker.protocol": {
         "type": "Project",

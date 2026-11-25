@@ -120,6 +120,13 @@
           "ThirdLife.Policy": "[1.0.0, )"
         }
       },
+      "thirdlife.broker.protocol": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Actions": "[1.0.0, )",
+          "ThirdLife.Core": "[1.0.0, )"
+        }
+      },
       "thirdlife.catalog": {
         "type": "Project"
       },
@@ -163,6 +170,7 @@
         "type": "Project",
         "dependencies": {
           "ThirdLife.Actions": "[1.0.0, )",
+          "ThirdLife.Broker.Protocol": "[1.0.0, )",
           "ThirdLife.Catalog": "[1.0.0, )",
           "ThirdLife.Core": "[1.0.0, )",
           "ThirdLife.Inventory": "[1.0.0, )",

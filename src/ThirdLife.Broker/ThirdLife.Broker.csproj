@@ -1,10 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ThirdLife.Actions\ThirdLife.Actions.csproj" />
+    <ProjectReference Include="..\ThirdLife.Broker.Protocol\ThirdLife.Broker.Protocol.csproj" />
+    <InternalsVisibleTo Include="ThirdLife.Broker.Tests" />
+  </ItemGroup>
 
 </Project>

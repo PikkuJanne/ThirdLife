@@ -5,7 +5,7 @@ param(
     [string] $Phase = "Targeted",
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "TL-0111", "TL-0112", "TL-0113", "AMD-2026-09-12-REPOSITORY-STABILIZATION")]
+    [ValidateSet("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "TL-0111", "TL-0112", "TL-0113", "TL-0311", "AMD-2026-09-12-REPOSITORY-STABILIZATION")]
     [string] $EvidenceTaskId = "TL-0102",
 
     [Parameter(Mandatory = $false)]
@@ -376,6 +376,9 @@ function Get-LockedNuGetClosure {
         if ($SelectedTaskId -eq "TL-0104") {
             $lockFiles = @(Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Diagnostics.Tests\packages.lock.json") -Force)
         }
+        elseif ($SelectedTaskId -eq "TL-0311") {
+            $lockFiles = @(Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Broker.Tests\packages.lock.json") -Force)
+        }
         else {
             $lockFiles = @(
                 Get-Item -LiteralPath (Join-Path $SourceRoot "tests\ThirdLife.Core.Tests\packages.lock.json") -Force
@@ -729,6 +732,9 @@ if ($TaskId -eq "TL-0112" -and $Phase -notin @("Quick", "Targeted")) {
 if ($TaskId -eq "TL-0113" -and $Phase -notin @("Quick", "Targeted")) {
     throw "TL-0113 supports only the shared Quick or Targeted Sandbox verification profiles."
 }
+if ($TaskId -eq "TL-0311" -and $Phase -ne "Targeted") {
+    throw "TL-0311 supports only the offline Targeted Sandbox broker ACL scenario."
+}
 if ($TaskId -eq "TL-0104" -and $Phase -notin @("Targeted", "Quick", "Full")) {
     throw "TL-0104 supports only Targeted, Quick, or Full Sandbox verification."
 }
@@ -854,6 +860,13 @@ try {
         $taskWorkingPaths = @(
             "src/ThirdLife.UI"
             "tests/ThirdLife.UI.Tests"
+        )
+    }
+    if ($TaskId -eq "TL-0311") {
+        $taskWorkingPaths = @(
+            "src/ThirdLife.Broker"
+            "src/ThirdLife.Broker.Protocol"
+            "tests/ThirdLife.Broker.Tests"
         )
     }
     $taskUntrackedFiles = @(& $gitExecutable -C $repositoryRoot ls-files --others --exclude-standard -- @taskWorkingPaths)

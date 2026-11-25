@@ -157,6 +157,7 @@ REQUIRED_FILES = (
     "schemas/policy.schema.json",
     "schemas/profile.schema.json",
     "docs/security/abuse-cases.md",
+    "docs/security/broker-launch.md",
     "docs/security/broker-protocol.md",
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
