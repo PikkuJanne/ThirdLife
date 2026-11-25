@@ -3,16 +3,16 @@
 | Field | Value |
 | --- | --- |
 | Gate task | `TL-0208` |
-| Record state | Review — technical verification complete |
+| Record state | Done — technical verification and policy-owner approval complete |
 | Integrated M2 product source | `bf7076ccee9e5c4c438f4706a68a1021e98316b7` |
 | Runtime authority | Active Codex machine, `REF-CODEX-001` revision `2026-08-29.1` |
-| Accountable decision | Policy-owner disposition wording and exception governance |
+| Accountable decision | Internal M2 wording and exception governance approved on 2026-11-25 |
 | Verified gate checkpoint | `0179b4f989dc2e743d08e463a9ad57fb3d27eb1d` |
-| Review branch | [Draft PR #25](https://github.com/PikkuJanne/ThirdLife/pull/25) |
+| Integration | [PR #25](https://github.com/PikkuJanne/ThirdLife/pull/25) |
 
 All seven preceding M2 engineering tasks are integrated into `main` through
-PRs #18–#24. This gate verifies the integrated product and prepares the
-applicable policy-owner decision under D-074.
+PRs #18–#24. This gate records verification of that product and the
+policy-owner decision under D-074.
 [Roadmap](../../ROADMAP.md#m2--explainable-disposition-engine)
 
 ## Acceptance
@@ -24,7 +24,24 @@ applicable policy-owner decision under D-074.
 | Exceptions require a reason and attributable history | A permitted exception binds the exact policy bytes, rule, job, fact, operator and time. Replacements append history. The report distinguishes exceptions from passes and pending confirmation. [Exceptions](../evidence/TL-0204/report.md) |
 | Policy updates preserve historical jobs | Disposable SQLite tests reject downgrade, changed same-version bytes, stale predecessors and corruption. An authorized reevaluation appends a linked record. Reopening retains the exact earlier policy and report. [Policy history](../evidence/TL-0205/report.md) |
 | Reports distinguish facts from organization decisions | Five report goldens, exception and privacy cases, and a loaded native WPF keyboard test cover separate facts, policy, exceptions and disposition. Linked retests retain original failure records. [Reports](../evidence/TL-0207/report.md) · [Retests](../evidence/TL-0206/report.md) |
-| New wording and governance have an attributable owner decision | Pending. The candidate wording and rules are prepared for that decision. |
+| New wording and governance have an attributable owner decision | Janne Vuorela approved the exact proposal for the internal M2 candidate. [Decision record](#policy-owner-decision) |
+
+## Policy-owner decision
+
+Janne Vuorela, project owner acting as policy owner, replied “Proposal approved”
+in the active Codex conversation on 2026-11-25 (Europe/Berlin). The approval
+covers the proposed disposition wording, including the summary when a check
+is resolved with an exception, the disposition precedence and Windows target
+guard, and the proposed exception governance for the internal M2 candidate.
+
+The approval binds product source `bf7076ccee9e5c4c438f4706a68a1021e98316b7`
+and the proposal presented from review checkpoint
+`fcecbb1fb672fc2d9aa2b423e94244fa69294ddc`. The proposal SHA-256 is
+`be59861a13d6d0d360cfbb4d92fb1b61c23ff180700540cc5c5eef9db254673d`.
+Effective policy adoption, individual exception grants, pilot exposure and
+release authorization retain their own requirements.
+[Exact proposal as presented](../evidence/TL-0208/policy-owner-decision.md)
+[D-074](../../DECISIONS.md#d-074)
 
 ## Verification
 
@@ -53,7 +70,13 @@ one startup observation. The worktree remained clean.
 | `ThirdLife.UI.exe` | `f5a060ab6c80e9a0d6c591b097cb1e2eb5128c574c0cd24d115689aad7913dde` |
 | `ThirdLife.UI.dll` | `0c72171e1ec1cbde2626887ec4a02d84f5d6c7474170e130eb54a4b84695ece7` |
 
-Extended had no trigger. The supplementary check on merged PR #24 passed.
+The approval checkpoint changes only governance records. The pre-edit
+`tools/validate_bundle.py` baseline passed in 3.103 s using the available
+custom structural validator. The Full, startup and representative-report
+results carry forward against the same product, tests and fixtures.
+
+Extended had no trigger. The supplementary checks on merged PR #24 and the
+proposal checkpoint of PR #25 passed.
 
 The compiled v2 renderer produced six synthetic workshop reports in 0.294 s.
 Inspection confirmed each of the five disposition headings, the relevant
@@ -86,6 +109,3 @@ pilot, stable-release or deployment authorization.
 The bundled candidate has no exception grants. Synthetic tests exercise
 reason validation and history. The saved decision preserves visible
 exception attribution while private reasons stay out of the captured report.
-The decision proposal SHA-256 is
-`be59861a13d6d0d360cfbb4d92fb1b61c23ff180700540cc5c5eef9db254673d`.
-[Prepared policy-owner decision](../evidence/TL-0208/policy-owner-decision.md)

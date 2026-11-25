@@ -3263,7 +3263,7 @@ tasks:
   workstream: release
   kind: gate
   priority: P0
-  status: review
+  status: done
   size: S
   executor: hybrid
   environment: any
@@ -3305,7 +3305,17 @@ tasks:
     result: passed
     environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400, clean same-machine worktree and synthetic fixtures
     date: '2026-11-24'
-    reference: artifacts/gates/M2-disposition.md, source 0179b4f989dc2e743d08e463a9ad57fb3d27eb1d, draft PR 25. Pending policy-owner wording and governance decision.
+    reference: artifacts/gates/M2-disposition.md, source 0179b4f989dc2e743d08e463a9ad57fb3d27eb1d, PR 25. Technical verification.
+  - summary: Janne Vuorela approved the exact internal M2 disposition wording and exception governance.
+    task: TL-0208
+    command_or_review: Explicit approval in the active Codex conversation
+    tier: policy-owner decision
+    result: approved
+    environment: Janne Vuorela, project owner acting as policy owner
+    date: '2026-11-25'
+    duration: one decision reply
+    reference: artifacts/gates/M2-disposition.md#policy-owner-decision, PR 25
+    limitation: Internal candidate approval. Effective adoption, individual grants, pilot and release have separate requirements.
   human_evidence_required:
   - The policy owner decides on new or materially changed disposition wording and exception governance. Record the actual
     decision and scope, or cite the valid unchanged decision.
