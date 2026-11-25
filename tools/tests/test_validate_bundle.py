@@ -3884,6 +3884,43 @@ class DevelopmentContractResetTests(unittest.TestCase):
         broker["evidence"] = [{"summary": "Fixture record without qualification and consent."}]
         self.assertIn("TL-0317: done requires satisfied execution_prerequisites", self.validate_contract())
 
+    def test_pending_application_qualification_only_blocks_broker_exposure(self) -> None:
+        for task_id in (
+            "TL-0311", "TL-0312", "TL-0313", "TL-0316", "TL-0317",
+            "TL-0401", "TL-0402", "TL-0403", "TL-0404",
+        ):
+            self.tasks[task_id]["status"] = "done"
+            self.tasks[task_id]["evidence"] = [{"summary": "Fixture prerequisite verification."}]
+        for entry in self.tasks["TL-0317"]["execution_prerequisites"]:
+            if entry["kind"] != "task":
+                entry["evidence"] = "Fixture protected broker qualification."
+
+        gate = self.tasks["TL-0314"]
+        gate["status"] = "backlog"
+        qualification = self.tasks["TL-0318"]
+        qualification["status"] = "blocked"
+        self.tasks["TL-0405"]["status"] = "backlog"
+        for entry in gate["release_prerequisites"]:
+            if entry["kind"] == "authorization":
+                entry["evidence"] = "Fixture security-owner decision."
+        for entry in qualification["execution_prerequisites"]:
+            if entry["kind"] == "authorization":
+                entry.pop("evidence", None)
+
+        selectable = validate_bundle.select_engineering_tasks(self.tasks)
+        self.assertIn("TL-0314", selectable)
+        self.assertIn("TL-0405", selectable)
+        self.assertNotIn("TL-0318", selectable)
+        self.assertEqual(self.validate_contract(), [])
+
+        gate["status"] = "done"
+        gate["evidence"] = [{"summary": "Fixture gate preparation."}]
+        self.assertIn("TL-0314: done requires satisfied release_prerequisites", self.validate_contract())
+
+        qualification["status"] = "done"
+        qualification["evidence"] = [{"summary": "Fixture application preparation."}]
+        self.assertIn("TL-0318: done requires satisfied execution_prerequisites", self.validate_contract())
+
     def test_missing_exposure_consent_keeps_release_unqualified(self) -> None:
         pilot = self.tasks["TL-0611"]
         candidate = self.tasks["TL-0610"]

@@ -32,6 +32,8 @@ Keep one intelligible default-branch continuation and use scoped branches based 
 
 A checkpoint may integrate when its scope is verified, production behavior remains safe, and unavailable or unqualified paths are visibly unavailable and unreachable. Keep remaining qualification or consent in the task record. Real execution and release decisions stay bound to the affected capability or exposure. Never infer a capability or release claim from merge state.
 
+Run unattended checks and prepare the exact candidates before requesting any attended decisions. Group pending operator actions in a planned validation window where practical. Record each approval and Windows choice against the action it governs. Continue independent work during the wait, and reuse earlier verification within the scope allowed by [TESTING.md](TESTING.md).
+
 For each meaningful checkpoint:
 
 1. Review the scoped diff, changed task state, affected security/privacy/accessibility/resource requirements, and applicable evidence. Exclude secrets, personal data, raw run output, caches and local setup files.

@@ -23,8 +23,8 @@ TL-0317 completed the reviewed no-op broker qualification and cleared the TL-031
 implementation prerequisite. All eight named cases passed in the Windows 11
 Hyper-V guest using PowerShell Direct and the local DPAPI credential. Evidence
 includes actual Windows consent and decline, distinct-account denial, recovery,
-and cleanup. Ordinary broker-dependent dispatch remains gated by live
-application qualification in TL-0313 and the applicable TL-0314 privilege decision.
+and cleanup. Ordinary broker-dependent dispatch requires live application
+qualification under TL-0318 and the TL-0314 privilege decision.
 [Guest runner and evidence](artifacts/evidence/TL-0317/report.md)
 
 TL-0312 completed the focused broker security checks for the reviewed no-op scope.
@@ -33,11 +33,10 @@ dispatch. The unelevated launch and bounded parser checks passed, and clean Full
 passed on `e734b5f`. Windows consent, distinct-account denial and teardown retain
 their TL-0317 provenance. [Broker security evidence](artifacts/evidence/TL-0312/report.md)
 
-TL-0313's guest preview reopened the exact three-action no-op plan in WPF and
-SQLite with zero approvals or journal entries. The independent WPF process-kill
-case reopened its job and recorded one recovery outcome per action. The guest
-dispatch cases require an operator to approve each exact plan in WPF and make
-the Windows consent choice. Ordinary dispatch also requires TL-0314 approval.
+TL-0313 is complete at implementation scope on `main`. The guest preview reopened the
+exact no-op plan, and the WPF process-kill scenario recovered the durable job.
+TL-0318 holds the live guest cases for an attended window with exact WPF
+approval and Windows consent for each plan. M3 technical preparation can proceed.
 [Orchestration evidence](artifacts/evidence/TL-0313/report.md)
 
 The next independent package task is TL-0405, covering progress, cancellation,

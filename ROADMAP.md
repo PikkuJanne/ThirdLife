@@ -264,7 +264,7 @@ TL-0113's completed shell observations retain their original provenance. TL-0114
 
 The [platform amendment](docs/amendments/2026-11-25-windows-11-only.md) supersedes the former Windows 10 live-audit criterion from TL-0107 and applies to the first executable broker. TL-0311 retains responsibility for trusted elevated startup and actual privilege and recovery evidence.
 
-**Gate:** `TL-0314` — Validate the M3 safe-planning gate. Record technical evidence and the authorization scoped to broker-dependent use. Independent package engineering follows its own prerequisites.
+**Gate:** `TL-0314` — Prepare the technical evidence and complete the gate after `TL-0318` verifies the live application route and the security owner records the scope-bound privilege decision. Independent package engineering follows its own prerequisites.
 
 ### M4 — One package installation vertical slice
 

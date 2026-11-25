@@ -65,9 +65,9 @@ unavailable. Decline and cancellation preserve the unelevated workflow, and ambi
 dispatch retains the existing recovery result.
 
 TL-0317 qualified the reviewed no-op candidate through the opt-in rehearsal.
-Ordinary broker-dependent actions remain gated by application orchestration
-in TL-0313 and the applicable TL-0314 privilege decision. Package setup uses
-its reviewed Windows Installer route.
+TL-0313 verified durable application orchestration. Ordinary broker-dependent
+actions require TL-0318 live application qualification and the TL-0314
+privilege decision. Package setup uses its reviewed Windows Installer route.
 
 The host publication, provisioning and consent observations are preserved in
 [TL-0311 evidence](../../artifacts/evidence/TL-0311/report.md). TL-0314 retains the
