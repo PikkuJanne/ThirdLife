@@ -3778,7 +3778,7 @@ tasks:
   workstream: execution
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -3801,7 +3801,37 @@ tasks:
   - The application does not auto-elevate on login.
   verification:
   - Test tamper, expiry, replay, duplicate start, and abandoned resume.
-  evidence: []
+  evidence:
+  - summary: Authenticated checkpoint and one-shot operator decisions passed through the Actions contracts, guarded SQLite store and WPF job view.
+    task: TL-0309
+    command_or_review: .\eng\verify.ps1 -Tier Targeted with Actions, Persistence and UI tests
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, unelevated, disposable SQLite and WPF recovery fixtures
+    date: '2026-11-25'
+    duration: 118.603 s, 1406 tests
+    reference: artifacts/evidence/TL-0309/report.md, source b3eabcd
+    limitation: Resume opens a review path. Physical or VM cold boot evidence belongs to TL-0509.
+  - summary: Additive v6 migration and complete clean verification passed.
+    task: TL-0309
+    command_or_review: .\eng\verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean same-machine worktree, Windows 11 x64, Python 3.14.7 and SDK 10.0.400
+    date: '2026-11-25'
+    duration: 340.433 s, 287 governance and 1845 .NET tests
+    reference: artifacts/evidence/TL-0309/report.md, source tree 4c4a987
+    limitation: V5 readers reject v6. No changes to earlier migrations or external packages.
+  - summary: Named FI-011 authentication/replay and FI-012 interrupted decision-commit cases passed independently.
+    task: TL-0309
+    command_or_review: Independently filtered reboot-checkpoint persistence cases in docs/testing/failure-injection.md
+    tier: extended
+    result: passed
+    environment: Unelevated active Windows machine with disposable protected SQLite stores and a deterministic clock
+    date: '2026-11-25'
+    duration: FI-011 4.637 s one case, FI-012 4.591 s two cases
+    reference: artifacts/evidence/TL-0309/report.md
+    limitation: Scope is authentication and commit recovery. No live reboot, package operation or UAC was used.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers:

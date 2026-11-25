@@ -73,6 +73,31 @@ the caller. An independent verification transition follows Applied.
 Restart-pending records wait for boot evidence. An independent no-change
 confirmation can resolve an interrupted synthetic no-op without dispatch.
 
+## TL-0309 restart recovery
+
+Schema v6 adds immutable restart checkpoints and an append-only disposition
+table under the existing protected job store. A maximum of 128 checkpoints per
+job bounds storage and discovery. A v5 binary rejects a v6 store. Prior
+migration bytes and job records are preserved.
+
+Only the exact latest restart-required Applied entry can open a checkpoint.
+Its immutable fields include the job, plan and impact digests, approval, action,
+entry, correlation, and UTC issue and expiry. A Windows CurrentUser DPAPI
+authenticator binds a digest of those fields to the original guarded database
+file. The proof carries no recipient identity, local account string, or plaintext
+credential. A copied database retains its job evidence and requires manual
+review for checkpoints whose proof no longer matches.
+
+The operator reopens the job and chooses Resume for review or Abandon resume.
+One immediate transaction checks the authenticated checkpoint and records the
+choice once. Resume also checks the current sanitization gate and approval,
+latest action entry, and issue/expiry window. Abandon leaves the action in its
+existing state and remains available after expiry. A reopen can show the latest
+durable disposition without returning an authenticator. Neither choice marks a
+restart observed or an action verified. A principal that can roll the existing
+protected database back in place can restore an old pending row, so a local
+review checkpoint cannot serve as machine mutation authority.
+
 ## Alternatives considered
 
 - **One JSON file per job:** rejected because durable transitions, indexed history, migrations, and concurrent recovery checks require more discipline than ad hoc whole-file replacement provides.

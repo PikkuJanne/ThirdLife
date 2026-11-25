@@ -181,6 +181,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ManualProgress = null;
         ApplyAssessment(null);
         ClearPlanReview(clearSelection: true);
+        ClearRebootRecovery();
         ClearRepairs();
         ClearPolicyView();
         ClearReport();
@@ -530,6 +531,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         {
             ClearReport();
             ClearRepairs();
+            ClearRebootRecovery();
         }
 
         _hasSeparateEvidenceOrigin = separateOrigin;
@@ -538,6 +540,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ClearPlanReview(clearSelection: jobChanged);
         ApplyRepairs(repairHistory.Repairs, repairHistory.Retests);
         await LoadPolicyViewAsync(job.Job.JobId, snapshot);
+        await LoadRebootRecoveryAsync(job.Job.JobId);
     }
 
     private bool IsSeparateEvidenceOrigin(StoredJob job) =>

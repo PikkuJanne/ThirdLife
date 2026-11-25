@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:disposition="clr-namespace:ThirdLife.UI.Features.Disposition"
              xmlns:plan="clr-namespace:ThirdLife.UI.Features.PlanReview"
+             xmlns:recovery="clr-namespace:ThirdLife.UI.Features.Recovery"
              xmlns:evidence="clr-namespace:ThirdLife.Core.Evidence;assembly=ThirdLife.Core"
              xmlns:manual="clr-namespace:ThirdLife.Core.ManualTests;assembly=ThirdLife.Core"
              xmlns:sanitization="clr-namespace:ThirdLife.Core.Sanitization;assembly=ThirdLife.Core">
@@ -182,6 +183,7 @@
         </StackPanel>
       </StackPanel>
     </GroupBox>
+    <recovery:RebootRecoveryView />
     <disposition:PolicyDispositionView x:Name="PolicyDispositionPanel" />
     <plan:PlanReviewView x:Name="PlanReviewPanel" />
     <GroupBox x:Name="WorkshopReportRegion" Header="Workshop report" AutomationProperties.Name="Workshop report">
