@@ -48,3 +48,9 @@ journal adds no external backend, reboot token, or automatic resume path.
   the focused SQLite journal and migration selection passed eight. The
   sequential command took 9.526 s. The corrupt-state regression uses only a
   disposable job store and verifies that a new approval fails closed.
+- Final Persistence and Actions Targeted passed 1,377 tests in 112.211 s.
+  Clean `.\eng\verify.ps1 -Tier Full -Restore` passed 287 governance and
+  1,816 .NET tests in 329.908 s. The clean source tree
+  `f0c5f9f48a3feac4635867d83831bd5984d49a87` matches pushed checkpoint
+  `e31498ac45d37cda7208df524444b9206cb00a2d`. Extended was outside the
+  task's triggers.

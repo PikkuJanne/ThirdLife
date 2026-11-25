@@ -3720,7 +3720,7 @@ tasks:
   workstream: execution
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: L
   executor: codex
   environment: any
@@ -3748,7 +3748,27 @@ tasks:
   - Table-test state transitions.
   - Failure-inject transaction boundaries.
   - Verify plan/approval hashes.
-  evidence: []
+  evidence:
+  - summary: Durable snapshot and approval binding, guarded transitions, independent verification, interrupted no-op reconciliation and corrupt-state rejection passed.
+    task: TL-0308
+    command_or_review: .\eng\verify.ps1 -Tier Targeted with Persistence and Actions tests
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400 and disposable local SQLite jobs
+    date: '2026-11-25'
+    duration: 112.211 s, 1377 tests
+    reference: artifacts/evidence/TL-0308/report.md, source e31498a
+    limitation: No dispatch or reboot. Restart-pending actions wait for boot evidence.
+  - summary: Additive schema v5 and the first-party project graph passed clean Full.
+    task: TL-0308
+    command_or_review: .\eng\verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean same-machine worktree, Windows 11 x64, Python 3.14.7 and SDK 10.0.400
+    date: '2026-11-25'
+    duration: 329.908 s, 287 governance and 1816 .NET tests
+    reference: artifacts/evidence/TL-0308/report.md, source tree f0c5f9f
+    limitation: Extended was not triggered. Earlier schema binaries reject v5.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
