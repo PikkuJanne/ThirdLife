@@ -1,16 +1,27 @@
 # ThirdLife Setup Core
 
-This repository develops ThirdLife Setup Core: a local-first, auditable Windows refurbishment workflow for volunteer and staff refurbishers. Development follows the frozen decisions, standalone Team B/B1 boundary, and dependency-ordered task graph checked into this repository.
+This repository develops ThirdLife Setup Core: a local-first, auditable Windows refurbishment workflow for volunteer and staff refurbishers. Development follows the current product contract, standalone Team B/B1 boundary and actual component dependencies.
 
 **Current project:** Team B / B1 — ThirdLife Setup Core  
-**Roadmap bundle:** 0.7.0 / ThirdLife Software Portfolio v2.1  
+**Roadmap bundle:** 0.8.0 / ThirdLife Software Portfolio v2.1  
 **Physical validation scope:** active Codex machine only  
 **Pilot gate:** `TL-0611` — controlled v0.1 partner pilot  
 **Standalone release gate:** `TL-0710` — ThirdLife Setup Core 1.0  
 **Next Team B project after stable:** Scam Explainer  
 **Future integration project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
 
-The governed roadmap contains **92 tasks**, **8 milestone gates**, and **74 frozen decisions**. Current progress and the next dependency-ready work are recorded in `TASKS.yaml` and `STATUS.md`.
+Start with the [product contract](docs/product-contract.md). Current work, evidence and
+limitations are recorded in [TASKS.yaml](TASKS.yaml), with a short continuation in
+[STATUS.md](STATUS.md).
+
+## What changed in bundle 0.8.0
+
+- The product contract defines current outcomes and delegated engineering. The roadmap describes delivery goals.
+- Implementation dependencies, action prerequisites and release prerequisites have distinct scopes. A blocked capability leaves independent work and verified isolated integration open.
+- Suitable package operations can use supported Windows, WinGet or vendor mechanisms. ThirdLife-owned privileged code uses the ephemeral broker. All routes preserve exact approval, trust, journal and independent verification.
+- Codex owns technical verification. Actual action consent, operating-system permission and release authority still apply.
+
+[Owner-approved development contract reset](docs/amendments/2026-11-25-development-contract-reset.md)
 
 ## What changed in governed bundle 0.7.0
 
@@ -68,21 +79,22 @@ See `CHANGELOG.md` for the file-level change record.
 
 | File | Role |
 |---|---|
-| `ROADMAP.md` | Binding product scope, portfolio position, architecture, milestone sequence, gates, test/evidence model, and Team B transition. |
-| `DECISIONS.md` | Highest-authority frozen project, safety, privacy, architecture, portfolio-boundary, and delivery choices. |
+| `ROADMAP.md` | Descriptive delivery goals, release criteria and Team B transition. |
+| `DECISIONS.md` | Decision rationale and explicit current/superseded status. |
 | `PROJECT_BOUNDARY.md` | Canonical **Owns / Does not own**, data boundary, project-vacuum rules, and future B4 late-integration contract. |
 | `SECURITY.md` | Threat baseline, privilege/package/data/update controls, reporting placeholder, and release security obligations. |
 | `ACCESSIBILITY.md` | Operator and recipient accessibility requirements, test evidence, and limitation policy. |
 | `LOW_SPEC.md` | Modest-hardware engineering, sanitized reference profile, same-machine constraints, resource evidence, and claim boundaries. |
 | `DEVELOPMENT_WORKFLOW.md` | Git synchronization, divergence safety, checkpoint, push, clean-clone, and handoff rules. |
 | `TESTING.md` | Quick, targeted, full, and extended tiers; fixtures, environments, defect workflow, and evidence rules. |
-| `TASKS.yaml` | Machine-readable DAG with 92 tasks, dependencies, deliverables, acceptance, verification, mutable history, and test-tier triggers. |
-| `STATUS.md` | Factual current branch/commit/test/handoff state; it cannot weaken higher authority. |
-| `AGENTS.md` | Codex operating contract: read order, task selection, allowed edits, project-vacuum rules, architecture, testing, and reporting. |
-| [`docs/product-contract.md`](docs/product-contract.md) | Concise product identity, outcome, delivery cuts, Team B queue, standalone rules, and quality-baseline map. |
+| `TASKS.yaml` | Current work/state source with implementation dependencies, execution and release prerequisites, evidence and test triggers. |
+| `STATUS.md` | Concise current handoff derived from task state. |
+| `AGENTS.md` | Codex execution, continuation, verification and integration instructions. |
+| [`docs/product-contract.md`](docs/product-contract.md) | Current product outcomes, scope, invariants and delegated engineering authority. |
 | [`docs/non-goals.md`](docs/non-goals.md) | Explicit existing-PC, bypass, optimizer, sibling-domain, shared-infrastructure, and early-B4 exclusions. |
+| [`docs/ui/audit-workspace.md`](docs/ui/audit-workspace.md) | Job intake, assessment, machine-wide package setup and workshop reports. |
 | [`docs/glossary.md`](docs/glossary.md) | Governed meanings for evidence, requirements, blockers, dispositions, action state, and frozen-release integration terms. |
-| [`docs/change-control.md`](docs/change-control.md) | Exact authority order, task-state limits, governed-amendment process, contradiction stop rule, and review checklist. |
+| [`docs/change-control.md`](docs/change-control.md) | Engineering delegation, material change decisions and checkpoint verification. |
 | [`docs/amendments/2026-08-22-adr-0009-reservation.md`](docs/amendments/2026-08-22-adr-0009-reservation.md) | Janne Vuorela's approved bundle 0.3.1 reservation of ADR 0009 for TL-0401 while preserving ADR 0004 and completed evidence. |
 | [`docs/security/threat-model.md`](docs/security/threat-model.md) | Assets, actors, threats, control/task mappings, residual-risk decisions, and named-owner approval state tracked by `TL-0004`. |
 | [`docs/security/data-flow.md`](docs/security/data-flow.md) | Accessible diagram and textual inventory of processes, stores, flows, validation, recovery, and distinct trust boundaries. |
@@ -107,7 +119,7 @@ See `CHANGELOG.md` for the file-level change record.
 | `FUTURE_ASSEMBLY_NOTES.md` | Non-binding B4 backlog for cross-project ideas; nothing here can block or expand B1. |
 | `CHANGELOG.md` | Bundle version and migration history. |
 | `TASKS.schema.json` | JSON Schema for the task graph, single-machine metadata, and test-tier fields. |
-| `tools/validate_bundle.py` | Structural/semantic validator for files, schema, decisions, DAG, gates, authority, naming, and portfolio-boundary markers. |
+| `tools/validate_bundle.py` | Structural and semantic validation for task dependencies, scoped prerequisites, evidence and product integrity. |
 | `tools/supply_chain.py` | Standard-library dependency-contract validator and deterministic CycloneDX 1.6 generator. |
 | `tools/merge_task_contracts.py` | Reviewed merger that updates canonical contracts while preserving live task execution history. |
 | `tools/requirements.txt` | Source-, binary-, version-, and hash-pinned validator dependencies. |
@@ -117,48 +129,28 @@ See `CHANGELOG.md` for the file-level change record.
 
 ## Implementation scaffold
 
-`ThirdLife.sln` contains the standalone ThirdLife Setup Core production boundaries defined by the binding roadmap:
+`ThirdLife.sln` contains the standalone ThirdLife Setup Core production boundaries:
 
 - `ThirdLife.Core`, `ThirdLife.Persistence`, `ThirdLife.Inventory`, `ThirdLife.Policy`, and `ThirdLife.Catalog`;
 - `ThirdLife.Packages`, `ThirdLife.Actions`, `ThirdLife.Broker.Protocol`, and the ephemeral `ThirdLife.Broker` executable;
 - `ThirdLife.Verification`, `ThirdLife.Reports`, `ThirdLife.Diagnostics`, and the unelevated `ThirdLife.UI` WPF application.
 
-Production projects live under `src/`; their focused xUnit projects live under `tests/`. Only `ThirdLife.UI` enables WPF. Production-to-production references are added only when a selected implementation task introduces an approved contract, keeping the initial dependency graph acyclic and avoiding speculative coupling.
+Production projects live under `src/`; their focused xUnit projects live under `tests/`. Only `ThirdLife.UI` enables WPF. Production references follow actual component needs and inward dependencies. Keep the assembly graph acyclic.
 
 ### Initial architecture decision records
 
-The initial ADR set records existing frozen choices as planned constraints; it does not amend the higher-authority decisions or claim that later runtime behavior is implemented:
+The initial ADR set records architecture rationale. See task evidence for the implemented and qualified scope.
 
 - [`0001-windows-wpf-stack.md`](docs/adr/0001-windows-wpf-stack.md) — Windows/.NET/WPF selection and inward assembly dependency direction.
 - [`0002-evidence-policy-separation.md`](docs/adr/0002-evidence-policy-separation.md) — immutable evidence, versioned policy, reproducible decisions, and separate verification.
 - [`0003-sqlite-job-store.md`](docs/adr/0003-sqlite-job-store.md) — local SQLite persistence, bounded attachments, migrations, history, and split-state recovery.
 - [`0004-ephemeral-broker.md`](docs/adr/0004-ephemeral-broker.md) — unelevated UI, authenticated typed IPC, and short-lived allowlisted elevation.
-- [`0005-package-adapter.md`](docs/adr/0005-package-adapter.md) — replaceable structured package backend pending the governed WinGet spike.
+- [`0005-package-adapter.md`](docs/adr/0005-package-adapter.md) — replaceable structured package backend and its trust boundaries.
 - [`0006-report-privacy-classes.md`](docs/adr/0006-report-privacy-classes.md) — independent workshop, recipient, and sanitized-support projections.
 - [`0007-standalone-late-binding-boundary.md`](docs/adr/0007-standalone-late-binding-boundary.md) — standalone project vacuum and future frozen-release B4 boundary.
 - [`0008-minimal-release-interface-envelope.md`](docs/adr/0008-minimal-release-interface-envelope.md) — verified human-readable black-box release facts without a shared API.
 
-ADR 0009 is reserved for the dependency-gated TL-0401 WinGet comparison at `docs/adr/0009-winget-backend.md`. That file does not exist until TL-0401 executes; the reservation is not a backend decision or maintainer approval.
-
-## Authority order
-
-Apply files in this order:
-
-1. `DECISIONS.md`
-2. `ROADMAP.md`
-3. `PROJECT_BOUNDARY.md`
-4. `SECURITY.md`
-5. `ACCESSIBILITY.md`
-6. `LOW_SPEC.md`
-7. `DEVELOPMENT_WORKFLOW.md`
-8. `TESTING.md`
-9. `AGENTS.md`
-10. `TASKS.yaml`
-11. `STATUS.md`
-12. `CODEX_START_PROMPT.md`
-13. `README.md`
-
-`RELEASE_INTERFACE.md` records verified release facts. `FUTURE_ASSEMBLY_NOTES.md` is explicitly non-binding. A lower document cannot weaken a higher one.
+TL-0401 records the selected package route in ADR 0009.
 
 ## Quick start
 
@@ -184,9 +176,11 @@ Run Quick for governance, formatting, build, and fast code feedback. Add `-Resto
 
 Run `.\eng\verify.ps1 -Tier Full -Restore` when a task or gate triggers the complete suite.
 
-For development, read the authority files in the required authority order and use the default selection rule in `AGENTS.md`. The validator lists dependency-ready task IDs from live `TASKS.yaml`; default-branch integration must also be verified before selection. Work on exactly one selected task and publish its verified result before choosing another.
+For development, follow AGENTS.md and the current product contract. Use the validator and
+TASKS.yaml to identify implementation-ready work. Verify the source and integration base
+before editing.
 
-## Milestone chain
+## Delivery milestones
 
 | Milestone | Increment | Gate |
 |---|---|---|
@@ -199,13 +193,8 @@ For development, read the authority files in the required authority order and us
 | M6 | Finalization, reports, audits, package, and controlled v0.1 pilot | `TL-0611` |
 | M7 | Recipient-controlled accessibility/basic backup, lifecycle hardening, interface sheet, and Core 1.0 stable release | `TL-0710` |
 
-The chain is strict:
-
-```text
-M0 → M1 → M2 → M3 → M4 → M5 → M6 → M7
-```
-
-M4 proves the architecture. M6 authorizes only a controlled pilot. M7 is the Team B/B1 project-exit gate.
+Milestones describe delivery evidence. Component readiness follows the live task
+dependencies. M6 is a controlled pilot. M7 is the Team B/B1 exit gate.
 
 ## Current work versus future suite assembly
 
@@ -214,7 +203,7 @@ M4 proves the architecture. M6 authorizes only a controlled pilot. M7 is the Tea
 - Standalone device assessment and explainable disposition.
 - Generic curated free essentials and synthetic package fixtures.
 - Package/update planning and execution through supported structured mechanisms.
-- Per-action elevation through an ephemeral allowlisted broker.
+- Per-action authorization and supported installer elevation. An ephemeral allowlisted broker handles ThirdLife-owned privileged code.
 - Local profiles, accessibility, basic operating-system backup onboarding, verification, finalization, handover, and sanitized support.
 - Ordinary installer/uninstaller, documented data locations, open outputs, samples, and release interface facts.
 
@@ -229,46 +218,17 @@ M4 proves the architecture. M6 authorizes only a controlled pilot. M7 is the Tea
 B4 will consume exact frozen releases and public release information. It will not consume active branches, internal databases, or private classes.
 
 
-### Branch integration rule
+## Integration and task state
 
-A completed roadmap task is merged into `main` before the next task begins. Temporary stacked branches are exceptional, named, and accompanied by a collapse plan. Remote workflow output is supplementary and never replaces active-machine task or release evidence.
+Use scoped branches and verify, push and integrate coherent checkpoints. Keep actual source,
+review and merge controls. A delayed or incomplete capability stays accurately unavailable
+while independent, verified work can proceed.
 
-## Task selection and state
-
-Unless the user names a valid task, Codex follows `AGENTS.md`:
-
-1. all direct and transitive prerequisites must be complete as represented by the graph;
-2. executor must permit Codex work;
-3. prefer `ready`, then dependency-ready `backlog`;
-4. choose the lowest milestone, then priority, then task ID;
-5. implement one task only.
-
-Normal implementation sessions may update only:
-
-```yaml
-status: review
-evidence:
-  - summary: "Unit and integration tests passed"
-    tier: targeted
-    result: passed
-    environment: "Windows 11, .NET 10"
-    date: "YYYY-MM-DD"
-    duration: "00:02:34"
-    reference: "artifacts/tests/TL-XXXX.txt"
-blocked_reason: "Only when status is blocked"
-```
-
-Do not weaken dependencies, decision references, executor, acceptance criteria, verification, or milestone assignment to obtain `done`.
-
-| State | Meaning |
-|---|---|
-| `backlog` | Specified, not selected. |
-| `ready` | Dependencies and inputs needed for engineering or authorized preparation are available. |
-| `in_progress` | Active session owns the task. |
-| `blocked` | A concrete blocker and unblock condition are recorded. |
-| `review` | Implementation exists and required verification or an applicable decision remains. |
-| `done` | Complete task contract and evidence exist. |
-| `cancelled` | Authorized human scope removal. |
+Select work by the outcome and its actual implementation dependencies. TASKS.yaml defines
+task state and records prerequisites, evidence, limitations and reopening conditions.
+Execution authorization and exposure consent apply at their respective boundaries.
+Finished engineering and uncompleted operational qualification can be recorded independently
+without losing the original outcome or history.
 
 ## Evidence and decisions
 

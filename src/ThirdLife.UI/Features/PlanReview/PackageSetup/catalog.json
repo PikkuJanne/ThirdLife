@@ -1,0 +1,55 @@
+{
+  "schema_version": "thirdlife.catalog.v1",
+  "catalog_id": "workshop-package-setup",
+  "version": "0.1.0",
+  "status": "reviewed",
+  "synthetic_data": false,
+  "classification": "PUBLIC_REFERENCE",
+  "applications": [
+    {
+      "id": "generic.plain-text-editor",
+      "version": "0.1.0",
+      "capability_id": "document_editing",
+      "entry_status": "reviewed",
+      "production_eligible": true,
+      "package": {
+        "source_id": "notepad-plus-plus-releases",
+        "package_id": "Notepad++.Notepad++",
+        "exact_version": "8.9.9.1",
+        "scope": "machine",
+        "architectures": [
+          "x64"
+        ],
+        "minimum_os": "windows_11",
+        "external_artifact": true,
+        "installer_sha256": "e3b0607a092ce2604fbdac027db2c94915995e8e568ebd226f8c5493c2f61a80"
+      },
+      "review": {
+        "publisher": "Notepad Plus Plus",
+        "declared_license": "GPL-3.0-or-later",
+        "license_review_status": "approved",
+        "privacy_review_status": "approved",
+        "license_reviewed_at_utc": "2026-11-25T00:00:00Z",
+        "privacy_reviewed_at_utc": "2026-11-25T00:00:00Z",
+        "redistribution_status": "withheld",
+        "installation_status": "allowed",
+        "valid_until_utc": "2026-12-25T00:00:00Z"
+      },
+      "behavior": {
+        "reboot": "possible",
+        "background_service": "no",
+        "auto_update": "no",
+        "network_use": "required",
+        "download_bytes": 7933952,
+        "installed_bytes": null
+      },
+      "verification": {
+        "status": "reviewed",
+        "type": "exact_package_identity",
+        "expected_source_id": "notepad-plus-plus-releases",
+        "expected_package_id": "Notepad++.Notepad++",
+        "expected_version": "8.9.9.1"
+      }
+    }
+  ]
+}

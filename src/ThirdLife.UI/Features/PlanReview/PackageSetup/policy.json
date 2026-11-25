@@ -1,0 +1,86 @@
+{
+  "schema_version": "thirdlife.policy.v2",
+  "policy_id": "workshop-package-setup",
+  "version": "0.1.0",
+  "status": "effective",
+  "synthetic_data": false,
+  "classification": "PUBLIC_REFERENCE",
+  "claim_scope": "one_machine_wide_package_preparation",
+  "effective": {
+    "status": "effective",
+    "effective_from_utc": "2026-11-25T00:00:00Z",
+    "effective_until_utc": "2026-12-25T00:00:00Z"
+  },
+  "target": {
+    "operating_system": "windows_11",
+    "support_state": "supported",
+    "architecture": "x64",
+    "device_class": "laptop"
+  },
+  "rules": [
+    {
+      "id": "POL-SAN-001",
+      "requirement_type": "blocking",
+      "severity": "critical",
+      "evidence_key": "sanitization.state",
+      "condition": {
+        "type": "one_of",
+        "values": [
+          "verified",
+          "replacement_storage",
+          "no_donor_storage"
+        ]
+      },
+      "decision": {
+        "blocks_ready": true,
+        "unmet_disposition": "human_review_required",
+        "unavailable_disposition": "human_review_required"
+      }
+    },
+    {
+      "id": "POL-OS-001",
+      "requirement_type": "blocking",
+      "severity": "critical",
+      "evidence_key": "operating_system.release",
+      "condition": {
+        "type": "equals",
+        "value": "windows_11"
+      },
+      "decision": {
+        "blocks_ready": true,
+        "unmet_disposition": "do_not_deploy",
+        "unavailable_disposition": "human_review_required"
+      }
+    },
+    {
+      "id": "POL-OS-002",
+      "requirement_type": "blocking",
+      "severity": "critical",
+      "evidence_key": "operating_system.support_state",
+      "condition": {
+        "type": "equals",
+        "value": "supported"
+      },
+      "decision": {
+        "blocks_ready": true,
+        "unmet_disposition": "do_not_deploy",
+        "unavailable_disposition": "human_review_required"
+      }
+    },
+    {
+      "id": "POL-ARCH-001",
+      "requirement_type": "blocking",
+      "severity": "critical",
+      "evidence_key": "system.architecture",
+      "condition": {
+        "type": "equals",
+        "value": "x64"
+      },
+      "decision": {
+        "blocks_ready": true,
+        "unmet_disposition": "do_not_deploy",
+        "unavailable_disposition": "human_review_required"
+      }
+    }
+  ]
+}

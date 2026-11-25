@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Portfolio Boundary and Validation Contract
 
-**Status:** Binding project boundary  
-**Bundle version:** 0.7.0  
+**Status:** Project ownership specification for the [current product contract](docs/product-contract.md)  
+**Bundle version:** 0.8.0  
 **Portfolio source:** *ThirdLife Software Portfolio — Two-Team Development Roadmap and Boundary Architecture*, version 2.1, 15 August 2026  
 **Current queue position:** Team B / B1  
 **Future suite project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
@@ -24,7 +24,7 @@ ThirdLife Setup Core owns:
 - outcome-based machine and recipient profile data;
 - complete change-plan preview and per-action approval;
 - supported package operations and structured Windows Update orchestration;
-- an unelevated UI and an ephemeral, typed, allowlisted elevated broker;
+- an unelevated UI, qualified supported package routes, and an ephemeral, typed, allowlisted elevated broker for ThirdLife-owned privileged code;
 - action journaling, restart recovery, independent verification, and cold-boot acceptance on the active Codex machine at the later task that explicitly requires it;
 - recipient-controlled accessibility setup for the Core 1.0 release;
 - basic operating-system backup onboarding and restore guidance/verification for the Core 1.0 release;
@@ -51,7 +51,7 @@ ThirdLife Setup Core does not own:
 - a device lab, second physical test computer, lower-performance reference computer, volunteer hardware pool, external hardware matrix, or authoritative remote runtime test farm;
 - broad manufacturer, device-class, or modest-hardware certification based on one physical development machine.
 
-Any change to **Owns** or **Does not own** requires an explicit portfolio decision, not an ordinary implementation task.
+Material changes to product ownership require a scope-bound portfolio decision. Choices within this boundary follow the delegated engineering contract.
 
 ## 4. Primary data boundary
 

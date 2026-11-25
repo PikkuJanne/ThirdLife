@@ -122,7 +122,13 @@ class VerificationRunnerTests(unittest.TestCase):
         result, records = self.run_tier(restore=True)
         self.assert_passed(result)
         operations = [record["arguments"][0] for record in records]
-        self.assertEqual(operations, ["--version", "-c", "tools/validate_bundle.py", "tools/validate_repository.py", "restore", "format", "build", "test", "test", "test"])
+        self.assertEqual(operations, [
+            "--version", "-c", "tools/validate_bundle.py", "tools/validate_repository.py",
+            "-m", "restore", "format", "build", "test", "test", "test",
+        ])
+        self.assertEqual(records[4]["arguments"], [
+            "-m", "unittest", "tools.tests.test_validate_bundle.DevelopmentContractResetTests",
+        ])
         calls = self.selected_tests(records)
         self.assertEqual([call[1] for call in calls], [CORE, INVENTORY, UI])
         for call in calls:

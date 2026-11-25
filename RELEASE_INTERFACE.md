@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Minimal Release Interface Sheet
 
 **Status:** Draft placeholder; not a published compatibility contract  
-**Bundle version:** 0.7.0  
+**Bundle version:** 0.8.0  
 **Pilot draft task:** `TL-0610`  
 **Stable completion task:** `TL-0706`  
 **Stable-release gate:** `TL-0710`
@@ -141,7 +141,9 @@ The active Codex machine is the only physical validation hardware. Same-machine 
 Document:
 
 - exact actions requiring elevation;
-- ephemeral broker lifecycle and no always-on privileged service;
+- qualified Windows/WinGet/vendor routes, required consent, and their exact action limits;
+- ephemeral broker lifecycle for ThirdLife-owned privileged code and no always-on privileged service;
+- unavailable or unqualified action capabilities and verified limits;
 - accepted untrusted inputs and validation boundaries;
 - package/update provenance and verification;
 - secrets handling;
@@ -232,5 +234,5 @@ After `TL-0710`, B4 may use this frozen sheet, installer, hashes, samples, and p
 | Issue/support route | TBD before preview |
 | Security route | TBD before preview; see `SECURITY.md` |
 | Release owner | TBD |
-| Interface revision | Draft 0.7.0 |
+| Interface revision | Draft 0.8.0 |
 | Approved stable version | Not yet approved |

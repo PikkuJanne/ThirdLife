@@ -1,5 +1,5 @@
-schema_version: 1
-bundle_version: 0.7.0
+schema_version: 2
+bundle_version: 0.8.0
 generated_on: '2026-11-25'
 project:
   name: ThirdLife
@@ -38,22 +38,8 @@ portfolio:
   - full
   - extended
 authority:
-  precedence:
-  - DECISIONS.md
-  - ROADMAP.md
-  - PROJECT_BOUNDARY.md
-  - SECURITY.md
-  - ACCESSIBILITY.md
-  - LOW_SPEC.md
-  - DEVELOPMENT_WORKFLOW.md
-  - TESTING.md
-  - AGENTS.md
-  - TASKS.yaml
-  - STATUS.md
-  - CODEX_START_PROMPT.md
-  - README.md
-  change_rule: Frozen decisions, project boundaries, portfolio posture, and milestone scope require explicit human approval.
-    Codex may update only task execution fields unless an owner-authorized amendment specifies synchronized contract changes.
+  product_contract: docs/product-contract.md
+  work_state: TASKS.yaml
 workflow:
   states:
   - backlog
@@ -63,73 +49,19 @@ workflow:
   - review
   - done
   - cancelled
-  allowed_transitions:
-    backlog:
-    - ready
-    - cancelled
-    ready:
-    - in_progress
-    - blocked
-    - cancelled
-    in_progress:
-    - blocked
-    - review
-    - ready
-    - done
-    blocked:
-    - ready
-    - cancelled
-    review:
-    - in_progress
-    - done
-    - blocked
-    done: []
-    cancelled: []
-  mutable_task_fields:
-  - status
-  - evidence
-  - blocked_reason
-  ready_rule: A task is dependency-ready when every depends_on task is done. It is Codex-ready when dependency-ready,
-    status is ready or backlog, executor is codex or hybrid, the work can be verified on the active Codex machine or with
-    deterministic fixtures, and any input or authorization required before the next action is available. A later decision
-    on a prepared candidate does not block engineering preparation or verification.
-  selection_rule: Select the lowest milestone, then lowest numeric task ID, among Codex-ready P0 tasks unless the user names
-    a task.
-  single_task_default: true
-  human_completion_rule: Codex owns ordinary engineering completion without routine human QA or owner sign-off. For hybrid
-    tasks, Codex prepares and verifies the candidate and records the actual attributable decision before advancing the
-    scope that requires authorization. Only actual accountable decision-makers may originate those decisions. Codex may
-    administer task state from recorded decisions. Historical human task contracts retain their original evidence and
-    provenance.
+  selection_rule: Select implementation-ready work within the assigned outcome. Prefer ready work and use priority and ID
+    as tie-breakers.
+  prerequisite_rule: Check capability evidence and action authorization before the scoped execution or release. Candidate
+    engineering may proceed independently.
 definition_of_ready:
-- All dependencies are done.
-- Relevant frozen decisions, STATUS.md, TESTING.md, DEVELOPMENT_WORKFLOW.md, and project-boundary rules have been read.
-- Deliverables and acceptance criteria are testable on the active Codex machine or with deterministic synthetic/captured
-  fixtures.
-- Required Windows, package and policy inputs and any authorization needed before the next action are available. A later
-  candidate approval is a condition of the action it governs. Validation stays on the active Codex machine.
-- The expected test tier and any full/extended triggers are explicit.
-- No unresolved blocker or contradictory authority exists.
-- The task has no live dependency on a sibling repository, database, service, branch, build, or unfinished feature.
+- Every actual implementation dependency is done.
+- The next engineering step is verifiable on the active machine or with appropriate deterministic fixtures.
+- The task records what requires execution qualification or exposure authorization.
 definition_of_done:
-- Every listed deliverable is present or the task record explains an approved replacement.
-- Every acceptance criterion is satisfied by linked evidence.
-- The selected quick/targeted/full/extended verification scope passes on the active Codex machine, and broader tiers are
-  run only when a documented trigger applies.
-- Each reproducible defect is reduced to the smallest practical deterministic regression case; slow scenarios are independently
-  invokable and checkpointed.
-- Objective engineering evidence supports each required workflow and distinguishes tested behavior, actual prior human
-  observations, reported defects, and unexercised physical or perceptual behavior.
-- A known defect in a required workflow blocks completion. A validation limit documents behavior outside the observed
-  test scope.
-- Any decision genuinely required for the action is attributable, scope-bound, and recorded. Ordinary engineering completion
-  creates no routine human QA or approval requirement.
-- Security, privacy, accessibility, modest-hardware design, migration, release-interface, and documentation impacts are
-  addressed where applicable.
-- The implementation remains independently useful without sibling applications and does not introduce a cross-project
-  dependency.
-- TASKS.yaml status/evidence is updated without rewriting frozen history; STATUS.md, branch, commit, push, and clean-tree
-  state support continuation from GitHub.
+- Evidence meets the task's defined outcome, verification tier, criteria and scoped prerequisites.
+- Record blocked or unavailable capability without claiming unobserved success.
+- Keep ordinary engineering complete through objective verification. Scope actual decisions to the affected action or exposure.
+- Update task evidence and synchronize the verified changes through GitHub.
 milestones:
 - id: M0
   name: Foundation and product contract
@@ -171,8 +103,8 @@ milestones:
   - New or materially changed wording and exception governance have an attributable policy-owner decision before adoption.
 - id: M3
   name: Safe planning and privilege boundary
-  objective: Resolve declarative profiles into a complete approved plan and prove that a narrow ephemeral broker independently
-    rejects anything outside compiled actions.
+  objective: Resolve declarative profiles into an approved plan and qualify compiled, isolated privilege routes for their
+    own capabilities.
   gate_task: TL-0314
   exit_criteria:
   - Profiles/catalog entries cannot execute arbitrary commands.
@@ -181,14 +113,15 @@ milestones:
   - The prepared privilege-boundary candidate has one attributable scope-bound security authorization.
 - id: M4
   name: One package installation vertical slice
-  objective: Install and independently verify one approved machine-wide package through the structured backend, broker,
-    journal, recovery, and reporting path.
+  objective: Install and independently verify an approved machine-wide package through a supported backend and the plan, journal,
+    recovery and reporting path.
   gate_task: TL-0411
   exit_criteria:
   - Exact package identity/source/trust data is enforced without localized table parsing or hash bypass.
   - Installer success is not accepted until independent verification passes.
   - UAC decline, network loss, process termination, reboot, and retry are recoverable and idempotent.
-  - One attributable first write-capable product/security decision records the verified candidate and its scope.
+  - One attributable first write-capable product/security decision records the verified candidate and its authorized release
+    scope.
 - id: M5
   name: Full machine profile
   objective: Verify the reviewed pilot profile across Windows Update, packages, security checks, restart phases, and cold-start
@@ -3905,7 +3838,8 @@ tasks:
   workstream: broker
   kind: code
   priority: P0
-  status: backlog
+  status: blocked
+  blocked_reason: Native AOT publish reaches the missing Microsoft C++ linker. Two official Visual Studio catalogs fail the advertised size and SHA-256 checks. Protected installation and real consent or elevated recovery remain unobserved. The distinct-account guest is separately deferred by the owner.
   size: XL
   executor: codex
   environment: windows
@@ -3936,15 +3870,87 @@ tasks:
   verification:
   - Test UAC accept/decline, cross-user access, replay, timeout, client crash, and broker crash.
   - Record objective broker token, pipe ACL, nonce enforcement, and process lifetime checks, including cleanup after failure.
-  evidence: []
+  evidence:
+  - summary: Bounded framing, native Windows pipe and peer checks, request pinning, cancellation, replay and recovery passed in local tests.
+    task: TL-0311
+    command_or_review: .\eng\verify.ps1 -Tier Targeted with Broker and UI tests, plus focused IpcIntegrationTests and BrokerBatchClientTests
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, unelevated interactive Windows and disposable local IPC fixtures
+    date: '2026-11-25'
+    duration: 76.187 s Targeted, 1204 .NET tests
+    reference: artifacts/evidence/TL-0311/report.md, source 382e4f4
+    limitation: Consent-path tests use a fixture. The development broker rejects ordinary launch, and the UI elevates no process.
+  - summary: Clean warnings-as-errors Release and applicable full suites passed with elevated launch held closed.
+    task: TL-0311
+    command_or_review: .\eng\verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean same-machine worktree, Windows 11 x64, Python 3.14.7 and SDK 10.0.400
+    date: '2026-11-25'
+    duration: 343.515 s, 289 governance and 1926 .NET tests
+    reference: artifacts/evidence/TL-0311/report.md, source tree fa3fe60
+    limitation: Full excludes the separate distinct-account guest scenario and provides no real UAC or elevated startup proof.
+  - summary: The isolated distinct-account profile could not start its Windows Sandbox guest.
+    task: TL-0311
+    command_or_review: .\eng\run-tl0102-sandbox.ps1 -Phase Targeted -EvidenceTaskId TL-0311 -PersistEvidence and minimal offline startup probe
+    tier: targeted
+    result: unavailable
+    environment: Same active machine, network-disabled Windows Sandbox, pinned offline closure
+    date: '2026-11-25'
+    duration: 342.323 s for the governed profile
+    reference: artifacts/evidence/TL-0311/report.md, source tree fa3fe60
+    limitation: Startup returned 0x80070780 with and without mapped folders. The distinct-account scenario did not execute.
+  - summary: Draft PR 36 incorporates TL-0315 and rejects unsupported or unverified hosts independently at broker and client entry points.
+    task: TL-0311
+    command_or_review: ./eng/verify.ps1 -Tier Targeted -Restore with Broker and Broker.SecurityTests, named active-machine checks, and test_sandbox_harness.py
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974, native x64, unelevated
+    date: '2026-11-25'
+    duration: Targeted 78.901 s and 1248 .NET tests, named checks 3.617 s, harness 55.167 s and 41 tests
+    reference: artifacts/evidence/TL-0311/report.md, verified source tree 30b2427c113b6c30b82a128380ce5ec0cdc2e44b
+    limitation: Platform reconciliation only. Consent was simulated and the distinct-account guest was outside the run.
+  - summary: Native publish, protected installation and production launcher code are prepared. Audited AOT inputs and changed-risk tests pass. Native link and live installation remain blocked by toolchain availability and integrity.
+    task: TL-0311
+    command_or_review: dotnet publish for win-x64, dotnet nuget verify, Targeted with Broker projects, and catalog, ACL and launcher checks
+    tier: targeted
+    result: unavailable
+    environment: Active Windows 11 Pro 26H2 build 26300.9974, native x64, SDK 10.0.400, unelevated
+    date: '2026-11-25'
+    duration: Targeted 74.896 s and 1267 .NET tests, publish attempt 4.646 s
+    reference: artifacts/evidence/TL-0311/report.md
+    limitation: No native artifact, protected deployment or real UAC observed. Owner deferred the Hyper-V guest.
+  - summary: Clean source Full and deterministic SBOM generation passed while native publication stayed blocked.
+    task: TL-0311
+    command_or_review: ./eng/verify.ps1 -Tier Full -Restore and source-bound eng/generate-sbom.ps1
+    tier: full
+    result: passed
+    environment: Clean same-machine worktree, Windows 11 Pro 26H2 build 26300.9974, SDK 10.0.400, unelevated
+    date: '2026-11-25'
+    duration: Full 342.790 s, 304 governance and 2001 .NET tests, SBOM 7.035 s
+    reference: artifacts/evidence/TL-0311/report.md, checkpoint 63eec10
+    limitation: Managed build and fixtures only. Actual installed Native AOT image, real UAC and isolated distinct-account evidence remain outstanding.
   notes:
   - UAC remains explicit. The attributable privilege-boundary authorization is recorded once at TL-0314.
-  - Reconcile retained draft PR #36 with the integrated TL-0315 contract. Preserve the trusted elevated startup and real privilege and recovery evidence gaps.
+  - Reconcile retained draft PR
+  - 'Draft PR #36 retains the historical source and report. TL-0316 tracks managed checkpoint integration; TL-0317 tracks
+    native publication and actual privilege qualification. The original capability remains blocked.'
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  checkpoints:
+  - reference: 642e6295fe913015f8da0563e3f93d33d0d1f267
+    verification: 'Draft PR #36 and its TL-0311 report record unchanged managed verification and the native linker blocker.'
+    state: retained
+    unqualified_execution: unavailable
+  completion_phase: execution
+  execution_prerequisites:
+  - kind: task
+    task: TL-0317
+    scope: Qualified native broker for ThirdLife-owned privileged operations
 - id: TL-0312
   title: Add focused broker security tests
   milestone: M3
@@ -3956,7 +3962,7 @@ tasks:
   executor: codex
   environment: windows
   depends_on:
-  - TL-0311
+  - TL-0316
   - TL-0004
   decision_refs:
   - D-023
@@ -3989,6 +3995,10 @@ tasks:
   extended_test_triggers:
   - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
     risk affected by the task.
+  execution_prerequisites:
+  - kind: task
+    task: TL-0317
+    scope: Scenarios exercising the real protected broker
 - id: TL-0313
   title: Connect approval, journal, UAC, broker, and result flow
   milestone: M3
@@ -4002,7 +4012,7 @@ tasks:
   depends_on:
   - TL-0306
   - TL-0308
-  - TL-0311
+  - TL-0316
   decision_refs:
   - D-025
   - D-029
@@ -4027,6 +4037,13 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  execution_prerequisites:
+  - kind: task
+    task: TL-0317
+    scope: Dispatch through the qualified protected broker
+  - kind: authorization
+    scope: Action-specific approval and Windows consent for the exact broker batch
+    authority: operator
 - id: TL-0314
   title: Validate the M3 safe-planning gate
   milestone: M3
@@ -4035,7 +4052,7 @@ tasks:
   priority: P0
   status: backlog
   size: M
-  executor: hybrid
+  executor: codex
   environment: windows
   depends_on:
   - TL-0307
@@ -4077,9 +4094,6 @@ tasks:
   - Check token, ACL, nonce, lifetime, and adversarial evidence from TL-0311 and TL-0312 and present the prepared privilege-boundary
     decision.
   evidence: []
-  human_evidence_required:
-  - The accountable security owner authorizes the prepared privilege boundary and records the accepted scope and residual
-    risks.
   notes:
   - Prepare and verify the no-op candidate under existing constraints. Any required authorization precedes the action
     it governs.
@@ -4089,6 +4103,15 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  completion_phase: release
+  release_prerequisites:
+  - kind: task
+    task: TL-0311
+    scope: Qualify the M3 broker capability for the claimed actions
+  - kind: authorization
+    scope: The accountable security owner authorizes the prepared privilege boundary and records the accepted scope and residual
+      risks.
+    authority: security-owner
 - id: TL-0315
   title: Enforce Windows 11 client/native-x64 scope and preserve historical records
   milestone: M3
@@ -4147,18 +4170,93 @@ tasks:
   full_test_triggers:
   - This governed amendment changes the execution entry points, versioned policy schema and historical compatibility.
   extended_test_triggers: []
-- id: TL-0401
-  title: Spike structured WinGet integration paths
-  milestone: M4
-  workstream: packages
-  kind: spike
+- id: TL-0316
+  title: Integrate the isolated managed broker checkpoint
+  milestone: M3
+  workstream: broker
+  kind: code
   priority: P0
   status: backlog
   size: M
   executor: codex
   environment: windows
   depends_on:
-  - TL-0314
+  - TL-0310
+  - TL-0315
+  decision_refs:
+  - D-029
+  - D-030
+  - D-031
+  - D-075
+  objective: 'Preserve intended managed transport, peer validation, and fail-closed launch work from draft PR #36.'
+  deliverables:
+  - Reconciled managed broker checkpoint and durable verification evidence
+  acceptance_criteria:
+  - The checkpoint preserves reviewed code and evidence with verified ancestry.
+  - Unqualified broker execution is unreachable by default and disclosed as unavailable.
+  - Independent supported package operations can be planned and dispatched without a ready broker.
+  verification:
+  - Build and run focused authentication, approval, startup, and broker-unavailability tests.
+  evidence: []
+  expected_test_tier: targeted
+  full_test_triggers:
+  - Run the full tier for integrated privilege-boundary changes.
+  extended_test_triggers: []
+- id: TL-0317
+  title: Qualify the protected native broker and privileged dispatch
+  milestone: M3
+  workstream: broker
+  kind: test
+  priority: P0
+  status: backlog
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0316
+  decision_refs:
+  - D-005
+  - D-029
+  - D-030
+  - D-031
+  - D-075
+  objective: Produce and qualify the protected Windows x64 broker for ThirdLife-owned privileged actions.
+  deliverables:
+  - Verified Microsoft native build closure and broker artifact
+  - Protected deployment and active-machine privilege, IPC isolation, and recovery records
+  acceptance_criteria:
+  - Native publish uses a provenance-verified Microsoft x64 linker and Windows SDK.
+  - The actual protected broker authenticates peers and dispatches only an approved typed batch on an admitted host.
+  - Unavailable or invalid qualification leaves real dispatch disabled.
+  verification:
+  - Verify Native AOT publication, protected launch, actual Windows consent and decline, distinct-account denial, and recovery.
+  - Reuse the preserved failed toolchain and Sandbox evidence until an input changes.
+  evidence: []
+  expected_test_tier: full
+  full_test_triggers:
+  - Run the full tier for qualification of the protected privilege boundary.
+  extended_test_triggers:
+  - Run independently invokable protected launch and distinct-account scenarios as available.
+  completion_phase: execution
+  execution_prerequisites:
+  - kind: capability
+    scope: Verified Microsoft x64 linker and Windows SDK that can link the pinned Native AOT target
+  - kind: capability
+    scope: Authorized protected-deployment environment and distinct-account isolation observation on the active machine
+  - kind: authorization
+    scope: Windows consent for the exact protected broker launch and its allowlisted rehearsal action
+    authority: operator
+- id: TL-0401
+  title: Select a supported structured package installation route
+  milestone: M4
+  workstream: packages
+  kind: spike
+  priority: P0
+  status: done
+  size: M
+  executor: codex
+  environment: windows
+  depends_on:
   - TL-0006
   decision_refs:
   - D-022
@@ -4166,40 +4264,48 @@ tasks:
   - D-025
   - D-043
   - D-074
-  objective: Compare Microsoft.WinGet.Client and the WinGet COM API and record the compliant structured backend decision
-    in ADR 0009 within approved trust, privilege, licensing, and architecture constraints.
+  - D-075
+  objective: Compare Microsoft.WinGet.Client, WinGet COM and supported Windows/vendor routes for an approved machine-wide
+    package. Record the compliant backend decision within trust, privilege, licensing, and architecture constraints.
   deliverables:
   - docs/adr/0009-winget-backend.md
-  - spikes/WinGet.BackendSpike
-  - artifacts/spikes/winget-backend-results.md
   - Technical comparison, compliant selection rationale, and applicable escalation record
   acceptance_criteria:
-  - Both candidate structured interfaces are exercised where the installed Windows/WinGet versions permit.
+  - Compare WinGet interfaces and the pinned vendor MSI route against exact installer selection and independent scope verification.
   - The comparison covers machine scope, exact source and ID selection, progress, cancellation, timeout, reboot signaling,
     system/elevated context, structured errors, and testability.
   - Localized human-readable table output is not used as an integration contract.
-  - ADR 0009 records the compliant production path, controlled fallback, and known version limits. Any material trust,
-    privilege, licensing, or frozen-architecture change follows its approval rule before adoption.
+  - ADR 0009 identifies the selected supported production route, its limits, and why the other interfaces are unsuitable for
+    this slice. A material change to the trust model, claimed behavior or licensing would require its applicable decision.
   verification:
-  - Run the spike on the supported Windows test image.
-  - Capture API/library versions and representative success, failure and cancellation. Compare both structured options
-    to binding constraints and record the evidence and decision in ADR 0009.
-  evidence: []
+  - Verify released interface contracts, host availability, exact vendor artifact provenance and machine-scope discovery
+    on the active Windows 11 host. Record observed results, comparison limits, and selection in ADR 0009.
+  evidence:
+  - task: TL-0401
+    summary: Selected the exact signed vendor MSI through released Windows Installer.
+    command_or_review: ADR 0009 route comparison and opt-in Windows adapter source resolution
+    tier: review
+    result: passed
+    environment: Active Windows 11 client on native x64, unelevated, deterministic fixtures where indicated
+    date: '2026-11-25'
+    duration: Local interface review and one active-machine nonmutating probe
+    reference: artifacts/evidence/TL-0412/report.md
+    limitation: The supported vendor route was selected. No live WinGet mutation was needed.
   notes:
-  - Codex selects a compliant implementation. Escalate a material trust, privilege, licensing, or frozen-architecture
-    change through its governing decision process.
+  - D-075 delegates compliant backend selection. Actual installation and continuity qualification are tracked by TL-0412.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  outcome: package-installation
 - id: TL-0402
   title: Implement the production package-manager adapter
   milestone: M4
   workstream: packages
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -4209,35 +4315,47 @@ tasks:
   - D-024
   - D-025
   - D-032
+  - D-075
   objective: Provide a replaceable structured package backend with typed operations and no dependency on localized console
     tables.
   deliverables:
   - src/ThirdLife.Packages package-manager contracts
-  - selected WinGet adapter
+  - pinned vendor MSI adapter using released Windows Installer and independent installed-state queries
   - adapter integration tests
   - fake package backend for deterministic tests
   acceptance_criteria:
-  - Search/resolve, install, inspect, and version operations return structured models.
+  - Exact allowlisted resolution, apply, independent inspection and version observations return structured models.
   - The adapter accepts exact package ID, source, scope, and approved version constraints.
-  - Progress, cancellation, timeout, restart, and backend errors are represented explicitly.
+  - Typed states represent bounded progress, cancellation, timeout, restart, failed or unavailable results. TL-0405 owns end-to-end interruption coverage.
   - The adapter does not expose arbitrary command-line argument or shell execution surfaces.
   - Tests run deterministically against the fake backend; Windows integration tests are separately tagged.
   verification:
-  - Run package unit tests on any platform.
-  - Run tagged adapter integration tests on Windows.
-  evidence: []
+  - Run deterministic adapter unit, trust and failure cases on the supported code path.
+  - Run tagged nonmutating source and installed-state observations on Windows. TL-0412 owns the real mutating transaction.
+  evidence:
+  - task: TL-0402
+    summary: Typed adapter and real read-only source resolution passed.
+    command_or_review: dotnet test tests/ThirdLife.Packages.Tests -c Release with active-machine probe
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 client on native x64, unelevated, deterministic fixtures where indicated
+    date: '2026-11-25'
+    duration: 19 tests, roughly 1 s test execution
+    reference: artifacts/evidence/TL-0412/report.md
+    limitation: Windows Installer mutation is qualified separately under TL-0412.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  outcome: package-installation
 - id: TL-0403
   title: Enforce package resolution and trust policy
   milestone: M4
   workstream: supply-chain
   kind: security
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: any
@@ -4269,53 +4387,84 @@ tasks:
   verification:
   - Run source-substitution, publisher-change, hash-mismatch, downgrade, and architecture-mismatch tests.
   - Verify reapproval is required when resolved package data changes.
-  evidence: []
+  evidence:
+  - task: TL-0403
+    summary: Catalog, exact identity, trust, and material-change protections passed.
+    command_or_review: Package adapter, catalog and fixture UI tests
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 client on native x64, unelevated, deterministic fixtures where indicated
+    date: '2026-11-25'
+    duration: 19 package and 64 catalog tests, plus exact plan and expiry regressions
+    reference: artifacts/evidence/TL-0412/report.md
+    limitation: Observed source trust on the active machine. A real installation remains a separate prerequisite.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  outcome: package-installation
 - id: TL-0404
   title: Implement one approved machine-wide package action
   milestone: M4
   workstream: actions
   kind: code
   priority: P0
-  status: backlog
+  status: review
   size: L
   executor: codex
   environment: windows
   depends_on:
   - TL-0403
-  - TL-0313
+  - TL-0306
+  - TL-0308
   decision_refs:
   - D-022
   - D-025
   - D-029
   - D-032
-  objective: Execute one curated machine-wide package installation through the approved plan, journal, broker, and package
+  - D-075
+  objective: Execute one curated machine-wide package installation through the approved plan, journal, and supported package
     adapter path.
   deliverables:
   - package.install compiled action
-  - broker-side package action handler
+  - supported package action execution route
   - one pilot catalog entry
   - end-to-end action tests
   acceptance_criteria:
-  - The UI cannot provide an arbitrary package ID, executable path, URL, or argument string to the broker.
-  - The broker independently revalidates action type, approved content digest, package identity, source, scope, and request
-    expiry.
+  - The UI cannot provide an arbitrary package ID, executable path, URL, or argument string to the package backend.
+  - The dispatch route revalidates action type, approved content digest, package identity, source, scope, and request expiry
+    at the execution boundary.
   - The journal records planned, approved, started, applied, and terminal states without marking applied as verified.
-  - Declined elevation and denied broker validation leave the job recoverable.
+  - Declined elevation and denied execution validation leave the job recoverable.
   - The selected pilot package has recorded license and privacy review metadata.
   verification:
-  - Install the pilot package on a clean Windows test image.
+  - Exercise the app dispatch boundary with deterministic adapters. TL-0412 proves the real transaction.
   - Exercise denied UAC, malformed request, stale approval, and already-installed paths.
-  evidence: []
+  evidence:
+  - task: TL-0404
+    summary: The isolated dispatch and persisted journal route passed focused tests.
+    command_or_review: dotnet test tests/ThirdLife.UI.Tests -c Release --filter PackageSetupTests or PlanReview
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 client on native x64, unelevated, deterministic fixtures where indicated
+    date: '2026-11-25'
+    duration: 14 tests, 10 s
+    reference: artifacts/evidence/TL-0412/report.md
+    limitation: The fixture route passed. Clean Full verification remains pending.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  execution_prerequisites:
+  - kind: capability
+    scope: Qualified supported machine-wide package backend on Windows 11 client/native x64
+  - kind: authorization
+    scope: Action-specific consent for the exact approved package, version, machine scope, target, and any applicable installer
+      terms or Windows consent
+    authority: operator
+  outcome: package-installation
 - id: TL-0405
   title: Handle progress, cancellation, timeout, and network loss
   milestone: M4
@@ -4352,6 +4501,7 @@ tasks:
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
+  outcome: package-installation
 - id: TL-0406
   title: Verify package installation and application launch
   milestone: M4
@@ -4363,7 +4513,8 @@ tasks:
   executor: codex
   environment: windows
   depends_on:
-  - TL-0404
+  - TL-0403
+  - TL-0308
   decision_refs:
   - D-032
   - D-033
@@ -4388,6 +4539,7 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  outcome: package-installation
 - id: TL-0407
   title: Classify package failures and emit sanitized diagnostics
   milestone: M4
@@ -4431,6 +4583,7 @@ tasks:
   extended_test_triggers:
   - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
     risk affected by the task.
+  outcome: package-installation
 - id: TL-0408
   title: Resume a package action safely after reboot or process loss
   milestone: M4
@@ -4448,7 +4601,7 @@ tasks:
   decision_refs:
   - D-032
   - D-033
-  objective: Reconcile durable action state after reboot, UI termination, or broker termination without blindly repeating
+  objective: Reconcile durable action state after reboot, UI termination, or backend termination without blindly repeating
     privileged work.
   deliverables:
   - resume coordinator
@@ -4462,7 +4615,7 @@ tasks:
   - Resume tokens are job/action-bound, expire appropriately, and cannot authorize a different action.
   - The operator sees why an action resumed, retried, verified, or requires review.
   verification:
-  - Terminate the UI and broker at documented action boundaries and restart Windows.
+  - Terminate the UI and the supported package route where safely observable at documented action boundaries and restart Windows.
   - Verify reconciliation for absent, installed, wrong-version, restart-required, and ambiguous package states.
   evidence: []
   expected_test_tier: targeted
@@ -4472,6 +4625,7 @@ tasks:
   extended_test_triggers:
   - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
     risk affected by the task.
+  outcome: package-installation
 - id: TL-0409
   title: Make package execution idempotent and safely retryable
   milestone: M4
@@ -4509,6 +4663,7 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  outcome: package-installation
 - id: TL-0410
   title: Complete the first write-capable end-to-end slice
   milestone: M4
@@ -4521,6 +4676,7 @@ tasks:
   environment: windows
   depends_on:
   - TL-0409
+  - TL-0412
   decision_refs:
   - D-006
   - D-015
@@ -4550,7 +4706,7 @@ tasks:
   acceptance_criteria:
   - The flow starts from a verified sanitization state and a policy-eligible Windows 11 x64 device.
   - The complete resolved plan is visible before any privileged action.
-  - One approved package is installed through the ephemeral broker and independently verified.
+  - One approved package is installed through a qualified supported machine-wide route and independently verified.
   - The flow survives at least one forced interruption or reboot checkpoint.
   - Workshop and recipient draft reports distinguish observations, decisions, actions, and verification.
   - A failure at any stage cannot produce a ready/handed-over result.
@@ -4561,11 +4717,13 @@ tasks:
   - Exercise and inspect approved recovery and cleanup on the isolated environment. Record scope and unexercised perception.
   evidence: []
   notes:
-  - Retain plan approval and UAC in the product. TL-0411 carries the first write-capable scope authorization.
+  - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
+    the later write-capable release claim.
   expected_test_tier: extended
   full_test_triggers: []
   extended_test_triggers:
   - Run only the independently invokable scenarios whose named risk is changed or whose gate explicitly requires them.
+  outcome: package-installation
 - id: TL-0411
   title: Validate the M4 package-installation gate
   milestone: M4
@@ -4574,7 +4732,7 @@ tasks:
   priority: P0
   status: backlog
   size: M
-  executor: hybrid
+  executor: codex
   environment: windows
   depends_on:
   - TL-0410
@@ -4598,10 +4756,10 @@ tasks:
   - Prepared first write-capable product/security decision packet and actual disposition
   acceptance_criteria:
   - No localized package table output is parsed.
-  - Exact approved identity/source data reaches a broker that independently validates it.
+  - Exact approved identity/source data is revalidated at the supported execution boundary before dispatch.
   - Hash/trust bypasses are impossible through supported interfaces.
   - Backend success without verification is failure.
-  - Network loss, UAC decline, UI/broker termination, and reboot remain recoverable.
+  - Network loss, UAC decline, UI/backend termination, and reboot remain recoverable.
   - Rerunning the completed plan is idempotent.
   - Package diagnostics satisfy the privacy contract.
   - The accountable first write-capable decision records product and security scope, evidence, and residual risks.
@@ -4609,17 +4767,84 @@ tasks:
   - Run the M4 failure matrix, security checks, clean-checkout verification, and bundle validator.
   - Present the exact verified slice and proposed scope for one first write-capable product/security decision.
   evidence: []
-  human_evidence_required:
-  - Accountable product and security decision-makers record one first write-capable disposition on the prepared, verified
-    package/broker slice, with attributable scopes.
   notes:
-  - TL-0410 supplies installation, independent verification, failure and cleanup proof for the decision.
+  - TL-0410 supplies installation, independent verification, failure and cleanup proof for the scoped release decision.
   expected_test_tier: full
   full_test_triggers:
   - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  completion_phase: release
+  release_prerequisites:
+  - kind: authorization
+    scope: Accountable product and security decision-makers record one first write-capable disposition on the prepared, verified
+      package slice, with attributable scopes.
+    authority: product-security-owners
+  outcome: package-installation
+- id: TL-0412
+  title: Verify one real machine-wide package transaction through ThirdLife
+  milestone: M4
+  workstream: integration
+  kind: test
+  priority: P0
+  status: blocked
+  blocked_reason: The exact Notepad++ 8.9.9.1 x64 vendor MSI machine-wide installation on the active Windows 11 host
+    requires scope-bound machine-change authorization and any ordinary Windows consent before the launched transaction.
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0404
+  decision_refs:
+  - D-005
+  - D-022
+  - D-032
+  - D-033
+  - D-074
+  - D-075
+  objective: Run the launched ThirdLife application through one approved package installation and confirm persisted report
+    continuity.
+  deliverables:
+  - Launchable application candidate using the normal plan, approval and action journal interfaces
+  - Durable evidence of one real independently verified installation and a report from the reopened job
+  acceptance_criteria:
+  - The admitted Windows 11 client on native x64 is the authorized target or a previously authorized same-machine environment.
+  - Capture initial absent state and resolve exact approved package, version, source, architecture, installer and machine
+    scope.
+  - The ordinary unelevated application exposes the complete plan, requires scoped authorization, and records the actual execution
+    outcome.
+  - Independent installed-state observation establishes package identity, exact version and machine scope.
+  - The saved transaction, reopened job and generated report agree with the independent observation.
+  verification:
+  - Exercise the real built application through UI or launched-application runner. Run focused fail-closed tests plus applicable
+    clean Full.
+  - Record artifact, source, environment, initial and final states, journal and report, authorized changes and any remaining
+    limitations.
+  evidence:
+  - task: TL-0412
+    summary: The approved installer resolved and the exact package was absent.
+    command_or_review: Opt-in active-machine package observation plus fixture reopen/report review
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 client on native x64, unelevated, deterministic fixtures where indicated
+    date: '2026-11-25'
+    duration: Initial-state probe and deterministic app checks
+    reference: artifacts/evidence/TL-0412/report.md
+    limitation: Machine-wide installation and real report continuity await action-specific authorization.
+  expected_test_tier: full
+  full_test_triggers:
+  - Run clean Full after governance, dependency contract, and package execution route changes.
+  extended_test_triggers: []
+  completion_phase: execution
+  execution_prerequisites:
+  - kind: capability
+    scope: Qualified supported machine-wide package backend and independent installed-state query
+  - kind: authorization
+    scope: Action-specific consent for the exact approved package, version, machine scope, target, and any applicable installer
+      terms or Windows consent
+    authority: operator
+  outcome: package-installation
 - id: TL-0501
   title: Execute dependency-aware multi-action plans
   milestone: M5
@@ -4631,7 +4856,8 @@ tasks:
   executor: codex
   environment: windows
   depends_on:
-  - TL-0411
+  - TL-0404
+  - TL-0309
   decision_refs:
   - D-020
   - D-023
@@ -4933,7 +5159,7 @@ tasks:
   priority: P0
   status: backlog
   size: M
-  executor: hybrid
+  executor: codex
   environment: any
   depends_on:
   - TL-0502
@@ -4978,14 +5204,17 @@ tasks:
   - Check the package-license/privacy matrix against the exact candidates. Reuse valid unchanged approvals and present
     new or materially changed content only.
   evidence: []
-  human_evidence_required:
-  - Record the product/policy decision on new or materially changed policy thresholds and application selections, and
-    applicable licensing/privacy decisions on that changed content. Cite valid unchanged approvals.
   notes:
   - Prepare and verify the candidate inputs before seeking actual adoption decisions.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
+  completion_phase: release
+  release_prerequisites:
+  - kind: authorization
+    scope: Record the product/policy decision on new or materially changed policy thresholds and application selections, and
+      applicable licensing/privacy decisions on that changed content. Cite valid unchanged approvals.
+    authority: policy-owner
 - id: TL-0509
   title: Require final cold-boot verification
   milestone: M5
@@ -5173,7 +5402,8 @@ tasks:
   executor: codex
   environment: any
   depends_on:
-  - TL-0511
+  - TL-0203
+  - TL-0308
   decision_refs:
   - D-021
   - D-035
@@ -5198,6 +5428,10 @@ tasks:
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
+  release_prerequisites:
+  - kind: task
+    task: TL-0511
+    scope: Full machine profile qualification before ready or handover claims for that profile
 - id: TL-0602
   title: Detect bounded workshop artifacts
   milestone: M6
@@ -5465,7 +5699,6 @@ tasks:
   depends_on:
   - TL-0605
   - TL-0607
-  - TL-0510
   decision_refs:
   - D-003
   - D-039
@@ -5504,6 +5737,10 @@ tasks:
   full_test_triggers: []
   extended_test_triggers:
   - Run only the independently invokable scenarios whose named risk is changed or whose gate explicitly requires them.
+  release_prerequisites:
+  - kind: task
+    task: TL-0510
+    scope: Integrated full-profile scenario evidence for pilot accessibility claims
 - id: TL-0609
   title: Complete the v0.1 security and privacy release review
   milestone: M6
@@ -5517,7 +5754,6 @@ tasks:
   depends_on:
   - TL-0606
   - TL-0607
-  - TL-0510
   decision_refs:
   - D-009
   - D-011
@@ -5570,6 +5806,10 @@ tasks:
   extended_test_triggers:
   - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
     risk affected by the task.
+  release_prerequisites:
+  - kind: task
+    task: TL-0510
+    scope: Integrated full-profile scenario evidence for pilot security and privacy review
 - id: TL-0610
   title: Package the controlled pilot and operating runbook
   milestone: M6
@@ -5632,8 +5872,7 @@ tasks:
   - Black-box review the pilot draft interface sheet against the packaged build and mark unknown/stable-only fields explicitly.
   evidence: []
   notes:
-  - The technical pilot candidate is ready for a decision at TL-0611. TL-0701 and TL-0702 use TL-0610 as their development
-    prerequisite.
+  - The completed technical candidate is the input for TL-0611. Core 1.0 onboarding uses the actual plan, journal and handover components.
   expected_test_tier: full
   full_test_triggers:
   - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
@@ -5648,7 +5887,7 @@ tasks:
   priority: P0
   status: backlog
   size: M
-  executor: hybrid
+  executor: codex
   environment: windows
   depends_on:
   - TL-0610
@@ -5679,7 +5918,7 @@ tasks:
   - pilot go/no-go record
   - One decision packet binding exact pilot artifacts, applicable evidence, material limits, and accountable dispositions
   acceptance_criteria:
-  - Every predecessor and prior milestone gate is done with linked evidence.
+  - The exact pilot candidate, scoped profile and package qualifications, and applicable release prerequisites have linked evidence.
   - A device cannot be handed over while any blocking finalization check remains.
   - Workshop, recipient, and diagnostic outputs meet their data-boundary rules.
   - The support bundle is previewable before export.
@@ -5700,18 +5939,10 @@ tasks:
   - Present the prepared controlled-pilot go/no-go packet and record actual decisions with candidate, scope, restrictions,
     and date.
   evidence: []
-  human_evidence_required:
-  - Accountable project/product and release decision-makers record the controlled-pilot go/no-go for the exact candidate
-    and exposure scope.
-  - Accountable security, privacy, accessibility, and licensing decision-makers record actual pilot-scope dispositions,
-    including material residual risks. Reuse valid unchanged decisions.
-  - The actual pilot partner records acceptance of the runbook, support path, operating scope, and known limitations before
-    exposure.
   notes:
   - Codex prepares and verifies the packet ahead of the release decision and may administer task state using actual attributable
     authorization.
-  - TL-0611 precedes actual partner pilot exposure. Preserve required pilot evidence for the stable gate. The technical
-    candidate TL-0610 enables TL-0701 and TL-0702 development.
+  - Preserve the scope-bound partner pilot decision and attributable results for the stable release gate.
   - This gate authorizes only controlled pilot exposure within its accepted scope. Standalone stable release and Team
     B transition remain at TL-0710.
   expected_test_tier: full
@@ -5720,6 +5951,26 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  completion_phase: release
+  release_prerequisites:
+  - kind: task
+    task: TL-0511
+    scope: Profile qualification for the exact controlled pilot scope
+  - kind: task
+    task: TL-0411
+    scope: Qualification of the package-installation and recovery route exposed to pilot operators
+  - kind: authorization
+    scope: Accountable project/product and release decision-makers record the controlled-pilot go/no-go for the exact candidate
+      and exposure scope.
+    authority: release-owners
+  - kind: authorization
+    scope: Accountable security, privacy, accessibility, and licensing decision-makers record actual pilot-scope dispositions,
+      including material residual risks. Reuse valid unchanged decisions.
+    authority: risk-owners
+  - kind: authorization
+    scope: The actual pilot partner records acceptance of the runbook, support path, operating scope, and known limitations
+      before exposure.
+    authority: pilot-partner
 - id: TL-0701
   title: Implement recipient-controlled accessibility setup
   milestone: M7
@@ -5731,7 +5982,9 @@ tasks:
   executor: codex
   environment: windows
   depends_on:
-  - TL-0610
+  - TL-0306
+  - TL-0308
+  - TL-0603
   decision_refs:
   - D-021
   - D-039
@@ -5770,6 +6023,10 @@ tasks:
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
+  execution_prerequisites:
+  - kind: authorization
+    scope: Recipient consent for the exact accessibility change on the target account
+    authority: recipient
 - id: TL-0702
   title: Implement basic operating-system backup onboarding and restore verification
   milestone: M7
@@ -5781,7 +6038,9 @@ tasks:
   executor: codex
   environment: windows
   depends_on:
-  - TL-0610
+  - TL-0306
+  - TL-0308
+  - TL-0603
   decision_refs:
   - D-021
   - D-038
@@ -5830,6 +6089,10 @@ tasks:
   extended_test_triggers:
   - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
     risk affected by the task.
+  execution_prerequisites:
+  - kind: authorization
+    scope: Recipient approval of exact backup destination, scope, and any account or storage exposure
+    authority: recipient
 - id: TL-0703
   title: Finalize standalone data ownership, profile export, and uninstall semantics
   milestone: M7
@@ -5841,7 +6104,9 @@ tasks:
   executor: codex
   environment: any
   depends_on:
-  - TL-0611
+  - TL-0101
+  - TL-0301
+  - TL-0601
   decision_refs:
   - D-011
   - D-014
@@ -6241,10 +6506,9 @@ tasks:
   priority: P0
   status: backlog
   size: M
-  executor: hybrid
+  executor: codex
   environment: windows
   depends_on:
-  - TL-0611
   - TL-0709
   decision_refs:
   - D-006
@@ -6302,12 +6566,6 @@ tasks:
   - Present one prepared stable-release and Team B transition packet and record actual attributable decisions, candidate,
     scope, material limits, and date.
   evidence: []
-  human_evidence_required:
-  - The accountable project/product and release decision-makers record the stable-release go/no-go and distribution scope
-    for the exact frozen candidate.
-  - Accountable security, privacy, accessibility, licensing, and support decision-makers address material residual risks
-    and exact permitted claims. Cite valid unchanged decisions.
-  - The accountable portfolio owner accepts the release-interface handoff and records whether Team B moves to Scam Explainer.
   notes:
   - Codex prepares and verifies the packet before the release decision and may administer task state using recorded attributable
     decisions.
@@ -6319,3 +6577,20 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  completion_phase: release
+  release_prerequisites:
+  - kind: task
+    task: TL-0611
+    scope: Controlled-pilot exit evidence and authorized exposure scope
+  - kind: authorization
+    scope: The accountable project/product and release decision-makers record the stable-release go/no-go and distribution
+      scope for the exact frozen candidate.
+    authority: release-owners
+  - kind: authorization
+    scope: Accountable security, privacy, accessibility, licensing, and support decision-makers address material residual
+      risks and exact permitted claims. Cite valid unchanged decisions.
+    authority: risk-owners
+  - kind: authorization
+    scope: The accountable portfolio owner accepts the release-interface handoff and records whether Team B moves to Scam
+      Explainer.
+    authority: portfolio-owner

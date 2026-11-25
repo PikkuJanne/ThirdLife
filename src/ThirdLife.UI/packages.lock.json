@@ -38,6 +38,13 @@
           "ThirdLife.Core": "[1.0.0, )"
         }
       },
+      "thirdlife.packages": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Actions": "[1.0.0, )",
+          "ThirdLife.Inventory": "[1.0.0, )"
+        }
+      },
       "thirdlife.persistence": {
         "type": "Project",
         "dependencies": {

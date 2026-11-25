@@ -1,5 +1,12 @@
 # Roadmap Bundle Changelog
 
+## 0.8.0 — 2026-11-25
+
+- [D-075 and the owner-approved development contract reset](docs/amendments/2026-11-25-development-contract-reset.md) promote the current product contract and retire D-045/D-067 implementation sequencing and task-field restrictions.
+- Separate actual implementation dependencies, action prerequisites and release prerequisites. Permit isolated integration while an affected capability remains unavailable.
+- Preserve unelevated operation and reserve the ephemeral broker for ThirdLife-owned privileged code. Suitable operations can use independently qualified Windows, WinGet or vendor routes with the same trusted approval, journal and postcondition controls.
+- Preserve prior work and evidence, active-machine validation, Codex engineering ownership, actual action/Windows consent and pilot/public-release decisions.
+
 ## 0.7.0 — 2026-11-25
 
 - Amended D-005, D-017 and D-027 under the [owner-authorized Windows 11–only direction](docs/amendments/2026-11-25-windows-11-only.md). Added TL-0315 before broker continuation.

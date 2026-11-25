@@ -1,6 +1,6 @@
-# ThirdLife Setup Core — Binding Development Roadmap
+# ThirdLife Setup Core — Delivery Roadmap
 
-**Bundle version:** 0.7.0  
+**Bundle version:** 0.8.0  
 **Portfolio roadmap:** ThirdLife Software Portfolio v2.1 (15 August 2026)  
 **Project / queue:** ThirdLife Setup Core — Team B / B1  
 **Pilot target:** v0.1 controlled partner pilot at `TL-0611`  
@@ -9,33 +9,18 @@
 **Supported application host and workflow target:** Windows 11 client on native x64  
 **Implementation baseline:** C# / .NET 10 / WPF / SQLite
 
-## 1. Purpose and authority
+## 1. Purpose
 
-This roadmap is the binding implementation plan for **ThirdLife Setup Core**, not for the complete future ThirdLife suite. It converts the product concept and the portfolio boundary architecture into a project-local sequence that Codex can execute without reading or depending on sibling repositories.
-
-The project must deliver a useful standalone PC-assessment and preparation product first. Portfolio-specific catalogue entries, sibling-application profiles, file-opening adapters, compatibility cuts, and offline suite media are intentionally deferred to the later Team B/B4 project and may consume only frozen releases and public release documentation.
-
-Apply repository documents in this order:
-
-1. `DECISIONS.md` — frozen product, architecture, safety, portfolio-boundary, testing, continuity, and delivery decisions.
-2. `ROADMAP.md` — binding scope, milestone sequence, release gates, and evidence model.
-3. `PROJECT_BOUNDARY.md` — canonical Team B/B1 ownership, non-goals, data boundary, and late-integration contract.
-4. `SECURITY.md` — security objective, threat boundaries, reporting requirements, and release controls.
-5. `ACCESSIBILITY.md` — operator and recipient accessibility requirements and evidence rules.
-6. `LOW_SPEC.md` — modest-hardware architecture, same-machine constraints, resource evidence, and claim boundaries.
-7. `DEVELOPMENT_WORKFLOW.md` — GitHub synchronization, branch/checkpoint/push, clean-clone, and handoff rules.
-8. `TESTING.md` — quick, targeted, full, and extended test tiers and single-machine execution contract.
-9. `AGENTS.md` — Codex operating contract and task-execution rules.
-10. `TASKS.yaml` — machine-readable executable task DAG, test triggers, and evidence state.
-11. `STATUS.md` — factual current handoff snapshot; it cannot weaken a higher-authority file.
-12. `CODEX_START_PROMPT.md` — copy-ready first-session and reusable Codex prompts.
-13. `README.md` — bundle navigation and setup guidance.
-
-`RELEASE_INTERFACE.md` is a release deliverable rather than a speculative API. `FUTURE_ASSEMBLY_NOTES.md` is a non-binding deferral log and cannot create B1 work. When documents conflict, stop before implementation that would cross a higher-authority boundary and request a named decision amendment.
+This roadmap describes delivery increments for ThirdLife Setup Core.
+The [product contract](docs/product-contract.md) defines current scope and
+invariants. [TASKS.yaml](TASKS.yaml) records the actual implementation graph,
+execution and release prerequisites, and evidence. Milestone labels describe
+outcomes. Independent implementation can proceed when its real prerequisites
+are available.
 
 ## 2. Portfolio position and delivery posture
 
-| Item | Binding position |
+| Item | Delivery position |
 |---|---|
 | Product family / code identity | `ThirdLife`; production namespaces remain `ThirdLife.*`. |
 | Current project | **ThirdLife Setup Core**, Team B queue position B1. |
@@ -52,7 +37,7 @@ No B1 task may depend on a PaperWorkShell, CaptionKit, Scam Explainer, Job Appli
 
 The project follows the portfolio v2.1 universal operating rule:
 
-- GitHub is the canonical continuity record. Every meaningful checkpoint is committed and pushed, `STATUS.md` records the handoff, and gate evidence includes a clean clone or clean worktree on the active Codex machine.
+- GitHub is the canonical continuity record. Integrate verified checkpoints under the current development workflow and record the continuation in STATUS.md. Gate evidence uses a clean clone or worktree on the active Codex machine as applicable.
 - The active Codex machine is the only physical machine used for implementation, tests, benchmarks, clean environments, manual walkthroughs, cold-boot evidence, and release evidence.
 - VMs, Windows Sandbox, containers, virtual disks, separate worktrees, process constraints, and deterministic fixtures are allowed only when hosted on that same physical machine.
 - No lab, second PC, lower-performance test device, volunteer hardware pool, cloud runner matrix, or missing equipment class is a project dependency or blocker.
@@ -63,16 +48,16 @@ The project follows the portfolio v2.1 universal operating rule:
 
 The former `TL-0008 draft 1` physical device-pool walkthrough is superseded by `D-064` and `TL-0008_TRANSITION.md`. Its source commit and digest remain historical references only.
 
-## 3. Binding product contract
+## 3. Product outcomes
 
 > ThirdLife Setup Core is a local-first, auditable refurbishment workflow that helps a volunteer determine whether a sanitized used computer is suitable for deployment, applies an approved setup plan, verifies the outcome, and produces a clear handover for the recipient.
 
-The product outcome is not merely that commands ran or packages were installed. A completed job must support a traceable statement that:
+A completed job must support a traceable statement that the following conditions hold.
 
 - the device entered through an accepted external sanitization state;
 - observed, inferred, unavailable, and human-confirmed evidence remain distinguishable;
 - a versioned organization policy produced an explainable disposition;
-- every modifying action was previewed, attributable, journaled, and narrowly elevated;
+- every modifying action was previewed, attributable, journaled, and run with the privileges its action required;
 - every claimed success passed an independent verification condition;
 - restart, interruption, low-space, network-loss, and declined-elevation states are recoverable or truthfully blocked;
 - finalization found no unresolved known workshop-residue blocker;
@@ -100,7 +85,7 @@ Historical decisions retain their original policy and disposition, including the
 
 ## 4. Project boundary
 
-`PROJECT_BOUNDARY.md` is the canonical ownership statement. The summary below is binding but does not replace that file.
+See [project ownership](PROJECT_BOUNDARY.md) for the detailed boundary.
 
 ### 4.1 ThirdLife Setup Core owns
 
@@ -118,13 +103,13 @@ Historical decisions retain their original policy and disposition, including the
 - a shared user-content database, central identity, portfolio content library, permanent privileged service, shared SDK, universal schema, plugin framework, or cross-repository source dependency;
 - B4 catalogue entries, sibling-specific profiles, app adapters, suite compatibility, or suite deployment media.
 
-A change to **Owns** or **Does not own** requires an explicit portfolio-owner decision and coordinated updates to all affected binding files. Codex must not infer permission from technical convenience.
+A change to **Owns** or **Does not own** requires an explicit portfolio-owner decision and coordinated updates to the affected specifications. Codex must not infer permission from technical convenience.
 
 ## 5. Release model
 
 | Stage | Gate | Meaning | Does not mean |
 |---|---|---|---|
-| Architecture-proving write slice | `TL-0411` | One trusted package can be planned, elevated, installed, recovered, and independently verified end to end. | Pilot readiness or product completion. |
+| Architecture-proving write slice | `TL-0411` | One approved machine-wide package is installed and independently verified through ThirdLife, with journal and report continuity. | Pilot readiness or product completion. |
 | Full machine profile | `TL-0511` | The reference profile converges through packages, updates, restarts, security checks and approved same-machine VM cold-start verification. | Handover authorization. |
 | Controlled v0.1 pilot | `TL-0611` | Named humans approve a bounded partner pilot with finalization, reports, audits, package, and runbook. | Team B/B1 exit, stable 1.0, or permission for sibling integration. |
 | Standalone Core 1.0 | `TL-0710` | Product lifecycle, recipient-controlled accessibility/basic backup, release evidence, artifacts, and black-box interface are frozen. | B4 suite assembly or synchronized sibling releases. |
@@ -166,7 +151,7 @@ These facts are populated as a verified preview draft in `RELEASE_INTERFACE.md` 
 | `ThirdLife.Packages` | Replaceable structured package backend, resolution, progress, errors, and installed-state queries. | Localized table parsing, unrestricted CLI arguments, hash bypass. |
 | `ThirdLife.Actions` | Compiled allowlisted action types, planning, preconditions, execution contracts, and journal integration. | Profile-provided code or general shell execution. |
 | `ThirdLife.Broker.Protocol` | Typed versioned requests/results, digest binding, nonce, expiry, correlation, and limits. | Shell strings, arbitrary executables/registry/URLs/files. |
-| `ThirdLife.Broker` | Ephemeral elevated validation and execution over restricted authenticated IPC. | Permanent service, caller trust, unknown actions, broad token retention. |
+| `ThirdLife.Broker` | Ephemeral elevated validation and execution of ThirdLife-owned privileged code over restricted authenticated IPC. | Permanent service, caller trust, unknown actions, broad token retention. |
 | `ThirdLife.Verification` | Independent post-action, profile, restart, and cold-boot checks. | Treating backend return codes as proof. |
 | `ThirdLife.Reports` | Workshop record, recipient guide, and support outputs with distinct schemas. | Secret leakage, donor/recipient mixing, unsupported safety claims. |
 | `ThirdLife.Diagnostics` | Allow-listed local diagnostic capture, preview, redaction, and export. | Whole-log dumping, content scanning, sibling support-data collection. |
@@ -185,7 +170,7 @@ Default dependency direction is inward toward domain contracts. UI and infrastru
 
 ### 8.2 Security and privilege
 
-- The main UI runs unelevated. Elevation is per approved action/batch through an ephemeral allowlisted broker.
+- The main UI runs unelevated. Suitable package actions use qualified Windows, WinGet or vendor routes with required operating-system consent. ThirdLife-owned privileged code uses the ephemeral allowlisted broker.
 - Profiles and policies are data. No profile-supplied PowerShell, command, executable path, registry path, URL, or arbitrary file operation is accepted.
 - Package identity, source, publisher, version, signature/hash/provenance, licence, and verification are bound to approval.
 - Material package/catalog changes invalidate approval and require a new preview.
@@ -212,23 +197,21 @@ Default dependency direction is inward toward domain contracts. UI and infrastru
 
 The core action states are **planned, approved, started, applied, verified, failed, skipped, rolled back,** and **requires review**. `applied` is never synonymous with `verified`. Missing evidence remains unknown. Human confirmation is attributable and cannot be fabricated by Codex.
 
-## 9. Machine-readable execution model
+## 9. Engineering and prerequisites
 
-`TASKS.yaml` contains the executable DAG. Unless a user names a valid task, Codex selects one dependency-ready task using `AGENTS.md`. Every task declares an expected quick, targeted, full, or extended test tier plus any broader triggers. Normal implementation sessions may edit only `status`, `evidence`, and `blocked_reason` in existing task entries.
+Use TASKS.yaml for task details and evidence. An implementation dependency
+supplies code, data or an interface to another task. An execution prerequisite
+gates a particular action. A release prerequisite gates a particular claim or
+exposure. Verified isolated checkpoints may integrate with affected unqualified
+execution unavailable. Codex owns engineering verification and prepares
+candidates for genuine decisions. Technical completion creates zero routine
+owner QA or sign-off.
 
-The milestone sequence is:
-
-`M0 → M1 → M2 → M3 → M4 → M5 → M6 → M7`
-
-Every milestone gate transitively depends on all work in that milestone. Later tasks depend on the previous milestone gate except TL-0701 and TL-0702, which depend on technical pilot candidate TL-0610. TL-0611 remains required before actual controlled-pilot exposure and is a direct prerequisite of the stable gate TL-0710. Preserve required pilot evidence. The exception separates engineering from exposure and authorizes neither M7 execution nor release.
-
-Under [D-074](DECISIONS.md#d-074), engineering readiness depends on technical prerequisites and authorizations needed for the work itself. A later decision on a prepared candidate does not block its preparation or verification. Codex closes technical work when objective criteria are satisfied. A task with a genuinely required accountable decision remains open for that decision after the evidence is ready. Record the actual person's scope and disposition. Ordinary technical completion creates no routine human QA or sign-off.
-
-## 10. Milestones and binding task sequence
+## 10. Delivery milestones
 
 ### M0 — Foundation and product contract
 
-**Objective:** Create the governed repository, frozen standalone and portfolio boundaries, security/privacy/accessibility/modest-hardware baselines, pilot inputs, GitHub continuity, and a tiered same-machine verification system before feature code expands.
+**Objective:** Establish the repository, standalone and portfolio boundaries, product safeguards, pilot inputs, GitHub continuity and tiered same-machine verification.
 
 **Exit criteria:**
 
@@ -238,20 +221,7 @@ Under [D-074](DECISIONS.md#d-074), engineering readiness depends on technical pr
 - The Team B/B1 project-vacuum boundary and future B4 late-binding posture are explicit and validated.
 - The roadmap bundle, GitHub workflow, task graph, and repository rules are internally consistent and validated.
 
-| Task | Deliverable | Executor | Direct dependencies |
-|---|---|---|---|
-| `TL-0001` | Create the solution and repository scaffold | `codex` | None |
-| `TL-0002` | Add deterministic local verification and GitHub continuity checks | `codex` | `TL-0001` |
-| `TL-0003` | Establish product, portfolio-boundary, and documentation governance | `codex` | `TL-0001` |
-| `TL-0004` | Write the v0.1 threat model | `hybrid` | `TL-0003` |
-| `TL-0005` | Define the privacy and logging model | `hybrid` | `TL-0003`, `TL-0004` |
-| `TL-0006` | Create dependency, license, and SBOM controls | `hybrid` | `TL-0002`, `TL-0004` |
-| `TL-0007` | Create synthetic pilot fixtures and reference inputs | `hybrid` | `TL-0003`, `TL-0005` |
-| `TL-0008` | Define the same-machine validation system and manual-test specification | `codex` | `TL-0003`, `TL-0004` |
-| `TL-0009` | Record initial architecture decisions and project boundaries | `codex` | `TL-0001`, `TL-0003`, `TL-0004`, `TL-0005` |
-| `TL-0010` | Validate the M0 foundation gate | `hybrid` | `TL-0002`, `TL-0003`, `TL-0004`, `TL-0005`, `TL-0006`, `TL-0007`, `TL-0008`, `TL-0009` |
-
-**Gate:** `TL-0010` — Validate the M0 foundation gate. The gate is not complete until its automated verification and every declared human evidence item are attached.
+**Gate:** `TL-0010` — Validate the M0 foundation gate. Preserve the original foundation evidence and approvals.
 
 ### M1 — Audit-only vertical slice
 
@@ -263,25 +233,6 @@ Under [D-074](DECISIONS.md#d-074), engineering readiness depends on technical pr
 - Missing evidence remains unknown and normalized observations are deterministic.
 - The isolated, actually launched WPF route starts with a fresh store and proves job creation, confirmed and saved intake, enabled Start assessment, completed read-only assessment, an attributable persisted manual fixture result, close/reopen and report agreement.
 - Technical accessibility, privacy-safe persistence and logging, safe cancellation/interruption and the triggered Full gate have objective evidence. Reported defects in required behavior are resolved. Record separate limits for physical and perceptual coverage. M1 establishes an internal audit-only baseline.
-
-| Task | Deliverable | Executor | Direct dependencies |
-|---|---|---|---|
-| `TL-0101` | Implement core job and evidence domain models | `codex` | `TL-0010` |
-| `TL-0102` | Implement the SQLite job store and migrations | `codex` | `TL-0101` |
-| `TL-0103` | Implement job lifecycle and sanitization gate services | `codex` | `TL-0102` |
-| `TL-0104` | Implement structured logging and redaction | `codex` | `TL-0101`, `TL-0005` |
-| `TL-0105` | Define inventory provider contracts and evidence normalization | `codex` | `TL-0101` |
-| `TL-0106` | Implement device identity, CPU, memory, and architecture inventory | `codex` | `TL-0105` |
-| `TL-0107` | Implement OS lifecycle and activation inventory | `codex` | `TL-0105` |
-| `TL-0108` | Implement storage inventory and reliability evidence | `codex` | `TL-0105` |
-| `TL-0109` | Implement battery report generation and parsing | `codex` | `TL-0105`, `TL-0104` |
-| `TL-0110` | Implement UEFI, Secure Boot, and TPM inventory | `codex` | `TL-0105` |
-| `TL-0111` | Implement network and key-device enumeration | `codex` | `TL-0105`, `TL-0104` |
-| `TL-0112` | Implement the read-only assessment orchestrator | `codex` | `TL-0103`, `TL-0104`, `TL-0106`, `TL-0107`, `TL-0108`, `TL-0109`, `TL-0110`, `TL-0111` |
-| `TL-0113` | Build the accessible six-stage WPF shell | `hybrid` | `TL-0002`, `TL-0103`, `TL-0105` |
-| `TL-0114` | Implement manual hardware-test capture | `codex` | `TL-0101`, `TL-0111`, `TL-0112`, `TL-0113` |
-| `TL-0115` | Generate the audit-only workshop report | `codex` | `TL-0112`, `TL-0114`, `TL-0104` |
-| `TL-0116` | Validate the M1 audit-only gate | `codex` | `TL-0112`, `TL-0113`, `TL-0114`, `TL-0115` |
 
 TL-0113's completed shell observations retain their original provenance. TL-0114 connects durable job create/open/reopen, external sanitization capture, read-only assessment and guided manual capture to the operator UI, with automated implementation verification. TL-0115 renders the deterministic workshop report from durable job evidence and adds the operator UI path to generate and open that report.
 
@@ -298,22 +249,11 @@ TL-0113's completed shell observations retain their original provenance. TL-0114
 - Historical jobs preserve the policy/result originally used.
 - New or materially changed disposition wording and exception governance receive an attributable policy-owner decision on prepared technical evidence.
 
-| Task | Deliverable | Executor | Direct dependencies |
-|---|---|---|---|
-| `TL-0201` | Implement the versioned policy schema and validator | `codex` | `TL-0116`, `TL-0007` |
-| `TL-0202` | Implement deterministic policy evaluation | `codex` | `TL-0201` |
-| `TL-0203` | Implement disposition and explanation generation | `codex` | `TL-0202` |
-| `TL-0204` | Implement human confirmations and governed exceptions | `codex` | `TL-0203`, `TL-0102` |
-| `TL-0205` | Implement policy versioning and historical replay | `codex` | `TL-0201`, `TL-0102` |
-| `TL-0206` | Implement device class, repair, and retest workflow | `codex` | `TL-0203`, `TL-0103` |
-| `TL-0207` | Upgrade reports and UI to separate facts from decisions | `codex` | `TL-0203`, `TL-0204`, `TL-0205`, `TL-0115` |
-| `TL-0208` | Validate the M2 explainable-disposition gate | `hybrid` | `TL-0204`, `TL-0205`, `TL-0206`, `TL-0207` |
-
 **Gate:** `TL-0208` — Validate the M2 explainable-disposition gate. Codex verifies the behavior and presents only applicable policy choices for decision.
 
 ### M3 — Safe planning and privilege boundary
 
-**Objective:** Resolve declarative profiles into a complete approved plan and prove that a narrow ephemeral broker independently rejects anything outside compiled actions.
+**Objective:** Resolve declarative profiles into a complete approved plan and verify broker-dependent privileged actions against their scoped trust boundary.
 
 **Exit criteria:**
 
@@ -322,56 +262,24 @@ TL-0113's completed shell observations retain their original provenance. TL-0114
 - The broker protocol, IPC, journal, and reboot checkpoints fail closed under adversarial tests.
 - Accountable authority records one privilege-boundary disposition on the prepared evidence and residual risks before the authorized scope is used.
 
-| Task | Deliverable | Executor | Direct dependencies |
-|---|---|---|---|
-| `TL-0301` | Implement the application catalog schema | `codex` | `TL-0208`, `TL-0007` |
-| `TL-0302` | Implement workshop and recipient profile schemas | `codex` | `TL-0208`, `TL-0007` |
-| `TL-0303` | Implement the compiled action registry and contracts | `codex` | `TL-0301`, `TL-0302`, `TL-0101` |
-| `TL-0304` | Implement deterministic plan resolution | `codex` | `TL-0301`, `TL-0302`, `TL-0303`, `TL-0202` |
-| `TL-0305` | Implement impact and preapproval estimates | `codex` | `TL-0304` |
-| `TL-0306` | Build the plan-review and approval UI | `codex` | `TL-0304`, `TL-0305`, `TL-0113` |
-| `TL-0307` | Detect material plan changes and require reapproval | `codex` | `TL-0304`, `TL-0306` |
-| `TL-0308` | Implement the durable action journal | `codex` | `TL-0303`, `TL-0102` |
-| `TL-0309` | Implement reboot checkpoints and resume tokens | `codex` | `TL-0308`, `TL-0102` |
-| `TL-0310` | Define the versioned broker protocol | `codex` | `TL-0303`, `TL-0009` |
-| `TL-0311` | Implement the ephemeral broker and authenticated IPC | `codex` | `TL-0310`, `TL-0002`, `TL-0315` |
-| `TL-0312` | Add focused broker security tests | `codex` | `TL-0311`, `TL-0004` |
-| `TL-0313` | Connect approval, journal, UAC, broker, and result flow | `codex` | `TL-0306`, `TL-0308`, `TL-0311` |
-| `TL-0314` | Validate the M3 safe-planning gate | `hybrid` | `TL-0307`, `TL-0309`, `TL-0312`, `TL-0313` |
-| `TL-0315` | Enforce Windows 11 client/native-x64 scope and preserve historical records | `codex` | `TL-0310` |
-
 The [platform amendment](docs/amendments/2026-11-25-windows-11-only.md) supersedes the former Windows 10 live-audit criterion from TL-0107 and applies to the first executable broker. TL-0311 retains responsibility for trusted elevated startup and actual privilege and recovery evidence.
 
-**Gate:** `TL-0314` — Validate the M3 safe-planning gate. Record technical acceptance and the actual privilege-boundary authorization here.
+**Gate:** `TL-0314` — Validate the M3 safe-planning gate. Record technical evidence and the authorization scoped to broker-dependent use. Independent package engineering follows its own prerequisites.
 
 ### M4 — One package installation vertical slice
 
-**Objective:** Install and independently verify one approved machine-wide package through the structured backend, broker, journal, recovery, and reporting path.
+**Objective:** Install and independently verify one approved machine-wide package through an appropriate supported backend and the actual application plan, approval, journal, recovery and reporting path.
 
 **Exit criteria:**
 
 - Exact package identity/source/trust data is enforced without localized table parsing or hash bypass.
-- Installer success is not accepted until independent verification passes.
+- Independently verify the installed package ID, version and machine scope. Save the transaction, reopen the job and confirm that its report agrees with the persisted facts.
 - UAC decline, network loss, process termination, reboot, and retry are recoverable and idempotent.
 - The actual first-write-capable product/security decision uses prepared isolated lifecycle, verification and recovery evidence. Any authorization required to execute a particular action still precedes that action.
 
-| Task | Deliverable | Executor | Direct dependencies |
-|---|---|---|---|
-| `TL-0401` | Spike structured WinGet integration paths and record ADR 0009 | `codex` | `TL-0314`, `TL-0006` |
-| `TL-0402` | Implement the production package-manager adapter | `codex` | `TL-0401` |
-| `TL-0403` | Enforce package resolution and trust policy | `codex` | `TL-0402`, `TL-0301`, `TL-0307` |
-| `TL-0404` | Implement one approved machine-wide package action | `codex` | `TL-0403`, `TL-0313` |
-| `TL-0405` | Handle progress, cancellation, timeout, and network loss | `codex` | `TL-0404` |
-| `TL-0406` | Verify package installation and application launch | `codex` | `TL-0404` |
-| `TL-0407` | Classify package failures and emit sanitized diagnostics | `codex` | `TL-0405`, `TL-0406`, `TL-0005` |
-| `TL-0408` | Resume a package action safely after reboot or process loss | `codex` | `TL-0309`, `TL-0406`, `TL-0407` |
-| `TL-0409` | Make package execution idempotent and safely retryable | `codex` | `TL-0408` |
-| `TL-0410` | Complete the first write-capable end-to-end slice | `codex` | `TL-0409` |
-| `TL-0411` | Validate the M4 package-installation gate | `hybrid` | `TL-0410` |
+TL-0401 records the backend route and its evidence in ADR 0009. The installer, scope and trust binding remain explicit. Broker qualification is required only for a route that uses it.
 
-Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md` and reserves ADR 0009 for the future TL-0401 backend decision at `docs/adr/0009-winget-backend.md`. TL-0401 selects a compliant structured implementation based on the spike and verification. An actual trust, privilege, licensing or frozen-architecture change requires the applicable authority. [Approved numbering amendment](docs/amendments/2026-08-22-adr-0009-reservation.md)
-
-**Gate:** `TL-0411` — Validate the M4 package-installation gate. Codex prepares and verifies the candidate. Record the accountable first-write-capable product/security decision on that evidence.
+**Gate:** `TL-0411` — Validate the M4 package-installation gate through the launched application. Record applicable action consent and any separate first-write exposure decision against the prepared evidence.
 
 ### M5 — Full machine profile
 
@@ -385,20 +293,6 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 - Checkpoint and approved VM cold-start verification record exact versions and environment. State any unverified physical power cycle explicitly and retain genuinely required physical product/release conditions.
 - New or materially changed catalogue content retains applicable policy, application-selection, licensing and privacy decisions. Security baseline and pilot-scope dispositions belong to TL-0611.
 - Evidence describes the reference machine and constraints and does not imply cross-hardware certification.
-
-| Task | Deliverable | Executor | Direct dependencies |
-|---|---|---|---|
-| `TL-0501` | Execute dependency-aware multi-action plans | `codex` | `TL-0411` |
-| `TL-0502` | Implement essential and optional action semantics | `codex` | `TL-0501`, `TL-0203` |
-| `TL-0503` | Preflight disk, power, and resource requirements | `codex` | `TL-0501`, `TL-0305` |
-| `TL-0504` | Implement a structured Windows Update workflow | `codex` | `TL-0503`, `TL-0004` |
-| `TL-0505` | Coordinate maintenance phases and restart checkpoints | `codex` | `TL-0502`, `TL-0504`, `TL-0309` |
-| `TL-0506` | Implement the v0.1 security baseline providers | `codex` | `TL-0505`, `TL-0112`, `TL-0004` |
-| `TL-0507` | Verify the complete machine profile | `codex` | `TL-0505`, `TL-0506` |
-| `TL-0508` | Finalize the pilot catalog, policy, and profiles | `hybrid` | `TL-0502`, `TL-0503`, `TL-0403`, `TL-0006` |
-| `TL-0509` | Require final cold-boot verification | `codex` | `TL-0507` |
-| `TL-0510` | Run the full-profile and failure-injection matrix | `codex` | `TL-0503`, `TL-0505`, `TL-0507`, `TL-0508`, `TL-0509` |
-| `TL-0511` | Validate the M5 full-machine-profile gate | `codex` | `TL-0510` |
 
 **Gate:** `TL-0511` — Validate the M5 full-machine-profile gate. Codex owns integration, fault and resource evidence and records blockers and coverage limits.
 
@@ -414,20 +308,6 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 - The prepared evidence and required pilot records support one coordinated go/no-go packet at TL-0611, with actual security, privacy, accessibility, licensing, release and partner decisions attributed by scope.
 - The gate record states that Core 1.0 completion and portfolio handoff remain in M7.
 
-| Task | Deliverable | Executor | Direct dependencies |
-|---|---|---|---|
-| `TL-0601` | Implement finalization rules and checklist state | `codex` | `TL-0511` |
-| `TL-0602` | Detect bounded workshop artifacts | `codex` | `TL-0601`, `TL-0005`, `TL-0506` |
-| `TL-0603` | Support assisted and sealed handover models | `codex` | `TL-0601` |
-| `TL-0604` | Generate the technical workshop record | `codex` | `TL-0601`, `TL-0507` |
-| `TL-0605` | Generate the plain-language recipient guide | `codex` | `TL-0603`, `TL-0508` |
-| `TL-0606` | Build a previewable sanitized diagnostic bundle | `codex` | `TL-0602`, `TL-0407`, `TL-0604` |
-| `TL-0607` | Enforce final sign-off and the blocking handover gate | `codex` | `TL-0602`, `TL-0603`, `TL-0604`, `TL-0605`, `TL-0606` |
-| `TL-0608` | Complete the v0.1 accessibility audit | `codex` | `TL-0605`, `TL-0607`, `TL-0510` |
-| `TL-0609` | Complete the v0.1 security and privacy release review | `codex` | `TL-0606`, `TL-0607`, `TL-0510` |
-| `TL-0610` | Package the controlled pilot and operating runbook | `codex` | `TL-0607`, `TL-0608`, `TL-0609` |
-| `TL-0611` | Validate the M6 and v0.1 controlled-pilot gate | `hybrid` | `TL-0610` |
-
 **Gate:** `TL-0611` — Validate the M6 and v0.1 controlled-pilot gate. Actual pilot exposure requires the scoped go/no-go and partner consent. Reuse valid unchanged decisions and preserve required pilot evidence.
 
 ### M7 — Core 1.0 standalone release and portfolio handoff
@@ -442,19 +322,6 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 - Exact artifacts, hashes, source revision, SBOM, licence evidence, known limitations, sanitized samples, and RELEASE_INTERFACE.md are frozen.
 - Codex verifies the frozen standalone candidate before exposure. TL-0710 records actual stable-release and security/privacy/accessibility/licensing/support/portfolio decisions on the candidate and required pilot evidence.
 - Team B/B1 is complete and the next project is Scam Explainer; no B4 sibling adapter work is authorized by this gate.
-
-| Task | Deliverable | Executor | Direct dependencies |
-|---|---|---|---|
-| `TL-0701` | Implement recipient-controlled accessibility setup | `codex` | `TL-0610` |
-| `TL-0702` | Implement basic operating-system backup onboarding and restore verification | `codex` | `TL-0610` |
-| `TL-0703` | Finalize standalone data ownership, profile export, and uninstall semantics | `codex` | `TL-0611` |
-| `TL-0704` | Harden install, update, repair, uninstall, and data preservation | `codex` | `TL-0701`, `TL-0702`, `TL-0703` |
-| `TL-0705` | Finalize stable security, accessibility, low-spec, and support documentation | `codex` | `TL-0701`, `TL-0702`, `TL-0704` |
-| `TL-0706` | Complete the minimal release interface and black-box samples | `codex` | `TL-0703`, `TL-0704`, `TL-0705` |
-| `TL-0707` | Run the Core 1.0 standalone stable-release matrix | `codex` | `TL-0701`, `TL-0702`, `TL-0704`, `TL-0705`, `TL-0706` |
-| `TL-0708` | Freeze ThirdLife Setup Core 1.0 release artifacts | `codex` | `TL-0706`, `TL-0707` |
-| `TL-0709` | Review standalone integrity and portfolio-boundary compliance | `codex` | `TL-0708` |
-| `TL-0710` | Validate the M7 and ThirdLife Setup Core 1.0 standalone release gate | `hybrid` | `TL-0709`, `TL-0611` |
 
 **Gate:** `TL-0710` — Validate the M7 and ThirdLife Setup Core 1.0 standalone release gate. Use prepared technical evidence, pilot evidence, known limits and the exact frozen candidate for the attributable stable-release and portfolio-transition decisions.
 
@@ -504,10 +371,4 @@ After `TL-0710`:
 
 ## 14. Change control
 
-A task-local implementation correction may proceed when it remains inside the task and frozen decisions. The following require a human-approved amendment before implementation:
-
-- changing the product boundary, owner/team queue, supported platform, sanitization assumption, privilege model, data ownership, release gates, or frozen decision;
-- adding sibling-specific behavior, a shared portfolio component, a cross-project dependency, a permanent privileged service, arbitrary execution, telemetry/default cloud dependency, or unsupported bypass;
-- weakening acceptance, test-tier triggers, GitHub continuity, verification, accessibility, modest-hardware design/claim limits, security/privacy, licence, finalization, or human-evidence requirements.
-
-An amendment preserves the old decision/history, names approver/date/rationale, identifies impacted tasks and evidence, updates all conflicting bundle files together, and reruns `python tools/validate_bundle.py`.
+Apply the [current product contract](docs/product-contract.md) and [change control](docs/change-control.md) when adjusting implementation or proposing a material product or authority change.

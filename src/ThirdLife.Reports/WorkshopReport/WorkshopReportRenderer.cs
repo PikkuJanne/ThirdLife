@@ -24,7 +24,8 @@ public static partial class WorkshopReportRenderer
         StoredJob job,
         WorkshopAssessmentSummary? latestAssessment,
         StoredPolicyDecision? savedDecision,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyList<WorkshopPackageRecord>? packages = null)
     {
         ArgumentNullException.ThrowIfNull(job);
         cancellationToken.ThrowIfCancellationRequested();
@@ -91,6 +92,11 @@ public static partial class WorkshopReportRenderer
         {
             Line(report, "Next step");
             Line(report, NextStep(job, gate, latestAssessment, needsReview));
+        }
+
+        if (packages is { Count: > 0 })
+        {
+            WritePackageRecords(report, packages, cancellationToken);
         }
 
         return report.ToString();

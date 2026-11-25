@@ -1,6 +1,6 @@
 # Dependency, licence, provenance, and SBOM controls
 
-This document is the governed supply-chain contract introduced by `TL-0006`. It covers every external component used to build, validate, test, or distribute ThirdLife Setup Core and every catalogue application identity, including project-created synthetic placeholders. It does not approve a component or grant legal advice. Dated audit checkpoints below are point-in-time technical evidence only. The licence and rights statements in `license-matrix.csv` are proposals. The global review table at the end of this document is the sole current pending/approved state, so row text remains stable when a review is bound to a matrix digest.
+This document is the governed supply-chain contract introduced by `TL-0006`. It covers every external component used to build, validate, test, or distribute ThirdLife Setup Core and every catalogue application identity, including project-created synthetic placeholders. Dated audit checkpoints below are point-in-time technical evidence. The licence and rights statements in `license-matrix.csv` are proposals. The review table at the end records the current aggregate licence and redistribution assessment. A scoped direct-vendor installation review identifies its exact package and scope.
 
 ## Current scope
 
@@ -11,12 +11,12 @@ The checked-in matrix has exactly these current counts:
 | Runtime NuGet dependencies | 4 | Two direct and two transitive managed packages; all remain `not-shipped`, with packaging, notice, native-SQLite redistribution, and release admission withheld |
 | Build-only dependencies and toolchains | 6 | Three GitHub actions are `remote-ci-only`; PyYAML and both toolchains are `not-shipped` |
 | Test-only NuGet dependencies | 14 | `not-shipped` |
-| Catalogue application identities | 4 | Project-created synthetic `production_eligible: false` placeholders; non-installable, no artifact or binary, and `not-shipped` |
-| **Total governed supply-chain components** | **28** | 24 external runtime/build/test components plus 4 synthetic catalogue placeholders |
+| Catalogue application identities | 5 | Four non-installable synthetic placeholders and the [direct-source Notepad++ setup route](../adr/0009-winget-backend.md) |
+| **Total governed supply-chain components** | **29** | 24 external runtime/build/test components, four synthetic catalogue placeholders and one direct-vendor package |
 
 The 18 NuGet rows are the complete non-project package closure discovered across production and test `packages.lock.json` files. `ThirdLife.Persistence` directly references `Microsoft.Data.Sqlite.Core` 10.0.11 and `SQLitePCLRaw.bundle_winsqlite3` 2.1.11. Their runtime closure adds `SQLitePCLRaw.core` 2.1.12 and `SQLitePCLRaw.provider.winsqlite3` 2.1.11. The bundle/provider deliberately use `winsqlite3.dll` supplied by supported Windows; no native SQLite binary is included by these packages or admitted for project redistribution. The 2.1.11 bundle/provider plus 2.1.12 core combination is intentional: Microsoft.Data.Sqlite.Core requires core 2.1.12, while the provider's 2.1.11 minimum is resolved to that higher compatible core.
 
-Project-to-project references are part of this repository, not third-party components, and are not matrix rows. A direct runtime package can appear as `CentralTransitive` in a consuming test lock under NuGet central package management; inventory normalization treats that occurrence as transitive while preserving the direct/runtime relationship observed in the owning production lock. The four catalogue rows correspond exactly to the project-created identities in `fixtures/catalog/catalog.yaml`; they are synthetic fixture metadata, not external applications, packages, installers, artifacts, or binaries. Each is marked `production_eligible: false` in the fixture, carries `NOASSERTION`, and withholds installation and redistribution rights separately.
+Project-to-project references are part of this repository and are excluded from the matrix. A direct runtime package can appear as `CentralTransitive` in a consuming test lock under NuGet central package management. Inventory normalization treats that occurrence as transitive and preserves the direct/runtime relationship in the owning production lock. The four fixture rows correspond to the project-created identities in `fixtures/catalog/catalog.yaml`. Each is marked `production_eligible: false`, carries `NOASSERTION`, and withholds installation and redistribution rights separately.
 
 Every future runtime dependency or external or production catalogue application requires a complete matrix row, reviewed source and integrity evidence, and the update workflow below before admission. A catalogue row must identify the exact application identity, source or clearly declared synthetic origin, publisher, version, installation rights, redistribution rights, provenance, and distribution plan. The presence of a synthetic placeholder identity is not production admission or package approval. Absence from the matrix is a fail-closed condition, not implicit approval.
 
@@ -36,6 +36,7 @@ The accountable ThirdLife role in every current row is `Principal Software Archi
 | `global.json` | Exact .NET SDK version with roll-forward disabled |
 | `eng/verify.ps1`, `.github/workflows/verify.yml` | Exact Python version and full-commit GitHub action pins |
 | `fixtures/catalog/catalog.yaml` | Exact current synthetic catalogue identities and their shared fixture-file SHA-256; no executable package behavior |
+| [Workshop package catalogue](../../src/ThirdLife.UI/Features/PlanReview/PackageSetup/catalog.json) | External package's reviewed MSI SHA-256, source identity, exact version, licence/privacy review dates and scope |
 | `docs/supply-chain/license-matrix.csv` | Ownership, purpose, scope, upstream evidence, proposed rights, distribution plan, integrity, provenance, and limitations |
 
 [NuGet's lock-file guidance](https://learn.microsoft.com/nuget/consume-packages/package-references-in-project-files#locking-dependencies), [locked restore documentation](https://learn.microsoft.com/dotnet/core/tools/dotnet-restore), [pip's repeatable-install guidance](https://pip.pypa.io/en/stable/topics/secure-installs/), and [GitHub's guidance to pin actions to a full commit SHA](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-third-party-actions) are the upstream control references.
@@ -76,7 +77,8 @@ Rows are sorted case-insensitively by `(component_type, component_id)`. Every fi
 - `.NET SDK` and `CPython` use the governed `version-pin` mechanism, referencing `global.json#sdk.version` and `.github/workflows/verify.yml#python-version` respectively. A version pin is not a binary digest: no exact Windows x64 installer hash is currently governed. They are not release payloads; any proposal to redistribute either toolchain must stop until exact binary provenance, hash/signature evidence, applicable licences, and complete third-party notices are recorded and reviewed.
 - `xunit.abstractions` 2.0.3 exposes a legacy `licenseUrl` to a mutable `master` branch rather than a licence expression or immutable licence artifact. Its Apache-2.0 conclusion and both rights statements remain proposals with an explicit immutable-evidence gap.
 - `Microsoft.Data.Sqlite.Core` 10.0.11 declares MIT and explicitly excludes a native SQLite library. `SQLitePCLRaw.bundle_winsqlite3`, `SQLitePCLRaw.core`, and `SQLitePCLRaw.provider.winsqlite3` declare Apache-2.0. Their matrix evidence is bound to immutable upstream revisions and exact NuGet lock `contentHash` values, but those values remain restore metadata rather than independently computed `.nupkg` hashes. The named owner approved all four proposals exactly as written. Because that approval preserves the recorded limitations, all four remain `not-shipped`; runtime packaging, applicable licence/NOTICE material, native-SQLite redistribution, and release admission remain withheld.
-- The four `catalog-application` rows use `sha256` over the exact bytes of `fixtures/catalog/catalog.yaml`; all four therefore carry the same file digest, `7f80078a24d9fa890738d344d3c705549c45d17d7712ce1f8d543d4ce47f8901`. This proves only which project-created fixture bytes declared the identities. It is not an installer or application-artifact hash. Because matrix `source` and `license_evidence` fields require HTTPS, these no-artifact rows use deliberately non-routable `example.invalid` sentinels and `NOASSERTION`; neither is upstream evidence or a licence conclusion. Installation and redistribution remain separately withheld.
+- The four fixture `catalog-application` rows use `sha256` over `fixtures/catalog/catalog.yaml`. Their shared digest is `7f80078a24d9fa890738d344d3c705549c45d17d7712ce1f8d543d4ce47f8901`. They use `example.invalid` for source and licence evidence, with installation and redistribution withheld.
+- The reviewed runtime catalogue row uses the SHA-256 of the exact vendor MSI. The verifier compares the matrix pin to the checked-in runtime catalogue and the live adapter verifies the downloaded bytes and Windows Authenticode chain. The matrix scope excludes shipping, mirroring and distributing the vendor binary. [Package provenance and scoped review](../adr/0009-winget-backend.md)
 
 ## Deterministic offline SBOM
 
@@ -107,7 +109,7 @@ $second = (Get-FileHash .\artifacts\sbom\thirdlife-setup-core.cdx.json -Algorith
 if ($first -cne $second) { throw "SBOM output was not deterministic." }
 ```
 
-Generation rejects missing or inconsistent matrix rows for discovered NuGet, PyPI, GitHub action, toolchain, and catalogue components. It also rejects empty required fields, ambiguous identities or order, and conflicts with governed pins. The validator extracts bounded application `id` and `version` values from `fixtures/catalog/*.yaml`, rejects ambiguous YAML, and requires a one-to-one match with matrix rows. The generated inventory records the dependency-input digest, licence-matrix SHA-256, source revision when supplied, and provenance and integrity references for each component.
+Generation rejects missing or inconsistent matrix rows for discovered NuGet, PyPI, GitHub action, toolchain, and catalogue components. It also rejects empty required fields, ambiguous identities or order, and conflicts with governed pins. The validator extracts bounded application identity and version fields from the synthetic YAML fixtures and reviewed runtime catalogue, verifying a one-to-one match with matrix rows. The generated inventory records the dependency-input digest, licence-matrix SHA-256, source revision when supplied, and provenance and integrity references for each component.
 
 The [catalog v1 schema](../../schemas/catalog.schema.json) describes the runtime JSON input. `CatalogSchema.Parse` validates an in-memory snapshot against a caller-supplied time and, for updates, the trusted current snapshot. It rejects expired or future-dated review metadata, lower catalog versions, and changed bytes under the same version. The parser records declared installation and redistribution rights separately. Package admission still requires independent matrix, provenance, and rights checks before execution. The four governed synthetic fixtures retain withheld rights and have no package artifacts.
 
@@ -213,7 +215,7 @@ Environment: active Codex machine, Windows 11 x64, .NET SDK 10.0.400. The result
 
 | Release-interface evidence | TL-0006 source |
 |---|---|
-| Product licence | The current 28-component matrix is approved for the exact commit/digest below; the final product licence remains TBD at release freeze |
+| Product licence | Historical exact-matrix approvals are recorded below. The expanded aggregate review is pending and the final product licence remains TBD at release freeze. |
 | Dependency-lock revision | Frozen source commit plus dependency-input digest emitted in the SBOM |
 | SBOM/third-party notices | Generated CycloneDX file, its SHA-256, matrix digest, review record, and later release-specific notices |
 | Source commit | Exact checked-out `HEAD` supplied as `-SourceRevision`, with every governed input verified against that commit |
@@ -232,20 +234,20 @@ This task does not produce a release artifact hash, signature, installer, third-
 
 ## Human licence and rights review
 
-The current 28-component matrix is approved for the exact candidate commit and matrix SHA-256 recorded below. The approval accepts every proposal, limitation, `not-shipped` plan, and withheld right exactly as written. It therefore does not turn a withheld right into an allowed right, admit native SQLite redistribution, or authorize packaging or release.
+The current matrix adds one local direct-vendor setup candidate. [The package record](../adr/0009-winget-backend.md) limits use to the reviewed installation flow and leaves release exposure and redistribution pending.
 
 | Field | Value |
 |---|---|
-| Review status | Approved |
-| Reviewer | Janne Vuorela |
-| Role | Principal Software Architect & Sole Project Owner and Dependency and Licence Owner |
-| Review date | 2026-08-28 |
-| Result | Approved without conditions |
-| Reviewed commit | d6807937f5eff712821c7927ce1953daaa5dfeb8 |
-| Matrix SHA-256 | e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418 |
+| Review status | Pending |
+| Reviewer | Not recorded |
+| Role | Not recorded |
+| Review date | Not recorded |
+| Result | Not recorded |
+| Reviewed commit | Not recorded |
+| Matrix SHA-256 | Not recorded |
 
-Janne Vuorela supplied the explicit approval in the Codex task, acting as Principal Software Architect & Sole Project Owner and Dependency and Licence Owner. `Approved without conditions` means that no new unrecorded condition was added; all conditions and limitations already written into the contract remain binding. In particular, the approval preserves the mutable `xunit.abstractions` evidence limitation, withheld `.NET SDK` and `CPython` redistribution, every synthetic placeholder's `NOASSERTION` and separately withheld rights, withheld runtime packaging/notice admission, no native SQLite redistribution, and no blanket redistribution or release authorization.
+On 2026-08-28 Janne Vuorela, acting as Principal Software Architect & Sole Project Owner and Dependency and Licence Owner, approved the exact 28-component proposal at commit `d6807937f5eff712821c7927ce1953daaa5dfeb8` and matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418` without added conditions. That approval preserves the mutable `xunit.abstractions` evidence limitation, withheld `.NET SDK` and `CPython` redistribution, every synthetic placeholder's `NOASSERTION` and withheld rights, and the withheld runtime packaging and notice admission. Native SQLite redistribution and release authorization remained withheld.
 
-The prior TL-0006 review remains immutable historical evidence for its exact 24-component matrix only: Janne Vuorela, acting as Principal Software Architect & Sole Project Owner, approved commit `7afc6c7599523fb56a66774a29e9107e6a9a0aac` and matrix SHA-256 `32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193` without added conditions on 2026-08-21. That prior approval preserved the same recorded limitations and granted no blanket redistribution, production admission, final product-licence decision, or release authorization. The renewed approval above extends governance to the exact 28-component proposal without rewriting that historical evidence.
+On 2026-08-21 Janne Vuorela, acting as Principal Software Architect & Sole Project Owner, approved the exact 24-component matrix at commit `7afc6c7599523fb56a66774a29e9107e6a9a0aac` and matrix SHA-256 `32ff63e4e6deb703f978efad368ba54cdc898004106fa443e211d046126ee193` without added conditions. The recorded limitations and withheld rights applied to that review.
 
-A material version, source, publisher, licence, integrity, purpose, scope, relationship, distribution-plan, or matrix change invalidates this review and requires a new named approval bound to the changed commit and digest.
+A material version, source, publisher, licence, integrity, purpose, scope, relationship, distribution-plan, or matrix change requires review for the affected use. A claim of approval for the expanded matrix needs named approval bound to the reviewed commit and exact digest. Engineering and local qualification within existing rights may proceed while a release-specific decision is pending.

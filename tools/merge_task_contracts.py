@@ -1,15 +1,8 @@
 #!/usr/bin/env python3
-"""Merge ThirdLife 0.3.0 task contracts into an in-progress repository.
+"""Reconcile a reviewed task amendment with live work and evidence.
 
-The canonical bundle defines task contracts and top-level governance metadata. The live
-repository remains authoritative for mutable execution history. This tool preserves:
-
-- status
-- evidence
-- blocked_reason
-- existing notes (while adding canonical notes)
-
-Dry-run is the default. Use --write after reviewing the summary.
+The candidate may revise implementation contracts and add tasks. Keep live execution
+state, completed task contracts, and all recorded evidence. Dry-run by default.
 """
 
 from __future__ import annotations
@@ -23,172 +16,172 @@ from typing import Any
 
 import yaml
 
-MUTABLE_FIELDS = ("status", "evidence", "blocked_reason")
+from validate_bundle import PREREQUISITE_FIELDS, TASK_ID_RE, Validation, load_yaml
 
 
-def load_yaml(path: Path) -> dict[str, Any]:
-    try:
-        value = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise SystemExit(f"Cannot read {path}: {exc}") from exc
-    if not isinstance(value, dict):
-        raise SystemExit(f"{path}: top-level value must be a mapping")
-    return value
+def read_task_document(path: Path) -> dict[str, Any]:
+    validation = Validation()
+    document = load_yaml(path, validation)
+    if validation.errors:
+        raise SystemExit("\n".join(validation.errors))
+    return document
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def indexed_tasks(document: dict[str, Any], label: str) -> dict[str, dict[str, Any]]:
+    tasks = document.get("tasks")
+    if not isinstance(tasks, list):
+        raise SystemExit(f"{label}: expected a task list")
+    index: dict[str, dict[str, Any]] = {}
+    for task in tasks:
+        task_id = task.get("id") if isinstance(task, dict) else None
+        if not isinstance(task_id, str) or not TASK_ID_RE.fullmatch(task_id):
+            raise SystemExit(f"{label}: invalid task ID {task_id!r}")
+        if task_id in index:
+            raise SystemExit(f"{label}: duplicate task ID {task_id}")
+        index[task_id] = task
+    return index
 
 
-def merge_notes(canonical: Any, live: Any) -> list[str] | None:
-    result: list[str] = []
-    for source in (live, canonical):
-        if source is None:
-            continue
-        if not isinstance(source, list) or any(not isinstance(item, str) for item in source):
-            raise SystemExit("Task notes must be a list of strings")
-        for item in source:
-            if item not in result:
-                result.append(item)
-    return result or None
+def append_distinct(live: list[Any], candidate: list[Any]) -> list[Any]:
+    result = copy.deepcopy(live)
+    for item in candidate:
+        if item not in result:
+            result.append(copy.deepcopy(item))
+    return result
+
+
+def preserve_prerequisite_evidence(live: dict[str, Any], updated: dict[str, Any]) -> None:
+    for field in PREREQUISITE_FIELDS:
+        for previous in live.get(field, []):
+            proof = previous.get("evidence")
+            if not proof:
+                continue
+            scope = {key: value for key, value in previous.items() if key != "evidence"}
+            matching = next(
+                (
+                    entry for entry in updated.get(field, [])
+                    if {key: value for key, value in entry.items() if key != "evidence"} == scope
+                ),
+                None,
+            )
+            if matching is not None and not matching.get("evidence"):
+                matching["evidence"] = proof
+                continue
+            if matching is not None and matching["evidence"] == proof:
+                continue
+            prior_evidence = {
+                "summary": f"Earlier {field}: {previous['scope']}",
+                "reference": proof,
+            }
+            updated["evidence"] = append_distinct(updated["evidence"], [prior_evidence])
+
+
+def preserve_checkpoints(
+    live: dict[str, Any], candidate: dict[str, Any], updated: dict[str, Any]
+) -> None:
+    current = {
+        entry["reference"]: copy.deepcopy(entry) for entry in live.get("checkpoints", [])
+    }
+    for entry in candidate.get("checkpoints", []):
+        reference = entry["reference"]
+        prior = current.get(reference)
+        if prior is None:
+            current[reference] = copy.deepcopy(entry)
+        elif prior != entry:
+            integrate = entry["state"] == "integrated" and prior["state"] == "retained"
+            historical = prior if integrate else entry
+            updated["evidence"] = append_distinct(updated["evidence"], [{
+                "summary": historical["verification"], "reference": reference,
+            }])
+            if integrate:
+                current[reference] = copy.deepcopy(entry)
+    if current:
+        updated["checkpoints"] = list(current.values())
+
+
+def merge_task(live: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
+    if "status" not in live:
+        raise SystemExit(f"{live['id']}: live task has no status")
+    completed = live["status"] in {"done", "cancelled"}
+    updated = copy.deepcopy(live if completed else candidate)
+    updated["status"] = live["status"]
+    if "blocked_reason" in live:
+        updated["blocked_reason"] = live["blocked_reason"]
+    else:
+        updated.pop("blocked_reason", None)
+
+    updated["evidence"] = append_distinct(live.get("evidence", []), candidate.get("evidence", []))
+    notes = append_distinct(live.get("notes", []), candidate.get("notes", []))
+    if notes:
+        updated["notes"] = notes
+    preserve_checkpoints(live, candidate, updated)
+    preserve_prerequisite_evidence(live, updated)
+    return updated
 
 
 def build_merged(
-    canonical: dict[str, Any],
-    live: dict[str, Any],
-    *,
-    allow_extra_tasks: bool,
+    candidate: dict[str, Any], live: dict[str, Any]
 ) -> tuple[dict[str, Any], list[str]]:
-    canonical_tasks = canonical.get("tasks")
-    live_tasks = live.get("tasks")
-    if not isinstance(canonical_tasks, list) or not isinstance(live_tasks, list):
-        raise SystemExit("Both canonical and live TASKS.yaml files must contain a tasks list")
-
-    c_by = {task.get("id"): task for task in canonical_tasks if isinstance(task, dict)}
-    l_by = {task.get("id"): task for task in live_tasks if isinstance(task, dict)}
-    if None in c_by or None in l_by:
-        raise SystemExit("Every task must have an id")
-
-    missing_live = sorted(set(c_by) - set(l_by))
-    extra_live = sorted(set(l_by) - set(c_by))
-    if missing_live:
-        raise SystemExit(
-            "Live TASKS.yaml is missing canonical tasks; stop for review: " + ", ".join(missing_live)
-        )
-    if extra_live and not allow_extra_tasks:
-        raise SystemExit(
-            "Live TASKS.yaml contains tasks not present in the canonical bundle: "
-            + ", ".join(extra_live)
-            + ". Re-run with --allow-extra-tasks only after reviewing them."
-        )
-
-    merged = copy.deepcopy(canonical)
-    merged_tasks: list[dict[str, Any]] = []
+    proposed = indexed_tasks(candidate, "Candidate")
+    current = indexed_tasks(live, "Live")
+    merged = copy.deepcopy(candidate)
+    result: list[dict[str, Any]] = []
     changes: list[str] = []
-
-    for canonical_task in canonical_tasks:
-        task_id = canonical_task["id"]
-        live_task = l_by[task_id]
-        new_task = copy.deepcopy(canonical_task)
-
-        for field in MUTABLE_FIELDS:
-            if field in live_task:
-                new_task[field] = copy.deepcopy(live_task[field])
-            elif field == "evidence":
-                new_task[field] = []
-            elif field == "status":
-                raise SystemExit(f"{task_id}: live task has no status")
-            else:
-                new_task.pop(field, None)
-
-        notes = merge_notes(canonical_task.get("notes"), live_task.get("notes"))
-        if notes:
-            new_task["notes"] = notes
+    for task_id in sorted(proposed.keys() | current.keys()):
+        if task_id not in proposed:
+            result.append(copy.deepcopy(current[task_id]))
+            continue
+        if task_id not in current:
+            updated = copy.deepcopy(proposed[task_id])
         else:
-            new_task.pop("notes", None)
-
-        contract_before = {k: v for k, v in live_task.items() if k not in MUTABLE_FIELDS and k != "notes"}
-        contract_after = {k: v for k, v in new_task.items() if k not in MUTABLE_FIELDS and k != "notes"}
-        if contract_before != contract_after:
+            updated = merge_task(current[task_id], proposed[task_id])
+        if updated != current.get(task_id):
             changes.append(task_id)
-
-        merged_tasks.append(new_task)
-
-    if extra_live:
-        merged_tasks.extend(copy.deepcopy(l_by[task_id]) for task_id in extra_live)
-
-    merged["tasks"] = merged_tasks
+        result.append(updated)
+    merged["tasks"] = result
     return merged, changes
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--canonical",
-        type=Path,
-        default=Path(__file__).resolve().parents[1] / "TASKS.yaml",
-        help="canonical 0.3.0 TASKS.yaml (default: bundle TASKS.yaml)",
+        "--canonical", type=Path, required=True, metavar="CANDIDATE",
+        help="reviewed candidate task amendment",
     )
     parser.add_argument("--target", type=Path, required=True, help="live repository TASKS.yaml")
     parser.add_argument("--write", action="store_true", help="write the merged file; otherwise dry-run")
-    parser.add_argument(
-        "--allow-extra-tasks",
-        action="store_true",
-        help="preserve live tasks absent from canonical bundle after explicit review",
-    )
     args = parser.parse_args()
 
-    canonical_path = args.canonical.resolve()
+    candidate_path = args.canonical.resolve()
     target_path = args.target.resolve()
-    if canonical_path == target_path:
-        raise SystemExit("Canonical and target paths must be different")
-    if not canonical_path.is_file() or not target_path.is_file():
-        raise SystemExit("Canonical and target TASKS.yaml files must exist")
+    if candidate_path == target_path:
+        raise SystemExit("Candidate and target paths must be different.")
+    if not candidate_path.is_file() or not target_path.is_file():
+        raise SystemExit("Candidate and target task files must exist.")
+    candidate = read_task_document(candidate_path)
+    live = read_task_document(target_path)
+    merged, changes = build_merged(candidate, live)
 
-    canonical = load_yaml(canonical_path)
-    live = load_yaml(target_path)
-    merged, changed_contracts = build_merged(
-        canonical, live, allow_extra_tasks=args.allow_extra_tasks
-    )
-
-    original_mutable = {
-        task["id"]: {field: copy.deepcopy(task.get(field)) for field in MUTABLE_FIELDS}
-        for task in live["tasks"]
-        if isinstance(task, dict) and "id" in task
-    }
-    merged_mutable = {
-        task["id"]: {field: copy.deepcopy(task.get(field)) for field in MUTABLE_FIELDS}
-        for task in merged["tasks"]
-        if isinstance(task, dict) and "id" in task
-    }
-    if any(merged_mutable.get(task_id) != values for task_id, values in original_mutable.items()):
-        raise SystemExit("Internal safety check failed: mutable execution state would change")
-
+    original = target_path.read_bytes()
     output = yaml.safe_dump(merged, sort_keys=False, allow_unicode=True, width=120)
-    print(f"Canonical: {canonical_path}")
+    print(f"Candidate: {candidate_path}")
     print(f"Target:    {target_path}")
-    print(f"Target SHA-256 before: {sha256(target_path)}")
-    print(f"Task contracts changed: {len(changed_contracts)}")
-    if changed_contracts:
-        print("Changed task IDs: " + ", ".join(changed_contracts))
-    print("Mutable status/evidence/blocked_reason values: PRESERVED")
-
+    print(f"Target SHA-256 before: {hashlib.sha256(original).hexdigest()}")
+    print("Changed task records: " + (", ".join(changes) if changes else "none"))
     if not args.write:
-        print("DRY RUN ONLY — re-run with --write after review")
+        print("Dry run. Review the inputs and use --write to record the amendment.")
         return 0
 
-    backup = target_path.with_suffix(target_path.suffix + ".pre-v0.3.0.bak")
-    if backup.exists():
-        raise SystemExit(f"Backup already exists: {backup}; preserve or rename it before writing")
-    backup.write_bytes(target_path.read_bytes())
-    target_path.write_text(output, encoding="utf-8")
+    backup = target_path.with_suffix(target_path.suffix + ".before-contract-merge.bak")
+    staged = target_path.with_suffix(target_path.suffix + ".contract-merge.tmp")
+    with backup.open("xb") as stream:
+        stream.write(original)
+    with staged.open("x", encoding="utf-8", newline="\n") as stream:
+        stream.write(output)
+    staged.replace(target_path)
     print(f"Backup: {backup}")
-    print(f"Target SHA-256 after:  {sha256(target_path)}")
-    print("WROTE MERGED TASK GRAPH — run bundle/repository validation now")
+    print(f"Target SHA-256 after:  {hashlib.sha256(target_path.read_bytes()).hexdigest()}")
+    print("Wrote task records. Verify the merged bundle before integration.")
     return 0
 
 

@@ -1,96 +1,25 @@
 # ThirdLife Setup Core — Change Control
 
-**Status:** Repository change process derived from D-045 and `AGENTS.md`  
-**Applies to:** Code, documentation, task state, schemas, fixtures, evidence, release inputs, and portfolio notes
+The [product contract](product-contract.md) defines current outcomes, invariants and delegated authority. [Project ownership](../PROJECT_BOUNDARY.md), [security](../SECURITY.md), [privacy](privacy/privacy-model.md), [accessibility](../ACCESSIBILITY.md) and [resource](../LOW_SPEC.md) specifications govern their affected behavior. [AGENTS.md](../AGENTS.md), the [development workflow](../DEVELOPMENT_WORKFLOW.md) and [testing strategy](../TESTING.md) govern execution and evidence. [TASKS.yaml](../TASKS.yaml) is the current work and state source. [ROADMAP.md](../ROADMAP.md) describes delivery cuts, [STATUS.md](../STATUS.md) is a handoff, and the [decision register](../DECISIONS.md) and ADRs preserve rationale and supersession.
 
-This process keeps completed evidence, safety boundaries, and the Team B/B1 project vacuum intact. Silence, a convenient implementation, a passing test, or an ordinary pull-request approval is not permission to amend a frozen decision or the canonical project boundary.
+## Engineering within the contract
 
-## Authority order
+Codex may revise implementation interfaces, priorities, sequencing, task decomposition, and dependencies as warranted by the product outcome. Refine how acceptance is tested while preserving promised behavior and protections. Preserve existing IDs and completed history. If splitting an unfinished outcome, keep the original obligation traceable and record what evidence is still owed. Keep schemas, fixtures, selection, validation and runner rules aligned with the current graph. Verify unique references and acyclicity.
 
-When documents differ, apply them in this exact order:
+An implementation dependency is a component, interface or data required to build another component. An execution prerequisite applies at the affected action, and a release prerequisite applies to a defined product claim or exposure. Evidence from an isolated integration does not make a blocked capability available. Retain any relevant release limitation and request actual consent only before the action for which it is required.
 
-1. `DECISIONS.md`
-2. `ROADMAP.md`
-3. `PROJECT_BOUNDARY.md`
-4. `SECURITY.md`
-5. `ACCESSIBILITY.md`
-6. `LOW_SPEC.md`
-7. `DEVELOPMENT_WORKFLOW.md`
-8. `TESTING.md`
-9. `AGENTS.md`
-10. `TASKS.yaml`
-11. `STATUS.md`
-12. `CODEX_START_PROMPT.md`
-13. `README.md`
+An ADR may document alternatives, a selected engineering route and its limitations. It gains authority through the product contract and relevant specification, implementation evidence and review.
 
-`RELEASE_INTERFACE.md` contains verified black-box release facts; it does not outrank the list or authorize new behavior. `FUTURE_ASSEMBLY_NOTES.md` is a non-binding deferred backlog and creates no B1 requirement.
+## Material product or authority change
 
-## Change classes
+A material reduction in promised functionality, changed product boundary or supported platform, materially different trust model, new commercial/licensing obligation, actual exposure or portfolio transition requires its actual scope-bound decision. Stop before the conflicting implementation or exposure. Continue authorized work with unrelated risks contained.
 
-### Task execution change
+Record the approving owner, date, affected outcome/specifications, rationale, evidence and compatibility or recovery implications. Synchronize the affected documents, task records, schemas and validators. Give historical decisions explicit supersession and preserve completed evidence with its original provenance. Assign a bundle version when migrating the governing contract. This is not required for ordinary contract-preserving engineering.
 
-For the one selected task, Codex may update only its `status`, `evidence`, and `blocked_reason` fields in `TASKS.yaml`. State must follow the declared transition graph. Evidence must identify the command or review, test tier, result, environment or same-machine constraint, date, duration, and durable artifact, commit, run, or file reference.
+## Checkpoint review
 
-Task execution authority does not permit changing IDs, dependencies, milestone, priority, size, executor, environment, decision references, objective, deliverables, acceptance criteria, verification, expected test tier, broader-tier triggers, or human-evidence requirements. A user-approved synchronized bundle amendment may change those contract fields while preserving mutable execution history.
-
-### Contract-preserving implementation change
-
-An eligible task may add or modify implementation, tests, documentation, schemas, fixtures, migrations, and evidence that its existing contract requires. The change must remain inside ThirdLife Setup Core, respect every higher-authority rule, and preserve completed history. It receives normal code/document review and the task's required automated, Windows, physical, accessibility, security/privacy, licence, or human evidence.
-
-### Governed amendment
-
-A proposal is a governed amendment when it changes or contradicts a frozen decision, the canonical **Owns / Does not own** boundary, portfolio posture, milestone scope, task graph or acceptance contract, authority order, supported safety boundary, release gate, or Team B queue.
-
-Stop before implementing such a proposal. Explicit human approval must name the amendment, approving owner, and approval date; approval by implication is invalid. The amendment record must include:
-
-- the affected decision IDs, authority files, tasks, schemas, releases, and completed evidence;
-- the user problem and why the existing contract cannot safely satisfy it;
-- security, privacy, accessibility, low-spec, data/migration, recovery, support, and project-vacuum impact;
-- alternatives, including retaining the current contract or using a manual fallback;
-- dependency-graph, compatibility, rollout, rollback/non-rollback, and historical-evidence treatment;
-- the documents, validators, tests, owners, and human evidence that must change; and
-- the new bundle version and changelog entry required by D-045.
-
-An ADR may explain an implementation choice, but it cannot overrule a higher-authority decision. `TL-0009` owns the initial ADR set; an ordinary earlier task must not invent a parallel decision register.
-
-### Deferred cross-project idea
-
-If an idea has value only with a sibling product, do not open an active B1 task, add a dependency, inspect a sibling repository, or build an adapter. Add only a concise entry to `FUTURE_ASSEMBLY_NOTES.md` with the target journey, required frozen release/interface, shallow action, data and privilege impact, manual fallback, risk, maintenance boundary, and reason it belongs to B4.
-
-## Amendment sequence after approval
-
-1. Record the explicit approval and amendment scope before implementation.
-2. Update the highest affected authority first. Preserve prior decisions and completed evidence through a clear supersession or migration record; do not silently rewrite history.
-3. Synchronize every lower affected document, task record, schema, fixture, validator, test, prompt, and navigation entry.
-4. Change task dependencies or acceptance contracts only within the named approved amendment. Validate the complete DAG and milestone-gate closure.
-5. Increment the bundle version consistently and update `CHANGELOG.md` when D-045 applies.
-6. Regenerate checked-in generated artifacts from their source, refresh `BUNDLE_MANIFEST.sha256`, and inspect all diffs.
-7. Run the selected task's quick or targeted checks and any full or extended tier whose documented trigger applies. `eng/verify.ps1 -Tier Quick` validates governance, formatting, a warnings-as-errors build, and fast Core/Inventory tests; Targeted adds selected subsystem tests. Run the complete governance regression suite through its named Targeted command or Full. Reserve Full for its named triggers, including cumulative integration. Do not disable warnings, analyzers, security, accessibility, modest-hardware, provenance, signature/hash, or test gates.
-8. Record environment-limited and human-only evidence honestly. A required approval or manual result cannot be inferred from automated output. All runtime evidence comes from the active Codex machine; fixtures and constraints are not cross-hardware certification.
-9. Publish the reviewed change and its evidence without secrets, personal data, machine-specific paths, or sibling private information.
-
-## Contradiction and stop rule
-
-When a material contradiction exists, stop before the conflicting implementation. Report the exact files, decision IDs, task IDs, observed conflict, safety or delivery effect, and safe options. Leave the selected task `blocked` only when there is a concrete blocker and record the owner and unblock condition; otherwise keep it in the truthful workflow state.
-
-Never bypass or weaken sanitization, supported-Windows, ownership, package trust, approval, privilege, verification, finalization, accessibility, low-spec, privacy, release, or human-review gates to resolve a contradiction.
-
-## Evidence and claim discipline
-
-- A code or document change is not evidence that its behavior works.
-- Automated, active-machine Windows, deterministic fixture, same-machine constraint, accessibility, security/privacy, licence, partner, and release evidence remain distinct.
-- Unknown, unavailable, untested, or unsupported behavior stays explicit.
-- Historical evidence remains tied to the source revision, dependency lock, policy/catalogue/profile version, environment, and artifact it actually tested.
-- `RELEASE_INTERFACE.md` receives only implemented and verified facts. Use **TBD**, **not yet verified**, or **not supported** instead of speculative promises.
-- No task is `done` until every deliverable, acceptance criterion, verification step, and declared human-evidence item is satisfied.
-
-## Pull-request review checklist
-
-- Exactly one dependency-ready task is selected and its execution fields are truthful.
-- The diff is scoped to that task and follows the authority order.
-- No frozen decision, boundary, graph, or gate was changed without a named approved amendment.
-- No sibling dependency, private-data access, shared integration infrastructure, or early B4 work was introduced.
-- Security/privacy, accessibility, low-spec, data/migration, and release-interface impacts are stated.
-- Negative, failure, interruption, recovery, and adversarial checks appropriate to the change are present.
-- The bundle validator, selected task tier, any triggered broader tier, manifest, and secret/machine-path scans pass.
-- Evidence and release claims match what was actually run and reviewed.
+- Check scope, source integrity, compatibility, real prerequisites and evidence. Regenerate `BUNDLE_MANIFEST.sha256` through the existing mechanism.
+- Run `eng/verify.ps1` with the applicable tier. Keep package trust, privilege, licensing, privacy, security, accessibility, resource and data safeguards in force. Record the result and any remaining real gate.
+- In a scoped checkpoint, confirm every unfinished capability remains accurately shown and any unqualified dispatch stays unreachable. Preserve prior history, source references, actual observations and known limits.
+- Use `RELEASE_INTERFACE.md` for verified preview/frozen facts. An untested field stays explicit, and an implementation checkpoint alone conveys no release authorization.
+- Put cross-project ideas in `FUTURE_ASSEMBLY_NOTES.md`. An entry creates no B1 requirement and includes a manual fallback for future B4 work.

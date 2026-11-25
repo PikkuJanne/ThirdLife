@@ -7,6 +7,7 @@ Run from any directory:
 
 from __future__ import annotations
 
+import argparse
 import copy
 import hashlib
 import ipaddress
@@ -37,6 +38,7 @@ MINIMAL_HUMAN_TESTING_AMENDMENT_PATH = (
 TESTING_POLICY_RESET_AMENDMENT_PATH = (
     "docs/amendments/2026-11-24-permanent-testing-policy-reset.md"
 )
+DEVELOPMENT_RESET_PATH = "docs/amendments/2026-11-25-development-contract-reset.md"
 WINDOWS_11_AMENDMENT_PATH = "docs/amendments/2026-11-25-windows-11-only.md"
 M1_WORKSHOP_REPORT_FIXTURE = "fixtures/expected-reports/M1/workshop-audit.txt"
 PILOT_CATALOG_YAML = "fixtures/catalog/catalog.yaml"
@@ -147,12 +149,14 @@ REQUIRED_FILES = (
     MINIMAL_HUMAN_TESTING_AMENDMENT_PATH,
     TESTING_POLICY_RESET_AMENDMENT_PATH,
     WINDOWS_11_AMENDMENT_PATH,
+    DEVELOPMENT_RESET_PATH,
     "docs/inventory/windows-lifecycle-data.md",
     "eng/run-m1-audit-journey.ps1",
     "docs/glossary.md",
     "docs/non-goals.md",
     "docs/product-contract.md",
     *ARCHITECTURE_DECISION_PATHS,
+    TL0401_WINGET_ADR_PATH,
     "docs/history/TL-0008-draft-1-superseded.md",
     "docs/privacy/logging-standard.md",
     "docs/privacy/privacy-model.md",
@@ -265,22 +269,6 @@ NEGATIVE_SCOPE_HEADING_RE = re.compile(
     r"\b(?:does\s+not\s+own|out\s+of\s+scope|non[\s-]*goals?|"
     r"security\s+and\s+safety\s+prohibitions?)\b",
     re.IGNORECASE,
-)
-
-AUTHORITY_ORDER = (
-    "DECISIONS.md",
-    "ROADMAP.md",
-    "PROJECT_BOUNDARY.md",
-    "SECURITY.md",
-    "ACCESSIBILITY.md",
-    "LOW_SPEC.md",
-    "DEVELOPMENT_WORKFLOW.md",
-    "TESTING.md",
-    "AGENTS.md",
-    "TASKS.yaml",
-    "STATUS.md",
-    "CODEX_START_PROMPT.md",
-    "README.md",
 )
 
 ASSET_IDS = tuple(f"AST-{index:02d}" for index in range(1, 13))
@@ -426,7 +414,6 @@ ADR_CONTRACT_PHRASES = {
     ARCHITECTURE_DECISION_PATHS[4]: (
         "replaceable structured package-backend seam",
         "portable `ThirdLife.Actions` does not reference the Windows package implementation",
-        "Backend selection remains open until `TL-0401`",
         "Profiles select reviewed generic capabilities",
         "grants no blanket redistribution right",
     ),
@@ -812,12 +799,6 @@ ALLOWED_SIZE = {"S", "M", "L", "XL"}
 ALLOWED_PRIORITY = {"P0", "P1", "P2", "P3"}
 ALLOWED_KIND = {"build", "code", "data", "docs", "gate", "release", "security", "spike", "test"}
 ALLOWED_TEST_TIER = {"quick", "targeted", "full", "extended"}
-MUTABLE_FIELDS = ["status", "evidence", "blocked_reason"]
-
-CURRENT_BUNDLE_VERSION = "0.7.0"
-CURRENT_BUNDLE_GENERATED_ON = "2026-11-25"
-CURRENT_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 75))
-CURRENT_TASK_COUNT = 92
 STABILIZATION_CI_CLARIFICATION = {
     "summary": (
         "Historical GitHub-hosted verification remains valid as a supplementary "
@@ -835,11 +816,6 @@ STABILIZATION_CI_CLARIFICATION = {
     "limitation": "Does not rerun or invalidate the historical workflow; active-machine evidence remains required.",
 }
 STABILIZATION_DECISION_CONTRACTS = {
-    "D-067": (
-        "A completed task branch is integrated into the repository’s default branch before the next roadmap task begins.",
-        "A temporary stacked branch is permitted only for an explicitly named recovery, cumulative stabilization, or approved dependency sequence, and it must include a documented collapse plan.",
-        "No reset, force push, or history rewrite is used to collapse the stack.",
-    ),
     "D-068": (
         "GitHub Actions and other remote runners may perform supplementary clean-checkout, format, build, static, and deterministic test checks, but they are not authoritative runtime, hardware, accessibility, benchmark, milestone, pilot, or release evidence.",
         "Historical CI evidence remains intact but is accompanied by a clarification.",
@@ -899,43 +875,6 @@ V030_TL0008_SOURCE_COMMIT = "4fa3ea050fd5e9985fde9cc8218281698d371cc8"
 V030_TL0008_PROCEDURE_DIGEST = (
     "ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b"
 )
-CURRENT_BUNDLE_DOCUMENT_MARKERS = {
-    "ACCESSIBILITY.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "AGENTS.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "CHANGELOG.md": f"## {CURRENT_BUNDLE_VERSION} — {CURRENT_BUNDLE_GENERATED_ON}",
-    "CODEX_START_PROMPT.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "DECISIONS.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "DEVELOPMENT_WORKFLOW.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "FUTURE_ASSEMBLY_NOTES.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "LOW_SPEC.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "PROJECT_BOUNDARY.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "README.md": (
-        f"**Roadmap bundle:** {CURRENT_BUNDLE_VERSION} / "
-        "ThirdLife Software Portfolio v2.1"
-    ),
-    "RELEASE_INTERFACE.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "ROADMAP.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "SECURITY.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-    "STATUS.md": f"**Bundle baseline:** {CURRENT_BUNDLE_VERSION}",
-    "TESTING.md": f"**Bundle version:** {CURRENT_BUNDLE_VERSION}",
-}
-CURRENT_BUNDLE_METADATA_LABELS = {
-    **{
-        relative: "Bundle version"
-        for relative in CURRENT_BUNDLE_DOCUMENT_MARKERS
-        if relative
-        not in {
-            "CHANGELOG.md",
-            "README.md",
-            "STATUS.md",
-        }
-    },
-    "README.md": "Roadmap bundle",
-    "STATUS.md": "Bundle baseline",
-}
-
-# Exact fragments from the superseded draft that are never valid as live
-# instructions. Historical and explicit rejection text remains permitted.
 OBSOLETE_ACTIVE_PHRASES = (
     "assign it a sanitized id such as `lab-device-001`",
     "you only need to complete the physical device pool",
@@ -966,7 +905,7 @@ class Validation:
 
 def load_yaml(path: Path, validation: Validation) -> dict[str, Any]:
     try:
-        value = yaml.safe_load(path.read_text(encoding="utf-8"))
+        value = yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueKeySafeLoader)
     except Exception as exc:  # diagnostic boundary
         validation.error(f"{path.name}: cannot parse YAML: {exc}")
         return {}
@@ -1450,85 +1389,37 @@ def validate_tracked_text_positioning(validation: Validation) -> None:
 
 
 def validate_governance_documents(validation: Validation) -> None:
-    require_phrases(
+    product = require_phrases(
         "docs/product-contract.md",
-        (
-            "ThirdLife** is the product family",
-            "ThirdLife Setup Core** is the active standalone project",
-            "Team B / B1",
-            "A present recipient participates only in explicitly recipient-controlled setup",
-            "M0 through M6",
-            "TL-0611",
-            "M7 / `TL-0710`",
-            "Scam Explainer",
-            "Team B / B4",
-            "project vacuum",
-            "recipient-controlled accessibility setup",
-            "basic operating-system backup onboarding",
-            "SECURITY.md",
-            "ACCESSIBILITY.md",
-            "LOW_SPEC.md",
-            "RELEASE_INTERFACE.md",
-            "does not amend or outrank",
-        ),
+        (PRODUCT_PLATFORM, "Team B / B1", "TL-0611", "TL-0710", "Scam Explainer"),
         validation,
     )
+    for path in (
+        "../SECURITY.md",
+        "../ACCESSIBILITY.md",
+        "../LOW_SPEC.md",
+        "../RELEASE_INTERFACE.md",
+        "../TASKS.yaml",
+        "privacy/privacy-model.md",
+    ):
+        if exact_inline_markdown_link_count(product, path) == 0:
+            validation.error(f"docs/product-contract.md: missing specification link {path}")
 
     require_phrases(
         "docs/non-goals.md",
         (
-            "existing personal-PC repair",
             "donor-media erasure",
-            "unsupported Windows",
             "activation",
             "ownership controls",
-            "PC cleaner, optimizer, debloater, registry cleaner",
-            "sibling-domain ownership",
             "shared SDK",
             "plugin framework",
-            "No B4 work during B1",
             "FUTURE_ASSEMBLY_NOTES.md",
             "manual fallback",
-            "ordinary implementation task cannot turn one into scope",
-            "already inside the selected task's contract",
-            "without silently expanding the task or editing the task graph",
         ),
         validation,
     )
 
-    change_control_text = require_phrases(
-        "docs/change-control.md",
-        (
-            "derived from D-045",
-            "status",
-            "evidence",
-            "blocked_reason",
-            "Explicit human approval",
-            "approving owner",
-            "approval date",
-            "bundle version",
-            "stop before the conflicting implementation",
-            "FUTURE_ASSEMBLY_NOTES.md",
-            "creates no B1 requirement",
-            "BUNDLE_MANIFEST.sha256",
-            "eng/verify.ps1",
-        ),
-        validation,
-    )
-    authority_block = "\n".join(
-        f"{index}. `{relative}`"
-        for index, relative in enumerate(AUTHORITY_ORDER, start=1)
-    )
-    if authority_block not in change_control_text:
-        validation.error(
-            "docs/change-control.md: authority order must exactly match D-045"
-        )
-
-    glossary_text = require_phrases(
-        "docs/glossary.md",
-        ("Exact frozen decisions", "prevail over this summary"),
-        validation,
-    )
+    glossary_text = require_phrases("docs/glossary.md", (), validation)
     glossary_sections = markdown_level_two_sections(glossary_text)
     glossary_contract: dict[str, tuple[str, ...]] = {
         "Evidence": (
@@ -1806,9 +1697,6 @@ def validate_architecture_decision_records(
     all_cited_decisions: set[str] = set()
     for relative, expected_title, required_decisions in ARCHITECTURE_DECISION_RECORDS:
         required_phrases = (
-            "records existing binding decisions as planned architecture constraints",
-            "does not amend",
-            "not evidence that the planned behavior is implemented or verified",
             *ADR_CONTRACT_PHRASES[relative],
         )
         text = require_phrases(relative, (), validation)
@@ -1909,12 +1797,6 @@ def validate_tl0401_adr_reservation(
             f"{TL0401_WINGET_ADR_PATH!r}"
         )
 
-    if task.get("executor") != "codex" or "human_evidence_required" in task:
-        validation.error(
-            "TL-0401: the compliant WinGet backend decision is a Codex task "
-            "without a routine maintainer approval gate"
-        )
-
     contract_lists = (
         "deliverables", "acceptance_criteria", "verification", "notes",
         "human_evidence_required",
@@ -1975,19 +1857,19 @@ def validate_tl0401_adr_reservation(
                 f"{expected_owner!r}; found {owners}"
             )
 
-    task_status = task.get("status")
-    if task_status in {"backlog", "ready"}:
-        premature_paths = sorted(
-            path.relative_to(ROOT).as_posix()
-            for path in (ROOT / "docs/adr").glob("*.md")
-            if path.is_file()
-            and 9 in adr_path_numbers(path.relative_to(ROOT).as_posix())
-        )
-        if premature_paths:
-            validation.error(
-                "TL-0401: ADR 0009 file must not exist before the task executes; "
-                f"found {premature_paths}"
-            )
+    actual_paths = {
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "docs/adr").glob("*.md")
+        if 9 in adr_path_numbers(path.relative_to(ROOT).as_posix())
+    }
+    if actual_paths - {TL0401_WINGET_ADR_PATH}:
+        validation.error(f"ADR 0009: conflicting paths {sorted(actual_paths)}")
+    adr = ROOT / TL0401_WINGET_ADR_PATH
+    if task.get("status") == "done" and not adr.is_file():
+        validation.error(f"TL-0401: completed route decision requires {TL0401_WINGET_ADR_PATH}")
+    if adr.is_file():
+        content = adr.read_text(encoding="utf-8")
+        validate_local_markdown_links(TL0401_WINGET_ADR_PATH, content, validation)
 
     amendment_text = require_phrases(
         ADR_NUMBERING_AMENDMENT_PATH,
@@ -2018,46 +1900,6 @@ def validate_tl0401_adr_reservation(
         amendment_text,
         validation,
     )
-
-    readme_text = require_phrases("README.md", (), validation)
-    readme_visible = markdown_visible_text(readme_text)
-    expected_navigation = f"({ADR_NUMBERING_AMENDMENT_PATH})"
-    if exact_inline_markdown_link_count(readme_text, ADR_NUMBERING_AMENDMENT_PATH) != 1:
-        validation.error(
-            f"README.md: must link exactly once to {ADR_NUMBERING_AMENDMENT_PATH}"
-        )
-
-    authority_contracts = {
-        "DECISIONS.md": (
-            "AMD-2026-08-22-ADR-0009",
-            ADR_NUMBERING_AMENDMENT_PATH,
-            "completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md`",
-            f"ADR 0009 for TL-0401 at `{TL0401_WINGET_ADR_PATH}`",
-        ),
-        "ROADMAP.md": (
-            "AMD-2026-08-22-ADR-0009",
-            ADR_NUMBERING_AMENDMENT_PATH,
-            "completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md`",
-            f"ADR 0009 for the future TL-0401 backend decision at `{TL0401_WINGET_ADR_PATH}`",
-        ),
-    }
-    for relative, phrases in authority_contracts.items():
-        authority_text = require_phrases(relative, (), validation)
-        authority_visible = markdown_visible_text(authority_text)
-        authority_folded = authority_visible.casefold()
-        for phrase in phrases:
-            if phrase.casefold() not in authority_folded:
-                validation.error(
-                    f"{relative}: missing ADR-numbering authority phrase {phrase!r}"
-                )
-        if exact_inline_markdown_link_count(
-            authority_text,
-            ADR_NUMBERING_AMENDMENT_PATH,
-        ) != 1:
-            validation.error(
-                f"{relative}: must link exactly once to {ADR_NUMBERING_AMENDMENT_PATH}"
-            )
-
 
 def security_field(body: str, field: str) -> str:
     match = re.search(
@@ -5446,7 +5288,7 @@ def validate_task_test_tier(
     validation: Validation,
 ) -> None:
     tier = task.get("expected_test_tier")
-    if tier not in ALLOWED_TEST_TIER:
+    if not isinstance(tier, str) or tier not in ALLOWED_TEST_TIER:
         validation.error(f"{task_id}: invalid expected_test_tier {tier!r}")
 
     for field in ("full_test_triggers", "extended_test_triggers"):
@@ -6358,137 +6200,6 @@ def validate_stabilization_contract(
         )
 
 
-def validate_current_bundle_document_markers(validation: Validation) -> None:
-    for relative, marker in CURRENT_BUNDLE_DOCUMENT_MARKERS.items():
-        text = require_phrases(relative, (), validation)
-        visible_text = markdown_visible_text(text)
-        if relative == "CHANGELOG.md":
-            version_headings = re.findall(r"(?m)^##\s+[^\r\n]+$", visible_text)
-            if not version_headings or version_headings[0] != marker:
-                validation.error(
-                    f"{relative}: first version heading must be {marker!r}"
-                )
-            if visible_text.count(marker) != 1:
-                validation.error(
-                    f"{relative}: must contain exactly one current version heading {marker!r}"
-                )
-            continue
-
-        label = CURRENT_BUNDLE_METADATA_LABELS[relative]
-        metadata_lines = [
-            line.rstrip(" \t")
-            for line in re.findall(
-            rf"(?m)^\*\*{re.escape(label)}:\*\*[^\r\n]*$",
-            visible_text,
-            )
-        ]
-        if metadata_lines != [marker]:
-            validation.error(
-                f"{relative}: {label!r} metadata must be exactly one line {marker!r}; "
-                f"found {metadata_lines}"
-            )
-
-    additional_markers = {
-        "DECISIONS.md": (f"**Generated:** {CURRENT_BUNDLE_GENERATED_ON}",),
-        "RELEASE_INTERFACE.md": (
-            f"| Interface revision | Draft {CURRENT_BUNDLE_VERSION} |",
-        ),
-    }
-    for relative, markers in additional_markers.items():
-        text = require_phrases(relative, (), validation)
-        visible_text = markdown_visible_text(text)
-        for marker in markers:
-            exact_lines = re.findall(
-                rf"(?m)^{re.escape(marker)}[ \t]*$",
-                visible_text,
-            )
-            if len(exact_lines) != 1:
-                validation.error(
-                    f"{relative}: required metadata line must appear exactly once "
-                    f"as {marker!r}"
-                )
-
-    required_markers: dict[str, tuple[str, ...]] = {
-        "ROADMAP.md": (
-            CURRENT_BUNDLE_DOCUMENT_MARKERS["ROADMAP.md"],
-            "ThirdLife Software Portfolio v2.1",
-            "active Codex machine",
-            "quick",
-            "targeted",
-            "full",
-            "extended",
-            "TL-0008",
-        ),
-        "DECISIONS.md": ("D-058", "D-059", "D-064", "D-066", "D-072"),
-        "PROJECT_BOUNDARY.md": (
-            "Team B / B1",
-            "project vacuum",
-            "active Codex machine",
-            "ThirdLife Deployment and Suite Assembly",
-            "Scam Explainer",
-            "TL-0710",
-        ),
-        "TESTING.md": (
-            "Quick tier",
-            "Targeted tier",
-            "Full tier",
-            "Extended tier",
-            "active Codex machine",
-        ),
-        "DEVELOPMENT_WORKFLOW.md": (
-            "git fetch",
-            "STATUS.md",
-            "clean clone",
-            "active Codex machine",
-        ),
-        "STATUS.md": (
-            "active Codex machine",
-            "supplementary",
-            "main",
-        ),
-        "LOW_SPEC.md": (
-            "active Codex machine",
-            "reference-machine",
-            "same-machine",
-            "hardware certification",
-        ),
-        "RELEASE_INTERFACE.md": (
-            "Draft placeholder",
-            "TL-0706",
-            "TL-0710",
-            "not a shared application API",
-            "Source continuity",
-            "Validation evidence",
-            "cross-hardware certification",
-        ),
-        "FUTURE_ASSEMBLY_NOTES.md": (
-            "Non-binding deferred backlog",
-            "Nothing in this file is an active B1 requirement",
-            "Team B / B4",
-        ),
-        "TL-0008_TRANSITION.md": (
-            "TL-0008 draft 1",
-            "SUPERSEDED",
-            "MHT-001",
-            "active Codex machine",
-        ),
-        "CODEX_TL0008_TRANSITION_PROMPT.md": (
-            "TL-0008 draft 1",
-            V030_TL0008_SOURCE_COMMIT,
-            V030_TL0008_PROCEDURE_DIGEST,
-            "Do not",
-        ),
-        "docs/history/TL-0008-draft-1-superseded.md": (
-            "SUPERSEDED",
-            "DO NOT EXECUTE",
-            V030_TL0008_SOURCE_COMMIT,
-            V030_TL0008_PROCEDURE_DIGEST,
-        ),
-    }
-    for relative, markers in required_markers.items():
-        require_phrases(relative, markers, validation)
-
-
 def validate_testing_documents(
     validation: Validation,
     task_by_id: dict[str, dict[str, Any]],
@@ -6503,20 +6214,8 @@ def validate_testing_documents(
     relative_markers: dict[str, tuple[str, ...]] = {
         "TESTING.md": (
             "active Codex machine only",
-            "Quick tier",
-            "Targeted tier",
-            "Full tier",
-            "Extended tier",
-            "be independently invokable and produce a durable scenario-level result",
-            "Remote CI",
-            "supplementary clean-checkout check",
-            "not hardware certification",
         ),
         "DEVELOPMENT_WORKFLOW.md": (
-            "Continuity source of truth",
-            "git fetch --all --prune",
-            "STATUS.md",
-            "clean clone",
             "active Codex machine only",
         ),
         "STATUS.md": (
@@ -6525,7 +6224,6 @@ def validate_testing_documents(
             "main",
         ),
         "LOW_SPEC.md": (
-            CURRENT_BUNDLE_DOCUMENT_MARKERS["LOW_SPEC.md"],
             "active Codex machine only",
             "concurrency explicit, configurable, and conservative",
             "working CPU path",
@@ -6734,151 +6432,196 @@ def topological_order(
     return result
 
 
-def ancestors(task_id: str, dependencies: dict[str, list[str]]) -> set[str]:
-    found: set[str] = set()
-    stack = list(dependencies.get(task_id, []))
-    while stack:
-        current = stack.pop()
-        if current in found:
-            continue
-        found.add(current)
-        stack.extend(dependencies.get(current, []))
-    return found
+PREREQUISITE_FIELDS = ("execution_prerequisites", "release_prerequisites")
+SCOPE_ID_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 
 
-def validate_testing_policy_task_contract(
+def select_engineering_tasks(
+    task_by_id: dict[str, dict[str, Any]], *, outcome: str | None = None
+) -> list[str]:
+    """Order engineering work using implementation inputs only."""
+    done = {task_id for task_id, task in task_by_id.items() if task.get("status") == "done"}
+    eligible = (
+        task_id
+        for task_id, task in task_by_id.items()
+        if task.get("status") in {"ready", "backlog"}
+        and task.get("executor") in {"codex", "hybrid"}
+        and (outcome is None or task.get("outcome") == outcome)
+        and set(task["depends_on"]) <= done
+    )
+    return sorted(
+        eligible,
+        key=lambda task_id: (
+            task_by_id[task_id]["status"] != "ready",
+            task_by_id[task_id]["priority"],
+            task_id,
+        ),
+    )
+
+
+def unmet_prerequisites(
+    task_by_id: dict[str, dict[str, Any]], task: dict[str, Any], field: str
+) -> list[dict[str, Any]]:
+    """Report absent work evidence for one phase. Runtime authorization stays with the action."""
+    return [
+        entry
+        for entry in task.get(field, [])
+        if (
+            task_by_id.get(entry.get("task"), {}).get("status") != "done"
+            if entry["kind"] == "task"
+            else not entry.get("evidence")
+        )
+    ]
+
+
+def validate_prerequisites(
+    validation: Validation, task_by_id: dict[str, dict[str, Any]]
+) -> None:
+    for task_id, task in task_by_id.items():
+        if "checkpoints" in task:
+            checkpoints = task["checkpoints"]
+            if not isinstance(checkpoints, list) or not checkpoints:
+                validation.error(f"{task_id}: checkpoints must be a nonempty list")
+            else:
+                references: set[str] = set()
+                for checkpoint in checkpoints:
+                    if not isinstance(checkpoint, dict) or set(checkpoint) != {
+                        "reference", "verification", "state", "unqualified_execution"
+                    }:
+                        validation.error(f"{task_id}: invalid checkpoint fields")
+                        continue
+                    require_nonempty_string(task_id, checkpoint, "verification", validation)
+                    reference = checkpoint["reference"]
+                    if not isinstance(reference, str) or not re.fullmatch(r"[0-9a-f]{40}", reference):
+                        validation.error(f"{task_id}: checkpoint requires an immutable commit ID")
+                    elif reference in references:
+                        validation.error(f"{task_id}: duplicate checkpoint commit {reference}")
+                    else:
+                        references.add(reference)
+                    if checkpoint["state"] not in ("retained", "integrated"):
+                        validation.error(f"{task_id}: unknown checkpoint integration state")
+                    if checkpoint["unqualified_execution"] != "unavailable":
+                        validation.error(f"{task_id}: checkpoint must isolate unqualified execution")
+        if task.get("status") != "done" and "human_evidence_required" in task:
+            validation.error(f"{task_id}: legacy human evidence belongs only to completed history")
+        if task.get("status") == "done" and not task.get("evidence"):
+            validation.error(f"{task_id}: done requires objective evidence")
+        completion_phase = task.get("completion_phase")
+        if "completion_phase" in task:
+            if completion_phase not in ("execution", "release"):
+                validation.error(f"{task_id}: invalid completion_phase {completion_phase!r}")
+            elif f"{completion_phase}_prerequisites" not in task:
+                validation.error(f"{task_id}: completion_phase requires scoped prerequisites")
+        for field in PREREQUISITE_FIELDS:
+            if field not in task:
+                continue
+            entries = task[field]
+            if not isinstance(entries, list) or not entries:
+                validation.error(f"{task_id}: {field} must be a nonempty list")
+                continue
+            seen: set[tuple[str, str]] = set()
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    validation.error(f"{task_id}: {field} entries must be mappings")
+                    continue
+                kind = entry.get("kind")
+                scope = entry.get("scope")
+                owner = f"{task_id}: {field}"
+                if kind not in ("task", "capability", "authorization"):
+                    validation.error(f"{owner}: invalid prerequisite kind {kind!r}")
+                    continue
+                if not isinstance(scope, str) or not scope.strip():
+                    validation.error(f"{owner}: prerequisite scope is required")
+                    continue
+                if (kind, scope) in seen:
+                    validation.error(f"{owner}: duplicate {kind} prerequisite scope {scope!r}")
+                seen.add((kind, scope))
+
+                fields = {"kind", "scope"}
+                if kind == "task":
+                    fields.add("task")
+                    target = entry.get("task")
+                    if not isinstance(target, str) or target not in task_by_id or target == task_id:
+                        validation.error(f"{owner}: invalid prerequisite task {target!r}")
+                else:
+                    fields.add("evidence")
+                    if "evidence" in entry:
+                        require_nonempty_string(owner, entry, "evidence", validation)
+                    if kind == "authorization":
+                        fields.add("authority")
+                        role = entry.get("authority")
+                        if not isinstance(role, str) or not SCOPE_ID_RE.fullmatch(role):
+                            validation.error(f"{owner}: authorization requires an accountable role")
+                if set(entry) - fields:
+                    validation.error(f"{owner}: fields do not match prerequisite kind {kind!r}")
+            well_formed = all(
+                isinstance(entry, dict)
+                and "kind" in entry
+                and (entry["kind"] != "task" or isinstance(entry.get("task"), str))
+                for entry in entries
+            )
+            if (
+                task.get("status") == "done"
+                and field == f"{completion_phase}_prerequisites"
+                and well_formed
+                and unmet_prerequisites(task_by_id, task, field)
+            ):
+                validation.error(f"{task_id}: done requires satisfied {field}")
+
+
+def validate_exposure_authorization(
     validation: Validation,
-    task_doc: dict[str, Any],
+    task_by_id: dict[str, dict[str, Any]],
+    project: dict[str, Any],
+) -> None:
+    """Retain real pilot and release accountability regardless of engineering sequencing."""
+    for release, additional_role in (
+        ("pilot_gate", "pilot-partner"),
+        ("standalone_release_gate", "portfolio-owner"),
+    ):
+        task_id = project.get(release)
+        if not isinstance(task_id, str) or task_id not in task_by_id:
+            validation.error(f"TASKS.yaml: {release} references a missing exposure task")
+            continue
+        release_task = task_by_id[task_id]
+        if release_task.get("completion_phase") != "release":
+            validation.error(f"{task_id}: exposure completion requires the release phase")
+        entries = release_task.get("release_prerequisites", [])
+        if isinstance(entries, list):
+            roles = {
+                entry["authority"]
+                for entry in entries
+                if isinstance(entry, dict) and entry.get("kind") == "authorization"
+                and isinstance(entry.get("authority"), str)
+            }
+            missing = {"release-owners", "risk-owners", additional_role} - roles
+            if missing:
+                validation.error(f"{task_id}: missing exposure authorization roles {sorted(missing)}")
+            if release == "standalone_release_gate" and not any(
+                isinstance(entry, dict)
+                and entry.get("kind") == "task"
+                and entry.get("task") == project.get("pilot_gate")
+                for entry in entries
+            ):
+                validation.error(f"{task_id}: standalone exposure requires the completed controlled pilot")
+
+
+def validate_engineering_dependencies(
+    validation: Validation,
     task_by_id: dict[str, dict[str, Any]],
     dependency_map: dict[str, list[str]],
 ) -> None:
-    # Historical decisions and accepted observations retain their original task contracts.
-    historical_tasks = {"TL-0004", "TL-0005", "TL-0006", "TL-0007", "TL-0010", "TL-0113"}
-    decision_scopes = {
-        "TL-0208": (("new or materially changed", "wording", "exception governance"),),
-        "TL-0314": (("security owner", "privilege boundary", "residual risks"),),
-        "TL-0411": (("product", "security", "first write-capable", "prepared"),),
-        "TL-0508": (("new or materially changed", "policy", "application", "licensing/privacy"),),
-        "TL-0611": (
-            ("controlled-pilot go/no-go", "exact candidate", "exposure"),
-            ("security", "privacy", "accessibility", "licensing", "residual risks"),
-            ("pilot partner", "acceptance", "before exposure"),
-        ),
-        "TL-0710": (
-            ("stable-release go/no-go", "distribution", "exact frozen candidate"),
-            ("security", "privacy", "accessibility", "licensing", "support"),
-            ("portfolio owner", "release-interface", "scam explainer"),
-        ),
-    }
-    legacy_qa = re.compile(
-        r"\b(?:operator|recipient|proxy|partner)\s+walkthroughs?\b"
-        r"|\b(?:representative operator|recipient/proxy|pilot partner/operator)"
-        r"\s+(?:completes?|rehearses?)\b"
-        r"|\b(?:owners?|reviewers?|maintainer)\s+(?:signs?\b|"
-        r"approves? (?:the )?(?:M[1-7] gate record|ADR 0009)|"
-        r"reviews? the spike evidence)"
-        r"|\b(?:accessibility|independent|human|security) reviewer\s+"
-        r"(?:signs?|inspects?)\b"
-        r"|\bwith the pilot policy owner\b",
-        re.IGNORECASE,
-    )
-
-    for task_id, task in task_by_id.items():
-        if task_id in historical_tasks and task.get("status") == "done":
-            continue
-        scopes = decision_scopes.get(task_id)
-        executor = "hybrid" if scopes else "codex"
-        if task.get("executor") != executor:
-            validation.error(f"{task_id}: D-074 executor must be {executor}")
-        evidence = task.get("human_evidence_required")
-        if scopes:
-            if (
-                not isinstance(evidence, list)
-                or len(evidence) != len(scopes)
-                or any(
-                    not isinstance(entry, str)
-                    or any(phrase not in entry.casefold() for phrase in required)
-                    for entry, required in zip(evidence, scopes)
-                )
+    task_ids = set(task_by_id)
+    for task_id, deps in dependency_map.items():
+        for dep in deps:
+            if dep not in task_ids:
+                validation.error(f"{task_id}: unknown dependency {dep}")
+            elif (
+                task_by_id[task_id].get("status") in ("ready", "done")
+                and task_by_id[dep].get("status") != "done"
             ):
-                validation.error(
-                    f"{task_id}: D-074 evidence must retain only its accountable decision scopes"
-                )
-        elif "human_evidence_required" in task:
-            validation.error(f"{task_id}: D-074 engineering work cannot require routine human evidence")
-
-        for field in (
-            "objective", "deliverables", "acceptance_criteria", "verification",
-            "notes", "human_evidence_required",
-        ):
-            values = task.get(field)
-            entries = [values] if isinstance(values, str) else values
-            if isinstance(entries, list) and any(
-                isinstance(entry, str) and legacy_qa.search(entry) for entry in entries
-            ):
-                validation.error(f"{task_id}: {field} reintroduces a superseded human QA gate")
-
-    for task_id in ("TL-0701", "TL-0702"):
-        if "TL-0610" not in dependency_map.get(task_id, []):
-            validation.error(
-                f"{task_id}: must directly depend on the technical pilot candidate TL-0610"
-            )
-        if "TL-0611" in ancestors(task_id, dependency_map):
-            validation.error(
-                f"{task_id}: technical onboarding work cannot depend on pilot exposure authorization TL-0611"
-            )
-    if "TL-0611" not in dependency_map.get("TL-0710", []):
-        validation.error("TL-0710: must directly depend on controlled-pilot authorization TL-0611")
-
-    workflow = task_doc.get("workflow")
-    workflow = workflow if isinstance(workflow, dict) else {}
-    for field, phrases in {
-        "ready_rule": (
-            "required before the next action", "later decision on a prepared candidate",
-        ),
-        "human_completion_rule": (
-            "without routine human qa", "actual attributable decision", "administer task state",
-        ),
-    }.items():
-        wording = workflow.get(field)
-        if not isinstance(wording, str) or any(phrase not in wording.casefold() for phrase in phrases):
-            validation.error(
-                f"TASKS.yaml: workflow.{field} must distinguish engineering from authorization under D-074"
-            )
-
-    definitions = {
-        "definition_of_ready": (
-            "authorization needed before the next action",
-            "later candidate approval is a condition of the action it governs",
-        ),
-        "definition_of_done": (
-            "objective engineering evidence",
-            "a known defect in a required workflow blocks completion",
-            "attributable, scope-bound, and recorded",
-            "no routine human qa",
-        ),
-    }
-    for field, phrases in definitions.items():
-        entries = task_doc.get(field)
-        if not isinstance(entries, list):
-            entries = []
-        wording = " ".join(entry for entry in entries if isinstance(entry, str))
-        if any(phrase not in wording.casefold() for phrase in phrases):
-            validation.error(
-                f"TASKS.yaml: {field} must preserve D-074 engineering and authorization criteria"
-            )
-
-    milestones = task_doc.get("milestones")
-    if not isinstance(milestones, list):
-        return
-    for milestone in milestones:
-        if not isinstance(milestone, dict) or milestone.get("id") == "M0":
-            continue
-        wording = milestone.get("exit_criteria")
-        if isinstance(wording, list) and any(
-            isinstance(entry, str) and legacy_qa.search(entry) for entry in wording
-        ):
-            validation.error(f"{milestone.get('id')}: exit criteria reintroduce a superseded human QA gate")
+                validation.error(f"{task_id}: unfinished implementation dependency {dep}")
+    topological_order(task_ids, dependency_map, validation)
 
 
 def validate_windows_11_task_contract(
@@ -6886,18 +6629,6 @@ def validate_windows_11_task_contract(
     task_by_id: dict[str, dict[str, Any]],
     dependencies: dict[str, list[str]],
 ) -> None:
-    migration = task_by_id.get("TL-0315", {})
-    if (
-        migration.get("milestone") != "M3"
-        or migration.get("executor") != "codex"
-        or migration.get("expected_test_tier") != "full"
-        or "human_evidence_required" in migration
-        or dependencies.get("TL-0315") != ["TL-0310"]
-    ):
-        validation.error(
-            "TL-0315: platform amendment must remain an independent Full "
-            "engineering task from integrated TL-0310"
-        )
     if "TL-0315" not in dependencies.get("TL-0311", []):
         validation.error("TL-0311: must incorporate the integrated TL-0315 platform contract")
 
@@ -6918,7 +6649,7 @@ def validate_windows_11_task_contract(
             validation.error(f"{task_id}: package or release criteria must qualify Windows 11 on native x64")
 
 
-def validate() -> int:
+def validate(*, outcome: str | None = None) -> int:
     validation = Validation()
 
     for relative in (*REQUIRED_FILES, BUNDLE_MANIFEST_FILE):
@@ -6930,32 +6661,34 @@ def validate() -> int:
         return report(validation)
 
     task_doc = load_yaml(ROOT / "TASKS.yaml", validation)
+    if validation.errors:
+        return report(validation)
     try:
-        json.loads((ROOT / "TASKS.schema.json").read_text(encoding="utf-8"))
-    except Exception as exc:
+        schema = json.loads((ROOT / "TASKS.schema.json").read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc:
         validation.error(f"TASKS.schema.json: cannot parse JSON: {exc}")
+        return report(validation)
 
-    # Optional full JSON Schema validation when jsonschema is available.
+    # The pinned Python toolchain always runs the structural checks below.
     try:
         import jsonschema  # type: ignore
 
-        schema = json.loads((ROOT / "TASKS.schema.json").read_text(encoding="utf-8"))
+        jsonschema.Draft202012Validator.check_schema(schema)
         jsonschema.Draft202012Validator(schema).validate(task_doc)
     except ModuleNotFoundError:
         validation.warn("jsonschema is not installed; custom structural validation was used")
     except Exception as exc:
         validation.error(f"TASKS.yaml does not satisfy TASKS.schema.json: {exc}")
 
-    if task_doc.get("schema_version") != 1:
-        validation.error("TASKS.yaml: schema_version must equal 1")
-    if task_doc.get("bundle_version") != CURRENT_BUNDLE_VERSION:
-        validation.error(
-            f"TASKS.yaml: bundle_version must equal {CURRENT_BUNDLE_VERSION!r}"
-        )
-    if str(task_doc.get("generated_on")) != CURRENT_BUNDLE_GENERATED_ON:
-        validation.error(
-            f"TASKS.yaml: generated_on must equal {CURRENT_BUNDLE_GENERATED_ON}"
-        )
+    if task_doc.get("schema_version") != 2:
+        validation.error("TASKS.yaml: schema_version must equal 2")
+    version = task_doc.get("bundle_version")
+    if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        validation.error("TASKS.yaml: bundle_version must use a version number")
+    try:
+        date.fromisoformat(str(task_doc.get("generated_on")))
+    except ValueError:
+        validation.error("TASKS.yaml: generated_on must use an ISO date")
     project = task_doc.get("project", {})
     if not isinstance(project, dict):
         validation.error("TASKS.yaml: project must be a mapping")
@@ -7003,38 +6736,32 @@ def validate() -> int:
             validation.error(
                 f"TASKS.yaml: portfolio.{field} must equal {expected!r}"
             )
-    if task_doc.get("workflow", {}).get("mutable_task_fields") != MUTABLE_FIELDS:
-        validation.error(
-            f"TASKS.yaml: workflow.mutable_task_fields must equal {MUTABLE_FIELDS!r}"
-        )
+    if task_doc.get("authority") != {
+        "product_contract": "docs/product-contract.md", "work_state": "TASKS.yaml"
+    }:
+        validation.error("TASKS.yaml: declare the product contract and current work source")
 
-    expected_authority = list(AUTHORITY_ORDER)
-    if task_doc.get("authority", {}).get("precedence") != expected_authority:
-        validation.error(
-            f"TASKS.yaml: authority.precedence must equal {expected_authority!r}"
-        )
+    workflow = task_doc.get("workflow")
+    workflow_fields = {"states", "selection_rule", "prerequisite_rule"}
+    if not isinstance(workflow, dict) or set(workflow) != workflow_fields:
+        validation.error("TASKS.yaml: workflow must describe states, selection and scoped prerequisites")
+    else:
+        states = workflow["states"]
+        if not isinstance(states, list) or sorted(str(state) for state in states) != sorted(ALLOWED_STATUS):
+            validation.error("TASKS.yaml: workflow must declare the supported states once")
+        for field in ("selection_rule", "prerequisite_rule"):
+            require_nonempty_string("TASKS.yaml workflow", workflow, field, validation)
 
     decisions_text = (ROOT / "DECISIONS.md").read_text(encoding="utf-8")
-    decision_ids = DECISION_HEADING_RE.findall(decisions_text)
+    decision_ids = DECISION_HEADING_RE.findall(markdown_visible_text(decisions_text))
     decision_set = set(decision_ids)
     if len(decision_ids) != len(decision_set):
         validation.error("DECISIONS.md: duplicate decision headings")
-    expected_decision_sequence = [f"D-{index:03d}" for index in range(1, len(decision_ids) + 1)]
-    if decision_ids != expected_decision_sequence:
-        validation.error(
-            "DECISIONS.md: decision headings must be contiguous and ordered from D-001"
-        )
-    if tuple(decision_ids) != CURRENT_DECISION_IDS:
-        validation.error(
-            f"DECISIONS.md: current bundle must contain exactly D-001 through {CURRENT_DECISION_IDS[-1]}"
-        )
-
     milestones = task_doc.get("milestones")
     if not isinstance(milestones, list) or not milestones:
         validation.error("TASKS.yaml: milestones must be a non-empty list")
         milestones = []
 
-    milestone_ids: list[str] = []
     milestone_by_id: dict[str, dict[str, Any]] = {}
     for index, milestone in enumerate(milestones):
         owner = f"milestones[{index}]"
@@ -7047,22 +6774,10 @@ def validate() -> int:
             continue
         if milestone_id in milestone_by_id:
             validation.error(f"TASKS.yaml: duplicate milestone id {milestone_id}")
-        milestone_ids.append(milestone_id)
         milestone_by_id[milestone_id] = milestone
         for field in ("name", "objective", "gate_task"):
             require_nonempty_string(owner, milestone, field, validation)
         require_nonempty_string_list(owner, milestone, "exit_criteria", validation)
-
-    expected_milestones = [f"M{index}" for index in range(len(milestone_ids))]
-    if milestone_ids != expected_milestones:
-        validation.error(
-            f"TASKS.yaml: milestones must be contiguous and ordered: expected {expected_milestones}"
-        )
-    if milestone_ids != [f"M{index}" for index in range(8)]:
-        validation.error("TASKS.yaml: portfolio-aligned bundle must contain M0 through M7")
-    elif milestone_by_id.get("M7", {}).get("gate_task") != "TL-0710":
-        validation.error("TASKS.yaml: M7 gate_task must equal TL-0710")
-    milestone_rank = {milestone_id: index for index, milestone_id in enumerate(milestone_ids)}
 
     tasks = task_doc.get("tasks")
     if not isinstance(tasks, list) or not tasks:
@@ -7071,7 +6786,6 @@ def validate() -> int:
 
     task_by_id: dict[str, dict[str, Any]] = {}
     dependency_map: dict[str, list[str]] = {}
-    task_order: list[str] = []
 
     required_task_fields = {
         "id",
@@ -7099,6 +6813,10 @@ def validate() -> int:
         "human_evidence_required",
         "notes",
         "blocked_reason",
+        "outcome",
+        "checkpoints",
+        "completion_phase",
+        *PREREQUISITE_FIELDS,
     }
 
     for index, task in enumerate(tasks):
@@ -7121,7 +6839,6 @@ def validate() -> int:
         if task_id in task_by_id:
             validation.error(f"TASKS.yaml: duplicate task id {task_id}")
         task_by_id[task_id] = task
-        task_order.append(task_id)
 
         for field in ("title", "milestone", "workstream", "objective"):
             require_nonempty_string(task_id, task, field, validation)
@@ -7130,23 +6847,23 @@ def validate() -> int:
         validate_task_test_tier(task_id, task, validation)
 
         status = task.get("status")
-        if status not in ALLOWED_STATUS:
+        if not isinstance(status, str) or status not in ALLOWED_STATUS:
             validation.error(f"{task_id}: invalid status {status!r}")
         executor = task.get("executor")
-        if executor not in ALLOWED_EXECUTOR:
+        if not isinstance(executor, str) or executor not in ALLOWED_EXECUTOR:
             validation.error(f"{task_id}: invalid executor {executor!r}")
         environment = task.get("environment")
-        if environment not in ALLOWED_ENVIRONMENT:
+        if not isinstance(environment, str) or environment not in ALLOWED_ENVIRONMENT:
             validation.error(f"{task_id}: invalid environment {environment!r}")
-        if task.get("size") not in ALLOWED_SIZE:
+        if not isinstance(task.get("size"), str) or task["size"] not in ALLOWED_SIZE:
             validation.error(f"{task_id}: invalid size {task.get('size')!r}")
-        if task.get("priority") not in ALLOWED_PRIORITY:
+        if not isinstance(task.get("priority"), str) or task["priority"] not in ALLOWED_PRIORITY:
             validation.error(f"{task_id}: invalid priority {task.get('priority')!r}")
-        if task.get("kind") not in ALLOWED_KIND:
+        if not isinstance(task.get("kind"), str) or task["kind"] not in ALLOWED_KIND:
             validation.error(f"{task_id}: invalid kind {task.get('kind')!r}")
 
         milestone_id = task.get("milestone")
-        if milestone_id not in milestone_by_id:
+        if not isinstance(milestone_id, str) or milestone_id not in milestone_by_id:
             validation.error(f"{task_id}: unknown milestone {milestone_id!r}")
 
         deps = task.get("depends_on")
@@ -7163,7 +6880,8 @@ def validate() -> int:
         if not isinstance(refs, list) or not refs:
             validation.error(f"{task_id}: decision_refs must be a non-empty list")
             refs = []
-        if len(refs) != len(set(refs)):
+        string_refs = [ref for ref in refs if isinstance(ref, str)]
+        if len(string_refs) != len(set(string_refs)):
             validation.error(f"{task_id}: duplicate decision_refs")
         for ref in refs:
             if not isinstance(ref, str) or not DECISION_ID_RE.fullmatch(ref):
@@ -7171,92 +6889,38 @@ def validate() -> int:
             elif ref not in decision_set:
                 validation.error(f"{task_id}: unknown decision reference {ref}")
 
+        outcome_id = task.get("outcome")
+        if "outcome" in task and (not isinstance(outcome_id, str) or not SCOPE_ID_RE.fullmatch(outcome_id)):
+            validation.error(f"{task_id}: invalid outcome identifier {outcome_id!r}")
+
         evidence = task.get("evidence")
         if not isinstance(evidence, list):
             validation.error(f"{task_id}: evidence must be a list")
+        else:
+            for entry in evidence:
+                if isinstance(entry, dict):
+                    require_nonempty_string(task_id, entry, "summary", validation)
+                elif not isinstance(entry, str) or not entry.strip():
+                    validation.error(f"{task_id}: evidence must contain a summary")
 
-        if executor in {"hybrid", "human"}:
-            require_nonempty_string_list(
-                task_id, task, "human_evidence_required", validation
-            )
+
+        if "human_evidence_required" in task:
+            require_nonempty_string_list(task_id, task, "human_evidence_required", validation)
         if status == "blocked":
             require_nonempty_string(task_id, task, "blocked_reason", validation)
         elif "blocked_reason" in task and task.get("blocked_reason"):
             validation.warn(f"{task_id}: blocked_reason is present while status is {status}")
 
-    if task_order != sorted(task_order):
-        validation.error("TASKS.yaml: tasks must be ordered by task ID")
-    if len(task_by_id) != CURRENT_TASK_COUNT:
-        validation.error(
-            "TASKS.yaml: current bundle must contain "
-            f"{CURRENT_TASK_COUNT} tasks, found {len(task_by_id)}"
-        )
+    validate_engineering_dependencies(validation, task_by_id, dependency_map)
 
-    task_ids = set(task_by_id)
-    for task_id, deps in dependency_map.items():
-        for dep in deps:
-            if dep not in task_ids:
-                validation.error(f"{task_id}: unknown dependency {dep}")
-                continue
-            own_milestone = task_by_id[task_id].get("milestone")
-            dep_milestone = task_by_id[dep].get("milestone")
-            if (
-                own_milestone in milestone_rank
-                and dep_milestone in milestone_rank
-                and milestone_rank[dep_milestone] > milestone_rank[own_milestone]
-            ):
-                validation.error(
-                    f"{task_id}: dependency {dep} is in later milestone {dep_milestone}"
-                )
-
-    topological_order(task_ids, dependency_map, validation)
-
-    roadmap_text = (ROOT / "ROADMAP.md").read_text(encoding="utf-8")
-    for task_id in sorted(task_ids):
-        if f"`{task_id}`" not in roadmap_text:
-            validation.error(f"ROADMAP.md: missing task reference `{task_id}`")
-
-    # Milestone gate and closure checks.
     for milestone_id, milestone in milestone_by_id.items():
         gate_id = milestone.get("gate_task")
-        gate = task_by_id.get(gate_id)
-        if gate is None:
-            validation.error(f"{milestone_id}: gate task {gate_id!r} does not exist")
-            continue
-        if gate.get("milestone") != milestone_id:
-            validation.error(f"{milestone_id}: gate {gate_id} is assigned to {gate.get('milestone')}")
-        if gate.get("kind") != "gate":
-            validation.error(f"{milestone_id}: gate {gate_id} must have kind: gate")
+        gate = task_by_id.get(gate_id) if isinstance(gate_id, str) else None
+        if gate is None or gate.get("kind") != "gate":
+            validation.error(f"{milestone_id}: gate must reference an existing gate task")
 
-        gate_ancestors = ancestors(gate_id, dependency_map)
-        milestone_tasks = {
-            task_id
-            for task_id, task in task_by_id.items()
-            if task.get("milestone") == milestone_id and task_id != gate_id
-        }
-        missing_from_gate = sorted(milestone_tasks - gate_ancestors)
-        if missing_from_gate:
-            validation.error(
-                f"{milestone_id}: gate {gate_id} does not depend transitively on {missing_from_gate}"
-            )
-
-        if milestone_rank.get(milestone_id, 0) > 0:
-            previous_id = milestone_ids[milestone_rank[milestone_id] - 1]
-            previous_gate = milestone_by_id[previous_id].get("gate_task")
-            for task_id in sorted(
-                task_id
-                for task_id, task in task_by_id.items()
-                if task.get("milestone") == milestone_id
-            ):
-                prerequisite = (
-                    "TL-0610" if task_id in {"TL-0701", "TL-0702"} else previous_gate
-                )
-                if prerequisite not in ancestors(task_id, dependency_map):
-                    validation.error(
-                        f"{task_id}: does not depend transitively on milestone prerequisite {prerequisite}"
-                    )
-
-    validate_testing_policy_task_contract(validation, task_doc, task_by_id, dependency_map)
+    validate_prerequisites(validation, task_by_id)
+    validate_exposure_authorization(validation, task_by_id, project)
     validate_windows_11_task_contract(validation, task_by_id, dependency_map)
     validate_governance_documents(validation)
     validate_architecture_decision_records(validation, task_by_id, decision_set)
@@ -7268,7 +6932,6 @@ def validate() -> int:
     validate_testing_documents(validation, task_by_id, decision_set)
     validate_m0_sandbox_scripts(validation)
     validate_m0_foundation_gate(validation, task_by_id)
-    validate_current_bundle_document_markers(validation)
 
     active_hardware_scope_documents = {
         relative: (ROOT / relative).read_text(encoding="utf-8")
@@ -7335,32 +6998,17 @@ def validate() -> int:
                 f"FUTURE_ASSEMBLY_NOTES.md: missing required deferral phrase {required_phrase!r}"
             )
 
-    # Initial/ongoing selection diagnostics.
-    done = {
-        task_id
-        for task_id, task in task_by_id.items()
-        if task.get("status") == "done"
-    }
-    dependency_ready = [
-        task_id
-        for task_id in task_order
-        if task_by_id[task_id].get("status") not in {"done", "cancelled"}
-        and all(dep in done for dep in dependency_map.get(task_id, []))
-    ]
-    codex_ready = [
-        task_id
-        for task_id in dependency_ready
-        if task_by_id[task_id].get("executor") in {"codex", "hybrid"}
-        and task_by_id[task_id].get("status") in {"ready", "backlog"}
-    ]
-    if not codex_ready and len(done) < len(task_by_id):
-        validation.warn("No Codex-ready task exists; check blockers, review tasks, or accountable decisions")
+    codex_ready = select_engineering_tasks(task_by_id, outcome=outcome) if not validation.errors else []
+    if not codex_ready and not validation.errors and any(
+        task.get("status") not in {"done", "cancelled"} for task in task_by_id.values()
+    ):
+        validation.warn("No Codex-ready task exists for this selection")
 
     return report(
         validation,
         summary=(
             f"{len(task_by_id)} tasks, {len(milestone_by_id)} milestones, "
-            f"{len(decision_set)} frozen decisions; DAG valid"
+            f"{len(decision_set)} decisions; implementation graph valid"
         ),
         codex_ready=codex_ready,
     )
@@ -7382,9 +7030,11 @@ def report(
 
     print(f"OK: {summary or 'bundle structure valid'}")
     if codex_ready is not None:
-        print("Dependency-ready tasks (verify default-branch integration before selection): " + (", ".join(codex_ready) if codex_ready else "none"))
+        print("Engineering-ready tasks: " + (", ".join(codex_ready) if codex_ready else "none"))
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(validate())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--outcome", help="list engineering-ready tasks for this outcome")
+    raise SystemExit(validate(outcome=parser.parse_args().outcome))

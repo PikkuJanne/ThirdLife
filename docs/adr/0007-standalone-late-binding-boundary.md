@@ -2,11 +2,11 @@
 
 ## Status and authority
 
-**Status:** Accepted for `TL-0009`.
+**Status:** Accepted architecture rationale from `TL-0009`.
 
 **Task:** [`TL-0009`](../../TASKS.yaml)
 
-This ADR records existing binding decisions as planned architecture constraints. It does not amend [`DECISIONS.md`](../../DECISIONS.md) or [`PROJECT_BOUNDARY.md`](../../PROJECT_BOUNDARY.md), and it is not evidence that the planned behavior is implemented or verified.
+The [current product contract](../product-contract.md) and applicable specifications govern implementation. See the linked task evidence for the verified scope.
 
 ## Decision IDs
 
@@ -61,6 +61,6 @@ B4 owns sibling-specific catalogue entries, profiles, file associations, compati
 ## References
 
 - [Canonical portfolio boundary](../../PROJECT_BOUNDARY.md)
-- [Binding development roadmap](../../ROADMAP.md)
+- [Delivery roadmap](../../ROADMAP.md)
 - [Non-goals](../non-goals.md)
 - [Non-binding future assembly notes](../../FUTURE_ASSEMBLY_NOTES.md)

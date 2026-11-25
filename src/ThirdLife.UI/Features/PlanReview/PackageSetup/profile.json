@@ -1,0 +1,28 @@
+{
+  "schema_version": "thirdlife.profile.v1",
+  "profile_id": "plain-text-editor",
+  "version": "0.1.0",
+  "status": "reviewed",
+  "synthetic_data": false,
+  "classification": "PUBLIC_REFERENCE",
+  "policy": {
+    "id": "workshop-package-setup",
+    "version": "0.1.0"
+  },
+  "catalog": {
+    "id": "workshop-package-setup",
+    "version": "0.1.0"
+  },
+  "workshop": {
+    "capabilities": [
+      {
+        "capability_id": "document_editing",
+        "intent": "essential",
+        "reason_code": "plain_text_editing"
+      }
+    ]
+  },
+  "recipient": {
+    "choices": []
+  }
+}
