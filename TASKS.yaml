@@ -3457,7 +3457,7 @@ tasks:
   workstream: actions
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: any
@@ -3485,7 +3485,17 @@ tasks:
   verification:
   - Unit-test allowlists and adversarial deserialization.
   - Static-scan DTOs for unbounded execution strings.
-  evidence: []
+  evidence:
+  - summary: The two compiled request shapes passed the versioned codec, bounded parameter, fixed impact and closed DTO checks.
+    task: TL-0303
+    command_or_review: .\eng\verify.ps1 -Tier Targeted -TestProject tests\ThirdLife.Actions.Tests\ThirdLife.Actions.Tests.csproj and project reference review
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400 and synthetic requests
+    date: '2026-11-25'
+    duration: 58.361 s, 1112 Quick tests and 36 Actions tests
+    reference: artifacts/evidence/TL-0303/report.md
+    limitation: Metadata and local serialization only. No application dispatch, elevation, or installer execution.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
