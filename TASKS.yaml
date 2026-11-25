@@ -3943,7 +3943,7 @@ tasks:
   notes:
   - UAC remains explicit. The attributable privilege-boundary authorization is recorded once at TL-0314.
   - PR 36 merged through TL-0316. Its historical report retains the earlier implementation and native linker evidence.
-  - TL-0317 records the verified protected no-op scope. Ordinary broker-dependent dispatch remains gated by TL-0313 and TL-0314.
+  - TL-0317 records the verified protected no-op scope. Ordinary broker-dependent dispatch remains gated by TL-0318 and TL-0314.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
@@ -4063,7 +4063,7 @@ tasks:
   workstream: execution
   kind: code
   priority: P0
-  status: blocked
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -4075,8 +4075,8 @@ tasks:
   - D-025
   - D-029
   - D-032
-  objective: Implement end-to-end orchestration for an approved no-op privileged batch, including UAC decline, progress, cancellation,
-    persistence, and recovery.
+  objective: Implement and verify approval, broker orchestration, decline, progress, cancellation, persistence, and recovery for
+    the no-op batch through the WPF and SQLite application flow. TL-0318 owns the composed live guest qualification.
   deliverables:
   - src/ThirdLife.Actions/Execution/ExecutionCoordinator.cs
   - src/ThirdLife.UI/Features/Execution
@@ -4088,7 +4088,9 @@ tasks:
   - Started and terminal states record exactly once.
   - The UI can reopen after client or broker interruption.
   verification:
-  - Test approve, decline, cancel, UI kill, broker kill, and reopen.
+  - Test approval, declined launch, cancellation, interruption, and reopen through the durable application flow. Reuse the actual
+    TL-0317 broker termination evidence at its transport scope and run the owned WPF process termination scenario.
+  - Verify the same saved plan can reopen through the approval-free guest case with the pinned broker verified in place.
   evidence:
   - task: TL-0313
     summary: WPF and SQLite fixtures verified durable plan approval, declined consent, cancellation, correlated progress,
@@ -4164,10 +4166,9 @@ tasks:
     duration: 13.558 s command from the isolated source worktree
     reference: artifacts/evidence/TL-0313/report.md
     limitation: Fixture pre-dispatch hold and controlled expiry. Actual native broker termination retains TL-0317 provenance.
-  blocked_reason: The prepared guest application cases need attributable operator approval in WPF and actual Windows consent
-    for each exact saved no-op batch. Ordinary dispatch also requires the TL-0314 privilege decision.
   notes:
-  - The verified application checkpoint keeps ordinary dispatch unavailable and can supply TL-0314 candidate preparation.
+  - PRs 44 and 45 integrated the verified implementation, guest preview, and real client recovery. TL-0318 carries the live
+    guest approval, acceptance, decline, and pre-dispatch cancellation obligations for the same flow.
   - Confirmed pre-dispatch decline, cancellation and unavailability permit fresh approval. Applied and unresolved results require
     independent postcondition evidence or reconciliation before another approval can start work in the same job.
   expected_test_tier: targeted
@@ -4180,14 +4181,10 @@ tasks:
     verification: Active-machine checkpoint evidence is recorded in artifacts/evidence/TL-0313/report.md.
     state: integrated
     unqualified_execution: unavailable
-  completion_phase: execution
-  execution_prerequisites:
-  - kind: task
-    task: TL-0317
-    scope: Dispatch through the qualified protected broker
-  - kind: authorization
-    scope: Action-specific approval and Windows consent for the exact broker batch
-    authority: operator
+  - reference: a607d85a66e4d4fa06eace09e0cca6657d5981cf
+    verification: Guest preview and actual fixture client termination evidence are recorded in the TL-0313 report.
+    state: integrated
+    unqualified_execution: unavailable
 - id: TL-0314
   title: Validate the M3 safe-planning gate
   milestone: M3
@@ -4241,6 +4238,7 @@ tasks:
   notes:
   - Prepare and verify the no-op candidate under existing constraints. Any required authorization precedes the action
     it governs.
+  - Candidate preparation and unattended verification can proceed while TL-0318 awaits an attended execution window.
   expected_test_tier: full
   full_test_triggers:
   - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
@@ -4252,6 +4250,9 @@ tasks:
   - kind: task
     task: TL-0311
     scope: Qualify the M3 broker capability for the claimed actions
+  - kind: task
+    task: TL-0318
+    scope: Qualify the composed application route through the protected broker before ordinary broker-dependent dispatch
   - kind: authorization
     scope: The accountable security owner authorizes the prepared privilege boundary and records the accepted scope and residual
       risks.
@@ -4478,6 +4479,59 @@ tasks:
     scope: Windows consent for the exact protected broker launch and its allowlisted rehearsal action
     authority: operator
     evidence: artifacts/evidence/TL-0317/report.md, observed Windows consent and decline inputs under the owner's authorization for the named no-op rehearsals
+- id: TL-0318
+  title: Qualify live application dispatch through the protected no-op broker
+  milestone: M3
+  workstream: execution
+  kind: test
+  priority: P0
+  status: blocked
+  size: S
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0313
+  decision_refs:
+  - D-029
+  - D-030
+  - D-032
+  - D-074
+  - D-075
+  objective: Complete the remaining TL-0313 live acceptance, decline, and cancellation evidence through the exact approved WPF
+    plan, SQLite journal, Windows secure desktop, and reviewed protected no-op broker on the same-machine guest.
+  deliverables:
+  - artifacts/evidence/TL-0318/report.md with live results and links to the TL-0313 and TL-0317 evidence
+  acceptance_criteria:
+  - Each run uses the pinned protected broker and an attributable WPF approval for the exact guest plan and impact. Windows
+    consent is observed for the matching request.
+  - Acceptance returns exactly one correlated Applied result per action and preserves independent verification as a separate step.
+  - Windows decline and authenticated pre-dispatch cancellation leave retryable jobs with zero action sends and no surviving broker.
+  - Reopening confirms the same durable plan and exactly one terminal outcome per action. Record scope, cleanup, and limits.
+  verification:
+  - Prepare one committed candidate and verify the approval-free ApplicationPreview before the attended window. Reuse evidence
+    when the fixture, approved scope, protected broker artifact, and relevant behavior still match.
+  - Group ApplicationAccept, ApplicationDecline, and ApplicationCancel in one attended window where practical. Each case presents
+    a new exact saved plan for WPF approval and its own Windows choice. Codex handles technical observation and recovery checks.
+  evidence: []
+  blocked_reason: The prepared cases are waiting for an attended guest window in which the operator can approve the exact plans
+    in WPF and make the actual Windows consent choices. The earlier acceptance attempt expired at CandidateReady and cleaned up.
+  notes:
+  - This is the live execution portion of TL-0313, with staged preview, timeout, and provenance recorded in its evidence report.
+  - Continue TL-0314 technical preparation and independent package work while this execution is pending.
+  expected_test_tier: targeted
+  full_test_triggers: []
+  extended_test_triggers: []
+  completion_phase: execution
+  execution_prerequisites:
+  - kind: task
+    task: TL-0317
+    scope: Reviewed protected no-op broker qualification on the dedicated Windows 11 guest
+  - kind: authorization
+    scope: Attributable operator approval in WPF for each exact saved no-op plan and impact
+    authority: operator
+  - kind: authorization
+    scope: Actual Windows consent or decline for the reviewed broker launch corresponding to each approved plan
+    authority: operator
 - id: TL-0401
   title: Select a supported structured package installation route
   milestone: M4

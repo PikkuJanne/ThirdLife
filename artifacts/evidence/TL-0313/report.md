@@ -168,3 +168,31 @@ then ran Targeted with Quick and the named Extended test. All 7 governed
 checks and 1,198 .NET tests passed in 142.916 s. The test source file
 `PlanReviewTests.BrokerInterruption.cs` had SHA-256
 `5ab20dfefac892af7191fc67790ddf2d9f2fb1a3b24dbac1352d54d9ad72ed38`.
+
+## Current qualification handoff
+
+TL-0313 completed the implementation, approval-free guest preview, and
+client recovery checks integrated through PRs 44 and 45. TL-0318 carries the
+outstanding live application acceptance, decline and cancellation cases. Prepare
+the committed candidate and verify its admission, pins and preview before
+inviting the operator. Where practical, run the three cases in one attended
+window. The operator approves each exact WPF plan and makes its Windows choice.
+Codex runs the technical checks, observes durable outcomes and verifies cleanup.
+Reruns follow the evidence reuse rules in [TESTING.md](../../../TESTING.md).
+
+The timed-out attempt remains evidence of staging and cleanup. M3 technical
+preparation and independent package work can proceed while TL-0318 is pending.
+TL-0314 requires the live qualification and the applicable privilege decision
+before ordinary broker-dependent dispatch.
+
+The 2026-11-25 sequencing change started at `ab0e0e3`. The validator selected
+TL-0314 preparation and TL-0405 with TL-0318 pending. The regression also
+rejected completing TL-0314 without TL-0318 and completing TL-0318 without its
+operator evidence. The existing application and runner sources match the
+integrated checkpoint.
+
+| Check | Active-machine result | Scope |
+| --- | --- | --- |
+| `eng/verify.ps1 -Tier Quick -Restore` | 8 work-contract and 1,197 .NET tests passed in 117.063 s | Windows 11 native x64. Locked restore, formatting and a warning-free Release build. |
+| Complete Python governance regression | 304 tests passed in 273.293 s | Includes the sequencing and exact-prerequisite regression. |
+| `PilotPackageServiceTests` and `PackageSetupTests` excluding `ActiveMachine` | 17 package tests passed in 14.811 s and 7 WPF tests passed in 40.715 s | TL-0405 baseline at `ab0e0e3` using the fake runtime and isolated SQLite. |
