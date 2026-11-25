@@ -111,7 +111,10 @@ public static partial class CatalogSchema
 
     private static CatalogPackage ReadPackage(JsonElement element, bool synthetic)
     {
-        RequireFields(element, ["source_id", "package_id", "exact_version", "scope", "architectures", "minimum_os", "external_artifact"]);
+        ReadOnlySpan<string> required = ["source_id", "package_id", "exact_version", "scope",
+            "architectures", "minimum_os", "external_artifact"];
+        var hasInstallerDigest = !synthetic && element.TryGetProperty("installer_sha256", out _);
+        RequireFields(element, hasInstallerDigest ? [.. required, "installer_sha256"] : required);
         var source = ReadToken(element, "source_id", LowerKebabPattern(), 64);
         var id = ReadToken(element, "package_id", PackageIdPattern(), 128);
         var expectedPrefixComparison = synthetic ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
@@ -136,7 +139,10 @@ public static partial class CatalogSchema
             scope,
             ReadArchitectures(element.GetProperty("architectures")),
             "windows_11",
-            hasArtifact);
+            hasArtifact)
+        {
+            InstallerSha256 = hasInstallerDigest ? ReadToken(element, "installer_sha256", Sha256Pattern(), 64) : null,
+        };
     }
 
     private static ImmutableArray<CatalogArchitecture> ReadArchitectures(JsonElement array)
@@ -294,8 +300,11 @@ public static partial class CatalogSchema
     [GeneratedRegex(@"\A(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*\.)+[a-z][a-z0-9]*(?:-[a-z0-9]+)*\z", RegexOptions.NonBacktracking)]
     private static partial Regex EntryIdPattern();
 
-    [GeneratedRegex(@"\A(?:[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\.)+[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\z", RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"\A(?:[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\+*\.)+[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\+*\z", RegexOptions.NonBacktracking)]
     private static partial Regex PackageIdPattern();
+
+    [GeneratedRegex(@"\A[0-9a-f]{64}\z", RegexOptions.NonBacktracking)]
+    private static partial Regex Sha256Pattern();
 
     [GeneratedRegex(@"\A[0-9][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*\z", RegexOptions.NonBacktracking)]
     private static partial Regex PackageVersionPattern();

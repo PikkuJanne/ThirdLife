@@ -7,17 +7,22 @@
 **Approving owner and role:** PikkuJanne — Security owner  
 **Approval date:** 2026-08-14  
 **Approval reference:** reviewed commit 917b5ebd5f5e4cf273a087a05dd381da54324235  
-**Authority:** Derived analysis under `DECISIONS.md`, `ROADMAP.md`, `PROJECT_BOUNDARY.md`, and `SECURITY.md`
+**Authority:** Supporting analysis for the [product contract](../product-contract.md) and [security specification](../../SECURITY.md)
 
 **Post-approval maintenance:** 2026-08-21 — `TL-0005` traceability/status annotation only. The approved base remains commit `917b5ebd5f5e4cf273a087a05dd381da54324235`; threats, residual decisions, and security approval were not changed or re-approved.
 
-This document identifies security risks in the planned ThirdLife Setup Core architecture. It is not a new authority tier, a certification, or evidence that a planned control has been implemented. Frozen decisions and the canonical **Owns / Does not own** boundary prevail.
+This document identifies security risks in the planned ThirdLife Setup Core architecture. Individual controls need implementation evidence. The approved initial model and residual decisions remain bound to the cited commit.
 
 The [Windows 11–only amendment](../amendments/2026-11-25-windows-11-only.md) supersedes the original platform assumption below. The original review remains bound to its cited commit.
 
+The [development contract reset](../amendments/2026-11-25-development-contract-reset.md)
+allows supported package routes to use operating-system elevation without the ThirdLife
+broker. The current boundary annotations below apply to new design and testing. The original
+approval does not qualify the changed package route or authorize its execution or exposure.
+
 ## Purpose and review posture
 
-The model asks what can go wrong while ThirdLife collects inventory, evaluates imported catalogue/profile data, resolves packages and updates, crosses the privilege boundary, persists a journal, verifies outcomes, and produces reports or exports. It uses data-flow decomposition and STRIDE-style prompts, then maps each high-risk threat to binding decisions and one or more roadmap tasks.
+The model asks what can go wrong while ThirdLife collects inventory, evaluates imported catalogue/profile data, resolves packages and updates, crosses the privilege boundary, persists a journal, verifies outcomes, and produces reports or exports. It uses data-flow decomposition and STRIDE-style prompts, then maps each high-risk threat to relevant rationale and active implementation or qualification work.
 
 Control status has three meanings:
 
@@ -107,9 +112,9 @@ The boundaries are intentionally separate; “local machine” is not a single t
 | `TB-UI` | Human/imported input into the unelevated UI and workflow process | UI input is untrusted and UI validation never authorizes privileged execution. |
 | `TB-PROVIDER` | Windows/CIM/API/provider output into normalized inventory evidence | The local OS can return malformed, stale, unavailable, localized, or deceptive data. |
 | `TB-BROKER` | Unelevated `P-07` journal/transition client, after an attributable UI request and durable started/dispatch-intent commit, across authenticated named-pipe IPC to the elevated ephemeral broker | Durable approval/dispatch authority never comes from UI or plan-service assertion; caller/session, ACL, nonce, expiry, correlation, protocol, size, plan digest, action type, and parameters still require independent broker validation. |
-| `TB-SYSTEM` | Elevated broker to package/update/system APIs and child installer processes | Least authority, exact allowlists, bounded lifetime, structured results, and ambiguous partial-state handling are required. |
+| `TB-SYSTEM` | Qualified package route or ephemeral broker to supported package/update/system APIs or installer processes | Least authority, exact package and machine scope binding, actual operating-system consent, exact allowlists, bounded lifetime, structured results, and ambiguous partial-state handling are required. |
 | `TB-PACKAGE-SOURCE` | Catalogue/package/update metadata and artifacts crossing a network or external-source boundary | Identity, provenance, staleness, redirects, source policy, material changes, and trust evidence require validation/reapproval. |
-| `TB-JOB-STORE` | Exact unelevated callers propose observations, approvals, broker results, verification, or read projections through `P-07` to SQLite/attachments/snapshots/journals/logs/checkpoints | `P-07` alone authorizes durable transitions; the elevated backend `P-05` has no database, job, attachment, or log handle. Local access control, bounds, transactional state, migration, corruption, replay, and DB/filesystem split-state still matter. |
+| `TB-JOB-STORE` | Exact unelevated callers propose observations, approvals, correlated package or broker results, verification, or read projections through `P-07` to SQLite/attachments/snapshots/journals/logs/checkpoints | `P-07` alone authorizes durable transitions; the executing backend `P-05` has no database, job, attachment, or log handle. Local access control, bounds, transactional state, migration, corruption, replay, and DB/filesystem split-state still matter. |
 | `TB-EXPORT` | Report/support writer to a user-selected directory, removable device, or share | Destination type, canonical target, reparse points, overwrite, partial writes, capacity, and preview/content binding require checks. |
 | `TB-RECIPIENT` | Workshop machine state to recipient-controlled personal choices/secrets | Sealed handover must defer personal setup; secrets never enter ThirdLife metadata or ordinary outputs. |
 | `TB-RELEASE-SUPPLY` | Dependency/build/release metadata and artifacts into deterministic verification and freeze | Exact source/version/hash/signature where available, dependency locks, provenance, licence/SBOM records, source revision, and immutable release artifacts require review. |

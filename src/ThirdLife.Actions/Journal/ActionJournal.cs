@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Core.Evidence;
+using ThirdLife.Core.Jobs;
 
 namespace ThirdLife.Actions.Journal;
 
@@ -11,6 +12,7 @@ public interface IActionJournalStore
     Task<JournalWriteResult> AppendJournalApprovalAsync(JournalApproval approval, CancellationToken cancellationToken = default);
     Task<JournalWriteResult> AppendJournalEntryAsync(JournalEntry entry, CancellationToken cancellationToken = default);
     Task<JournalHistory?> LoadJournalAsync(JournalPlanKey key, CancellationToken cancellationToken = default);
+    Task<ImmutableArray<JournalHistory>> LoadJobJournalsAsync(JobId jobId, CancellationToken cancellationToken = default);
 }
 
 public enum JournalWriteResult
@@ -38,6 +40,7 @@ public enum JournalActor
     Coordinator,
     Broker,
     Verifier,
+    PackageBackend,
 }
 
 public enum JournalResult
@@ -50,6 +53,12 @@ public enum JournalResult
     Interrupted,
     Declined,
     NoChangeConfirmed,
+    Cancelled,
+    VerificationUnconfirmed,
+    BackendUnavailable,
+    AuthorizationDeclined,
+    TrustMismatch,
+    PreconditionChanged,
 }
 
 public enum JournalCheckpoint
@@ -58,6 +67,8 @@ public enum JournalCheckpoint
     DispatchIntent,
     RestartRequired,
     Reconcile,
+    PackageDispatchIntent,
+    PackagePlanApproval,
 }
 
 public sealed record JournalApproval

@@ -170,8 +170,9 @@ public partial class MainWindow : Window
                 ? "4. Prepare, review plan"
                 : "4. Prepare, review unavailable");
             AutomationProperties.SetHelpText(WorkflowStages,
-                "Use Page Down and Page Up to read stage requirements. Intake and Inspect are available for review. A current assessment enables synthetic plan review.");
-            PrepareCriteria.Text = "A current assessment and approved intake gate enable synthetic plan review. Review the choices, exact package details and declared impact.";
+                "Use Page Down and Page Up to read stage requirements. A current assessment enables preparation plan review.");
+            PrepareCriteria.Text = "A current assessment and approved intake gate enable plan review. Review the choices, exact package details and declared impact.";
+            VerifyCriteria.Text = "Review package checks in the saved setup journal and workshop report. Full-device verification requires additional checks.";
         }
     }
 

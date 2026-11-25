@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://thirdlife.local/schemas/tasks.schema.json",
-  "title": "ThirdLife Setup Core roadmap task graph",
+  "title": "ThirdLife Setup Core work and evidence",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -19,7 +19,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "bundle_version": {
       "type": "string",
@@ -166,21 +166,15 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "precedence",
-        "change_rule"
+        "product_contract",
+        "work_state"
       ],
       "properties": {
-        "precedence": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "type": "string"
-          }
+        "product_contract": {
+          "const": "docs/product-contract.md"
         },
-        "change_rule": {
-          "type": "string",
-          "minLength": 1
+        "work_state": {
+          "const": "TASKS.yaml"
         }
       }
     },
@@ -189,12 +183,8 @@
       "additionalProperties": false,
       "required": [
         "states",
-        "allowed_transitions",
-        "mutable_task_fields",
-        "ready_rule",
         "selection_rule",
-        "single_task_default",
-        "human_completion_rule"
+        "prerequisite_rule"
       ],
       "properties": {
         "states": {
@@ -209,29 +199,11 @@
             "cancelled"
           ]
         },
-        "allowed_transitions": {
-          "type": "object"
-        },
-        "mutable_task_fields": {
-          "type": "array",
-          "const": [
-            "status",
-            "evidence",
-            "blocked_reason"
-          ]
-        },
-        "ready_rule": {
-          "type": "string",
-          "minLength": 1
-        },
         "selection_rule": {
           "type": "string",
           "minLength": 1
         },
-        "single_task_default": {
-          "const": true
-        },
-        "human_completion_rule": {
+        "prerequisite_rule": {
           "type": "string",
           "minLength": 1
         }
@@ -407,7 +379,8 @@
           "items": {
             "type": "string",
             "pattern": "^TL-\\d{4}$"
-          }
+          },
+          "description": "Other tasks that supply code, data or an interface needed to implement this work."
         },
         "decision_refs": {
           "type": "array",
@@ -488,7 +461,8 @@
           "items": {
             "type": "string",
             "minLength": 1
-          }
+          },
+          "description": "Historical evidence contract. Allowed only on completed task records."
         },
         "notes": {
           "type": "array",
@@ -523,24 +497,58 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "execution_prerequisites": {
+          "description": "Requirements scoped to execution. These do not determine engineering selection.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/prerequisite"
+          }
+        },
+        "release_prerequisites": {
+          "description": "Requirements scoped to release. These do not determine engineering selection.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/prerequisite"
+          }
+        },
+        "outcome": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+        },
+        "checkpoints": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/checkpoint"
+          }
+        },
+        "completion_phase": {
+          "description": "Phase whose scoped prerequisites are criteria for completing this task. Ordinary engineering does not set this field.",
+          "enum": [
+            "execution",
+            "release"
+          ]
         }
       },
       "allOf": [
         {
           "if": {
-            "properties": {
-              "executor": {
-                "enum": [
-                  "hybrid",
-                  "human"
-                ]
-              }
-            }
-          },
-          "then": {
             "required": [
               "human_evidence_required"
             ]
+          },
+          "then": {
+            "properties": {
+              "status": {
+                "const": "done"
+              }
+            }
           }
         },
         {
@@ -556,8 +564,162 @@
               "blocked_reason"
             ]
           }
+        },
+        {
+          "if": {
+            "required": [
+              "completion_phase"
+            ],
+            "properties": {
+              "completion_phase": {
+                "const": "execution"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "execution_prerequisites"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "completion_phase"
+            ],
+            "properties": {
+              "completion_phase": {
+                "const": "release"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "release_prerequisites"
+            ]
+          }
         }
       ]
+    },
+    "prerequisite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "scope"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "task",
+            "capability",
+            "authorization"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task": {
+          "type": "string",
+          "pattern": "^TL-\\d{4}$"
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "task"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "task"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "authority"
+                  ]
+                },
+                {
+                  "required": [
+                    "evidence"
+                  ]
+                }
+              ]
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "task"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "authorization"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "authority"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "authority"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "verification",
+        "state",
+        "unqualified_execution"
+      ],
+      "properties": {
+        "reference": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "verification": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "enum": [
+            "retained",
+            "integrated"
+          ]
+        },
+        "unqualified_execution": {
+          "const": "unavailable"
+        }
+      }
     }
   }
 }

@@ -48,7 +48,7 @@
     "packageId": {
       "type": "string",
       "maxLength": 128,
-      "pattern": "^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*(?:\\.[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)+$(?![\\s\\S])"
+      "pattern": "^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\\+*(?:\\.[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\\+*)+$(?![\\s\\S])"
     },
     "semanticVersion": {
       "type": "string",
@@ -102,6 +102,7 @@
         "entry_status": { "const": "synthetic_placeholder" },
         "production_eligible": { "const": false },
         "package": {
+          "not": { "required": ["installer_sha256"] },
           "properties": {
             "source_id": { "const": "synthetic-fixture-source" },
             "package_id": { "pattern": "^generic\\.synthetic\\." },
@@ -175,7 +176,8 @@
           "items": { "enum": ["x64", "arm64", "x86"] }
         },
         "minimum_os": { "const": "windows_11" },
-        "external_artifact": { "type": "boolean" }
+        "external_artifact": { "type": "boolean" },
+        "installer_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$(?![\\s\\S])" }
       }
     },
     "review": {

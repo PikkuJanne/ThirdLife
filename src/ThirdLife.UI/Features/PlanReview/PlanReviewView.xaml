@@ -7,7 +7,7 @@
   <GroupBox x:Name="PlanReviewRegion" Header="Preparation plan" Focusable="True"
             KeyboardNavigation.IsTabStop="True" AutomationProperties.Name="Preparation plan">
     <StackPanel>
-      <TextBlock Text="Review a synthetic no-op plan. Approval records review consent for the displayed plan."
+      <TextBlock Text="Review the proposed changes before approving a plan."
                  TextWrapping="Wrap" />
       <StackPanel Margin="0,6,0,0" IsEnabled="{Binding CanReviewPlan}">
         <Label Content="Preparation profile" Target="{Binding ElementName=PlanProfileSelector}" />
@@ -33,6 +33,13 @@
       <TextBlock x:Name="PlanStatusMessage" Text="{Binding PlanReviewStatus, NotifyOnTargetUpdated=True}"
                  TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
                  AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
+      <StackPanel Visibility="{Binding IsPackageProfile, Converter={StaticResource PlanReviewVisibility}}">
+        <TextBlock x:Name="PackageSourceMessage" Text="{Binding PackageSourceStatus, NotifyOnTargetUpdated=True}"
+                   TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                   AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
+        <Button x:Name="CancelPackageButton" Content="Cancel package operation" IsEnabled="{Binding CanCancelPackage}"
+                Click="CancelPackageOperation" Margin="0,4,0,4" HorizontalAlignment="Left" />
+      </StackPanel>
       <StackPanel Margin="0,8,0,0"
                   Visibility="{Binding HasPlanReview, Converter={StaticResource PlanReviewVisibility}}">
         <TextBlock x:Name="PlanResultTitle" Text="{Binding PlanReviewTitle}" TextWrapping="Wrap"
@@ -52,13 +59,26 @@
                    AutomationProperties.Name="Plan details and impact"
                    AutomationProperties.HelpText="Press Escape to close the details and return to the heading." />
         </Expander>
+        <StackPanel Visibility="{Binding IsPackageProfile, Converter={StaticResource PlanReviewVisibility}}">
+          <Label Content="Workshop operator code for this approval" Target="{Binding ElementName=PackageOperator}" />
+          <TextBox x:Name="PackageOperator" MaxLength="64" Text="{Binding PackageOperatorCode, UpdateSourceTrigger=PropertyChanged}"
+                   IsEnabled="{Binding CanEditPackageOperator}" AutomationProperties.Name="Workshop operator code for this approval" />
+        </StackPanel>
         <WrapPanel Margin="0,6,0,0">
           <Button x:Name="ApprovePlanReviewButton" Content="Approve plan" Click="ApprovePlanReview"
                   IsEnabled="{Binding CanApprovePlanReview}" Margin="0,0,8,4" />
           <Button x:Name="DeclinePlanReviewButton" Content="Decline plan" Click="DeclinePlanReview"
-                  IsEnabled="{Binding CanDeclinePlanReview}" Margin="0,0,0,4" />
+                  IsEnabled="{Binding CanDeclinePlanReview}" Margin="0,0,8,4" />
+          <Button x:Name="InstallPackageButton" Content="Install approved package"
+                  Visibility="{Binding IsPackageProfile, Converter={StaticResource PlanReviewVisibility}}"
+                  IsEnabled="{Binding CanInstallPackage}" Click="InstallPackage" Margin="0,0,0,4" />
         </WrapPanel>
       </StackPanel>
+      <TextBox x:Name="SavedPackageHistory" Text="{Binding PackageHistoryText, Mode=OneWay}" TextWrapping="Wrap"
+               IsReadOnly="True" IsReadOnlyCaretVisible="True" AcceptsReturn="True" MaxHeight="220"
+               VerticalScrollBarVisibility="Auto" Margin="0,6,0,0"
+               Visibility="{Binding HasPackageHistory, Converter={StaticResource PlanReviewVisibility}}"
+               AutomationProperties.Name="Saved machine-wide setup journal" />
     </StackPanel>
   </GroupBox>
 </UserControl>

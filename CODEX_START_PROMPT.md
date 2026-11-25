@@ -1,77 +1,48 @@
 # ThirdLife Setup Core — Codex Start and Reusable Prompts
 
-**Bundle version:** 0.7.0  
+**Bundle version:** 0.8.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1
 
 ## 1. Prompt selection
 
-- **Repository not yet consolidated through TL-0106:** continue the
-  [approved stabilization](docs/amendments/2026-09-12-repository-stabilization.md)
-  from live `STATUS.md` and the [review checklist](docs/reviews/2026-09-12-repository-review.md).
-  Stop before merge and do not start `TL-0107` in that session.
-- **Normal product session after stabilization:** use the task execution prompt below.
-- **Defect, gate, security, accessibility, resource, recovery, or release work:** use the
-  matching specialized prompt.
+Use the current outcome prompt for an engineering assignment and the relevant specialized
+prompt for scoped review, diagnosis, verification or exposure. The TL-0008 transition prompt,
+completed M1 assignment and Windows 11 migration are historical continuations. Use live
+STATUS.md and TASKS.yaml to find the current work.
 
-The TL-0008 transition prompt is historical. Do not select it for normal current work.
-For the assigned TL-0315 migration and TL-0311 reconciliation, use the
-[Windows 11–only amendment](docs/amendments/2026-11-25-windows-11-only.md).
-
-## 2. Normal task execution prompt
+## 2. Outcome execution prompt
 
 ```text
-Work on one ThirdLife Setup Core task at a time. Continue within an explicitly assigned
-sequence from updated main after each completed task is integrated.
+Work toward the assigned ThirdLife Setup Core outcome. Start with DEVELOPMENT_WORKFLOW.md,
+verify remote, branch, worktree, HEAD, upstream, divergence and main, and fetch safely.
+Preserve unrelated work and use an isolated checkout when helpful.
 
-Start with DEVELOPMENT_WORKFLOW.md. Verify remote, branch, worktree, HEAD, upstream,
-divergence, and default-branch integration state. Fetch/prune safely.
+Read STATUS.md, docs/product-contract.md, affected specifications and TASKS.yaml. Confirm real
+implementation dependencies, action and release prerequisites, test triggers and prior
+evidence. Run the smallest relevant baseline.
 
-Do not select a new product task when completed prior work is not integrated into main. In
-that case stop and perform only the named stabilization/integration work.
+Continue across directly enabling tasks. Split or resequence work within the current
+contract and preserve meaningful acceptance and completed evidence. When a component is
+blocked, record the exact failed operation, its missing prerequisite and affected actions.
+Continue independent work. A verified isolated checkpoint may integrate while an affected
+capability remains accurately unavailable and unreachable.
 
-Read STATUS.md and the binding documents in AGENTS.md order. Parse the selected TASKS.yaml
-entry, including dependencies, decisions, deliverables, criteria, verification, test tier,
-triggers, prior evidence, and applicable accountable decisions.
+Preserve standalone Team B/B1 scope, Windows 11 client/native x64 admission, unelevated UI,
+typed and bounded execution, exact approved trust and provenance, durable journal and
+independent verification. Use qualified supported Windows/WinGet/vendor routes where
+appropriate and the ephemeral broker for ThirdLife-owned privileged code. Keep privacy,
+accessibility, bounded resources and strongest applicable safety safeguards in force.
 
-If the task is not dependency-ready, stop. Do not implement around it.
+Codex owns technical verification, repair, cleanup and evidence, with zero routine owner
+QA or sign-off. Record objective evidence, missing observations and actual authorization
+separately. Prepare safe work before decisions. Real action authorization, applicable UAC,
+recipient choices, pilot/public consent and enforced repository controls remain in force.
 
-Implement the smallest coherent diff. Preserve:
-- standalone Team B/B1 scope and project vacuum;
-- local-first behavior;
-- Windows 11 client/native-x64 checks before live work and original provenance for legacy records;
-- unelevated UI and ephemeral allowlisted broker;
-- declarative non-executable profiles;
-- one semantic owner or explicit reconciliation per evidence fact;
-- evidence/policy separation;
-- independent verification;
-- truthful journal states;
-- privacy-safe outputs;
-- accessibility;
-- resource-conscious design;
-- versioned and stale-safe external lifecycle knowledge.
-
-All authoritative runtime verification occurs on the active Codex machine. Remote CI is
-supplementary only.
-
-Run Quick during iteration and before checkpoints. Run Targeted for the changed subsystem.
-Run Full/Extended only when triggered. Reduce failures to focused deterministic regressions.
-
-Keep STATUS.md concise. Put detailed evidence in committed artifacts and reference it from
-TASKS.yaml.
-
-Codex owns preparation, verification, diagnosis, repair and evidence under D-074.
-Use real entry points. Carry forward valid unchanged evidence. Distinguish objective
-results, actual observations, evidence limits, reported defects and scope-bound decisions.
-Plan zero routine human QA, confirmation, retests or owner sign-off. Apply the D-074
-exceptional-input criteria and continue safe preparation before a later decision.
-
-Commit and push coherent checkpoints. Open/update the task pull request. Do not start the
-next roadmap task until this task is integrated into main.
-
-Pause when an action genuinely requires a decision, at a concrete external blocker or at the end of the
-assigned work. Leave the AGENTS.md report and a resumable next action when paused.
-For the authorized M1 continuation, complete and integrate the TL-0116 technical gate,
-then end the assignment.
+Run Quick during iteration, Targeted for changed risks, and Full or named Extended only
+when triggered. Use real entry points. Runtime evidence is from the active Codex machine.
+Remote CI is supplementary. Commit, push and integrate coherent checkpoints with concise
+evidence and the next executable action. Pause only at a true blocker, required decision
+or the end of the assigned outcome.
 ```
 
 ## 3. Focused defect prompt
@@ -93,8 +64,8 @@ PR, and limitations.
 ```text
 Prepare and verify the named gate. Preserve actual authorization and its scope.
 
-Verify graph closure, branch/default integration, clean-clone continuity, and all predecessor
-evidence. Run bundle/repository validation, active-machine Full, and only triggered Extended
+Verify the scoped execution and release prerequisites, source continuity, clean-checkout
+results, and applicable evidence. Run bundle/repository validation, active-machine Full, and only triggered Extended
 scenarios. Remote CI is supplementary.
 
 Create an evidence index mapping every criterion to a durable artifact. Record reference

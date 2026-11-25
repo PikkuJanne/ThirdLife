@@ -2,8 +2,8 @@
 
 TL-0310 defines the bounded payload contract shared by the unelevated client and
 the ephemeral broker. This version carries synthetic no-op actions. Package
-requests remain planning data until a separately authorized execution contract
-and backend exist. [ADR 0004](../adr/0004-ephemeral-broker.md) ·
+requests are outside this protocol version. A qualified independent Windows or
+vendor package route uses its own typed adapter and the same plan and journal controls. [ADR 0004](../adr/0004-ephemeral-broker.md) ·
 [D-030](../../DECISIONS.md#d-030)
 
 ## Payload

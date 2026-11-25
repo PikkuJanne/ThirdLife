@@ -1,71 +1,56 @@
 # ThirdLife Setup Core — Product Contract
 
-**Status:** Governed summary of the frozen product contract  
-**Active project:** Team B / B1 — ThirdLife Setup Core  
-**Primary authority:** `DECISIONS.md`, `ROADMAP.md`, and `PROJECT_BOUNDARY.md`
+**Status:** Current product contract  
+**Active project:** Team B / B1 — ThirdLife Setup Core
 
-This document makes the active product contract easy to find. It does not amend or outrank the authority files above. If a summary here conflicts with a higher-authority file, stop and follow `docs/change-control.md`.
+This contract defines the product outcomes, scope, invariants and engineering authority. The linked specifications supply requirements for affected behavior. [Change control](change-control.md) explains when an engineering choice needs a separate decision.
 
-## Identity
+## Product and users
 
-**ThirdLife** is the product family, repository, solution, and `ThirdLife.*` code identity. **ThirdLife Setup Core** is the active standalone project and user-facing release being built in this repository.
+**ThirdLife** is the product family, repository, solution and `ThirdLife.*` code identity. **ThirdLife Setup Core** is the active standalone project and user-facing release. It remains useful, installable, updateable, repairable, removable, recoverable and supportable without a sibling application, mandatory account, project-controlled server or permanent privileged service.
 
-ThirdLife Setup Core is Team B / B1. It must remain useful, installable, updateable, repairable, removable, recoverable, and supportable without a sibling application, a shared portfolio service, or a project-controlled account.
+The primary operator is a volunteer or staff refurbisher. A present recipient participates only in explicitly recipient-controlled setup. Where a supported workflow permits an authorized organization to act, its authority and recovery ownership must be explicit. Personal choices stay with the recipient.
 
-## Users and outcome
+Windows 11 client on native x64 is the only supported application host and target for new live assessment, preparation, remediation and handover. Application entry points check structured Windows version, client product type, recognized build and native architecture before live work. Uncertain identity fails closed. Preparation additionally requires current reviewed servicing and policy evidence. Stale servicing evidence can leave prior records accessible without permitting preparation. Existing records remain readable with their original platform observations, policy provenance and decisions.
 
-The primary operator is a volunteer or staff refurbisher preparing donated Windows computers. A present recipient participates only in explicitly recipient-controlled setup. Where a later governed workflow permits an authorized organization to act, its authority and recovery ownership must be explicit; this does not let the workshop infer personal choices.
+## Required workflow
 
-The product provides a local-first, auditable workflow:
+1. **Intake.** Record the method, operator, date, bounded media identifier, result, verification and policy version for donor storage sanitized externally, replaced or absent. Start from a fresh or known Windows installation. Unknown or failed sanitization blocks preparation.
+2. **Inspect.** Gather bounded read-only observations and guided human tests. Keep observed, inferred, unavailable and human-confirmed evidence distinguishable. Record source, time, availability and provenance. Each evidence fact has one semantic owner or an explicit deterministic reconciliation rule.
+3. **Decide.** Evaluate immutable evidence against attributable, versioned organization policy. Cite the controlling rules and supporting or missing evidence for each disposition. Current dispositions are **Ready to prepare**, **Repair and retest**, **Human review required** and **Do not deploy**. Allowed exceptions carry operator identity, reason, policy authorization and timestamp. Show them in the workshop output. Prohibited rules cannot be overridden through an exception. Preserve older dispositions with their original policy. Unknown, stale, contradictory or unrecognized lifecycle data cannot satisfy a support rule.
+4. **Prepare.** Show the complete resolved plan with actions, data touched, privilege, network, disk, restart, rollback and verification expectations. Execute supported setup operations through the normal application after approval binds the exact plan. Reapproval is required after material changes. Instructions, Settings links and checklists can support the workflow. A promised automated operation requires actual execution at the approved scope.
+5. **Verify.** Record a correlated durable dispatch intent before executing and maintain recoverable state across cancellation, interruption and restart. Keep applied and verified distinct. Only an independent observation of the approved postcondition establishes verification. Final acceptance includes the actual required cold boot and fresh re-verification. Development evidence from a same-machine VM retains its own scope. Essential failure, missing evidence and ambiguous state block readiness as applicable.
+6. **Handover.** Require applicable policy, essential verification and blocking finalization. Check for workshop accounts, credentials, Wi-Fi profiles, test media, diagnostic exports, package residue and remote-support access. Report what was checked or removed. Produce a technical workshop record and a plain-language recipient guide that agree with saved facts and disclose limitations. A previewable sanitized support bundle follows a separate allowlist. Core makes no device security, sanitization, reliability or universal hardware certification claim.
 
-1. **Intake** a device whose donor storage is sanitized, replaced, or absent.
-2. **Inspect** the device with bounded read-only evidence and human-assisted tests.
-3. **Decide** by evaluating immutable evidence against versioned organization policy.
-4. **Prepare** only the complete plan that an operator reviewed and approved.
-5. **Verify** outcomes independently after actions and required restarts.
-6. **Handover** only when policy, verification, finalization, and reporting gates allow it.
+## Product invariants
 
-Windows 11 client on native x64 is the only supported application host and the only target for new live assessment, preparation, remediation, and handover. Supported preparation additionally requires reviewed servicing and policy evidence. Existing jobs remain readable with their original observations, policy provenance and decisions. The product does not certify a device as secure, reliable, sanitized, or universally suitable.
+- **Privilege and execution.** Keep the WPF UI unelevated. Use supported Windows, WinGet or vendor mechanisms for suitable approved operations. Use the short-lived, independently validating, typed, allowlisted broker for operations that require ThirdLife-owned privileged code. Unavailable capabilities block only affected actions. Preserve ordinary Windows consent and any other authorization that actually applies. A supported installer may obtain elevation through Windows. Neither elevation nor process success proves an install.
+- **Package trust.** Bind exact package identity, reviewed source and publisher, selected version and installer, architecture, requested scope, licence and applicable provenance to the approval. Recheck material metadata before use and preserve signature/hash verification. Keep read-only resolution and independent installed-state queries available without the broker when the backend supports them. Profiles, catalogue entries and policy are bounded declarative data. Compiled actions accept typed inputs and cannot take arbitrary commands, paths, URLs, registry keys, installer arguments or unrestricted file operations. Core 1.0 excludes WinGet Configuration and profile-supplied PowerShell DSC. Use structured Windows Update APIs for update orchestration and preserve restart, cancellation and resume behavior.
+- **Data and recovery.** Use local SQLite history and bounded access-restricted attachments. Version migrations and preserve source facts, policy, action history, approval and verification evidence. Preflight disk and rollback headroom where relevant. Recovery reconciles actual state before a retry. Job management, assessment, policy, existing record access and reports remain local-first. Show catalogue update, software download, Windows Update and optional application update network categories explicitly. Telemetry is off by default. Pilot measurements use explicit aggregated or pseudonymized exports.
+- **Architecture.** Maintain the C#/.NET/WPF application. Keep domain contracts independent of WPF, SQLite, OS/package infrastructure and localized output. Providers return typed normalized observations. Use replaceable, narrow adapters and the existing plan, approval, journal and verification seams for execution work.
+- **Privacy, accessibility and resources.** Keep Core-owned records and audience-specific outputs within their approved privacy scopes. Recipient identity is optional. Restrict necessary full serials or operator attribution to approved workshop fields. Keep credentials, recovery material and private content out of ordinary outputs. Provide keyboard operation, named controls, accessible progress, clear errors, cancellation and recovery. Require no GPU. Bound startup work, memory, storage, output, retry and concurrency.
+- **Project vacuum.** B1 uses generic public free essentials and synthetic packages. Keep a small reviewed catalogue that records publisher, licence, privacy, architecture, storage, background and update behavior, verification and redistribution status. Do not inspect, import or depend on a sibling repository, active branch, service, database, schema, fixture or release schedule. Defer sibling catalogue entries, profiles, adapters, compatibility cuts and suite media to B4. Record useful ideas in `FUTURE_ASSEMBLY_NOTES.md`.
 
-## Delivery cuts and Team B queue
+## Delivery and accountability
 
 | Delivery cut | Meaning |
 |---|---|
-| M0 through M6 / `TL-0611` | A controlled v0.1 partner pilot. This does not complete Team B/B1 or authorize suite integration. |
-| M7 / `TL-0710` | The human gate for an independently releasable ThirdLife Setup Core 1.0 and the only Team B/B1 exit gate. |
+| M4 / `TL-0411` | One real machine-wide, approved package transaction through the application with independent verification and persisted job/report continuity. |
+| M0 through M6 / `TL-0611` | Scope-bound controlled v0.1 partner pilot with actual exposure authorization. |
+| M7 / `TL-0710` | Accountable gate for independently releasable ThirdLife Setup Core 1.0 and the only Team B/B1 exit. |
 | After `TL-0710` | Team B proceeds to **Scam Explainer**. |
-| Future Team B / B4 | **ThirdLife Deployment and Suite Assembly** may later work against exact frozen releases and public release documentation. B4 is not active or authorized by this repository. |
+| Future Team B / B4 | **ThirdLife Deployment and Suite Assembly** may consume exact frozen releases, public documentation, hashes and non-sensitive samples. |
 
-Core 1.0 includes recipient-controlled accessibility setup and basic operating-system backup onboarding with a harmless restore verification where supported. It excludes personal account creation, recovery-key custody, a custom backup engine, Backup Circle control, and applying recipient-specific choices during sealed handover.
+Core 1.0 includes recipient-controlled accessibility setup and basic operating-system backup onboarding with destination/capacity checks, an initial backup and harmless restore verification where supported. Claim backup configuration only after the representative restore succeeds. Sealed handover defers recipient-specific choices. Personal account creation, recovery-key custody, a custom backup engine and control of sibling backup data are excluded. Encrypt only with an approved recovery-ownership plan. See [project ownership](../PROJECT_BOUNDARY.md) and [non-goals](non-goals.md).
 
-## Product rules
+Codex can split and resequence implementation, revise real implementation dependencies and interfaces, choose compliant supported routes, refine acceptance and tests, repair tooling, and prepare or integrate verified isolated checkpoints while affected execution or exposure stays gated. Preserve completed work, evidence and history. Material loss of a promised outcome, a materially different trust model, new commercial/licensing obligations and external exposure require applicable scope-bound authority.
 
-- Develop B1 in a **project vacuum**. Do not inspect, import, or depend on a sibling repository, branch, service, database, schema, fixture, or release schedule.
-- Keep observed facts, organization policy, and dispositions separate. Missing or unavailable evidence stays unknown and never becomes an implicit pass.
-- Show the complete resolved plan, impact, privilege, network, restart, rollback, and verification expectations before any change.
-- Keep the WPF UI unelevated. Privileged actions use a short-lived, independently validating, typed, allowlisted broker only after approval.
-- Keep policies, profiles, and catalogue entries declarative and non-executable. They cannot supply scripts, shell commands, arbitrary executable paths, registry paths, URLs, or unrestricted file operations.
-- Treat **applied** and **verified** as different states. Backend success is not proof that the requested outcome exists.
-- Store only Core-owned local workflow data, minimize sensitive fields, and keep workshop, recipient, and diagnostic outputs in separate privacy classes.
-- Make safety state, progress, cancellation, failure, and recovery accessible without a mouse or color-only meaning.
-- Require no GPU, permanent background service, constant broadband, or unbounded cache, memory, storage, retry, or concurrency behavior.
+Codex owns implementation verification and evidence with zero routine owner QA. Use the active Codex machine for authoritative runtime, security, resource and accessibility evidence. Keep fixtures, actual observations, unobserved behavior and decisions distinct. Remote CI is supplementary.
 
-## Specialized quality baselines
+## Specifications and progress
 
-- `SECURITY.md` defines the security objective, trust boundaries, privileged-broker invariants, supply-chain controls, and release evidence.
-- `docs/privacy/privacy-model.md` and `docs/privacy/logging-standard.md` define the three audience classes, excluded data, approved retention guidance, prohibited diagnostics, and support allowlist; the named privacy-owner approval is commit-bound and evidenced in `TL-0005`, while runtime implementation remains separately owned by later tasks.
-- `ACCESSIBILITY.md` defines operator and recipient accessibility requirements, technical verification and evidence limits under D-074.
-- `LOW_SPEC.md` defines bounded-resource and graceful-degradation rules; numerical support claims require measurements.
-- `RELEASE_INTERFACE.md` is populated only from verified preview or frozen release behavior. It is not a shared API or an early adapter contract.
-- `docs/non-goals.md` records the product and portfolio exclusions that ordinary tasks may not erode.
-- `docs/glossary.md` defines the vocabulary used for evidence, decisions, action state, and later black-box assembly.
-
-## Change rule
-
-Ordinary tasks may implement this contract but may not silently redefine it. Frozen decisions, the canonical **Owns / Does not own** boundary, the task graph, milestone scope, and portfolio posture require an explicitly approved governed amendment. Cross-project ideas go only to `FUTURE_ASSEMBLY_NOTES.md`; a note creates no B1 task, dependency, implementation, or release promise.
-
-See `docs/change-control.md` for the authority order, stop conditions, amendment record, synchronization steps, and evidence rules.
-
-## Current maturity and claims
-
-This contract states the governed target, not a claim that every planned capability already exists. `TASKS.yaml` and its evidence show implementation progress. `RELEASE_INTERFACE.md` alone records verified preview or frozen-release facts; fields remain **TBD**, **not yet verified**, or **not supported** until evidence exists.
+- [Security](../SECURITY.md), [privacy](privacy/privacy-model.md), [logging](privacy/logging-standard.md) and [supply chain](supply-chain/dependencies.md) define the applicable trust, provenance, data and output controls.
+- [Accessibility](../ACCESSIBILITY.md) and [modest hardware](../LOW_SPEC.md) define the behavior and evidence required at the affected surfaces.
+- [Testing](../TESTING.md) and [development workflow](../DEVELOPMENT_WORKFLOW.md) define verification and integration practice.
+- [TASKS.yaml](../TASKS.yaml) records work, dependencies, prerequisites, evidence and limitations. [STATUS.md](../STATUS.md) summarizes the current continuation. The [roadmap](../ROADMAP.md) describes delivery cuts. [Decisions](../DECISIONS.md) and ADRs preserve rationale.
+- [RELEASE_INTERFACE.md](../RELEASE_INTERFACE.md) contains verified preview or frozen release behavior. Leave unverified fields explicit.

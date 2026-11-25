@@ -1,25 +1,30 @@
-# ThirdLife Setup Core — Current Handoff Status
+# ThirdLife Setup Core — Current status
 
-**Snapshot date:** 2026-11-25  
-**Bundle baseline:** 0.7.0  
-**Runtime authority:** active Codex machine only. Remote CI is supplementary.  
-**Current milestone:** M3 — Safe planning and privilege boundary  
-**Current task:** TL-0315 — Done
+**Snapshot date** 2026-11-25  
+**Bundle baseline** 0.8.0  
+**Runtime authority** Active Codex machine only. Remote CI is supplementary.  
+**Active outcome** One verified machine-wide package transaction
 
-## Continuity
+The [development contract reset](docs/amendments/2026-11-25-development-contract-reset.md)
+establishes the product contract and separates implementation dependencies, execution
+prerequisites and exposure decisions. `TASKS.yaml` is the current work record.
 
-The owner-authorized [Windows 11–only amendment](docs/amendments/2026-11-25-windows-11-only.md)
-is based on `main` after broker protocol PR #35 at `8f1441b`. The verified candidate
-`b8314ef` targets Windows 11 client on native x64 and retains historical jobs,
-reports, policy and journal readback.
+The unelevated application has a reviewed Notepad++ x64 machine-wide path through
+Windows Installer. Read-only adapter checks confirmed the initial absence and verified the
+signed vendor installer. Deterministic application tests exercise approval expiry, dispatch,
+independent verification, SQLite reopen and reporting. The real launched transaction
+remains pending under TL-0412.
+[Package evidence](artifacts/evidence/TL-0412/report.md)
 
-Targeted passed 1,812 tests. Clean Full passed 290 governance and 1,941 .NET tests.
-Three direct active-machine checks passed, including the apphost and the isolated
-assessment and report journey. [TL-0315 evidence](artifacts/evidence/TL-0315/report.md)
+Clean Full passed on candidate `100aeb8`. The same build passed unelevated application
+startup and read-only vendor package resolution. TL-0401 through TL-0404 are complete
+at their engineering scope.
 
-## Next action
+TL-0311 remains blocked. Draft PR #36 retains the broker implementation and evidence at
+`642e629`. Its native publication needs a verified Microsoft x64 linker and SDK,
+followed by protected deployment and privilege
+qualification. The distinct-account guest remains deferred.
 
-Continue on retained broker draft PR #36 after its platform reconciliation. TL-0311
-is blocked on trusted elevated startup, with real privilege, recovery and cross-account
-evidence pending. TL-0312 follows completed TL-0311. The original workspace retains
-the documented untracked Word reference.
+After action-specific authorization, run the ordinary launched app on the admitted active
+Windows 11 host, verify exact machine registration, then reopen the job and verify its
+report. The task remains incomplete until that evidence is recorded.

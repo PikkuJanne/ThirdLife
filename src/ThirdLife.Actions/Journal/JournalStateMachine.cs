@@ -45,26 +45,44 @@ public static class JournalStateMachine
             (JournalState.Planned, JournalState.Approved) =>
                 candidate.Actor == JournalActor.Operator && candidate.ActorId == approval.ActorId &&
                 candidate.CorrelationId == approval.CorrelationId &&
-                candidate.Result == JournalResult.None && candidate.Checkpoint == JournalCheckpoint.None,
+                candidate.Result == JournalResult.None &&
+                (candidate.Checkpoint == JournalCheckpoint.None ||
+                    (candidate.Checkpoint == JournalCheckpoint.PackagePlanApproval && IsMachinePackage(action))),
+            (JournalState.Approved, JournalState.Approved) =>
+                candidate.Actor == JournalActor.Operator && candidate.ActorId == approval.ActorId &&
+                candidate.CorrelationId == approval.CorrelationId && candidate.ApprovalId != previous?.ApprovalId &&
+                candidate.Result == JournalResult.None && candidate.Checkpoint == JournalCheckpoint.PackagePlanApproval &&
+                previous?.Checkpoint == JournalCheckpoint.PackagePlanApproval && IsMachinePackage(action),
             (JournalState.Approved, JournalState.Started) =>
                 candidate.Actor == JournalActor.Coordinator && candidate.Result == JournalResult.None &&
-                candidate.Checkpoint == JournalCheckpoint.DispatchIntent,
+                ((candidate.Checkpoint == JournalCheckpoint.DispatchIntent && previous?.Checkpoint != JournalCheckpoint.PackagePlanApproval) ||
+                    (candidate.Checkpoint == JournalCheckpoint.PackageDispatchIntent && IsMachinePackage(action) &&
+                        previous?.Checkpoint == JournalCheckpoint.PackagePlanApproval &&
+                        previous?.ApprovalId == candidate.ApprovalId)),
             (JournalState.Approved, JournalState.Skipped) => IsDecline(candidate),
             (JournalState.Started, JournalState.Applied) =>
-                candidate.Actor == JournalActor.Broker && candidate.Result == JournalResult.BackendApplied &&
+                IsExecutionActor(candidate, previous) && candidate.Result == JournalResult.BackendApplied &&
                 (candidate.Checkpoint == JournalCheckpoint.None ||
                     (candidate.Checkpoint == JournalCheckpoint.RestartRequired && action.Definition.Reboot == ActionReboot.MayRequire)),
             (JournalState.Started, JournalState.Failed) =>
-                candidate.Actor == JournalActor.Broker && candidate.Result == JournalResult.OperationFailed &&
+                IsExecutionActor(candidate, previous) &&
+                (candidate.Result == JournalResult.OperationFailed ||
+                    (candidate.Actor == JournalActor.PackageBackend && candidate.Result is JournalResult.BackendUnavailable or
+                        JournalResult.AuthorizationDeclined or JournalResult.TrustMismatch or JournalResult.PreconditionChanged)) &&
                 candidate.Checkpoint == JournalCheckpoint.None,
             (JournalState.Started, JournalState.RequiresReview) =>
-                candidate.Actor is JournalActor.Coordinator or JournalActor.Broker && IsInterruption(candidate),
+                ((candidate.Actor is JournalActor.Coordinator or JournalActor.Broker && IsInterruption(candidate)) ||
+                    (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent && candidate.Actor == JournalActor.PackageBackend &&
+                        candidate.Result is JournalResult.Interrupted or JournalResult.Cancelled &&
+                        candidate.Checkpoint == JournalCheckpoint.Reconcile)),
             (JournalState.Applied, JournalState.Verified) =>
                 candidate.Actor == JournalActor.Verifier && candidate.Result == JournalResult.VerificationPassed &&
                 candidate.Verification == action.Definition.Verification && candidate.Checkpoint == JournalCheckpoint.None &&
                 previous?.Checkpoint != JournalCheckpoint.RestartRequired,
             (JournalState.Applied, JournalState.RequiresReview) =>
-                candidate.Actor is JournalActor.Coordinator or JournalActor.Verifier && IsInterruption(candidate),
+                (candidate.Actor is JournalActor.Coordinator or JournalActor.Verifier && IsInterruption(candidate)) ||
+                (candidate.Actor == JournalActor.Verifier && action.Request is InstallPackageActionRequest &&
+                    candidate.Result == JournalResult.VerificationUnconfirmed && candidate.Checkpoint == JournalCheckpoint.Reconcile),
             (JournalState.RequiresReview, JournalState.Failed) =>
                 candidate.Actor == JournalActor.Verifier && candidate.Result == JournalResult.NoChangeConfirmed &&
                 candidate.Checkpoint == JournalCheckpoint.None && candidate.Verification == ActionVerification.NoMachineChange &&
@@ -82,4 +100,10 @@ public static class JournalStateMachine
 
     private static bool IsInterruption(JournalEntry entry) =>
         entry.Result == JournalResult.Interrupted && entry.Checkpoint == JournalCheckpoint.Reconcile;
+
+    private static bool IsExecutionActor(JournalEntry entry, JournalEntry? previous) =>
+        entry.Actor == (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent ? JournalActor.PackageBackend : JournalActor.Broker);
+
+    private static bool IsMachinePackage(JournalAction action) =>
+        action.Request is InstallPackageActionRequest { Scope: ActionScope.Machine };
 }

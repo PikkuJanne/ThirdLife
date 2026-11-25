@@ -20,9 +20,9 @@ internal sealed partial class AuditWorkspace
     private ImmutableArray<PlanReviewDecision> _planReviewHistory = [];
     private PlanProfileOption? _selectedPlanProfile;
     private string? _planReviewChanges;
-    private string _planReviewStatus = "Open a current assessment to review a synthetic plan.";
+    private string _planReviewStatus = "Open a current assessment to review a preparation plan.";
 
-    public IReadOnlyList<PlanProfileOption> PlanProfiles { get; } = WorkshopPlanCandidate.Options;
+    public IReadOnlyList<PlanProfileOption> PlanProfiles { get; }
     public IReadOnlyList<PlanCapabilityChoice> PlanCapabilities { get; private set; } = [];
     public PlanReviewSnapshot? PlanReview { get; private set; }
     public PlanReviewDecision? PlanReviewDecision { get; private set; }
@@ -37,11 +37,13 @@ internal sealed partial class AuditWorkspace
     public bool CanReviewPlan => CanEditJob && PlanProfiles.Count != 0 &&
         Assessment is { Outcome: AssessmentOutcome.Completed or AssessmentOutcome.RequiresReview } assessment &&
         Gate is { AllowsAssessment: true, Decision: { } gate } && gate.DecisionId == assessment.GateDecisionId &&
-        PlanPolicy() is not null;
-    public bool CanBuildPlanReview => CanReviewPlan && SelectedPlanProfile is not null && IncludedEssentials;
+        (CandidatePlanPolicy() is not null || PlanProfiles.Any(option => option.PackagePolicy?.Document.Target.DeviceClass ==
+            (RepairDeviceClass ?? PolicyDeviceClass.Laptop)));
+    public bool CanBuildPlanReview => CanReviewPlan && SelectedPlanProfile is not null && IncludedEssentials && PlanPolicy() is not null;
     public bool CanApprovePlanReview => CanBuildPlanReview && CanRecordPlanReviewDecision && PlanReviewDecision is null &&
-        PlanReview?.Plan is { SyntheticData: true, BlockedReason: null, Actions.IsEmpty: false } plan &&
-        plan.Actions.All(action => action.Request is NoOpActionRequest);
+        PlanReview?.Plan is { BlockedReason: null, Actions.IsEmpty: false } plan &&
+        (plan.SyntheticData ? plan.Actions.All(action => action.Request is NoOpActionRequest) :
+            CanApprovePackagePlan && PackageRequest(plan) is not null);
     public bool CanDeclinePlanReview => CanReviewPlan && CanRecordPlanReviewDecision && HasPlanReview && PlanReviewDecision is null;
 
     private bool CanRecordPlanReviewDecision => _planReviewHistory.Length < MaximumPlanReviewDecisions;
@@ -71,12 +73,18 @@ internal sealed partial class AuditWorkspace
         {
             var active = PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } approval ? approval : null;
             var changes = _planReviewChanges;
+            var savedApproval = _packageApproval;
             ClearPlanReview();
             var plan = await ResolveCurrentPlanAsync();
             if (plan is null)
             {
                 _planReviewStatus = "The assessment changed. Reopen the job before building a plan.";
                 return;
+            }
+
+            if (!plan.SyntheticData)
+            {
+                await CheckPackageAsync();
             }
 
             var current = PlanReviewPresentation.Describe(plan);
@@ -88,8 +96,11 @@ internal sealed partial class AuditWorkspace
                 {
                     PlanReview = approved;
                     PlanReviewDecision = active;
+                    _packageApproval = savedApproval;
                     _planReviewChanges = changes;
-                    _planReviewStatus = "The recorded approval still applies to this synthetic plan.";
+                    _planReviewStatus = plan.SyntheticData
+                        ? "The recorded approval still applies to this synthetic plan."
+                        : "The recorded approval still applies to this machine-wide plan.";
                     return;
                 }
 
@@ -125,8 +136,15 @@ internal sealed partial class AuditWorkspace
                 return;
             }
 
+            if (!plan.SyntheticData && !await SavePackageApprovalAsync(displayed))
+            {
+                return;
+            }
+
             RecordPlanReviewDecision(PlanReviewOutcome.Approved, displayed);
-            _planReviewStatus = "Approval recorded for this synthetic plan. Device readiness still requires verification.";
+            _planReviewStatus = plan.SyntheticData
+                ? "Approval recorded for this synthetic plan. Device readiness still requires verification."
+                : "Approval saved for this exact plan. Select Install approved package to continue.";
         });
     }
 
@@ -147,12 +165,23 @@ internal sealed partial class AuditWorkspace
     private PolicySnapshot? PlanPolicy()
     {
         var deviceClass = RepairDeviceClass ?? PolicyDeviceClass.Laptop;
+        if (SelectedPlanProfile?.PackagePolicy is { } package)
+        {
+            return package.Document.Target.DeviceClass == deviceClass ? package : null;
+        }
+
+        return CandidatePlanPolicy();
+    }
+
+    private PolicySnapshot? CandidatePlanPolicy()
+    {
+        var deviceClass = RepairDeviceClass ?? PolicyDeviceClass.Laptop;
         return _fixturePlanPolicy is null
             ? WorkshopPolicyCandidate.ForDeviceClass(deviceClass)
             : _fixturePlanPolicy(deviceClass);
     }
 
-    private async Task<ProposedPlan?> ResolveCurrentPlanAsync()
+    private async Task<ProposedPlan?> ResolveCurrentPlanAsync(CancellationToken cancellationToken = default)
     {
         var jobId = RequireWritableJob().Job.JobId;
         var expectedAssessment = Assessment?.AssessmentId;
@@ -163,7 +192,7 @@ internal sealed partial class AuditWorkspace
 
         var optional = PlanCapabilities.Where(choice => !choice.IsEssential && choice.IsIncluded)
             .Select(choice => choice.CapabilityId).ToArray();
-        var job = await LoadJobAsync(jobId);
+        var job = await LoadJobAsync(jobId, cancellationToken);
         var now = _timeProvider.GetUtcNow();
         return await Task.Run(() =>
         {
@@ -179,7 +208,7 @@ internal sealed partial class AuditWorkspace
 
             var evidence = AuditPolicyEvidence.Create(job, assessment, now);
             return PlanResolver.Resolve(job, policy.Document, chosen.Profile, chosen.Catalog, evidence, optional, now);
-        });
+        }, cancellationToken);
     }
 
     private void PresentPlan(PlanReviewSnapshot current, string? changes = null)
@@ -252,20 +281,25 @@ internal sealed partial class AuditWorkspace
     {
         PlanReview = null;
         PlanReviewDecision = null;
+        _packageApproval = null;
+        _packageResolution = null;
         _planReviewChanges = null;
         if (clearSelection)
         {
             _selectedPlanProfile = null;
+            _packageOperatorCode = string.Empty;
             PlanCapabilities = [];
             _planReviewHistory = [];
         }
 
         _planReviewStatus = Assessment is null || Job is not { IsArchived: false }
-            ? "Open a current assessment to review a synthetic plan."
+            ? "Open a current assessment to review a preparation plan."
             : SelectedPlanProfile is null
-            ? "Select a profile to review a synthetic plan for the current assessment."
-            : IncludedEssentials
-                ? "Build a plan to review this selection."
-                : "Expected readiness is not met because an essential action is skipped.";
+            ? "Select a profile to review a plan for the current assessment."
+            : PlanPolicy() is null
+                ? "The selected plan has no policy for this device class."
+                : IncludedEssentials
+                    ? "Build a plan to review this selection."
+                    : "Expected readiness is not met because an essential action is skipped.";
     }
 }

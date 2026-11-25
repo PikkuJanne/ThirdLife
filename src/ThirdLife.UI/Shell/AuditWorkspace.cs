@@ -10,10 +10,12 @@ using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Inventory.Windows;
+using ThirdLife.Packages;
 using ThirdLife.Persistence;
 using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
 using ThirdLife.Reports.WorkshopReport;
+using ThirdLife.UI.Features.PlanReview;
 
 namespace ThirdLife.UI.Shell;
 
@@ -52,7 +54,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         IReadOnlyList<IInventoryProvider> providers,
         TimeProvider timeProvider,
         WorkshopReportStore? reportStore = null,
-        Func<PolicyDeviceClass, PolicySnapshot?>? fixturePlanPolicy = null)
+        Func<PolicyDeviceClass, PolicySnapshot?>? fixturePlanPolicy = null,
+        PilotPackageService? packageService = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -80,6 +83,15 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         }
 
         _fixturePlanPolicy = fixturePlanPolicy;
+        if (packageService is not null && IsFixtureScenario)
+        {
+            throw new ArgumentException("Live package execution requires a live workspace.", nameof(packageService));
+        }
+
+        _packageService = packageService;
+        PlanProfiles = packageService is not null && WorkshopPackageProfile.Load(timeProvider.GetUtcNow()) is { } package
+            ? [.. WorkshopPlanCandidate.Options, package]
+            : WorkshopPlanCandidate.Options;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -140,7 +152,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             new SystemInventoryProvider(),
         ],
         TimeProvider.System,
-        RegisteredReportStore());
+        RegisteredReportStore(),
+        packageService: new PilotPackageService());
 
     private static WorkshopReportStore? RegisteredReportStore()
     {
@@ -181,6 +194,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ManualProgress = null;
         ApplyAssessment(null);
         ClearPlanReview(clearSelection: true);
+        PackageHistoryText = string.Empty;
         ClearRebootRecovery();
         ClearRepairs();
         ClearPolicyView();
@@ -292,6 +306,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _closing = true;
         CancelAssessment();
         CancelReport();
+        CancelPackageOperation();
         await _active;
         if (_store is { } store)
         {
@@ -317,11 +332,10 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             var assessment = await Task.Run(() => AssessmentOrchestrator.ReadLatest(stored), cancellationToken);
             var summary = SummarizeAssessment(assessment);
             var policy = await FindSavedPolicyAsync(jobId, assessment, cancellationToken);
+            var packages = await ReadPackageRecordsAsync(jobId, cancellationToken);
             var artifact = await Task.Run(() =>
             {
-                var content = summary is not null && policy is not null
-                    ? WorkshopReportRenderer.RenderWithPolicy(stored, summary, policy, cancellationToken)
-                    : WorkshopReportRenderer.Render(stored, summary, cancellationToken);
+                var content = WorkshopReportRenderer.RenderWithPackageRecords(stored, summary, policy, packages, cancellationToken);
                 return _reportStore!.Write(jobId, content, cancellationToken);
             }, cancellationToken);
             ReportArtifact = artifact;
@@ -434,6 +448,9 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             _assessmentCancellation = null;
             _reportCancellation?.Dispose();
             _reportCancellation = null;
+            _packageCancellation?.Dispose();
+            _packageCancellation = null;
+            _packageActivity = null;
             IsBusy = false;
             Publish();
         }
@@ -541,6 +558,10 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ApplyRepairs(repairHistory.Repairs, repairHistory.Retests);
         await LoadPolicyViewAsync(job.Job.JobId, snapshot);
         await LoadRebootRecoveryAsync(job.Job.JobId);
+        if (jobChanged)
+        {
+            await LoadPackageHistoryAsync(job.Job.JobId);
+        }
     }
 
     private bool IsSeparateEvidenceOrigin(StoredJob job) =>

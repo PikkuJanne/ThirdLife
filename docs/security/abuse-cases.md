@@ -11,6 +11,13 @@ These cases turn the threat register into reviewable misuse and failure stories.
 
 All mapped product controls are **planned** unless their owning task has separately reached done with the required evidence. A roadmap reference does not claim implementation. The named security owner recorded a treatment for every residual risk; this is not release authorization.
 
+The [development contract reset](../amendments/2026-11-25-development-contract-reset.md)
+adds a supported package route that can be independent of broker IPC. Package identity,
+scope, artifact pinning, plan binding, durable intent, operating-system consent and independent
+verification apply to that route. Broker-specific scenarios cover the affected broker action.
+The approval above applies to the historical model revision. Verify the new route against
+substitution, stale approval, unavailable execution, cancellation and interrupted state.
+
 ## Coverage index
 
 | Required threat family | Abuse cases |
@@ -305,7 +312,7 @@ All mapped product controls are **planned** unless their owning task has separat
 The security owner should review the exact commit and confirm:
 
 - actors, assets, every trust boundary, and flows `F-01` through `F-19`, including release supply, are complete enough for v0.1 design work;
-- all High threats have a binding decision and at least one real roadmap task mapping;
+- all High threats have applicable rationale and at least one real task mapping;
 - every broker, runtime-package, dependency/build, and release-supply abuse case maps to concrete future tests or human inspection;
 - no future task mapping is represented as implemented or verified; any verified subset names a completed task and remains narrowly scoped;
 - sanitization and ownership remain evidence/blocker boundaries, never runtime bypass behavior;

@@ -42,7 +42,10 @@ public sealed record CatalogPackage(
     CatalogScope Scope,
     ImmutableArray<CatalogArchitecture> Architectures,
     string MinimumOs,
-    bool ExternalArtifact);
+    bool ExternalArtifact)
+{
+    public string? InstallerSha256 { get; init; }
+}
 
 public sealed record CatalogReview(
     string Publisher,
