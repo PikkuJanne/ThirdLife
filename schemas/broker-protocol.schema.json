@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Runtime validation also enforces strict UTF-8, 4096-byte frames, a depth limit of 4, unique properties and action IDs, exact integer tokens, valid Gregorian timestamps, and the short expiry window.",
+  "title": "ThirdLife broker protocol v1 message",
+  "description": "Closed message shapes for a bounded synthetic no-op broker batch.",
+  "type": "object",
+  "required": ["protocol_version", "kind", "correlation_id", "nonce", "expires_at_utc"],
+  "properties": {
+    "protocol_version": { "type": "integer", "const": 1 },
+    "kind": { "enum": ["hello", "hello_ack", "request", "progress", "result", "cancel", "error"] },
+    "correlation_id": { "$ref": "#/$defs/nonzeroUuid" },
+    "nonce": { "$ref": "#/$defs/lowerHex64" },
+    "expires_at_utc": { "$ref": "#/$defs/utcTimestamp" }
+  },
+  "oneOf": [
+    { "properties": { "kind": { "const": "hello" } } },
+    { "properties": { "kind": { "const": "hello_ack" } } },
+    {
+      "required": ["job_id", "approval_id", "plan_sha256", "impact_sha256", "actions"],
+      "properties": {
+        "kind": { "const": "request" },
+        "job_id": { "$ref": "#/$defs/jobId" },
+        "approval_id": { "$ref": "#/$defs/nonzeroUuid" },
+        "plan_sha256": { "$ref": "#/$defs/lowerHex64" },
+        "impact_sha256": { "$ref": "#/$defs/lowerHex64" },
+        "actions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/noOpAction" }
+        }
+      }
+    },
+    {
+      "required": ["action_id", "sequence", "stage"],
+      "properties": {
+        "kind": { "const": "progress" },
+        "action_id": { "$ref": "#/$defs/nonzeroUuid" },
+        "sequence": { "$ref": "#/$defs/actionSequence" },
+        "stage": { "enum": ["accepted", "running"] }
+      }
+    },
+    {
+      "required": ["action_id", "sequence", "status"],
+      "properties": {
+        "kind": { "const": "result" },
+        "action_id": { "$ref": "#/$defs/nonzeroUuid" },
+        "sequence": { "$ref": "#/$defs/actionSequence" },
+        "status": { "enum": ["applied", "failed", "cancelled", "requires_review"] }
+      }
+    },
+    {
+      "required": ["action_id"],
+      "properties": {
+        "kind": { "const": "cancel" },
+        "action_id": { "$ref": "#/$defs/nonzeroUuid" }
+      }
+    },
+    {
+      "required": ["code"],
+      "properties": {
+        "kind": { "const": "error" },
+        "code": {
+          "enum": ["invalid_message", "unauthorized", "expired", "replay", "invalid_state", "unavailable"]
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "nonzeroUuid": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36,
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$(?![\\s\\S])",
+      "not": { "const": "00000000-0000-0000-0000-000000000000" }
+    },
+    "lowerHex64": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]{64}$(?![\\s\\S])"
+    },
+    "utcTimestamp": {
+      "type": "string",
+      "minLength": 28,
+      "maxLength": 28,
+      "format": "date-time",
+      "pattern": "^(?!0000)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{7}Z$(?![\\s\\S])",
+      "not": { "const": "0001-01-01T00:00:00.0000000Z" }
+    },
+    "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$(?![\\s\\S])",
+      "not": {
+        "pattern": "^(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])$(?![\\s\\S])"
+      }
+    },
+    "actionSequence": { "type": "integer", "minimum": 1, "maximum": 32 },
+    "noOpAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_version", "action_id", "type", "parameters"],
+      "properties": {
+        "contract_version": { "type": "integer", "const": 1 },
+        "action_id": { "$ref": "#/$defs/nonzeroUuid" },
+        "type": { "const": "no_op" },
+        "parameters": { "type": "object", "maxProperties": 0 }
+      }
+    }
+  }
+}

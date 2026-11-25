@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ThirdLife.Actions\ThirdLife.Actions.csproj" />
+    <ProjectReference Include="..\ThirdLife.Core\ThirdLife.Core.csproj" />
+  </ItemGroup>
+
 </Project>
