@@ -301,22 +301,7 @@ public sealed class PlanResolverTests
     public void ProposesOnlyAnExactMachinePackageWhileItsReviewAndPolicyApply(
         string policyExpiry, string reviewExpiry, PlanBlockReason? blockedReason)
     {
-        var reviewedPolicy = MakeEffectivePolicy(policyExpiry);
-        var catalog = MakeReviewedCatalog(reviewExpiry);
-        var profileJson = JsonNode.Parse(ReadFixture("basic"))!;
-        profileJson["status"] = "reviewed";
-        profileJson["synthetic_data"] = false;
-        profileJson["policy"]!["version"] = reviewedPolicy.Version;
-        profileJson["catalog"]!["id"] = catalog.CatalogId;
-        profileJson["catalog"]!["version"] = catalog.Version;
-        var workshop = profileJson["workshop"]!;
-        workshop["capabilities"] = new JsonArray(workshop["capabilities"]![0]!.DeepClone());
-        var profile = ProfileSchema.Parse(Encoding.UTF8.GetBytes(profileJson.ToJsonString()), catalog);
-        var intake = CreateIntake("reviewed", "community-laptop-policy@1.0.0", ProvenanceKind.ProviderObservation);
-        var observations = ReadyObservations(intake);
-        var job = Store(observations, intakes: [intake], decisions: [EvaluateGate(intake)]);
-
-        var plan = PlanResolver.Resolve(job, reviewedPolicy, profile, catalog, observations, [], AsOfUtc);
+        var plan = CreateReviewedPlan(policyExpiry, reviewExpiry);
 
         Assert.False(plan.SyntheticData);
         Assert.Equal(blockedReason, plan.BlockedReason);
@@ -340,6 +325,39 @@ public sealed class PlanResolverTests
         Assert.Equal(ActionAvailability.PackageBackendRequired, action.Definition.Availability);
     }
 
+    internal static ProposedPlan CreateReviewedPlan(
+        string policyExpiry = "2030-06-01T00:00:00Z",
+        string reviewExpiry = "2030-06-01T00:00:00Z",
+        Action<JsonObject>? adjustCatalog = null)
+    {
+        var reviewedPolicy = MakeEffectivePolicy(policyExpiry);
+        var catalog = MakeReviewedCatalog(reviewExpiry, adjustCatalog);
+        var profileJson = JsonNode.Parse(ReadFixture("basic"))!;
+        profileJson["status"] = "reviewed";
+        profileJson["synthetic_data"] = false;
+        profileJson["policy"]!["version"] = reviewedPolicy.Version;
+        profileJson["catalog"]!["id"] = catalog.CatalogId;
+        profileJson["catalog"]!["version"] = catalog.Version;
+        var workshop = profileJson["workshop"]!;
+        var included = catalog.Applications.Select(entry => entry.CapabilityId).ToHashSet(StringComparer.Ordinal);
+        var capabilities = workshop["capabilities"]!.AsArray()
+            .Where(item => included.Contains(item!["capability_id"]!.GetValue<string>()))
+            .Select(item => item!.DeepClone())
+            .ToArray();
+        workshop["capabilities"] = new JsonArray(capabilities);
+        var profile = ProfileSchema.Parse(Encoding.UTF8.GetBytes(profileJson.ToJsonString()), catalog);
+        var intake = CreateIntake("reviewed", "community-laptop-policy@1.0.0", ProvenanceKind.ProviderObservation);
+        var observations = ReadyObservations(intake);
+        var job = Store(observations, intakes: [intake], decisions: [EvaluateGate(intake)]);
+        return PlanResolver.Resolve(job, reviewedPolicy, profile, catalog, observations, [], AsOfUtc);
+    }
+
+    internal static ProposedPlan CreateSyntheticPlan(bool archived = false)
+    {
+        var observations = ReadyObservations();
+        return Resolve(Store(observations, archived), observations);
+    }
+
     private static PolicyDocument MakeEffectivePolicy(string expiresUtc)
     {
         var json = JsonNode.Parse(PolicyJson)!;
@@ -353,7 +371,7 @@ public sealed class PlanResolverTests
         return PolicySchema.Parse(Encoding.UTF8.GetBytes(json.ToJsonString()));
     }
 
-    private static CatalogDocument MakeReviewedCatalog(string expiresUtc)
+    private static CatalogDocument MakeReviewedCatalog(string expiresUtc, Action<JsonObject>? adjustCatalog)
     {
         const string source = "test-repository";
         const string packageId = "Fictional.Tests.WebBrowser";
@@ -388,6 +406,7 @@ public sealed class PlanResolverTests
         verification["expected_package_id"] = packageId;
         verification["expected_version"] = exactVersion;
         json["applications"] = new JsonArray(entry);
+        adjustCatalog?.Invoke(json.AsObject());
         return CatalogSchema.Parse(Encoding.UTF8.GetBytes(json.ToJsonString()), AsOfUtc.AddMinutes(-1));
     }
 

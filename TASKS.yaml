@@ -3568,7 +3568,7 @@ tasks:
   workstream: planning
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: any
@@ -3595,7 +3595,17 @@ tasks:
   - Estimates are not silently refreshed after approval.
   verification:
   - Test known, partial, conflicting, and unknown estimates.
-  evidence: []
+  evidence:
+  - summary: Per-action estimates preserved known and unknown declarations, compiled network categories, conflicts, and the original plan digest after catalog revision.
+    task: TL-0305
+    command_or_review: .\eng\verify.ps1 -Tier Targeted -TestProject tests\ThirdLife.Actions.Tests\ThirdLife.Actions.Tests.csproj
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400 and synthetic plans
+    date: '2026-11-25'
+    duration: 58.296 s, 1112 Quick tests and 68 Actions tests
+    reference: artifacts/evidence/TL-0305/report.md
+    limitation: Declared values only. No live free-space or backend measurement. Full and Extended triggers did not apply.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
