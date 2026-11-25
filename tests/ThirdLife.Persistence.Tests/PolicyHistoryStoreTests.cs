@@ -248,7 +248,7 @@ public sealed class PolicyHistoryStoreTests
         }
 
         await Assert.ThrowsAsync<InjectedPersistenceException>(() => SqliteJobStore.OpenForTestingAsync(
-            workspace.StoreRoot, SqliteJobStore.CurrentSchemaVersion, TimeProvider.System,
+            workspace.StoreRoot, maximumMigrationVersion: 4, TimeProvider.System,
             new ThrowingFaultInjector(JobStoreFaultPoint.BeforeMigrationCommit, detail: 4)));
         Assert.Equal(3, await SqliteTestControl.ReadUserVersionAsync(databasePath));
         await Assert.ThrowsAsync<SqliteException>(() =>
@@ -256,7 +256,8 @@ public sealed class PolicyHistoryStoreTests
 
         var policy = Snapshot("1.0.0");
         var decision = Decide(policy, job, observations);
-        await using (var migrated = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        await using (var migrated = await SqliteJobStore.OpenForTestingAsync(
+                         workspace.StoreRoot, maximumMigrationVersion: 4, TimeProvider.System, faultInjector: null))
         {
             Assert.Equal(4, await SqliteTestControl.ReadUserVersionAsync(databasePath));
             var loaded = (await migrated.LoadJobAsync(job.JobId))!;
@@ -269,7 +270,8 @@ public sealed class PolicyHistoryStoreTests
             await migrated.AppendPolicyDecisionAsync(policy, decision);
         }
 
-        await using var reopened = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        await using var reopened = await SqliteJobStore.OpenForTestingAsync(
+            workspace.StoreRoot, maximumMigrationVersion: 4, TimeProvider.System, faultInjector: null);
         var restored = Assert.IsType<StoredPolicyDecision>(await reopened.LoadLatestPolicyDecisionAsync(job.JobId, AssessmentId));
         Assert.Equal(policy.Utf8Json.ToArray(), restored.Snapshot.Utf8Json.ToArray());
         Assert.Equal(decision.DecisionId, restored.Decision.DecisionId);
