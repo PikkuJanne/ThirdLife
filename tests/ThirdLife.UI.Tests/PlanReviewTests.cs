@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
@@ -7,6 +8,8 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using ThirdLife.Actions.Contracts;
+using ThirdLife.Actions.Execution;
+using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Inventory;
@@ -14,6 +17,7 @@ using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
+using ThirdLife.UI.Features.Execution;
 using ThirdLife.UI.Features.PlanReview;
 using ThirdLife.UI.Shell;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
@@ -364,6 +368,170 @@ public sealed class PlanReviewTests
             finally { CloseWindow(window); }
         });
 
+    [Fact]
+    public async Task DurableNoOpApprovalStaysVisibleWhenBrokerIsUnavailable()
+    {
+        using var disk = new AuditTestStore();
+        var clock = new FixtureClock();
+        await using var workspace = OpenBrokerWorkspace(disk, clock);
+        await PrepareAssessmentAsync(workspace);
+        var jobId = workspace.JobId;
+        string? planHash = null;
+
+        InPlanReview(workspace, (window, panel) =>
+        {
+            SelectProfile(window, panel, workspace, "basic");
+            Build(window, panel, workspace);
+            var operatorCode = Named<TextBox>(panel, "BrokerOperator");
+            Assert.True(operatorCode.Focusable && operatorCode.IsTabStop);
+            Assert.False(Named<Button>(panel, "ApprovePlanReviewButton").IsEnabled);
+            operatorCode.Text = "fixture-operator";
+            ShellTestHost.Drain(window);
+            planHash = Approve(window, panel, workspace).PlanSha256;
+
+            var execution = Named<BrokerExecutionView>(panel, "BrokerExecutionPanel");
+            var status = Named<TextBlock>(execution, "ExecutionStatus");
+            Assert.Equal(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(status));
+            Assert.Contains("unavailable", status.Text, StringComparison.Ordinal);
+            Assert.False(Named<Button>(execution, "RunBrokerButton").IsEnabled);
+            Assert.False(Named<Button>(execution, "CancelBrokerButton").IsEnabled);
+            var saved = Named<TextBox>(execution, "SavedBrokerHistory");
+            Assert.True(saved.IsReadOnly && saved.IsTabStop);
+            Assert.Contains("No action started", saved.Text, StringComparison.Ordinal);
+        });
+
+        await using var reopened = OpenBrokerWorkspace(disk, clock);
+        await reopened.OpenJobAsync(jobId);
+        Assert.True(reopened.HasBrokerHistory);
+        Assert.Contains(planHash!, reopened.BrokerHistoryText, StringComparison.Ordinal);
+        Assert.DoesNotContain("fixture-operator", reopened.BrokerHistoryText, StringComparison.Ordinal);
+        await reopened.RunBrokerExecutionAsync();
+        await using var store = await disk.OpenSqliteAsync();
+        var history = Assert.Single(await store.LoadJobJournalsAsync(reopened.Job!.Job.JobId));
+        Assert.Equal(planHash, Assert.Single(history.Approvals).Plan.PlanSha256);
+        Assert.All(history.Entries, entry => Assert.Equal(JournalCheckpoint.BrokerApproval, entry.Checkpoint));
+    }
+
+    [Fact]
+    public async Task DeclinedConsentCanBeReapprovedAndCancelledFromTheNoOpView()
+    {
+        using var disk = new AuditTestStore();
+        var clock = new FixtureClock();
+        var backend = new FixtureBrokerBackend(async (call, batch, authorize, progress, token) =>
+        {
+            if (call == 1)
+            {
+                return new NoOpBrokerBatchResult(NoOpBrokerBatchStatus.Declined, []);
+            }
+
+            Assert.True(await authorize(token));
+            var first = batch.Actions[0];
+            progress!.Report(new NoOpExecutionProgress(batch.CorrelationId, first.ActionId, NoOpProgressStage.Running));
+            try { await Task.Delay(Timeout.InfiniteTimeSpan, token); }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+            return new NoOpBrokerBatchResult(NoOpBrokerBatchStatus.Finished, batch.Actions.Select(action =>
+                new NoOpBrokerActionResult(batch.CorrelationId, action.ActionId, NoOpBrokerActionStatus.Cancelled)).ToImmutableArray());
+        });
+        await using var workspace = OpenBrokerWorkspace(disk, clock, backend);
+        await PrepareAssessmentAsync(workspace);
+        var jobId = workspace.Job!.Job.JobId;
+
+        InPlanReview(workspace, (window, panel) =>
+        {
+            SelectProfile(window, panel, workspace, "basic");
+            Build(window, panel, workspace);
+            var execution = Named<BrokerExecutionView>(panel, "BrokerExecutionPanel");
+            var run = Named<Button>(execution, "RunBrokerButton");
+            var status = Named<TextBlock>(execution, "ExecutionStatus");
+            Assert.False(run.IsEnabled);
+            workspace.BrokerOperatorCode = "fixture-operator";
+            var original = Approve(window, panel, workspace);
+            Assert.True(run.Focus());
+            Invoke(window, run);
+            PumpUntil(window, () => !workspace.IsBusy && workspace.BrokerHistoryText.Contains("consent declined", StringComparison.Ordinal),
+                () => workspace.BrokerExecutionStatus);
+            Assert.Contains("No action was sent", workspace.BrokerExecutionStatus, StringComparison.Ordinal);
+            Assert.False(run.IsEnabled);
+            Assert.Same(status, Keyboard.FocusedElement);
+
+            var retry = Approve(window, panel, workspace);
+            Assert.Equal(original.PlanSha256, retry.PlanSha256);
+            Invoke(window, run);
+            var cancel = Named<Button>(execution, "CancelBrokerButton");
+            PumpUntil(window, () => cancel.IsEnabled && status.Text.Contains("No-op in progress", StringComparison.Ordinal),
+                () => workspace.BrokerExecutionStatus);
+            Assert.Equal("Cancel no-op execution", ShellTestHost.ButtonPeer(cancel).GetName());
+            Invoke(window, cancel);
+            PumpUntil(window, () => !workspace.IsBusy, () => workspace.BrokerExecutionStatus);
+            Assert.False(cancel.IsEnabled);
+            Assert.False(run.IsEnabled);
+            Assert.Contains("needs review", workspace.BrokerHistoryText, StringComparison.Ordinal);
+        });
+
+        await using var store = await disk.OpenSqliteAsync();
+        var history = Assert.Single(await store.LoadJobJournalsAsync(jobId));
+        Assert.Equal(2, backend.Calls);
+        Assert.Equal(2, history.Approvals.Length);
+        Assert.All(history.Plan.Actions, action => Assert.Equal(JournalState.RequiresReview, history.StateOf(action.ActionId)));
+    }
+
+    [Fact]
+    public async Task ReopenedNoOpReviewReconcilesAnExpiredDispatchWithoutRelaunching()
+    {
+        using var disk = new AuditTestStore();
+        var clock = new FixtureClock();
+        await using var original = OpenBrokerWorkspace(disk, clock);
+        await PrepareAssessmentAsync(original);
+        var jobId = original.Job!.Job.JobId;
+        original.SelectedPlanProfile = Assert.Single(original.PlanProfiles, option => option.Profile.ProfileId == "basic");
+        await original.BuildPlanReviewAsync();
+        original.BrokerOperatorCode = "fixture-operator";
+        await original.ApprovePlanReviewAsync();
+        original.CloseJob();
+
+        await using var store = await disk.OpenSqliteAsync();
+        var history = Assert.Single(await store.LoadJobJournalsAsync(jobId));
+        var approval = Assert.Single(history.Approvals);
+        var correlation = Guid.NewGuid();
+        var intents = history.Plan.Actions.Select(action => new JournalEntry(Guid.NewGuid(), approval.Plan, action.ActionId,
+            approval.ApprovalId, JournalState.Approved, JournalState.Started, JournalActor.Coordinator,
+            new OperatorId("fixture-coordinator"), correlation, clock.Current, JournalResult.None,
+            JournalCheckpoint.BrokerDispatchIntent)).ToImmutableArray();
+        await store.AppendBrokerBatchAsync(intents);
+
+        await using var reopened = OpenBrokerWorkspace(disk, clock);
+        await reopened.OpenJobAsync(jobId.Value);
+        Assert.True(reopened.CanCheckBrokerRecovery);
+        Assert.False(reopened.CanRunBrokerExecution);
+        Assert.Contains("Waiting for a final result", reopened.BrokerHistoryText, StringComparison.Ordinal);
+        clock.Current += ExecutionCoordinator.MaximumDispatchLifetime;
+        await reopened.CheckBrokerRecoveryAsync();
+        Assert.False(reopened.CanCheckBrokerRecovery);
+        Assert.Contains("needs review", reopened.BrokerHistoryText, StringComparison.Ordinal);
+        var recovered = Assert.Single(await store.LoadJobJournalsAsync(jobId));
+        Assert.All(recovered.Plan.Actions, action => Assert.Equal(JournalState.RequiresReview, recovered.StateOf(action.ActionId)));
+        reopened.CloseJob();
+        await reopened.OpenJobAsync(jobId.Value);
+        Assert.Contains("needs review", reopened.BrokerHistoryText, StringComparison.Ordinal);
+        var saved = Assert.Single(await store.LoadJobJournalsAsync(jobId));
+        Assert.Equal(recovered.Entries, saved.Entries.AsEnumerable());
+    }
+
+    private static AuditWorkspace OpenBrokerWorkspace(AuditTestStore disk, FixtureClock clock,
+        INoOpBrokerBackend? backend = null) =>
+        new(async token => await disk.OpenSqliteAsync(token).ConfigureAwait(false), [new PlanFactsProvider()], clock,
+            fixturePlanPolicy: static _ => ReadyPolicy, fixtureBrokerCoordinator: journal => new(journal, backend, clock));
+
+    private sealed class FixtureBrokerBackend(Func<int, NoOpExecutionBatch, Func<CancellationToken, Task<bool>>,
+        IProgress<NoOpExecutionProgress>?, CancellationToken, Task<NoOpBrokerBatchResult>> run) : INoOpBrokerBackend
+    {
+        public int Calls { get; private set; }
+
+        public Task<NoOpBrokerBatchResult> RunAsync(NoOpExecutionBatch batch, Func<CancellationToken, Task<bool>> canDispatch,
+            IProgress<NoOpExecutionProgress>? progress, CancellationToken cancellationToken) =>
+            run(++Calls, batch, canDispatch, progress, cancellationToken);
+    }
+
     private static void SelectProfile(Window window, PlanReviewView panel, AuditWorkspace workspace, string id)
     {
         var selector = Named<ComboBox>(panel, "PlanProfileSelector");
@@ -444,7 +612,8 @@ public sealed class PlanReviewTests
 
     private sealed class FixtureClock : TimeProvider
     {
-        public override DateTimeOffset GetUtcNow() => EvaluationTime;
+        public DateTimeOffset Current { get; set; } = EvaluationTime;
+        public override DateTimeOffset GetUtcNow() => Current;
     }
 
     private sealed class PlanFactsProvider : IInventoryProvider

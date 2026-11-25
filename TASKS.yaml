@@ -4063,7 +4063,7 @@ tasks:
   workstream: execution
   kind: code
   priority: P0
-  status: backlog
+  status: blocked
   size: L
   executor: codex
   environment: windows
@@ -4089,12 +4089,56 @@ tasks:
   - The UI can reopen after client or broker interruption.
   verification:
   - Test approve, decline, cancel, UI kill, broker kill, and reopen.
-  evidence: []
+  evidence:
+  - task: TL-0313
+    summary: WPF and SQLite fixtures verified durable plan approval, declined consent, cancellation, correlated progress,
+      atomic journal transitions and recovery after reopening. The transport preserves observed results and keeps verification separate.
+    command_or_review: eng/verify.ps1 -Tier Targeted -Restore with Actions, Persistence, Broker, Broker.Security and UI test projects
+    tier: targeted
+    result: passed
+    environment: Unelevated Windows 11 Pro 26H2 build 26300.9974 on native x64, .NET SDK 10.0.400
+    date: '2026-11-25'
+    duration: 139.442 s, 7 work-contract and 1586 .NET checks
+    reference: artifacts/evidence/TL-0313/report.md, source a6149608be1c97daa4954853bc7d76d11aeb0001
+    limitation: Fixture broker and synthetic plan admission. Live integrated UAC and process interruptions are pending.
+  - task: TL-0313
+    summary: The clean active-machine Full suite passed with locked restore, formatting and a warning-free Release build.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean same-machine worktree, unelevated Windows 11 Pro 26H2 build 26300.9974 on native x64, .NET SDK 10.0.400
+    date: '2026-11-25'
+    duration: 341.723 s, 303 governance and 2050 .NET checks
+    reference: artifacts/evidence/TL-0313/report.md, source a6149608be1c97daa4954853bc7d76d11aeb0001
+    limitation: Default deterministic Full filter. The named ActiveMachine checks and guest preflight are separate.
+  - task: TL-0313
+    summary: The adapter mapped a declined launch, and the client mapped decline and cancellation using the native Windows identity lookup.
+    command_or_review: UI BrokerBatchClientTests filtered by Category=ActiveMachine
+    tier: targeted
+    result: passed
+    environment: Unelevated Windows 11 Pro 26H2 build 26300.9974 on native x64, injected launcher
+    date: '2026-11-25'
+    duration: 2.108 s command, 3 tests
+    reference: artifacts/evidence/TL-0313/report.md, source a6149608be1c97daa4954853bc7d76d11aeb0001
+    limitation: Synthetic launcher observations. Actual UAC and teardown retain TL-0317 provenance.
+  blocked_reason: Live integrated dispatch awaits attributable operator approval and actual Windows consent for its exact saved
+    no-op batch. The guest and pinned payload are prepared. The dedicated case binding the protected adapter to the durable
+    application plan is outstanding. Ordinary dispatch also requires the TL-0314 privilege decision.
+  notes:
+  - The verified application checkpoint keeps ordinary dispatch unavailable and can supply TL-0314 candidate preparation.
+  - Confirmed pre-dispatch decline, cancellation and unavailability permit fresh approval. Applied and unresolved results require
+    independent postcondition evidence or reconciliation before another approval can start work in the same job.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  checkpoints:
+  - reference: a6149608be1c97daa4954853bc7d76d11aeb0001
+    verification: Active-machine checkpoint evidence is recorded in artifacts/evidence/TL-0313/report.md.
+    state: integrated
+    unqualified_execution: unavailable
+  completion_phase: execution
   execution_prerequisites:
   - kind: task
     task: TL-0317

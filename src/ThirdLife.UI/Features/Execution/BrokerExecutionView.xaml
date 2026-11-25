@@ -1,0 +1,30 @@
+<UserControl x:Class="ThirdLife.UI.Features.Execution.BrokerExecutionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="ExecutionVisibility" />
+  </UserControl.Resources>
+  <GroupBox Header="No-op broker execution" AutomationProperties.Name="No-op broker execution">
+    <StackPanel>
+      <TextBlock x:Name="ExecutionStatus" Text="{Binding BrokerExecutionStatus, NotifyOnTargetUpdated=True}"
+                 TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                 AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
+      <WrapPanel Margin="0,6,0,0">
+        <Button x:Name="RunBrokerButton" Content="Run approved no-op" IsEnabled="{Binding CanRunBrokerExecution}"
+                Visibility="{Binding HasBrokerPlan, Converter={StaticResource ExecutionVisibility}}"
+                Click="RunBroker" Margin="0,0,8,4" />
+        <Button x:Name="CancelBrokerButton" Content="Cancel no-op execution" IsEnabled="{Binding CanCancelBrokerExecution}"
+                Visibility="{Binding HasBrokerPlan, Converter={StaticResource ExecutionVisibility}}"
+                Click="CancelBroker" Margin="0,0,8,4" />
+        <Button x:Name="CheckRecoveryButton" Content="Check broker recovery" IsEnabled="{Binding CanCheckBrokerRecovery}"
+                Visibility="{Binding HasBrokerHistory, Converter={StaticResource ExecutionVisibility}}"
+                Click="CheckRecovery" Margin="0,0,0,4" />
+      </WrapPanel>
+      <TextBox x:Name="SavedBrokerHistory" Text="{Binding BrokerHistoryText, Mode=OneWay}" TextWrapping="Wrap"
+               IsReadOnly="True" IsReadOnlyCaretVisible="True" AcceptsReturn="True" MaxHeight="220"
+               VerticalScrollBarVisibility="Auto"
+               Visibility="{Binding HasBrokerHistory, Converter={StaticResource ExecutionVisibility}}"
+               AutomationProperties.Name="Saved no-op execution journal" />
+    </StackPanel>
+  </GroupBox>
+</UserControl>

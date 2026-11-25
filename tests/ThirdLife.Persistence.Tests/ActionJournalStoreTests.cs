@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
@@ -41,6 +42,95 @@ public sealed class ActionJournalStoreTests
           }]
         }
         """u8.ToArray());
+
+    [Fact]
+    public async Task BrokerApprovalAndDispatchRequireTheWholeExactBatch()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        await using var store = await OpenAsync(workspace);
+        var (job, intake) = await CreateJobAsync(store);
+        var plan = CreateSnapshot(job, intake, "0.1.0-candidate.1", actionCount: 2);
+        await store.SaveJournalPlanAsync(plan);
+        var approval = new JournalApproval(ApprovalId, plan.Key, Approver, CorrelationId, Now);
+        var approved = BrokerEntries(plan, approval, JournalState.Planned, JournalState.Approved,
+            JournalActor.Operator, JournalResult.None, JournalCheckpoint.BrokerApproval, approval.CorrelationId, Now);
+        var invalid = approved.SetItem(1, new JournalEntry(Guid.NewGuid(), plan.Key, approved[1].ActionId,
+            approval.ApprovalId, JournalState.Planned, JournalState.Approved, JournalActor.Coordinator, approval.ActorId,
+            approval.CorrelationId, Now, JournalResult.None, JournalCheckpoint.BrokerApproval));
+
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => store.RecordBrokerApprovalAsync(approval, invalid));
+        var unapproved = await store.LoadJournalAsync(plan.Key);
+        Assert.NotNull(unapproved);
+        Assert.Empty(unapproved.Approvals);
+        Assert.Empty(unapproved.Entries);
+
+        var dispatch = BrokerEntries(plan, approval, JournalState.Approved, JournalState.Started,
+            JournalActor.Coordinator, JournalResult.None, JournalCheckpoint.BrokerDispatchIntent, Guid.NewGuid(), Now.AddMinutes(1));
+        Assert.Equal(JournalWriteResult.Recorded, await store.RecordBrokerApprovalAsync(approval, approved));
+        Assert.Equal(JournalWriteResult.AlreadyRecorded, await store.RecordBrokerApprovalAsync(approval, approved));
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => store.AppendJournalEntryAsync(dispatch[0]));
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => store.AppendBrokerBatchAsync([dispatch[0]]));
+        Assert.Equal(JournalWriteResult.Recorded, await store.AppendBrokerBatchAsync(dispatch));
+        Assert.Equal(JournalWriteResult.AlreadyRecorded, await store.AppendBrokerBatchAsync(dispatch));
+        var history = await store.LoadJournalAsync(plan.Key);
+        Assert.NotNull(history);
+        Assert.Equal(approved.Concat(dispatch), history.Entries.AsEnumerable());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BrokerDispatchCommitInterruptionReopensAtomicallyAndDeclineRequiresFreshApproval(bool committed)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        JournalPlanSnapshot plan;
+        JournalApproval approval;
+        await using (var store = await OpenAsync(workspace))
+        {
+            var (job, intake) = await CreateJobAsync(store);
+            plan = CreateSnapshot(job, intake, "0.1.0-candidate.1", actionCount: 2);
+            await store.SaveJournalPlanAsync(plan);
+            approval = new JournalApproval(ApprovalId, plan.Key, Approver, CorrelationId, Now);
+            await store.RecordBrokerApprovalAsync(approval, BrokerEntries(plan, approval, JournalState.Planned, JournalState.Approved,
+                JournalActor.Operator, JournalResult.None, JournalCheckpoint.BrokerApproval, approval.CorrelationId, Now));
+        }
+
+        var dispatch = BrokerEntries(plan, approval, JournalState.Approved, JournalState.Started,
+            JournalActor.Coordinator, JournalResult.None, JournalCheckpoint.BrokerDispatchIntent, Guid.NewGuid(), Now.AddMinutes(1));
+        var point = committed ? JobStoreFaultPoint.AfterWriteCommit : JobStoreFaultPoint.BeforeWriteCommit;
+        await using (var interrupted = await OpenAsync(workspace, new ThrowingFaultInjector(point)))
+        {
+            await Assert.ThrowsAsync<InjectedPersistenceException>(() => interrupted.AppendBrokerBatchAsync(dispatch));
+        }
+
+        await using var reopened = await OpenAsync(workspace);
+        var afterFault = await reopened.LoadJournalAsync(plan.Key);
+        Assert.NotNull(afterFault);
+        Assert.All(plan.Actions, action =>
+            Assert.Equal(committed ? JournalState.Started : JournalState.Approved, afterFault.StateOf(action.ActionId)));
+        Assert.Equal(committed ? JournalWriteResult.AlreadyRecorded : JournalWriteResult.Recorded,
+            await reopened.AppendBrokerBatchAsync(dispatch));
+
+        var declined = BrokerEntries(plan, approval, JournalState.Started, JournalState.Failed,
+            JournalActor.Coordinator, JournalResult.AuthorizationDeclined, JournalCheckpoint.BrokerPreDispatchFailure,
+            dispatch[0].CorrelationId, Now.AddMinutes(2));
+        Assert.Equal(JournalWriteResult.Recorded, await reopened.AppendBrokerBatchAsync(declined));
+        Assert.Equal(JournalWriteResult.AlreadyRecorded, await reopened.AppendBrokerBatchAsync(declined));
+        var renewed = new JournalApproval(Guid.NewGuid(), plan.Key, Approver, Guid.NewGuid(), Now.AddMinutes(3));
+        Assert.Equal(JournalWriteResult.Recorded, await reopened.RecordBrokerApprovalAsync(renewed,
+            BrokerEntries(plan, renewed, JournalState.Failed, JournalState.Approved, JournalActor.Operator, JournalResult.None,
+                JournalCheckpoint.BrokerApproval, renewed.CorrelationId, renewed.OccurredAtUtc)));
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => reopened.AppendBrokerBatchAsync(
+            BrokerEntries(plan, approval, JournalState.Approved, JournalState.Started, JournalActor.Coordinator, JournalResult.None,
+                JournalCheckpoint.BrokerDispatchIntent, Guid.NewGuid(), Now.AddMinutes(4))));
+
+        var history = await reopened.LoadJournalAsync(plan.Key);
+        Assert.NotNull(history);
+        Assert.Equal(renewed, history.ActiveApproval);
+        Assert.All(plan.Actions, action => Assert.Equal(JournalState.Approved, history.StateOf(action.ActionId)));
+        Assert.Equal(plan.Actions.Length, history.Entries.Count(entry => entry.Checkpoint == JournalCheckpoint.BrokerDispatchIntent));
+        Assert.Equal(plan.Actions.Length, history.Entries.Count(entry => entry.Result == JournalResult.AuthorizationDeclined));
+    }
 
     [Theory]
     [InlineData(false)]
@@ -265,7 +355,7 @@ public sealed class ActionJournalStoreTests
         return plan;
     }
 
-    private static JournalPlanSnapshot CreateSnapshot(StoredJob stored, SanitizationEvidence intake, string profileVersion)
+    private static JournalPlanSnapshot CreateSnapshot(StoredJob stored, SanitizationEvidence intake, string profileVersion, int actionCount = 1)
     {
         var catalog = CatalogSchema.Parse(ReadFixture("catalog"), Now);
         var profileJson = JsonNode.Parse(ReadFixture("basic"))!;
@@ -273,7 +363,8 @@ public sealed class ActionJournalStoreTests
         profileJson["policy"]!["id"] = Policy.PolicyId;
         profileJson["policy"]!["version"] = Policy.Version;
         var workshop = profileJson["workshop"]!;
-        workshop["capabilities"] = new JsonArray(workshop["capabilities"]![0]!.DeepClone());
+        workshop["capabilities"] = new JsonArray(workshop["capabilities"]!.AsArray().Take(actionCount)
+            .Select(capability => capability!.DeepClone()).ToArray());
         var profile = ProfileSchema.Parse(Encoding.UTF8.GetBytes(profileJson.ToJsonString()), catalog);
         Observation[] facts =
         [
@@ -286,6 +377,12 @@ public sealed class ActionJournalStoreTests
         Assert.Null(proposal.BlockedReason);
         return JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
     }
+
+    private static ImmutableArray<JournalEntry> BrokerEntries(JournalPlanSnapshot plan, JournalApproval approval, JournalState prior,
+        JournalState state, JournalActor actor, JournalResult result, JournalCheckpoint checkpoint, Guid correlation, DateTimeOffset time) =>
+        plan.Actions.Select(action => new JournalEntry(Guid.NewGuid(), plan.Key, action.ActionId, approval.ApprovalId, prior, state,
+            actor, actor == JournalActor.Operator ? approval.ActorId : new OperatorId("actor-" + actor.ToString().ToLowerInvariant()),
+            correlation, time, result, checkpoint)).ToImmutableArray();
 
     private static JournalEntry Start(JournalPlanSnapshot plan) =>
         Entry(plan, StartedEntryId, JournalState.Approved, JournalState.Started,

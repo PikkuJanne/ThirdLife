@@ -3,6 +3,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using ThirdLife.Actions.Contracts;
+using ThirdLife.Actions.Execution;
+using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Registry;
 using ThirdLife.Broker.Protocol;
 using ThirdLife.Broker.Protocol.Transport;
@@ -141,6 +143,32 @@ public sealed class BrokerBatchClientTests
         Assert.Equal(BrokerBatchStatus.Declined, result.Status);
         Assert.Empty(result.Results);
         Assert.Equal(1, attempts);
+    }
+
+    [Fact]
+    [Trait("Category", "ActiveMachine")]
+    public async Task ProtectedAdapterCorrelatesDeclineWithoutGrantingDispatch()
+    {
+        Assert.False(WindowsBrokerPeer.CurrentIdentity().IsElevated);
+        var request = Request();
+        var batch = new NoOpExecutionBatch(new JournalPlanKey(request.JobId, request.PlanSha256, request.ImpactSha256),
+            request.ApprovalId, request.Envelope.CorrelationId, request.Envelope.ExpiresAtUtc,
+            request.Actions.Cast<NoOpActionRequest>().ToImmutableArray());
+        BrokerLaunchTicket? launch = null;
+        var backend = new ProtectedNoOpBrokerBackend(new BrokerBatchClient(ticket =>
+        {
+            launch = ticket;
+            return Task.FromException<Process?>(new Win32Exception(1223));
+        }));
+
+        var result = await backend.RunAsync(batch,
+            _ => throw new InvalidOperationException("Declined consent must precede the dispatch check."), null, CancellationToken.None);
+
+        var ticket = Assert.IsType<BrokerLaunchTicket>(launch);
+        Assert.Equal(batch.CorrelationId, ticket.CorrelationId);
+        Assert.Equal(batch.ExpiresAtUtc, ticket.ExpiresAtUtc);
+        Assert.Equal(NoOpBrokerBatchStatus.Declined, result.Status);
+        Assert.Empty(result.Results);
     }
 
     [Fact]
