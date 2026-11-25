@@ -1,12 +1,15 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Win32.SafeHandles;
 using ThirdLife.Actions.Registry;
 using ThirdLife.Broker.Protocol;
 using ThirdLife.Broker.Protocol.Transport;
@@ -201,20 +204,23 @@ public sealed class ProtectedBrokerRehearsalTests
         var secondActionId = Guid.NewGuid();
         var request = CreateRequest(TimeSpan.FromSeconds(70), firstActionId, secondActionId);
         var progress = new InterruptAtSecondProgress(firstActionId, secondActionId);
-        WindowsBrokerPeer? peer = null;
-        Process? observedExit = null;
+        SafeProcessHandle? observedExit = null;
+        ExceptionDispatchInfo? observationSetupFailure = null;
         var client = new BrokerBatchClient(async ticket =>
         {
             var launched = Assert.IsType<Process>(await TrustedBrokerLauncher.LaunchAsync(ticket, cancellationToken));
             try
             {
-                peer = WindowsBrokerPeer.Open(launched.Id);
+                using var peer = WindowsBrokerPeer.Open(launched.Id);
                 VerifyElevatedPeer(peer);
-                observedExit = Process.GetProcessById(launched.Id);
+                // The client owns and disposes the launch handle. Preserve only the rights
+                // needed to observe this exact process after its client pipe closes.
+                observedExit = DuplicateExitObservationHandle(launched.SafeHandle);
                 return launched;
             }
-            catch
+            catch (Exception exception)
             {
+                observationSetupFailure = ExceptionDispatchInfo.Capture(exception);
                 launched.Dispose();
                 throw;
             }
@@ -224,12 +230,14 @@ public sealed class ProtectedBrokerRehearsalTests
         {
             Trace(new("RequestingConsent", RetainObservationScenario));
             var result = await client.RunAsync(request, progress, cancellationToken);
-            var broker = Assert.IsType<Process>(observedExit);
-            await broker.WaitForExitAsync(cancellationToken).WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
-
             var clientUnelevated = !WindowsBrokerPeer.CurrentIdentity().IsElevated;
             Trace(new("Result", RetainObservationScenario, result.Status.ToString(), result.Results.Length,
-                clientUnelevated, ExitCode: broker.ExitCode));
+                clientUnelevated));
+
+            observationSetupFailure?.Throw();
+            var broker = Assert.IsType<SafeProcessHandle>(observedExit);
+            var exitCode = await Task.Run(() => ObserveBrokerExit(broker), cancellationToken);
+            Trace(new("BrokerExited", RetainObservationScenario, ExitCode: exitCode));
             Assert.True(clientUnelevated);
             Assert.True(progress.Interrupted);
             Assert.Equal(BrokerBatchStatus.RequiresReview, result.Status);
@@ -237,13 +245,51 @@ public sealed class ProtectedBrokerRehearsalTests
             Assert.Equal(firstActionId, terminal.ActionId);
             Assert.Equal(2, terminal.Sequence);
             Assert.Equal(BrokerResultStatus.Applied, terminal.Status);
-            Assert.True(broker.ExitCode is 0 or 3);
+            Assert.True(exitCode is 0 or 3);
         }
         finally
         {
             observedExit?.Dispose();
-            peer?.Dispose();
         }
+    }
+
+    private static SafeProcessHandle DuplicateExitObservationHandle(SafeProcessHandle launchHandle)
+    {
+        const uint processQueryLimitedInformation = 0x1000;
+        const uint synchronize = 0x100000;
+        var currentProcess = NativeMethods.GetCurrentProcess();
+        if (NativeMethods.DuplicateHandle(currentProcess, launchHandle, currentProcess, out var duplicate,
+            processQueryLimitedInformation | synchronize, inheritHandle: false, options: 0))
+        {
+            return duplicate;
+        }
+
+        var error = Marshal.GetLastPInvokeError();
+        duplicate.Dispose();
+        throw new Win32Exception(error, "The broker exit observation handle could not be duplicated.");
+    }
+
+    private static int ObserveBrokerExit(SafeProcessHandle broker)
+    {
+        const uint waitObject0 = 0;
+        const uint waitTimeout = 258;
+        var wait = NativeMethods.WaitForSingleObject(broker, 5_000);
+        if (wait == waitTimeout)
+        {
+            throw new TimeoutException("The observed broker did not exit within five seconds of client interruption.");
+        }
+
+        if (wait != waitObject0)
+        {
+            throw new Win32Exception(Marshal.GetLastPInvokeError(), "Waiting for the observed broker process failed.");
+        }
+
+        if (!NativeMethods.GetExitCodeProcess(broker, out var code))
+        {
+            throw new Win32Exception(Marshal.GetLastPInvokeError(), "The observed broker process exit code could not be read.");
+        }
+
+        return code;
     }
 
     private static void VerifyElevatedPeer(WindowsBrokerPeer peer)
@@ -278,7 +324,7 @@ public sealed class ProtectedBrokerRehearsalTests
                 Height = 150,
                 Content = new TextBlock
                 {
-                    Text = "Windows will ask for consent to run one test action that makes no machine changes.",
+                    Text = "Windows will ask for consent to run this test. The test makes no machine changes.",
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(20),
                 },
@@ -349,5 +395,27 @@ public sealed class ProtectedBrokerRehearsalTests
             Interrupted = true;
             throw new IOException("The rehearsal interrupted delivery of the second action's progress to the UI.");
         }
+    }
+
+    private static class NativeMethods
+    {
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        [DllImport("kernel32.dll", ExactSpelling = true)]
+        internal static extern nint GetCurrentProcess();
+
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool DuplicateHandle(nint sourceProcess, SafeProcessHandle sourceHandle, nint targetProcess,
+            out SafeProcessHandle targetHandle, uint desiredAccess, [MarshalAs(UnmanagedType.Bool)] bool inheritHandle, uint options);
+
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
+        internal static extern uint WaitForSingleObject(SafeProcessHandle handle, uint milliseconds);
+
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool GetExitCodeProcess(SafeProcessHandle process, out int exitCode);
     }
 }

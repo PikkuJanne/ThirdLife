@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -8,6 +9,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Win32;
+using Microsoft.Win32.SafeHandles;
 using ThirdLife.Broker.Protocol.Transport;
 using ThirdLife.Inventory.Windows;
 
@@ -27,7 +29,8 @@ public sealed class SandboxPipeAclTests
     public async Task WindowsSandboxDistinctStandardAccountIsDeniedByProductionPipeAcl()
     {
         RequireVerifiedSandbox();
-        await VerifyProductionPipeDeniesDistinctAccountAsync("TLBroker" + Guid.NewGuid().ToString("N")[..10], null);
+        await VerifyProductionPipeDeniesDistinctAccountAsync("TLBroker" + Guid.NewGuid().ToString("N")[..10],
+            comment: null, useHyperVToken: false);
     }
 
     [Fact]
@@ -35,10 +38,11 @@ public sealed class SandboxPipeAclTests
     public async Task HyperVDistinctStandardAccountIsDeniedByProductionPipeAcl()
     {
         var runId = RequireVerifiedHyperV();
-        await VerifyProductionPipeDeniesDistinctAccountAsync("TLBroker" + runId[..12], "ThirdLife TL-0317 " + runId);
+        await VerifyProductionPipeDeniesDistinctAccountAsync("TLBroker" + runId[..12], "ThirdLife TL-0317 " + runId,
+            useHyperVToken: true);
     }
 
-    private static async Task VerifyProductionPipeDeniesDistinctAccountAsync(string account, string? comment)
+    private static async Task VerifyProductionPipeDeniesDistinctAccountAsync(string account, string? comment, bool useHyperVToken)
     {
         var pipeId = Guid.NewGuid();
         var initiatingIdentity = WindowsBrokerPeer.CurrentIdentity();
@@ -49,7 +53,15 @@ public sealed class SandboxPipeAclTests
         CreateGuestAccount(account, password, comment);
         try
         {
-            await CheckDistinctStandardAccountAsync(account, password, pipeId, timeout.Token);
+            if (useHyperVToken)
+            {
+                CheckHyperVDistinctStandardAccount(account, password, pipeId, initiatingIdentity.UserSid);
+            }
+            else
+            {
+                await CheckDistinctStandardAccountAsync(account, password, pipeId, timeout.Token);
+            }
+
             Assert.False(server.IsConnected, "The restricted pipe accepted a connection from the distinct account.");
             Assert.False(accepting.IsCompleted, "The restricted pipe listener should still be awaiting its initiating user.");
             await using var control = WindowsBrokerPipe.CreateClient(pipeId);
@@ -205,6 +217,46 @@ public sealed class SandboxPipeAclTests
         Assert.True(deleted == 0 && lookup == UserNotFound, "The owned guest test account was not fully removed.");
     }
 
+    private static void CheckHyperVDistinctStandardAccount(
+        string account, SecureString password, Guid pipeId, SecurityIdentifier initiatingUser)
+    {
+        const uint interactiveLogon = 2;
+        const uint defaultProvider = 0;
+        var nativePassword = Marshal.SecureStringToGlobalAllocUnicode(password);
+        SafeAccessTokenHandle token;
+        try
+        {
+            // Authenticate against the local SAM without loading a user profile or starting a desktop process.
+            if (!NativeMethods.LogonUserW(account, ".", nativePassword, interactiveLogon, defaultProvider, out token))
+            {
+                var error = Marshal.GetLastWin32Error();
+                token.Dispose();
+                throw new Win32Exception(error, FormattableString.Invariant(
+                    $"The Hyper-V probe could not authenticate its owned standard account. NativeErrorCode={error}."));
+            }
+        }
+        finally
+        {
+            Marshal.ZeroFreeGlobalAllocUnicode(nativePassword);
+        }
+
+        using (token)
+        {
+            WindowsIdentity.RunImpersonated(token, () =>
+            {
+                using var identity = WindowsIdentity.GetCurrent(ifImpersonating: true);
+                Assert.True(identity?.User is { } user && !initiatingUser.Equals(user) &&
+                    identity.Name.Equals(Environment.MachineName + "\\" + account, StringComparison.OrdinalIgnoreCase) &&
+                    !new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator),
+                    "The Hyper-V probe did not receive its distinct standard account token.");
+
+                // Connect only. No data is sent under the unrelated account token.
+                using var client = WindowsBrokerPipe.CreateClient(pipeId);
+                Assert.Throws<UnauthorizedAccessException>(() => client.Connect(2_000));
+            });
+        }
+    }
+
     private static async Task CheckDistinctStandardAccountAsync(
         string account, SecureString password, Guid pipeId, CancellationToken cancellationToken)
     {
@@ -249,7 +301,18 @@ public sealed class SandboxPipeAclTests
         start.ArgumentList.Add("-NonInteractive");
         start.ArgumentList.Add("-EncodedCommand");
         start.ArgumentList.Add(Convert.ToBase64String(Encoding.Unicode.GetBytes(fixture)));
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("The owned guest probe did not start.");
+        Process? started;
+        try
+        {
+            started = Process.Start(start);
+        }
+        catch (Win32Exception exception)
+        {
+            throw new Win32Exception(exception.NativeErrorCode, FormattableString.Invariant(
+                $"The owned guest probe did not start. NativeErrorCode={exception.NativeErrorCode}."));
+        }
+
+        using var process = started ?? throw new InvalidOperationException("The owned guest probe did not start.");
         try
         {
             await process.WaitForExitAsync(cancellationToken);
@@ -298,5 +361,11 @@ public sealed class SandboxPipeAclTests
         [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
         [DllImport("netapi32.dll", ExactSpelling = true)]
         internal static extern uint NetApiBufferFree(nint buffer);
+
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool LogonUserW(string account, string domain, nint password,
+            uint logonType, uint provider, out SafeAccessTokenHandle token);
     }
 }
