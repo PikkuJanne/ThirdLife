@@ -1423,7 +1423,10 @@ def _is_governed_git_path(path_text: str) -> bool:
         return True
     if normalized.startswith(("src/", "tests/")):
         return path.suffix.casefold() == ".csproj" or path.name == "packages.lock.json"
-    return normalized.startswith("fixtures/catalog/")
+    return (
+        normalized.startswith("fixtures/catalog/")
+        and normalized != CATALOG_JSON_PROJECTION
+    )
 
 
 def _committed_governed_paths(root: Path, revision: str) -> set[str]:

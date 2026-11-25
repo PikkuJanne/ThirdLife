@@ -34,6 +34,12 @@
   inventory and digests unchanged and rejects an unrecognized JSON path.
   Direct supply-chain validation passed with 28 components and approved matrix
   status. The affected pilot-fixture suite passed 21 checks in 20.239 s.
+- The working checkout's Python discovery copied an older ignored
+  `TestResults` artifact into test repositories. Isolating the approval case
+  reproduced Git's staging rejection. The clean worktree passed that case and
+  exposed a separate exact-source-revision mismatch. The checked-out inventory
+  and committed Git inventory now both exclude exactly the governed JSON
+  projection. Bundle validation checks its contents against the original YAML.
 - The formatter found LF endings in the three new production C# files. After
   normalizing those files to repository CRLF, the focused format check passed.
 - PowerShell `Test-Json` accepted the governed synthetic sample and a
