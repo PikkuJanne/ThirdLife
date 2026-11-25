@@ -11,6 +11,8 @@ using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Inventory.Windows;
 using ThirdLife.Persistence;
+using ThirdLife.Policy.Schema;
+using ThirdLife.Policy.Versioning;
 using ThirdLife.Reports.WorkshopReport;
 
 namespace ThirdLife.UI.Shell;
@@ -28,7 +30,6 @@ internal sealed record AssessmentFinding(string Name, string Value, string Evide
 /// <summary>Owns one window's open job and serializes commands while the shell stays navigable.</summary>
 internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
 {
-    private const string IntakePolicyVersion = "m1-intake-v1";
     private const string NoAssessment = "No assessment is recorded for this job.";
     private static readonly ProviderId IntakeProvider = new("workshop-intake");
     private readonly Func<CancellationToken, Task<IJobStore>> _openStore;
@@ -50,7 +51,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         Func<CancellationToken, Task<IJobStore>> openStore,
         IReadOnlyList<IInventoryProvider> providers,
         TimeProvider timeProvider,
-        WorkshopReportStore? reportStore = null)
+        WorkshopReportStore? reportStore = null,
+        Func<PolicyDeviceClass, PolicySnapshot?>? fixturePlanPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -71,6 +73,13 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         {
             throw new ArgumentException("Fixture and live providers require separate workspaces.", nameof(providers));
         }
+
+        if (fixturePlanPolicy is not null && !IsFixtureScenario)
+        {
+            throw new ArgumentException("A fixture plan policy requires a fixture workspace.", nameof(fixturePlanPolicy));
+        }
+
+        _fixturePlanPolicy = fixturePlanPolicy;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -171,6 +180,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _hasSeparateEvidenceOrigin = false;
         ManualProgress = null;
         ApplyAssessment(null);
+        ClearPlanReview(clearSelection: true);
         ClearRepairs();
         ClearPolicyView();
         ClearReport();
@@ -217,6 +227,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _assessmentCancellation = new CancellationTokenSource();
         var cancellationToken = _assessmentCancellation.Token;
         Assessment = null;
+        ClearPlanReview();
         ClearPolicyView();
         AssessmentStatus = "Read-only assessment is running. Device readiness is unknown.";
         Findings = [];
@@ -505,7 +516,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             known ? new OperatorId(input.OperatorCode.Trim()) : null,
             known ? new DateTimeOffset(input.OccurredOn!.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero) : null,
             needsMedia ? new MediaIdentifier(media) : null,
-            verification, IntakePolicyVersion);
+            verification, SanitizationGate.WorkshopIntakePolicyVersion);
     }
 
     private async Task ApplyJobAsync(StoredJob job, AssessmentSnapshot? currentRun = null)
@@ -524,6 +535,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _hasSeparateEvidenceOrigin = separateOrigin;
         ManualProgress = manual;
         ApplyAssessment(snapshot);
+        ClearPlanReview(clearSelection: jobChanged);
         ApplyRepairs(repairHistory.Repairs, repairHistory.Retests);
         await LoadPolicyViewAsync(job.Job.JobId, snapshot);
     }

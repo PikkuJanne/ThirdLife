@@ -24,6 +24,7 @@ internal sealed partial class AuditWorkspace
             }
 
             _repairDeviceClass = value;
+            ClearPlanReview();
             RepairCandidates = RepairSuggestions.For(Assessment, value);
             Publish();
         }

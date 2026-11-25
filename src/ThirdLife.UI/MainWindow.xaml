@@ -64,8 +64,8 @@
             <TextBlock Text="3. Decide — unavailable" />
           </Button>
           <TextBlock x:Name="DecideCriteria" Text="Required: assessment evidence, a versioned policy and an explained disposition. Decision controls are not yet available." />
-          <Button x:Name="PrepareButton" IsEnabled="False" AutomationProperties.Name="4. Prepare, unavailable">
-            <TextBlock Text="4. Prepare — unavailable" />
+          <Button x:Name="PrepareButton" Click="OpenPlanReview" IsEnabled="False" AutomationProperties.Name="4. Prepare, unavailable">
+            <TextBlock x:Name="PrepareStageLabel" Text="4. Prepare — unavailable" />
           </Button>
           <TextBlock x:Name="PrepareCriteria" Text="Required: an eligible disposition and an approved plan showing changes, privileges, network use, disk space, restart and recovery. Preparation controls are not yet available." />
           <Button x:Name="VerifyButton" IsEnabled="False" AutomationProperties.Name="5. Verify, unavailable">

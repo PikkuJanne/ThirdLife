@@ -77,6 +77,8 @@ public partial class AuditWorkspaceView : UserControl
         target.BringIntoView();
     }
 
+    internal void FocusPlanReview() => PlanReviewPanel.FocusReview();
+
     private async void CreateJob(object sender, RoutedEventArgs e)
     {
         string previousJob = Workspace.JobId;
