@@ -16,9 +16,13 @@ independent verification, SQLite reopen and reporting. The real launched transac
 remains pending under TL-0412.
 [Package evidence](artifacts/evidence/TL-0412/report.md)
 
+Clean Full passed on candidate `100aeb8`. The same build passed unelevated application
+startup and read-only vendor package resolution. TL-0401 through TL-0404 are complete
+at their engineering scope.
+
 TL-0311 remains blocked. Draft PR #36 retains the broker implementation and evidence at
-`642e629`. Its native publication needs
-a verified Microsoft x64 linker and SDK, followed by protected deployment and privilege
+`642e629`. Its native publication needs a verified Microsoft x64 linker and SDK,
+followed by protected deployment and privilege
 qualification. The distinct-account guest remains deferred.
 
 After action-specific authorization, run the ordinary launched app on the admitted active

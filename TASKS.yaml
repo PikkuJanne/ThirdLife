@@ -4410,7 +4410,7 @@ tasks:
   workstream: actions
   kind: code
   priority: P0
-  status: review
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -4451,7 +4451,17 @@ tasks:
     date: '2026-11-25'
     duration: 14 tests, 10 s
     reference: artifacts/evidence/TL-0412/report.md
-    limitation: The fixture route passed. Clean Full verification remains pending.
+    limitation: The fixture route passed. The real authorized transaction remains under TL-0412.
+  - task: TL-0404
+    summary: Clean Full and real unelevated app startup passed for the joined package and governance candidate.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore and eng/run-ui-smoke.ps1
+    tier: full
+    result: passed
+    environment: Active Windows 11 Pro 26H2 native x64, same-machine clean worktree, unelevated
+    date: '2026-11-25'
+    duration: Full 331.593 s and app startup observation 1.325 s
+    reference: artifacts/evidence/TL-0412/report.md, source 100aeb82
+    limitation: The real machine-wide transaction awaits separate action-specific authorization under TL-0412.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
