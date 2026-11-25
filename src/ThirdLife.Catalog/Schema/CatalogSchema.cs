@@ -1,8 +1,7 @@
 using System.Collections.Immutable;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using static ThirdLife.Catalog.Schema.DeclarativeJson;
 
 namespace ThirdLife.Catalog.Schema;
 
@@ -16,7 +15,6 @@ public static partial class CatalogSchema
     private const string SyntheticSource = "synthetic-fixture-source";
     private const string SyntheticPublisher = "synthetic-fixture-publisher";
     private const string UnreviewedLicense = "NOASSERTION";
-    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     /// <summary>Validates catalog metadata at a supplied instant against an optional trusted catalog snapshot.</summary>
     /// <remarks>The result describes catalog claims. The package and its rights still need independent supply-chain verification.</remarks>
@@ -24,20 +22,8 @@ public static partial class CatalogSchema
     {
         try
         {
-            if (utf8Json.IsEmpty || utf8Json.Length > MaximumDocumentBytes)
-            {
-                throw new JsonException();
-            }
-
-            // Validate and hash the same bounded byte snapshot.
-            var bytes = utf8Json.ToArray();
-            _ = StrictUtf8.GetCharCount(bytes);
-            using var document = JsonDocument.Parse(bytes, new JsonDocumentOptions
-            {
-                AllowDuplicateProperties = false,
-                MaxDepth = 8,
-            });
-            var catalog = ReadCatalog(document.RootElement, asOfUtc, Convert.ToHexStringLower(SHA256.HashData(bytes)));
+            using var document = Open(utf8Json, MaximumDocumentBytes, out var contentSha256);
+            var catalog = ReadCatalog(document.RootElement, asOfUtc, contentSha256);
             if (current is not null)
             {
                 RequireCurrentVersion(catalog, current);
@@ -305,50 +291,11 @@ public static partial class CatalogSchema
         }
     }
 
-    private static void RequireFields(JsonElement value, ReadOnlySpan<string> expected)
-    {
-        var count = 0;
-        foreach (var property in value.EnumerateObject())
-        {
-            if (!expected.Contains(property.Name))
-            {
-                throw new JsonException();
-            }
-
-            count++;
-        }
-
-        if (count != expected.Length)
-        {
-            throw new JsonException();
-        }
-    }
-
-    private static void RequireValue(JsonElement element, string name, string expected)
-    {
-        if (!element.GetProperty(name).ValueEquals(expected))
-        {
-            throw new JsonException();
-        }
-    }
-
-    private static string ReadToken(JsonElement element, string property, Regex pattern, int maximumLength)
-    {
-        var value = element.GetProperty(property).GetString();
-        return value is not null && value.Length <= maximumLength && pattern.IsMatch(value) ? value : throw new JsonException();
-    }
-
-    [GeneratedRegex(@"\A[a-z][a-z0-9]*(?:-[a-z0-9]+)*\z", RegexOptions.NonBacktracking)]
-    private static partial Regex LowerKebabPattern();
-
     [GeneratedRegex(@"\A(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*\.)+[a-z][a-z0-9]*(?:-[a-z0-9]+)*\z", RegexOptions.NonBacktracking)]
     private static partial Regex EntryIdPattern();
 
     [GeneratedRegex(@"\A(?:[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\.)+[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\z", RegexOptions.NonBacktracking)]
     private static partial Regex PackageIdPattern();
-
-    [GeneratedRegex(@"\A(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?\z", RegexOptions.NonBacktracking)]
-    private static partial Regex SemanticVersionPattern();
 
     [GeneratedRegex(@"\A[0-9][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*\z", RegexOptions.NonBacktracking)]
     private static partial Regex PackageVersionPattern();

@@ -126,6 +126,8 @@ class PilotFixtureContractTests(unittest.TestCase):
         for source, projection in (
             (validate_bundle.PILOT_CATALOG_YAML, validate_bundle.PILOT_CATALOG_JSON),
             (validate_bundle.PILOT_POLICY_YAML, validate_bundle.PILOT_POLICY_JSON),
+            ("fixtures/profiles/basic.yaml", "fixtures/profiles/basic.json"),
+            ("fixtures/profiles/job-seeker.yaml", "fixtures/profiles/job-seeker.json"),
         ):
             with self.subTest(projection=projection), self.fixture_copy() as root:
                 self.assertIn(projection, validate_bundle.REQUIRED_FILES)

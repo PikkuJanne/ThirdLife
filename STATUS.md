@@ -4,25 +4,24 @@
 **Bundle baseline:** 0.6.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
 **Current milestone:** M3 — Safe planning and privilege boundary  
-**Current task:** TL-0301 — Done
+**Current task:** TL-0302 — Done
 
 ## Continuity
 
-PR #25 integrated the [completed M2 gate](artifacts/gates/M2-disposition.md)
-and scope-bound approval into `main` at `8517ed6`. Integrate the completed
-`codex/tl-0301-application-catalog` branch through its pull request, then
-continue from updated `main`.
+PR #26 integrated the [catalog schema](artifacts/evidence/TL-0301/report.md)
+into `main` at `e393f77`. The
+`codex/tl-0302-workshop-recipient-profiles` branch contains the completed
+TL-0302 work and evidence.
 
 The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-The catalog validator accepts the four governed synthetic entries through an
-exact JSON projection and rejects stale reviews, identity collisions, unsafe
-fields, and downgraded catalog versions. Targeted passed 1,177 .NET tests.
-The clean worktree passed all 287 Python governance tests.
-[TL-0301 evidence](artifacts/evidence/TL-0301/report.md)
+Basic and Job Seeker validate against their exact catalog, pin their policy
+references, and keep recipient choices deferred. Targeted passed 1,217 tests.
+The clean worktree passed 287 governance tests.
+[TL-0302 evidence](artifacts/evidence/TL-0302/report.md)
 
 ## Next action
 
-After the TL-0301 merge, start TL-0302 from verified updated `main`.
+Start TL-0303 after verifying TL-0302 integration on updated `main`.
