@@ -81,12 +81,17 @@ public sealed class RebootResumeToken
 
 public sealed class RebootResumeCandidate
 {
-    public RebootResumeCandidate(RebootCheckpoint checkpoint, RebootResumeToken token)
+    public RebootResumeCandidate(RebootCheckpoint checkpoint, RebootResumeToken token, bool isCurrentPolicyPlan = false)
     {
         Checkpoint = checkpoint ?? throw new ArgumentNullException(nameof(checkpoint));
         Token = token ?? throw new ArgumentNullException(nameof(token));
+        IsCurrentPolicyPlan = isCurrentPolicyPlan;
     }
 
     public RebootCheckpoint Checkpoint { get; }
     public RebootResumeToken Token { get; }
+
+    /// <summary>Indicates that the saved plan version permits offering resume for review.</summary>
+    /// <remarks>The store independently verifies the plan, checkpoint and approval before recording a decision.</remarks>
+    public bool IsCurrentPolicyPlan { get; }
 }

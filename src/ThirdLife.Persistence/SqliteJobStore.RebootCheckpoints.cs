@@ -68,7 +68,7 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
 
                 if (!existing.IsDecided && IsAuthenticRebootCandidate(existing.Candidate))
                 {
-                    candidate = existing.Candidate;
+                    candidate = new RebootResumeCandidate(existing.Candidate.Checkpoint, existing.Candidate.Token, isCurrentPolicyPlan: true);
                 }
 
                 return;
@@ -96,7 +96,7 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
             insert.Parameters.AddWithValue("$entry", checkpoint.JournalEntryId.ToString("D"));
             insert.Parameters.AddWithValue("$authenticity", protectedToken.AuthenticityBlob.ToArray());
             await insert.ExecuteNonQueryAsync(token).ConfigureAwait(false);
-            candidate = new RebootResumeCandidate(checkpoint, protectedToken);
+            candidate = new RebootResumeCandidate(checkpoint, protectedToken, isCurrentPolicyPlan: true);
         }, cancellationToken).ConfigureAwait(false);
         return candidate;
     }
@@ -116,7 +116,13 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
             }
 
             _layout.ValidateJobDirectory(jobId);
-            return IsAuthenticRebootCandidate(stored.Candidate) ? stored.Candidate : null;
+            if (!IsAuthenticRebootCandidate(stored.Candidate))
+            {
+                return null;
+            }
+
+            var plan = await RequireJournalPlanAsync(connection, transaction, stored.Candidate.Checkpoint.Plan, token).ConfigureAwait(false);
+            return new RebootResumeCandidate(stored.Candidate.Checkpoint, stored.Candidate.Token, plan.IsCurrentPolicyPlan);
         }, cancellationToken);
     }
 
@@ -167,28 +173,39 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
             await using var command = RebootCheckpointCommand(connection, transaction, jobId,
                 RebootCheckpointProjection + " AND disposition.checkpoint_id IS NULL ORDER BY checkpoint.rowid DESC LIMIT $limit;");
             command.Parameters.AddWithValue("$limit", MaximumRebootCheckpointsPerJob + 1);
-            await using var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
             var candidates = ImmutableArray.CreateBuilder<RebootResumeCandidate>();
-            var count = 0;
-            while (await reader.ReadAsync(token).ConfigureAwait(false))
+            await using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
             {
-                if (++count > MaximumRebootCheckpointsPerJob)
+                while (await reader.ReadAsync(token).ConfigureAwait(false))
                 {
-                    throw new JobStoreCorruptionException("store_payload_mismatch");
-                }
+                    var stored = ReadRebootCheckpoint(reader, jobId);
+                    if (candidates.Count == MaximumRebootCheckpointsPerJob || !IsAuthenticRebootCandidate(stored.Candidate))
+                    {
+                        throw new JobStoreCorruptionException("store_payload_mismatch");
+                    }
 
-                var stored = ReadRebootCheckpoint(reader, jobId);
-                if (!IsAuthenticRebootCandidate(stored.Candidate))
-                {
-                    throw new JobStoreCorruptionException("store_payload_mismatch");
+                    candidates.Add(stored.Candidate);
                 }
-
-                candidates.Add(stored.Candidate);
             }
 
-            if (count != 0)
+            if (candidates.Count != 0)
             {
                 _layout.ValidateJobDirectory(jobId);
+            }
+
+            var planContracts = new Dictionary<JournalPlanKey, bool>();
+            for (var index = 0; index < candidates.Count; index++)
+            {
+                var candidate = candidates[index];
+                var key = candidate.Checkpoint.Plan;
+                if (!planContracts.TryGetValue(key, out var current))
+                {
+                    var plan = await RequireJournalPlanAsync(connection, transaction, key, token).ConfigureAwait(false);
+                    current = plan.IsCurrentPolicyPlan;
+                    planContracts.Add(key, current);
+                }
+
+                candidates[index] = new RebootResumeCandidate(candidate.Checkpoint, candidate.Token, current);
             }
 
             return candidates.ToImmutable();
@@ -272,7 +289,7 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
     {
         var plan = await ReadJournalPlanAsync(connection, transaction, key, token).ConfigureAwait(false);
         var approval = await ReadApprovalAsync(connection, transaction, key, null, token).ConfigureAwait(false);
-        if (plan is null || approval?.Plan != key || approval.ApprovalId != approvalId ||
+        if (plan is not { IsCurrentPolicyPlan: true } || approval?.Plan != key || approval.ApprovalId != approvalId ||
             !plan.Actions.Any(action => action.ActionId == actionId && action.Definition.Reboot == ActionReboot.MayRequire))
         {
             return false;

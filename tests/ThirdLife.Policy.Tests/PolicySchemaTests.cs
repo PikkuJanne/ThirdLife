@@ -13,12 +13,16 @@ public sealed class PolicySchemaTests
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "community-laptop-policy.json"));
 
     [Fact]
-    public void ParsesCandidateWithoutChangingItsRequirements()
+    public void ParsesTheCurrentWindows11Candidate()
     {
         var policy = Parse(CandidateJson);
 
         Assert.Equal("community-laptop-policy", policy.PolicyId);
-        Assert.Equal("0.1.0-candidate.1", policy.Version);
+        Assert.Equal("0.1.0-candidate.2", policy.Version);
+        Assert.True(policy.IsCurrentSchema);
+        Assert.Equal(PolicySchema.Version, policy.SchemaVersion);
+        Assert.DoesNotContain(policy.Rules, rule =>
+            rule.Decision.UnmetDisposition == Disposition.AlternativeOperatingSystemCandidate);
         Assert.Equal(PolicyStatus.Candidate, policy.Status);
         Assert.Null(policy.Effective.FromUtc);
         Assert.Null(policy.Effective.UntilUtc);
@@ -102,7 +106,7 @@ public sealed class PolicySchemaTests
     }
 
     [Theory]
-    [InlineData("schema_version", "\"thirdlife.policy.v2\"")]
+    [InlineData("schema_version", "\"thirdlife.policy.v3\"")]
     [InlineData("status", "\"approved\"")]
     [InlineData("status", "\"effective\"")]
     [InlineData("synthetic_data", "null")]
@@ -127,6 +131,7 @@ public sealed class PolicySchemaTests
     [InlineData("rules.0.condition.values", "[true]")]
     [InlineData("rules.0.decision.blocks_ready", "false")]
     [InlineData("rules.0.decision.unmet_disposition", "\"ready_to_prepare\"")]
+    [InlineData("rules.0.decision.unmet_disposition", "\"alternative_operating_system_candidate\"")]
     [InlineData("rules.0.decision.unavailable_disposition", "null")]
     [InlineData("rules.0.decision.unavailable_disposition", "\"repair_and_retest\"")]
     [InlineData("rules.0.active_for_capability_ids", "[\"video_calling\"]")]

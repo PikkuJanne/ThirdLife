@@ -5,11 +5,13 @@ using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
+using ThirdLife.Inventory.Windows;
 using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
 using ThirdLife.Reports.WorkshopReport;
@@ -23,6 +25,77 @@ namespace ThirdLife.UI.Tests;
 [Collection(ShellWindowChecks.Name)]
 public sealed class PolicyWorkflowTests
 {
+    [Fact]
+    [Trait("Category", "ActiveMachine")]
+    public async Task SupportedDesktopAssessesEvaluatesReopensAndExportsAnIsolatedJob()
+    {
+        Assert.Equal(WindowsPlatformEligibility.Supported, WindowsPlatform.CheckCurrent());
+        Assert.Equal(StartupAccess.StandardUser, StartupSafety.CheckCurrentProcess());
+        using var disk = new AuditTestStore();
+        var provider = new MemoryProvider();
+        var reportRoot = Path.Combine(disk.Root, "desktop-workshop-reports");
+        await using var workspace = new AuditWorkspace(
+            async token => await disk.OpenSqliteAsync(token).ConfigureAwait(false),
+            [provider], new FixtureClock(), new WorkshopReportStore(reportRoot));
+        await workspace.CreateJobAsync();
+        await workspace.RecordSanitizationAsync(VerifiedSample());
+        workspace.RepairDeviceClass = PolicyDeviceClass.Laptop;
+        var jobId = Assert.IsType<StoredJob>(workspace.Job).Job.JobId;
+        M1AuditJourneyTests.JourneyResult? result = null;
+
+        ShellTestHost.Run(() =>
+        {
+            var window = new MainWindow(new ShellViewModel(), workspace) { Width = 640, Height = 500 };
+            try
+            {
+                ShellTestHost.Show(window);
+                ShellTestHost.Invoke(window, "OpenAuditWorkspaceButton");
+                var audit = Named<FrameworkElement>(window, "AuditView");
+                var start = Named<Button>(audit, "StartAssessmentButton");
+                Assert.True(start.Focus());
+                Invoke(window, start);
+                PumpUntil(window, () => workspace.Assessment is not null && !workspace.IsBusy, () => workspace.AssessmentStatus);
+
+                var panel = Named<PolicyDispositionView>(audit, "PolicyDispositionPanel");
+                panel.LayoutTransform = new ScaleTransform(2, 2);
+                ShellTestHost.Drain(window);
+                var evaluate = Named<Button>(panel, "EvaluatePolicyButton");
+                Assert.Equal("Evaluate candidate policy", ShellTestHost.ButtonPeer(evaluate).GetName());
+                Assert.True(evaluate.Focus());
+                Invoke(window, evaluate);
+                PumpUntil(window, () => workspace.HasPolicyDecision && !workspace.IsBusy, () => workspace.PolicyStatus);
+                Assert.Equal("Human review required", Named<TextBlock>(panel, "PolicyResultTitle").Text);
+                var assessmentId = workspace.Assessment!.AssessmentId;
+
+                Invoke(window, Named<Button>(audit, "CloseJobButton"));
+                Assert.Null(workspace.Job);
+                var idInput = Named<TextBox>(audit, "JobIdInput");
+                Assert.Equal(jobId.Value, idInput.Text);
+                Assert.Same(idInput, Keyboard.FocusedElement);
+                Invoke(window, Named<Button>(audit, "OpenJobButton"));
+                PumpUntil(window, () => workspace.HasPolicyDecision && !workspace.IsBusy, () => workspace.Status);
+                Assert.Equal(assessmentId, workspace.Assessment!.AssessmentId);
+                Assert.Equal("Human review required", workspace.PolicyDispositionTitle);
+
+                result = M1AuditJourneyTests.GenerateAndOpenReport(window, audit, workspace, jobId, assessmentId);
+            }
+            finally { CloseWindow(window); }
+        });
+
+        var exported = Assert.IsType<M1AuditJourneyTests.JourneyResult>(result);
+        await using var store = await disk.OpenSqliteAsync();
+        var saved = Assert.IsType<StoredPolicyDecision>(
+            await store.LoadLatestPolicyDecisionAsync(jobId, exported.AssessmentId.Value));
+        Assert.True(saved.Snapshot.Document.IsCurrentSchema);
+        Assert.Equal("0.1.0-candidate.2", saved.Decision.PolicyVersion);
+        Assert.Equal(Disposition.HumanReviewRequired, saved.Decision.Disposition);
+        Assert.Equal(1, provider.InvocationCount);
+        Assert.Contains(saved.Decision.PolicySha256, exported.Preview, StringComparison.Ordinal);
+        Assert.Contains(saved.Decision.Explanation, exported.Preview, StringComparison.Ordinal);
+        Assert.Contains("synthetic fixture", exported.Preview, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(exported.Preview, await File.ReadAllTextAsync(Path.Combine(reportRoot, exported.FileName)));
+    }
+
     [Fact]
     public async Task CandidateEvaluationAndExplicitReevaluationKeepTheOriginalSavedAssessmentAndDecision()
     {

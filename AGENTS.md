@@ -1,6 +1,6 @@
 # AGENTS.md — ThirdLife Setup Core Codex Operating Contract
 
-**Bundle version:** 0.6.0  
+**Bundle version:** 0.7.0  
 **Project:** ThirdLife Setup Core — Team B / B1  
 **Physical validation scope:** active Codex machine only
 
@@ -8,7 +8,7 @@
 
 This contract governs every Codex session in the ThirdLife Setup Core repository. It applies from the repository root downward unless a nested `AGENTS.md` adds stricter local rules. A nested file may not weaken this contract, a frozen decision, the binding roadmap, the project boundary, the test strategy, or the GitHub continuity rules.
 
-ThirdLife Setup Core is safety-sensitive Windows refurbishment software. It must remain independently useful without a sibling portfolio application, mandatory account, project-controlled server, or permanent privileged service. Prefer small, typed, testable, explainable, cancellable, and recoverable work over broad automation.
+ThirdLife Setup Core is safety-sensitive Windows refurbishment software. It must remain independently useful without a sibling portfolio application, mandatory account, project-controlled server, or permanent privileged service. Prefer small, typed, testable, explainable, cancellable, and recoverable work over broad automation. D-005 limits product execution and new live workflows to Windows 11 client on native x64. Preserve original platform facts and decisions in historical records.
 
 The v0.1 controlled pilot at `TL-0611` is not the project exit. Team B/B1 completes only at `TL-0710`; Team B then proceeds to Scam Explainer. Sibling catalogue entries, profiles, adapters, compatibility cuts, and suite media remain deferred to Team B/B4.
 
@@ -104,7 +104,7 @@ approved dependency sequence with a recorded collapse plan.
   `STATUS.md` and `TASKS.yaml`.
 - Within an explicitly assigned sequence, continue from verified updated `main` after each
   completed task. Pause when an action genuinely requires a decision, at a concrete external
-  blocker, or at the end of the assignment. The authorized M1 sequence ends at TL-0116.
+  blocker, or at the end of the assignment. The historical M1 sequence ended at TL-0116. [TL-0315](docs/amendments/2026-11-25-windows-11-only.md) is the separately authorized platform amendment and integration.
 
 ### Evidence-size discipline
 

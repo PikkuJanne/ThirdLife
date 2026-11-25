@@ -31,7 +31,7 @@ public sealed class ActivationProvider : IInventoryProvider
             TimeSpan.FromSeconds(5),
             ProviderNetworkUse.None,
             evidenceOrigin,
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             new ProviderFailureDefinition(new EvidenceKey("activation.provider_status"), "activation.provider.status"),
             [new ProviderEvidenceDefinition(StateKey, EvidenceValueKind.Enum, unit: null, StatusSource)]);
     }

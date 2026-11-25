@@ -7,8 +7,11 @@ namespace ThirdLife.UI.Shell;
 
 internal sealed record RebootRecoveryChoice(RebootResumeCandidate Candidate)
 {
-    public string Label => string.Format(CultureInfo.CurrentCulture, "Resume by {0:g} (action {1:D})",
-        Candidate.Checkpoint.ExpiresAtUtc.ToLocalTime(), Candidate.Checkpoint.ActionId);
+    public string Label => Candidate.IsCurrentPolicyPlan
+        ? string.Format(CultureInfo.CurrentCulture, "Resume by {0:g} (action {1:D})",
+            Candidate.Checkpoint.ExpiresAtUtc.ToLocalTime(), Candidate.Checkpoint.ActionId)
+        : string.Format(CultureInfo.CurrentCulture, "Historical checkpoint. Only abandon is available (action {0:D}).",
+            Candidate.Checkpoint.ActionId);
 }
 
 internal sealed partial class AuditWorkspace
@@ -21,7 +24,8 @@ internal sealed partial class AuditWorkspace
     public bool HasRebootRecovery => HasPendingRebootRecovery || RebootRecoveryStatus.Length > 0;
     public bool CanAbandonRebootRecovery => CanEditJob && SelectedRebootRecovery is not null;
     public bool CanResumeRebootRecovery => CanAbandonRebootRecovery &&
-        SelectedRebootRecovery!.Candidate.Checkpoint.IsCurrent(_timeProvider.GetUtcNow());
+        SelectedRebootRecovery!.Candidate.IsCurrentPolicyPlan &&
+        SelectedRebootRecovery.Candidate.Checkpoint.IsCurrent(_timeProvider.GetUtcNow());
 
     public RebootRecoveryChoice? SelectedRebootRecovery
     {

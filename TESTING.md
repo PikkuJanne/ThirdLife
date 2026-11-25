@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Testing Strategy and Execution Contract
 
-**Bundle version:** 0.6.0  
+**Bundle version:** 0.7.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Authoritative runtime hardware:** active Codex machine only  
 **Remote CI:** supplementary
@@ -17,6 +17,11 @@ ThirdLife needs fast feedback and complete risk-relevant evidence.
 - Do not convert one-machine, VM, fixture, or constraint evidence into broad hardware claims.
 
 The machine-readable tier/budget selection lives in `eng/test-manifest.json`.
+
+Qualify application runtime and packaged lifecycle on Windows 11 client on native x64.
+Record the exact release, edition, build, OS architecture and tested artifact. Use
+deterministic fixtures for platform refusal and historical-record compatibility.
+The supplementary Windows Server runner covers build, governance and deterministic tests.
 
 ### Engineering ownership, evidence and reuse
 

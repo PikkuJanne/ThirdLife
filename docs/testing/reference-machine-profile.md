@@ -64,7 +64,7 @@ The deterministic captured-data replay reads this exact profile, imports only it
 
 - This is one active-machine snapshot. It does not establish behavior on another processor, memory size, storage device, firmware implementation, GPU, peripheral set, or manufacturer.
 - The TL-0106 provider reports firmware and operating-system facts, not legal ownership, authenticity, Windows 11 CPU eligibility, health, reliability, or a minimum specification. A compromised operating system can still lie.
-- Windows 10 in the provider descriptor is audit-only collection scope. It is not a normal-ready support or release claim.
+- Historical TL-0106 evidence retains the provider scope of its source revision. The [Windows 11–only amendment](../amendments/2026-11-25-windows-11-only.md) supersedes Windows 10 live collection. Legacy OS facts and synthetic refusal cases remain useful for testing.
 - Provider-reported virtualization and storage classes were recorded without resolving device identity or serial information.
 - Free space is deliberately recorded as a bucket, not an exact capacity or volume path.
 - No physical manual-test walkthrough, cold boot, accessibility audit, broad failure injection, or low-resource extended matrix ran for TL-0008.

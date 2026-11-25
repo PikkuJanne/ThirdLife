@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$comment": "The runtime also checks the UTF-8 input size and nesting limits, duplicate JSON properties, unique rule IDs, valid UTC calendar dates and chronological effective periods. JSON Schema integer limits apply to numeric values. The runtime requires integers in their integer JSON representation.",
-  "title": "ThirdLife policy v1",
-  "description": "Versioned, declarative requirements for supported Windows 11 x64 devices.",
+  "title": "ThirdLife policy",
+  "description": "Declarative requirements for supported Windows 11 x64 devices. Version 2 is current. Version 1 remains readable for historical audit.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,7 +18,7 @@
     "rules"
   ],
   "properties": {
-    "schema_version": { "const": "thirdlife.policy.v1" },
+    "schema_version": { "enum": ["thirdlife.policy.v1", "thirdlife.policy.v2"] },
     "policy_id": {
       "type": "string",
       "maxLength": 64,
@@ -53,6 +53,26 @@
       "effective": { "properties": { "status": { "const": "effective" } } }
     }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "schema_version": { "const": "thirdlife.policy.v2" } } },
+      "then": {
+        "properties": {
+          "rules": {
+            "items": {
+              "properties": {
+                "decision": {
+                  "properties": {
+                    "unmet_disposition": { "enum": [null, "repair_and_retest", "human_review_required", "do_not_deploy"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "token": {
       "type": "string",

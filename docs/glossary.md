@@ -19,7 +19,7 @@ An unresolved condition that prevents a defined transition, such as preparation,
 
 ## Disposition
 
-An explainable, reproducible policy conclusion derived from immutable evidence and a named policy version. The five dispositions are **Ready to prepare**, **Repair and retest**, **Human review required**, **Alternative operating system candidate**, and **Do not deploy**. Every disposition cites its controlling requirements and evidence; it is not a numeric score or a fact about all possible uses of the device. **Ready to prepare** is a device/job result, not the `TASKS.yaml` state `ready`.
+An explainable, reproducible policy conclusion derived from immutable evidence and a named policy version. Current dispositions are **Ready to prepare**, **Repair and retest**, **Human review required**, and **Do not deploy**. **Alternative operating system candidate** is a retired disposition retained in historical results under their original policies. Every disposition cites its controlling requirements and evidence; it is not a numeric score or a fact about all possible uses of the device. **Ready to prepare** is a device/job result, not the `TASKS.yaml` state `ready`.
 
 ## Applied
 

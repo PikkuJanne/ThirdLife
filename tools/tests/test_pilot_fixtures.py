@@ -332,6 +332,22 @@ class PilotFixtureContractTests(unittest.TestCase):
                 ),
                 "invalid explicit disposition semantics",
             ),
+            (
+                lambda policy: policy["rules"][0]["decision"].__setitem__(
+                    "unmet_disposition", "alternative_operating_system_candidate"
+                ),
+                "invalid explicit disposition semantics",
+            ),
+            (
+                lambda policy: policy.__setitem__("schema_version", "thirdlife.policy.v1"),
+                "invalid Windows 11 x64 candidate policy metadata",
+            ),
+            (
+                lambda policy: policy["rules"][0]["decision"].__setitem__(
+                    "unmet_disposition", "repair_and_retest"
+                ),
+                "differs from the authorized Windows 11-only delta",
+            ),
         )
         relative = "fixtures/policies/community-laptop-policy.yaml"
         for mutate, expected in mutations:
@@ -638,7 +654,7 @@ class PilotFixtureContractTests(unittest.TestCase):
                 self.write_yaml(root, relative, document)
                 self.assert_rejected(root, "ready claim does not satisfy")
 
-    def test_done_requires_pilot_owner_approval_bound_to_current_digest(self) -> None:
+    def test_done_requires_pilot_owner_approval_bound_to_historical_digest(self) -> None:
         with self.fixture_copy() as root:
             tasks = copy.deepcopy(TASK_BY_ID)
             tasks["TL-0007"]["status"] = "done"
@@ -646,7 +662,7 @@ class PilotFixtureContractTests(unittest.TestCase):
             self.assert_rejected(root, "done evidence must bind", tasks)
 
         with self.fixture_copy() as root:
-            digest = validate_bundle.pilot_fixture_set_digest(root)
+            digest = validate_bundle.pilot_fixture_set_digest(root, historical=True)
             tasks = copy.deepcopy(TASK_BY_ID)
             tasks["TL-0007"]["status"] = "done"
             tasks["TL-0007"]["evidence"] = [
@@ -661,10 +677,10 @@ class PilotFixtureContractTests(unittest.TestCase):
                 }
             ]
             validation, actual = self.validate(root, tasks)
-            self.assertEqual(actual, digest)
+            self.assertNotEqual(actual, digest)
             self.assertEqual(validation.errors, [])
 
-            tasks["TL-0007"]["evidence"][0]["reference"] = "wrong digest"
+            tasks["TL-0007"]["evidence"][0]["reference"] = f"current digest {actual}"
             self.assert_rejected(root, "done evidence must bind", tasks)
 
 

@@ -14,7 +14,6 @@ public sealed class ProviderContractTests
         var operatingSystems = new[]
         {
             ProviderOperatingSystem.Windows11,
-            ProviderOperatingSystem.Windows10,
         };
         var definitions = new[]
         {
@@ -43,7 +42,7 @@ public sealed class ProviderContractTests
         Assert.Equal(ProviderNetworkUse.None, descriptor.NetworkUse);
         Assert.Equal(ProviderEvidenceOrigin.ActiveMachine, descriptor.EvidenceOrigin);
         Assert.Equal(
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             descriptor.SupportedOperatingSystems);
         Assert.Equal(
             ["system.alpha", "system.zeta"],
@@ -72,6 +71,9 @@ public sealed class ProviderContractTests
             () => CreateDescriptor(networkUse: (ProviderNetworkUse)2),
             () => CreateDescriptor(evidenceOrigin: (ProviderEvidenceOrigin)0),
             () => CreateDescriptor(supportedOperatingSystems: []),
+            () => CreateDescriptor(
+                evidenceOrigin: ProviderEvidenceOrigin.ActiveMachine,
+                supportedOperatingSystems: [ProviderOperatingSystem.Windows10]),
             () => CreateDescriptor(supportedOperatingSystems:
                 [ProviderOperatingSystem.Windows11, ProviderOperatingSystem.Windows11]),
             () => CreateDescriptor(supportedOperatingSystems: [(ProviderOperatingSystem)0]),
@@ -761,7 +763,7 @@ internal static class ProviderTestData
             timeout ?? TimeSpan.FromSeconds(1),
             ProviderNetworkUse.None,
             evidenceOrigin,
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             new ProviderFailureDefinition(new EvidenceKey("provider.fake.failure"), "source.provider.fake.status"),
             definitions ?? DefaultDefinitions());
 }

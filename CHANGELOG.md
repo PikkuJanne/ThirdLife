@@ -1,5 +1,11 @@
 # Roadmap Bundle Changelog
 
+## 0.7.0 — 2026-11-25
+
+- Amended D-005, D-017 and D-027 under the [owner-authorized Windows 11–only direction](docs/amendments/2026-11-25-windows-11-only.md). Added TL-0315 before broker continuation.
+- Scoped product execution and new workflows to Windows 11 client/native x64. Retired Windows 10 live audit and current alternative-OS advice. Preserved historical records and their versioned policy semantics.
+- Refreshed the reviewed offline lifecycle snapshot and aligned future Windows 11 x64 package qualification, task contracts and governance checks.
+
 ## 0.6.0 — 2026-11-24
 
 - Added D-074 under the [owner-authorized permanent testing policy reset](docs/amendments/2026-11-24-permanent-testing-policy-reset.md). Codex owns routine engineering verification, evidence and integration. Preserve applicable accountable decisions and distinctly record absent or failed observations.

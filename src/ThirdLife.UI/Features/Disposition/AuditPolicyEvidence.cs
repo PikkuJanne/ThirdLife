@@ -10,6 +10,7 @@ namespace ThirdLife.UI.Features.Disposition;
 internal static class AuditPolicyEvidence
 {
     private const string OsProvider = "windows-operating-system";
+    private const string IdentitySource = "os.windows.identity";
     private const string LifecycleSource = "os.lifecycle.catalog";
     private const string SystemProvider = "windows-system-inventory";
     private const string FirmwareProvider = "windows-firmware-security";
@@ -36,12 +37,13 @@ internal static class AuditPolicyEvidence
 
         var intake = job.SanitizationEvidence.Single(evidence => evidence.Metadata.EvidenceId == gate.EvidenceId);
         var observations = assessment.Observations.ToLookup(fact => fact.EvidenceKey.Value, StringComparer.Ordinal);
-        var lifecycleIssue = GetLifecycleIssue(observations, evaluatedAtUtc);
+        var familyIssue = GetFamilyIssue(observations);
+        var lifecycleIssue = StrongestIssue(familyIssue, GetLifecycleIssue(observations, evaluatedAtUtc));
         var architectureIssue = GetArchitectureIssue(observations);
         var projected = new List<Observation> { ProjectSanitization(intake) };
         foreach (var fact in assessment.Observations)
         {
-            if (Project(fact, lifecycleIssue, architectureIssue) is { } selected)
+            if (Project(fact, familyIssue, lifecycleIssue, architectureIssue) is { } selected)
             {
                 if ((fact.EvidenceKey.Value == "operating_system.release" && observations.Contains("os.family")) ||
                     (fact.EvidenceKey.Value == "operating_system.support_state" && observations.Contains("os.support_target")))
@@ -79,11 +81,11 @@ internal static class AuditPolicyEvidence
             intake.Metadata.EvidenceClassification == EvidenceClassification.HumanConfirmed ? intake.OperatorId : null);
     }
 
-    private static Observation? Project(Observation fact, string? lifecycleIssue, string? architectureIssue) =>
+    private static Observation? Project(Observation fact, string? familyIssue, string? lifecycleIssue, string? architectureIssue) =>
         fact.EvidenceKey.Value switch
         {
-            "os.family" when IsLifecycle(fact) =>
-                WithLimit(fact, new EvidenceKey("operating_system.release"), lifecycleIssue),
+            "os.family" when IsOsFamily(fact) =>
+                WithLimit(fact, new EvidenceKey("operating_system.release"), familyIssue),
             "os.support_target" when IsLifecycle(fact) =>
                 WithLimit(fact, new EvidenceKey("operating_system.support_state"),
                     StrongestIssue(lifecycleIssue, fact.Value?.StringValue == "supported" ? architectureIssue : null)),
@@ -160,7 +162,7 @@ internal static class AuditPolicyEvidence
 
     private static string? GetLifecycleIssue(ILookup<string, Observation> observations, DateTimeOffset evaluatedAtUtc)
     {
-        var (family, familyIssue) = ReadScoped(observations["os.family"], IsLifecycle);
+        var (family, familyIssue) = ReadScoped(observations["os.family"], IsOsFamily);
         var (target, targetIssue) = ReadScoped(observations["os.support_target"], IsLifecycle);
         var (source, sourceIssue) = ReadScoped(observations["os.lifecycle.source"], IsLifecycle);
         var (revision, revisionIssue) = ReadScoped(observations["os.lifecycle.revision"], IsLifecycle);
@@ -188,24 +190,49 @@ internal static class AuditPolicyEvidence
             return Malformed;
         }
 
-        var familyToken = family.Value.StringValue;
-        var supportToken = target.Value.StringValue;
-        if (familyToken is not ("windows_10" or "windows_11") ||
-            supportToken is not ("supported" or "unsupported" or "audit_only"))
+        if (target.Value.StringValue == "audit_only")
+        {
+            return "legacy_windows_10_audit";
+        }
+
+        if (target.Value.StringValue is not ("supported" or "unsupported"))
         {
             return Malformed;
         }
 
-        if (!new[] { target, source, revision, asOf!, freshThrough!, collectedOn! }.All(fact =>
-                fact.Metadata.Provenance == family.Metadata.Provenance &&
-                fact.Metadata.CollectedAtUtc == family.Metadata.CollectedAtUtc) ||
-            (familyToken == "windows_10" && supportToken != "audit_only") ||
-            (familyToken == "windows_11" && supportToken == "audit_only"))
+        if (!new[] { source, revision, asOf!, freshThrough!, collectedOn! }.All(fact =>
+                fact.Metadata.Provenance == target.Metadata.Provenance && SameCollection(fact, target)))
         {
             return Conflict;
         }
 
         return evaluationDate > last ? Stale : null;
+    }
+
+    private static string? GetFamilyIssue(ILookup<string, Observation> observations)
+    {
+        var (family, issue) = ReadScoped(observations["os.family"], IsOsFamily);
+        if (issue is not null)
+        {
+            return issue;
+        }
+
+        if (family!.Value is not { Kind: EvidenceValueKind.Enum, StringValue: { } token } ||
+            token is not ("windows_11" or "windows_10" or "windows_server" or "windows_other"))
+        {
+            return Malformed;
+        }
+
+        var (target, targetIssue) = ReadScoped(observations["os.support_target"], IsLifecycle);
+        if (targetIssue == Conflict ||
+            (target is not null && targetIssue is null && (!SameCollection(target, family) ||
+                (token != "windows_11" && target.Value?.StringValue == "supported") ||
+                (token != "windows_10" && target.Value?.StringValue == "audit_only"))))
+        {
+            return Conflict;
+        }
+
+        return null;
     }
 
     private static (Observation? Fact, string? Issue) ReadScoped(
@@ -238,6 +265,13 @@ internal static class AuditPolicyEvidence
 
     private static bool IsLifecycle(Observation fact) => IsOwned(fact, OsProvider, LifecycleSource);
 
+    private static bool IsOsFamily(Observation fact) => IsOwned(fact, OsProvider, IdentitySource) || IsLifecycle(fact);
+
+    private static bool SameCollection(Observation left, Observation right) =>
+        left.Metadata.ProviderId == right.Metadata.ProviderId &&
+        left.Metadata.Provenance.Kind == right.Metadata.Provenance.Kind &&
+        left.Metadata.CollectedAtUtc == right.Metadata.CollectedAtUtc;
+
     private static bool IsSystemArchitecture(Observation fact) =>
         fact.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture ||
         IsOwned(fact, SystemProvider, "system_inventory.dotnet.os_architecture");
@@ -250,7 +284,8 @@ internal static class AuditPolicyEvidence
         issues.Contains(Conflict, StringComparer.Ordinal) ? Conflict :
         issues.Contains(Stale, StringComparer.Ordinal) ? Stale :
         issues.Contains(Malformed, StringComparer.Ordinal) ? Malformed :
-        issues.Any(issue => issue is not null) ? Missing : null;
+        issues.FirstOrDefault(issue => issue is not null && issue != Missing) ??
+        (issues.Contains(Missing, StringComparer.Ordinal) ? Missing : null);
 
     private static Observation WithLimit(Observation fact, EvidenceKey key, string? issue) =>
         key == fact.EvidenceKey && issue is null

@@ -91,7 +91,10 @@ public static partial class WorkshopReportRenderer
         Line(report, $"Policy ID {SafeCode(decision.PolicyId)}.");
         Line(report, $"Version {SafeCode(decision.PolicyVersion)}.");
         Line(report, $"SHA-256 {decision.PolicySha256}.");
-        Line(report, savedDecision.Snapshot.Document.Status == PolicyStatus.Candidate
+        var policy = savedDecision.Snapshot.Document;
+        Line(report, !policy.IsCurrentSchema
+            ? "Historical policy evaluation. Use the current policy for a new preparation decision."
+            : policy.Status == PolicyStatus.Candidate
             ? "Candidate policy evaluation for workshop review."
             : "Saved effective policy evaluation.");
         Line(report, $"Evaluated {Timestamp(decision.EvaluatedAtUtc)}.");
@@ -103,6 +106,11 @@ public static partial class WorkshopReportRenderer
             "The saved rule details include any exception statuses and records.");
         Line(report, "");
         Line(report, "Captured disposition");
+        if (!policy.IsCurrentSchema)
+        {
+            Line(report, "Original recorded disposition and explanation follow.");
+        }
+
         Line(report, SafePolicyPresentation(decision.Title));
         Line(report, SafePolicyPresentation(decision.Explanation));
     }

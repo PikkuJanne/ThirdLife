@@ -1,12 +1,12 @@
 # ThirdLife Setup Core — Binding Development Roadmap
 
-**Bundle version:** 0.6.0  
+**Bundle version:** 0.7.0  
 **Portfolio roadmap:** ThirdLife Software Portfolio v2.1 (15 August 2026)  
 **Project / queue:** ThirdLife Setup Core — Team B / B1  
 **Pilot target:** v0.1 controlled partner pilot at `TL-0611`  
 **Standalone release target:** ThirdLife Setup Core 1.0 at `TL-0710`  
 **Future suite project:** ThirdLife Deployment and Suite Assembly — Team B / B4  
-**Primary platform:** supported Windows 11 x64  
+**Supported application host and workflow target:** Windows 11 client on native x64  
 **Implementation baseline:** C# / .NET 10 / WPF / SQLite
 
 ## 1. Purpose and authority
@@ -81,7 +81,7 @@ The product outcome is not merely that commands ran or packages were installed. 
 
 ### 3.1 Primary users and starting condition
 
-The primary operator is a volunteer or employee at a refurbishment charity, repair café, library, school, municipality, or community organization. The supported preparation flow starts with a sanitized/replaced/no-donor-storage device and a fresh or known Windows installation. Existing personal computers with unknown user data, malware, licences, keys, and configuration are outside this roadmap.
+The primary operator is a volunteer or employee at a refurbishment charity, repair café, library, school, municipality, or community organization. The supported preparation flow starts with a sanitized/replaced/no-donor-storage device and a fresh or known Windows 11 client installation on native x64. Existing personal computers with unknown user data, malware, licences, keys, and configuration are outside this roadmap.
 
 ### 3.2 Visible workflow
 
@@ -94,10 +94,9 @@ The UI may allow navigation, but it may not convert missing or failed blocking e
 1. **Ready to prepare**
 2. **Repair and retest**
 3. **Human review required**
-4. **Alternative operating system candidate**
-5. **Do not deploy**
+4. **Do not deploy**
 
-There is no composite health or security percentage. Every disposition cites the governing policy rule and evidence, including missing or contradictory evidence.
+Historical decisions retain their original policy and disposition, including the retired alternative-operating-system result. There is no composite health or security percentage. Every disposition cites the governing policy rule and evidence, including missing or contradictory evidence.
 
 ## 4. Project boundary
 
@@ -286,7 +285,7 @@ Under [D-074](DECISIONS.md#d-074), engineering readiness depends on technical pr
 
 TL-0113's completed shell observations retain their original provenance. TL-0114 connects durable job create/open/reopen, external sanitization capture, read-only assessment and guided manual capture to the operator UI, with automated implementation verification. TL-0115 renders the deterministic workshop report from durable job evidence and adds the operator UI path to generate and open that report.
 
-**Gate:** `TL-0116` — Validate the M1 audit-only gate. Codex owns the launched-route regression and technical acceptance under [D-074](DECISIONS.md#d-074). Retain earlier failures and applicable unchanged observations with their provenance. The current assignment ends with this gate's verified integration.
+**Gate:** `TL-0116` — Validate the M1 audit-only gate. Codex owns the launched-route regression and technical acceptance under [D-074](DECISIONS.md#d-074). Retain earlier failures and applicable unchanged observations with their provenance. The prior permanent-testing-reset implementation assignment ended at verified integration of this gate.
 
 ### M2 — Explainable disposition engine
 
@@ -335,10 +334,13 @@ TL-0113's completed shell observations retain their original provenance. TL-0114
 | `TL-0308` | Implement the durable action journal | `codex` | `TL-0303`, `TL-0102` |
 | `TL-0309` | Implement reboot checkpoints and resume tokens | `codex` | `TL-0308`, `TL-0102` |
 | `TL-0310` | Define the versioned broker protocol | `codex` | `TL-0303`, `TL-0009` |
-| `TL-0311` | Implement the ephemeral broker and authenticated IPC | `codex` | `TL-0310`, `TL-0002` |
+| `TL-0311` | Implement the ephemeral broker and authenticated IPC | `codex` | `TL-0310`, `TL-0002`, `TL-0315` |
 | `TL-0312` | Add focused broker security tests | `codex` | `TL-0311`, `TL-0004` |
 | `TL-0313` | Connect approval, journal, UAC, broker, and result flow | `codex` | `TL-0306`, `TL-0308`, `TL-0311` |
 | `TL-0314` | Validate the M3 safe-planning gate | `hybrid` | `TL-0307`, `TL-0309`, `TL-0312`, `TL-0313` |
+| `TL-0315` | Enforce Windows 11 client/native-x64 scope and preserve historical records | `codex` | `TL-0310` |
+
+The [platform amendment](docs/amendments/2026-11-25-windows-11-only.md) supersedes the former Windows 10 live-audit criterion from TL-0107 and applies to the first executable broker. TL-0311 retains responsibility for trusted elevated startup and actual privilege and recovery evidence.
 
 **Gate:** `TL-0314` — Validate the M3 safe-planning gate. Record technical acceptance and the actual privilege-boundary authorization here.
 
@@ -377,7 +379,7 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 
 **Exit criteria:**
 
-- The job-seeker machine profile converges on supported clean Windows environments hosted on the active Codex machine.
+- The job-seeker machine profile converges on supported clean Windows 11 client/native-x64 environments hosted on the active Codex machine.
 - Essential failures and resource or ownership blockers prevent ready status.
 - Same-machine offline, low-space, no-GPU, reduced-concurrency, interruption, and failure scenarios preserve state and recovery.
 - Checkpoint and approved VM cold-start verification record exact versions and environment. State any unverified physical power cycle explicitly and retain genuinely required physical product/release conditions.
@@ -408,7 +410,7 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 
 - Workshop, recipient, and diagnostic outputs respect their distinct data boundaries.
 - Finalization and sign-off cannot be bypassed while blockers remain.
-- Codex completes recipient-guide checks, technical audits and the exact pilot package lifecycle, rollback and runbook before seeking consent for exposure.
+- Codex completes recipient-guide checks, technical audits and the exact Windows 11 client/native-x64 pilot package lifecycle, rollback and runbook before seeking consent for exposure.
 - The prepared evidence and required pilot records support one coordinated go/no-go packet at TL-0611, with actual security, privacy, accessibility, licensing, release and partner decisions attributed by scope.
 - The gate record states that Core 1.0 completion and portfolio handoff remain in M7.
 
@@ -436,7 +438,7 @@ Approved amendment `AMD-2026-08-22-ADR-0009` preserves the completed ADR 0004 at
 
 - ThirdLife Setup Core is useful, installable, updateable, repairable, removable, and recoverable without sibling applications, a ThirdLife account, or a permanent privileged service.
 - Recipient accessibility and basic operating-system backup choices remain recipient-controlled, reversible where applicable, and do not leak recovery material.
-- Offline core behavior, same-machine modest-hardware evidence, security/privacy, accessibility, update, repair, uninstall, migration, and data-preservation evidence pass the stable-release matrix.
+- Offline core behavior, same-machine modest-hardware evidence, security/privacy, accessibility, update, repair, uninstall, migration, and data-preservation evidence pass the Windows 11 client/native-x64 stable-release matrix.
 - Exact artifacts, hashes, source revision, SBOM, licence evidence, known limitations, sanitized samples, and RELEASE_INTERFACE.md are frozen.
 - Codex verifies the frozen standalone candidate before exposure. TL-0710 records actual stable-release and security/privacy/accessibility/licensing/support/portfolio decisions on the candidate and required pilot evidence.
 - Team B/B1 is complete and the next project is Scam Explainer; no B4 sibling adapter work is authorized by this gate.
@@ -476,14 +478,14 @@ Evidence names task, branch/commit, tier, exact command or procedure, duration, 
 
 Before `TL-0710`, freeze at minimum:
 
-- exact installer/package, package size, cryptographic hash, signature/verification method, source revision, and dependency lock;
+- exact Windows 11 native-x64 installer/package, package size, cryptographic hash, signature/verification method, source revision, and dependency lock;
 - SBOM, licence/redistribution review, third-party notices, and vulnerability-review record;
 - migration, update, repair, rollback/non-rollback, uninstall, and data-preservation evidence;
 - security, privacy, offline, same-machine modest-hardware, accessibility, hostile-input, failure-injection, cold-start coverage and targeted rerun results, with separately evidenced physical cold-boot conditions where required;
 - sanitized support-bundle sample and proof that prohibited categories are excluded;
 - non-sensitive sample job/input/output artifacts and hashes;
 - active reference-machine profile, test-tier manifest, constraint settings, workload hashes, skipped scenarios, and limits on hardware claims;
-- known limitations, supported versions/platforms, reporting/support path, and maintenance status;
+- verified Windows 11 client editions, builds and servicing coverage, known limitations, reporting/support path, and maintenance status;
 - completed `RELEASE_INTERFACE.md`; and
 - a signed/approved gate record confirming standalone usefulness and project-boundary compliance.
 

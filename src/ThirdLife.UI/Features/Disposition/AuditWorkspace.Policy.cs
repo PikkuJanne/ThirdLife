@@ -1,3 +1,4 @@
+using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Inventory;
 using ThirdLife.Persistence;
@@ -136,12 +137,18 @@ internal sealed partial class AuditWorkspace
         }
 
         var decision = saved.Decision;
+        var historical = !saved.Snapshot.Document.IsCurrentSchema;
         var label = saved.Snapshot.Document.Status == ThirdLife.Policy.Schema.PolicyStatus.Candidate ? "Candidate" : "Saved";
-        PolicyStatus = $"{label} decision saved for workshop review.";
+        PolicyStatus = historical
+            ? "Historical policy decision. Use the current policy for a new preparation decision."
+            : $"{label} decision saved for workshop review.";
         PolicyDispositionTitle = WorkshopReportRenderer.SafePolicyPresentation(decision.Title);
-        PolicyDispositionSummary = WorkshopReportRenderer.SafePolicyPresentation(decision.Summary);
+        PolicyDispositionSummary = historical && decision.Disposition == Disposition.AlternativeOperatingSystemCandidate
+            ? "This outcome was recorded under an earlier policy."
+            : WorkshopReportRenderer.SafePolicyPresentation(decision.Summary);
         PolicyExpertDetails = WorkshopReportRenderer.SafePolicyPresentation(
             $"Policy {decision.PolicyId} version {decision.PolicyVersion}\nSHA-256 {decision.PolicySha256}\n\n" +
+            (historical ? "Original recorded explanation\n" : string.Empty) +
             $"{decision.Explanation}\n\n{decision.RuleReport}\n\nExceptions\n" +
             (decision.ExceptionReport ?? "See the exception details captured with this saved policy."));
     }

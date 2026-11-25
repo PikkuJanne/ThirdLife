@@ -1,12 +1,12 @@
 schema_version: thirdlife.profile.v1
 profile_id: job-seeker
-version: 0.1.0-candidate.1
+version: 0.1.0-candidate.2
 status: candidate
 synthetic_data: true
 classification: PUBLIC_REFERENCE
 policy:
   id: community-laptop-policy
-  version: 0.1.0-candidate.1
+  version: 0.1.0-candidate.2
 catalog:
   id: community-laptop-candidate
   version: 0.1.0-candidate.1

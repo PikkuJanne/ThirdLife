@@ -35,7 +35,8 @@ public static class PolicyEvaluator
         var capabilities = activeCapabilityIds is null ? null : CollectCapabilities(activeCapabilityIds);
         var outcomes = policy.Rules
             .OrderBy(rule => rule.Requirement.RequirementId.Value, StringComparer.Ordinal)
-            .Select(rule => EvaluateRule(rule, observationsByKey.GetValueOrDefault(rule.Requirement.EvidenceKey), capabilities))
+            .Select(rule => EvaluateRule(rule, observationsByKey.GetValueOrDefault(rule.Requirement.EvidenceKey), capabilities,
+                policy.IsCurrentSchema ? KnownWindowsValues(rule.Requirement.EvidenceKey.Value) : default))
             .ToImmutableArray();
         var targetOutcomes = targetRules
             .OrderBy(target => target.Rule.Requirement.RequirementId.Value, StringComparer.Ordinal)
@@ -45,6 +46,17 @@ public static class PolicyEvaluator
         var savedCapabilities = capabilities?.OrderBy(id => id, StringComparer.Ordinal).ToImmutableArray();
         return (new PolicyEvaluation(policy, outcomes, savedCapabilities), targetOutcomes);
     }
+
+    internal static ImmutableArray<string> KnownWindowsValues(string evidenceKey) => evidenceKey switch
+    {
+        "system.architecture" => ["x64", "x86", "arm64", "arm32", "ia64"],
+        "operating_system.release" => ["windows_11", "windows_10", "windows_server", "windows_other"],
+        // A saved audit-only result is a known non-passing state under the current policy.
+        "operating_system.support_state" => ["supported", "unsupported", "audit_only"],
+        "processor.windows_11_eligibility" => ["eligible", "ineligible"],
+        "firmware.mode" => ["uefi", "bios"],
+        _ => default,
+    };
 
     private static Dictionary<EvidenceKey, IndexedEvidence> IndexByKey(
         IEnumerable<Observation> observations,

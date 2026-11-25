@@ -31,6 +31,10 @@ No unsupported Windows bypass is provided. The product does not:
 
 Unsupported or unknown states remain explicit and may block preparation or handover.
 
+## Platform scope
+
+Windows 10, earlier Windows, Windows Server, Linux, macOS, and ARM64 are outside the product scope. ThirdLife provides no alternate platform track, operating-system recommendation, Windows upgrade or imaging engine, or bootable assessment environment. Historical platform facts remain available in existing records.
+
 ## No recipient identity or secret custody
 
 The workshop does not create personal cloud accounts, infer accessibility preferences, retain passwords or recovery keys, take custody of backup credentials, or make recipient-specific choices while the recipient is absent. Sealed handover records these choices as pending.

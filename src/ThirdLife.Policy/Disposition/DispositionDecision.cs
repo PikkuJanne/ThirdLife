@@ -39,7 +39,7 @@ public sealed class DispositionDecision
         RuleDetails = ruleDetails;
         ExceptionHistory = exceptionHistory;
         EvaluatedAtUtc = evaluatedAtUtc;
-        (Title, Summary, Explanation) = DispositionExplanation.Describe(disposition, citations);
+        (Title, Summary, Explanation) = DispositionExplanation.Describe(disposition, citations, evaluation.Policy.IsCurrentSchema);
     }
 
     public Disposition Disposition { get; }

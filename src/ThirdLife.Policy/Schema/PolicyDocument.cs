@@ -47,6 +47,7 @@ public sealed record PolicyRule(
 public sealed class PolicyDocument
 {
     internal PolicyDocument(
+        string schemaVersion,
         string policyId,
         string version,
         string contentSha256,
@@ -58,6 +59,7 @@ public sealed class PolicyDocument
         PolicyTarget target,
         ImmutableArray<PolicyRule> rules)
     {
+        SchemaVersion = schemaVersion;
         PolicyId = policyId;
         Version = version;
         ContentSha256 = contentSha256;
@@ -70,7 +72,8 @@ public sealed class PolicyDocument
         Rules = rules;
     }
 
-    public string SchemaVersion { get; } = PolicySchema.Version;
+    public string SchemaVersion { get; }
+    public bool IsCurrentSchema => SchemaVersion == PolicySchema.Version;
 
     public string PolicyId { get; }
 

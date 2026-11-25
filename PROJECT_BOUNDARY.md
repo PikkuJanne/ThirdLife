@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Portfolio Boundary and Validation Contract
 
 **Status:** Binding project boundary  
-**Bundle version:** 0.6.0  
+**Bundle version:** 0.7.0  
 **Portfolio source:** *ThirdLife Software Portfolio — Two-Team Development Roadmap and Boundary Architecture*, version 2.1, 15 August 2026  
 **Current queue position:** Team B / B1  
 **Future suite project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
@@ -10,7 +10,7 @@
 
 **ThirdLife** is the product family and code identity. **ThirdLife Setup Core** is the active standalone project and the release being built by this repository. Production namespaces remain `ThirdLife.*` because the later B4 suite-assembly project may extend the same host product; this does not authorize integration code during B1.
 
-ThirdLife Setup Core helps a refurbisher, volunteer, support worker, or recipient assess and prepare a supported Windows PC through safe, explicit, understandable actions. It must remain useful, installable, removable, recoverable, and supportable without any sibling portfolio application, project-controlled account, external test laboratory, or permanent privileged service.
+ThirdLife Setup Core helps a refurbisher, volunteer, support worker, or recipient assess and prepare a Windows 11 client PC on native x64 through safe, explicit, understandable actions. Application execution and new live workflows share this platform boundary. Servicing and readiness are evaluated separately. It must remain useful, installable, removable, recoverable, and supportable without any sibling portfolio application, project-controlled account, external test laboratory, or permanent privileged service.
 
 ## 2. Owns
 
@@ -42,6 +42,7 @@ ThirdLife Setup Core does not own:
 - Job Application Studio records, authoring, deadlines, or application ranking;
 - Charity Cyber Check authorization, assessment evidence, beneficiary data, or certification;
 - Backup Circle repositories, schedules, credentials, recovery keys, or backup-engine behavior;
+- an alternate operating-system assessment or preparation track, deployment recommendation, port, or operating-system upgrade engine;
 - a central user identity, portfolio content library, shared workspace, or behavioural record;
 - another application's private database, internal source, development branch, background process, or release schedule;
 - shared SDKs, universal job engines, universal findings schemas, plugin frameworks, shared user-content databases, or portfolio-wide services;

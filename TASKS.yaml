@@ -1,6 +1,6 @@
 schema_version: 1
-bundle_version: 0.6.0
-generated_on: '2026-11-24'
+bundle_version: 0.7.0
+generated_on: '2026-11-25'
 project:
   name: ThirdLife
   component: ThirdLife Setup Core
@@ -11,7 +11,7 @@ project:
   standalone_release_gate: TL-0710
   future_assembly_project: ThirdLife Deployment and Suite Assembly
   future_assembly_queue_position: B4
-  platform: Windows 11 x64
+  platform: Windows 11 client on native x64
   stack:
   - .NET 10
   - C#
@@ -195,7 +195,7 @@ milestones:
     and constrained scenarios hosted on the active Codex machine.
   gate_task: TL-0511
   exit_criteria:
-  - The job-seeker machine profile converges on supported clean Windows environments hosted on the active Codex machine.
+  - The job-seeker machine profile converges on supported clean Windows 11 client/native-x64 environments hosted on the active Codex machine.
   - Essential failures and resource or ownership blockers prevent ready status.
   - Same-machine offline, low-space, no-GPU, reduced-concurrency, interruption, and failure scenarios preserve state and
     recovery.
@@ -211,7 +211,7 @@ milestones:
   exit_criteria:
   - Workshop, recipient, and diagnostic outputs respect their distinct data boundaries.
   - Finalization and product operator sign-off cannot be bypassed while blockers remain.
-  - TL-0610 verifies the reproducible technical pilot candidate, lifecycle, runbook, and audit evidence. TL-0611 records
+  - TL-0610 verifies the reproducible Windows 11 client/native-x64 pilot candidate, lifecycle, runbook, and audit evidence. TL-0611 records
     the actual controlled-pilot go/no-go, accountable dispositions, and partner acceptance before exposure.
   - The gate record states that Core 1.0 completion and portfolio handoff remain in M7.
 - id: M7
@@ -226,7 +226,7 @@ milestones:
   - Recipient accessibility and basic operating-system backup choices remain recipient-controlled, reversible where applicable,
     and do not leak recovery material.
   - Offline core behavior, same-machine modest-hardware evidence, security/privacy, accessibility, update, repair, uninstall,
-    migration, and data-preservation evidence pass the stable-release matrix.
+    migration, and data-preservation evidence pass the Windows 11 client/native-x64 stable-release matrix.
   - Exact artifacts, hashes, source revision, SBOM, licence evidence, known limitations, sanitized samples, and RELEASE_INTERFACE.md
     are frozen.
   - Release wording distinguishes design intent and active-machine observations from unperformed cross-hardware certification.
@@ -2364,6 +2364,8 @@ tasks:
     duration: Targeted 38.786 s; active activation 2.222 s, OS 1.795 s, reboot 1.726 s; committed Sandbox Quick 90.707 s, guest 148.017 s, total 201.530 s
     reference: PR 8; implementation c144221; verified Sandbox source dd4f1d0; artifacts/audit/TL-0107; artifacts/evidence/TL-0107/report.md; runs.json; inputs.sha256 (bdd24c5aedeba3e115a2cef7e65d4130b8275a58fc09181218444e29793c11d8)
     limitation: Native calls can outlive caller timeout; lifecycle expires after 2026-10-30; reboot indicators incomplete; no ownership, readiness, or cross-hardware claim; Full/Extended not triggered; direct-host Application Control compatibility remains unverified.
+  notes:
+  - The original Windows 10 audit criterion and verification describe completed historical work. For current collection, assessment and platform rejection coverage, see TL-0315 and docs/amendments/2026-11-25-windows-11-only.md.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
@@ -3910,7 +3912,9 @@ tasks:
   depends_on:
   - TL-0310
   - TL-0002
+  - TL-0315
   decision_refs:
+  - D-005
   - D-029
   - D-030
   - D-031
@@ -3926,7 +3930,7 @@ tasks:
   - The UI remains unelevated. The approved broker has the expected token and exits cleanly.
   - Pipe ACLs exclude other users/sessions.
   - Nonce, expiry, and correlation are enforced.
-  - The broker validates against its own registry.
+  - The broker validates against its own registry. The executor independently enforces the TL-0315 Windows 11 platform guard before dispatch.
   - Cancellation or broker crash returns a recoverable journal result.
   - The broker exits after batch or timeout.
   verification:
@@ -3935,6 +3939,7 @@ tasks:
   evidence: []
   notes:
   - UAC remains explicit. The attributable privilege-boundary authorization is recorded once at TL-0314.
+  - Reconcile retained draft PR #36 with the integrated TL-0315 contract. Preserve the trusted elevated startup and real privilege and recovery evidence gaps.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
@@ -4083,6 +4088,64 @@ tasks:
   - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
+  extended_test_triggers: []
+- id: TL-0315
+  title: Enforce Windows 11 client/native-x64 scope and preserve historical records
+  milestone: M3
+  workstream: platform
+  kind: code
+  priority: P0
+  status: done
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0310
+  decision_refs:
+  - D-005
+  - D-017
+  - D-027
+  - D-045
+  - D-067
+  - D-072
+  - D-074
+  objective: Apply the approved Windows 11 platform amendment across application entry points, policy, lifecycle evidence, and delivery.
+  deliverables:
+  - docs/amendments/2026-11-25-windows-11-only.md
+  - Shared Windows 11 client/native-x64 guard before live work
+  - Versioned current policy and historical record compatibility
+  - Reviewed edition-aware offline Windows 11 lifecycle data and documentation
+  - Synchronized roadmap, package qualification, validators and tests
+  - artifacts/evidence/TL-0315/report.md
+  acceptance_criteria:
+  - Windows 11 client on native x64 is the only supported host and new workflow target. Standard-user UI startup remains required.
+  - Unsupported, missing or contradictory platform identity stops live store, assessment and action entry points with bounded accessible feedback.
+  - Known Windows 11 identity can launch independently of servicing freshness. Unknown or stale servicing evidence cannot satisfy readiness.
+  - No current policy recommends an alternative operating system. Original jobs, reports, observations, tokens and policy provenance remain readable.
+  - Historical records and replay do not create current executable authority. Store migration occurs only if needed and follows existing recovery rules.
+  - Future pilot and stable package verification applies the same platform scope. The TL-0311 broker blocker and exposure decisions retain their evidence and scope.
+  verification:
+  - Use deterministic Windows 11, Windows 10, overlapping Server build, Arm64 emulation, and malformed or conflicting platform cases.
+  - Verify supported startup, the real isolated synthetic assessment and disposition route, saved-job reopen, report agreement, and applicable keyboard, focus, automation and scaling behavior on the active machine.
+  - Exercise pre-change records, legacy serialized outcomes, policy/version boundaries, and lifecycle edition and date boundaries.
+  - Run Targeted and clean-checkout Full with the branch candidate. Record exact source, artifacts, environment, durations and evidence limitations.
+  evidence:
+  - summary: Candidate Targeted, clean Full, and direct host and isolated WPF route passed. Original SQLite and policy history reopened and exported.
+    task: TL-0315
+    command_or_review: ./eng/verify.ps1 -Tier Targeted -Restore, ./eng/verify.ps1 -Tier Full -Restore, and named ActiveMachine checks
+    tier: full
+    result: passed
+    environment: Same-machine clean worktree, Windows 11 Pro 26H2 build 26300.9974, native x64, unelevated
+    date: '2026-11-25'
+    duration: Targeted 125.840 s and 1812 .NET tests, Full 337.118 s and 290 governance plus 1941 .NET tests, active checks 7.451 s
+    reference: artifacts/evidence/TL-0315/report.md, candidate b8314ef
+    limitation: Actual startup and synthetic job route observed separately. No other hardware, UAC or real broker recovery claim. No named Extended trigger.
+  notes:
+  - Applies AMD-2026-11-25-WINDOWS-11-ONLY with no routine human QA. The prior TL-0107 Windows 10 audit contract is historical.
+  - The assignment is independent of the draft TL-0311 transport. Reconcile that work before its integration.
+  expected_test_tier: full
+  full_test_triggers:
+  - This governed amendment changes the execution entry points, versioned policy schema and historical compatibility.
   extended_test_triggers: []
 - id: TL-0401
   title: Spike structured WinGet integration paths
@@ -5490,8 +5553,10 @@ tasks:
   - Dependencies, licenses, SBOM, known vulnerabilities, release signing/update assumptions, and disclosure path are reviewed.
   - Critical/high issues and unowned residual risks are explicit blockers for the affected pilot scope.
   - Review explicitly confirms unsupported OS, activation, ownership, firmware-password, and MDM bypasses are absent.
+  - Review confirms that planned package execution and lifecycle require Windows 11 client on native x64, consistent with D-005.
   verification:
   - Run the security test suite, dependency/SBOM checks, privacy fixtures, and focused technical inspection.
+  - Inspect Windows 11 native-x64 artifact targets, entry-point guards and planned install, upgrade, repair and removal constraints.
   - Trace every high-risk threat to code and test evidence or a documented blocker. Identify findings requiring an accountable
     disposition at TL-0611.
   evidence: []
@@ -5548,8 +5613,7 @@ tasks:
   - RELEASE_INTERFACE.md preview draft
   - Verified packaged lifecycle/runbook record and candidate decision inputs
   acceptance_criteria:
-  - A clean Windows machine can install/run the build using documented prerequisites and remove/rollback it without losing
-    workshop records unintentionally.
+  - A clean Windows 11 client on native x64 can install and run the build using documented prerequisites, then repair, remove or roll it back while preserving workshop records as documented.
   - The runbook covers sanitization prerequisite, intake, assessment, decisions, plan approval, UAC, interruption/reboot,
     finalization, reports, handover, support, and emergency stop.
   - Network categories and offline behavior are documented; no ThirdLife account or cloud dependency is required.
@@ -5563,8 +5627,8 @@ tasks:
     freeze remain in M7.
   verification:
   - Reproduce the pilot package from a clean checkout.
-  - Drive the real packaged install, upgrade/reinstall, rollback/uninstall, and runbook route in approved same-machine
-    environments and record the outcomes and cleanup.
+  - Drive the real packaged install, upgrade, repair, rollback, uninstall, and runbook route in approved same-machine
+    Windows 11 client/native-x64 environments. Record exact edition, release, build, architecture, artifact, outcomes and cleanup.
   - Black-box review the pilot draft interface sheet against the packaged build and mark unknown/stable-only fields explicitly.
   evidence: []
   notes:
@@ -5836,16 +5900,16 @@ tasks:
   - D-063
   - D-074
   objective: Verify the standalone application lifecycle and data preservation across approved clean and upgraded same-machine
-    Windows environments.
+    Windows 11 client/native-x64 environments.
   deliverables:
-  - production installer/package definition
+  - Windows 11 native-x64 production installer/package definition
   - update and repair procedure
   - rollback or explicit non-rollback procedure
   - uninstall/data-preservation behavior
   - clean-install and upgrade fixtures/tests
   - Versioned packaged lifecycle evidence, recovery and preservation outcomes, and release decision inputs
   acceptance_criteria:
-  - Tested clean and upgraded same-machine Windows environments install, launch, update/repair, and uninstall ThirdLife
+  - Tested clean and upgraded same-machine Windows 11 client/native-x64 environments install, launch, update/repair, and uninstall ThirdLife
     Setup Core using documented privileges and restart behavior.
   - The main UI remains unelevated and no permanent privileged service is left installed.
   - Jobs and user-selected reports are preserved or removed only through explicit documented choices.
@@ -5854,7 +5918,7 @@ tasks:
   - A downgrade or rollback that is unsafe after migration is disclosed before change with export/recovery steps.
   verification:
   - Drive the actual packaged clean install, reinstall/repair, upgrade from the pilot build, interruption, rollback/non-rollback,
-    uninstall, and data-preservation paths.
+    uninstall, and data-preservation paths. Record exact edition, release, build, architecture and artifact.
   - Inspect services, scheduled tasks, startup entries, files, registry entries, and job data before/after lifecycle operations.
   evidence: []
   notes:
@@ -5963,7 +6027,7 @@ tasks:
   acceptance_criteria:
   - Identity, artifact, install/update/repair/remove, launch, data locations, inputs/outputs, offline, resource, privilege,
     support, samples, limitations, and contacts are complete for the frozen version.
-  - Unknown fields remain explicit and unsupported behavior is not invented.
+  - The sheet distinguishes Windows 11 client/native-x64 product scope, tested release and edition coverage, and servicing prerequisites. Unknown fields remain explicit.
   - Only independently useful launch/CLI behavior is documented; no speculative plugin, URI, shared schema, or sibling
     command is added.
   - Samples contain no personal data and require no sibling source or development build.
@@ -6031,7 +6095,7 @@ tasks:
   - Same-machine low-resource scenarios show bounded peak memory, temporary/cache growth, correct output, and safe cancellation/recovery.
   - Recipient accessibility and supported backup/restore or explicit pending/unsupported paths pass their matrices.
   - Install, upgrade/repair, migration, rollback/non-rollback, uninstall, and data preservation pass in clean and upgraded
-    environments hosted on the active Codex machine.
+    Windows 11 client/native-x64 environments hosted on the active Codex machine. Record exact editions, releases, builds and artifacts.
   - All critical/high defects are fixed and their smallest deterministic cases plus related targeted sets rerun, or they
     block release.
   - No test uses a sibling development build, private interface, external hardware matrix, or authoritative remote runtime
@@ -6093,7 +6157,7 @@ tasks:
   acceptance_criteria:
   - Every artifact has an exact version and cryptographic hash and can be reproduced from the recorded source/dependency
     inputs.
-  - The release is independently installable/removable and has no sibling package or service dependency.
+  - The Windows 11 native-x64 release is independently installable/removable and has no sibling package or service dependency.
   - The interface sheet and samples correspond exactly to the frozen artifacts.
   - No B4 adapter, portfolio compatibility claim, or automatic adoption of future versions is bundled.
   - Candidate evidence identifies residual risks, unsupported configurations, maintenance, support and security routes,
@@ -6222,7 +6286,7 @@ tasks:
   - Recipient-controlled accessibility and basic operating-system backup behavior meets D-057 and exposes no unauthorized
     recovery material.
   - Installer, update, repair, migration, rollback/non-rollback, uninstall, offline core, same-machine modest-hardware,
-    security/privacy, accessibility, and data-preservation evidence pass.
+    security/privacy, accessibility, and data-preservation evidence pass for the D-005 Windows 11 client/native-x64 scope.
   - Exact artifacts, hashes, source revision, dependency lock, SBOM, licences, notices, known limitations, samples, and
     RELEASE_INTERFACE.md are frozen.
   - The boundary review finds no live cross-project dependency or early shared integration infrastructure.
