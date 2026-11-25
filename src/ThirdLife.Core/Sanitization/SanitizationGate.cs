@@ -167,6 +167,8 @@ public sealed record SanitizationGateStatus
 
 public static class SanitizationGate
 {
+    public const string WorkshopIntakePolicyVersion = "m1-intake-v1";
+
     public static SanitizationGateDecision Evaluate(
         JobId jobId,
         SanitizationEvidence evidence,

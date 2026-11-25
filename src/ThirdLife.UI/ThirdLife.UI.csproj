@@ -13,9 +13,17 @@
     <EmbeddedResource Include="app.manifest" LogicalName="ThirdLife.UI.app.manifest" />
     <EmbeddedResource Include="..\..\fixtures\policies\community-laptop-policy.json"
                       LogicalName="ThirdLife.UI.community-laptop-policy.json" />
+    <EmbeddedResource Include="..\..\fixtures\catalog\catalog.json"
+                      LogicalName="ThirdLife.UI.catalog.json" />
+    <EmbeddedResource Include="..\..\fixtures\profiles\basic.json"
+                      LogicalName="ThirdLife.UI.basic.json" />
+    <EmbeddedResource Include="..\..\fixtures\profiles\job-seeker.json"
+                      LogicalName="ThirdLife.UI.job-seeker.json" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ThirdLife.Actions\ThirdLife.Actions.csproj" />
+    <ProjectReference Include="..\ThirdLife.Catalog\ThirdLife.Catalog.csproj" />
     <ProjectReference Include="..\ThirdLife.Core\ThirdLife.Core.csproj" />
     <ProjectReference Include="..\ThirdLife.Inventory\ThirdLife.Inventory.csproj" />
     <ProjectReference Include="..\ThirdLife.Persistence\ThirdLife.Persistence.csproj" />

@@ -3615,7 +3615,7 @@ tasks:
   workstream: ui
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -3647,7 +3647,27 @@ tasks:
   verification:
   - UI-test approve, decline, deselect, and details.
   - Verify no broker starts before approval.
-  evidence: []
+  evidence:
+  - summary: Loaded WPF plan review passed approval, decline, optional deselection, essential skip, default details and 200 percent keyboard access. The unelevated apphost passed separately.
+    task: TL-0306
+    command_or_review: .\eng\verify.ps1 -Tier Targeted with UI and Actions tests; ShellProcessSmokeTests
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, synthetic job and constrained WPF viewport
+    date: '2026-11-25'
+    duration: 64.225 s for 1185 tests; 3.668 s apphost smoke
+    reference: artifacts/evidence/TL-0306/report.md, source 5517e07
+    limitation: No-op review session only. No dispatch, durable approval storage, or system DPI change.
+  - summary: Clean Full verified both first-party UI project edges and the same source tree.
+    task: TL-0306
+    command_or_review: .\eng\verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean same-machine worktree, Windows 11 x64, Python 3.14.7 and SDK 10.0.400
+    date: '2026-11-25'
+    duration: 323.95 s, 287 governance and 1748 .NET tests
+    reference: artifacts/evidence/TL-0306/report.md, source tree f181870
+    limitation: Extended was not triggered.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

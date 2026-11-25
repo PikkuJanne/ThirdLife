@@ -67,7 +67,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged
         : "Not available: no assessment evidence is open. Device requirements have not been evaluated and no checks have passed.";
 
     public string PlanText => auditAvailable
-        ? "No plan exists. This audit workflow records evidence. Decide, Prepare, Verify, and Handover remain unavailable."
+        ? "The audit controls show evidence and candidate decisions. With a current assessment you can review a synthetic preparation plan."
         : SelectedStage == ShellStage.Intake
         ? "No plan exists. Job entry and sanitization recording are not available in this shell. You can review the Inspect stage."
         : "No plan exists. Assessment collection is not available in this shell. Decide, Prepare, Verify, and Handover remain unavailable until their required evidence and workflows exist.";

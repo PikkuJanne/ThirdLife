@@ -100,6 +100,8 @@ public partial class MainWindow : Window
 
     private void OpenAuditWorkspace(object sender, RoutedEventArgs e) => AuditView.FocusWorkspace();
 
+    private void OpenPlanReview(object sender, RoutedEventArgs e) => AuditView.FocusPlanReview();
+
     private void ScrollFromWheel(object sender, MouseWheelEventArgs e) => _wheelScrolling.Scroll(ShellScroll, e);
 
     private void ResizeWorkflow(object sender, SizeChangedEventArgs e)
@@ -162,6 +164,14 @@ public partial class MainWindow : Window
             OpenAuditWorkspaceButton.Content = workspace.IsAssessmentRunning
                 ? "Go to assessment controls"
                 : "Go to audit controls";
+            PrepareButton.IsEnabled = workspace.CanReviewPlan;
+            PrepareStageLabel.Text = workspace.CanReviewPlan ? "4. Prepare — review plan" : "4. Prepare — review unavailable";
+            AutomationProperties.SetName(PrepareButton, workspace.CanReviewPlan
+                ? "4. Prepare, review plan"
+                : "4. Prepare, review unavailable");
+            AutomationProperties.SetHelpText(WorkflowStages,
+                "Use Page Down and Page Up to read stage requirements. Intake and Inspect are available for review. A current assessment enables synthetic plan review.");
+            PrepareCriteria.Text = "A current assessment and approved intake gate enable synthetic plan review. Review the choices, exact package details and declared impact.";
         }
     }
 

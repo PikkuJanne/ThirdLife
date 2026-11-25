@@ -1,5 +1,20 @@
 # Accessible six-stage shell — TL-0113
 
+## Preparation plan review — TL-0306
+
+An open job with a current assessment exposes Prepare as a shortcut to
+the plan review controls in the audit workspace. Prepare moves focus to the
+named Preparation plan group. The profile selector and capability checkboxes
+are native controls. A skipped essential action updates the readiness
+message and disables approval. Building a new plan displays a status update
+and opens the details. Escape closes the details and
+returns focus to their heading.
+
+The review is a synthetic no-op proposal tied to the current saved assessment.
+Approve and Decline capture the exact displayed plan and its impact for the
+open review session. Neither operation launches a broker. The rest of this
+document preserves the earlier TL-0113 shell baseline.
+
 ## Scope and workflow
 
 The shell presents **Intake → Inspect → Decide → Prepare → Verify → Handover**.

@@ -4,22 +4,23 @@
 **Bundle baseline:** 0.6.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
 **Current milestone:** M3 — Safe planning and privilege boundary  
-**Current task:** TL-0305 — Done
+**Current task:** TL-0306 — Done
 
 ## Continuity
 
-PR #29 integrated [plan resolution](artifacts/evidence/TL-0304/report.md)
-into `main` at `096e33e`. The `codex/tl-0305-preapproval-impact` branch
-contains the completed TL-0305 work and evidence.
+PR #30 integrated [impact estimation](artifacts/evidence/TL-0305/report.md)
+into `main` at `be79922`. The `codex/tl-0306-plan-review-approval`
+branch contains the completed TL-0306 work and evidence.
 
 The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-Preapproval estimates preserve declared values, partial totals, unknowns,
-and catalog network conflicts. Each estimate carries the exact plan digest.
-Targeted passed 1,180 tests. [TL-0305 evidence](artifacts/evidence/TL-0305/report.md)
+The audit workspace reviews synthetic no-op plans and binds approve or
+decline to the displayed plan digest and impact. The 200% loaded WPF test
+passed. Clean Full passed 287 governance tests and 1,748 .NET tests.
+[TL-0306 evidence](artifacts/evidence/TL-0306/report.md)
 
 ## Next action
 
-Start TL-0306 after verifying TL-0305 integration on updated `main`.
+Start TL-0307 after verifying TL-0306 integration on updated `main`.
