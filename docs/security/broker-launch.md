@@ -64,6 +64,10 @@ before the same-user, session and IPC checks. Missing or unsuitable installs sta
 unavailable. Decline and cancellation preserve the unelevated workflow, and ambiguous
 dispatch retains the existing recovery result.
 
+Broker-dependent actions remain unavailable in the ordinary application while
+TL-0317 qualification is open. The launcher is exercised by the opt-in
+rehearsal. Package setup uses its reviewed Windows Installer route.
+
 Verified test and runtime outcomes belong in [TL-0311 evidence](../../artifacts/evidence/TL-0311/report.md).
 The real consent rehearsal is separate from the deterministic fixtures and uses
 the production client from an unelevated WPF test window. Its single compiled

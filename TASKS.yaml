@@ -4176,7 +4176,7 @@ tasks:
   workstream: broker
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: M
   executor: codex
   environment: windows
@@ -4197,7 +4197,17 @@ tasks:
   - Independent supported package operations can be planned and dispatched without a ready broker.
   verification:
   - Build and run focused authentication, approval, startup, and broker-unavailability tests.
-  evidence: []
+  evidence:
+  - task: TL-0316
+    summary: The reconciled broker checkpoint passed clean Full. Source ancestry preserves PR 36 and the reset, and the normal application starts unelevated without the broker.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore, source ancestry and dispatch reachability review, and eng/run-ui-smoke.ps1
+    tier: full
+    result: passed
+    environment: Clean same-machine worktree on active Windows 11 Pro 26H2 native x64, .NET SDK 10.0.400, Python 3.14.7
+    date: '2026-11-25'
+    duration: Full 350.666 s, 303 governance and 2025 .NET tests. UI smoke 1.371 s.
+    reference: artifacts/evidence/TL-0311/report.md, tested source a5fcef3
+    limitation: Broker-dependent application dispatch remains unavailable. Active protected qualification is tracked in TL-0317.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier for integrated privilege-boundary changes.
@@ -4208,7 +4218,8 @@ tasks:
   workstream: broker
   kind: test
   priority: P0
-  status: in_progress
+  status: blocked
+  blocked_reason: Windows consent for exact protected provisioning is pending. Elevated accept, decline and recovery remain unobserved, and the owner-deferred distinct-account Hyper-V test remains open.
   size: L
   executor: codex
   environment: windows

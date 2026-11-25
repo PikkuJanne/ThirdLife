@@ -20,11 +20,12 @@ Clean Full passed on candidate `100aeb8`. The same build passed unelevated appli
 startup and read-only vendor package resolution. TL-0401 through TL-0404 are complete
 at their engineering scope.
 
-PR #36 retains the broker implementation and is being reconciled with the integrated reset
-under TL-0316. The installed Microsoft x64 tools and pinned .NET inputs produced the
-Native AOT broker. TL-0317 tracks protected deployment and live privilege qualification.
-The distinct-account guest remains deferred. [Broker evidence](artifacts/evidence/TL-0311/report.md)
+PR #36 contains the verified isolated TL-0316 broker checkpoint, reconciled with the reset.
+The installed Microsoft x64 tools and pinned .NET inputs produced the Native AOT broker.
+Protected provisioning awaits Windows consent. TL-0317 retains live privilege, recovery and
+the owner-deferred distinct-account guest. Broker-dependent actions remain unavailable in
+the ordinary application. [Broker evidence](artifacts/evidence/TL-0311/report.md)
 
-After action-specific authorization, run the ordinary launched app on the admitted active
-Windows 11 host, verify exact machine registration, then reopen the job and verify its
-report. The task remains incomplete until that evidence is recorded.
+The live package transaction awaits machine-change authorization and an attributable
+intake fact. Then run the ordinary launched app on the admitted active Windows 11 host,
+verify exact machine registration, reopen the job and verify its report.

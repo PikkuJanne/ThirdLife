@@ -178,6 +178,7 @@ and linker/DUMPBIN 14.52.37029.0 had valid signatures. The VC toolset
 directory was 14.52.37025. Signed RC, MT and SignTool resolved with the
 10.0.28000.0 SDK. The x64 SDK supplied `kernel32.lib`, `advapi32.lib`
 and `ucrt.lib`. The active host remained unelevated.
+[Microsoft Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell)
 
 The pre-edit broker IPC baseline passed 33 cases. The pinned .NET SDK
 10.0.400 published the original `642e629` checkpoint in 23.431 s.
@@ -197,6 +198,7 @@ heap, string, conversion, stdio, runtime and locale. The import table contains
 `SetDefaultDllDirectories`. MT extracted `asInvoker` and `uiAccess=false`.
 The unsigned local candidate returned exit 2 on an ordinary launch without
 a ticket. Only the executable and its identity record are provisioning inputs.
+[Microsoft linker flag reference](https://learn.microsoft.com/en-us/cpp/build/reference/dependentloadflag)
 
 Before provisioning, the exact reviewed script SHA-256 matched
 `cd8c8d67d943872b9206fc14379df428406785d10a4b7b1122e9cf248c6a90da`.
@@ -210,3 +212,29 @@ The development reset supersedes the original integration hold for safe
 isolated work. TL-0316 covers that integration. TL-0317 covers live
 qualification, including the owner-deferred distinct-account scenario.
 The ordinary package path has no call to the broker launcher.
+
+## Reconciled checkpoint verification
+
+Merge checkpoint `a5fcef310c685045f7ca0f282bb70ea08d4bb51a`,
+tree `19a4a15f60f9dfa77280471ad24d33140b2606d2`, retains both the draft
+broker head `642e629` and reset merge `0492cb7` as parents.
+
+| Check | Result |
+| --- | --- |
+| `eng/verify.ps1 -Tier Quick -Restore` | Passed in 106.670 s. Seven focused governance and 1,193 .NET tests. |
+| `eng/verify.ps1 -Tier Full -Restore` | Passed in 350.666 s in a clean same-machine worktree. 303 governance and 2,025 .NET tests. Locked restore, format and the Release build passed with zero warnings. |
+| Broker active-machine unelevated rejection | One valid-ticket managed apphost case passed in a separate 2.428 s invocation on the reconciled build. The native candidate independently refused a direct launch without a ticket. |
+| `eng/run-ui-smoke.ps1` | The reconciled app launched unelevated, responded to external UI Automation and exited normally in 1.371 s. Peak working set was 269,316,096 bytes in this single startup observation. |
+| `eng/generate-sbom.ps1 -ProductVersion 0.8.0-dev -SourceRevision <checkpoint>` | Generated the 33-component inventory in 5.564 s. SHA-256 `bf8a544ad588ca6740c75b2e95a394235f0374ec9651ccb4bc5e25f9b0aaff0f`. Release review is pending. |
+| GitHub Actions | Supplementary Windows clean-checkout check passed on `a5fcef3`. |
+
+The clean Full run covered the deterministic authentication, launcher, consent
+mapping and recovery checks. The clean worktree excluded the original checkout's
+untracked attachments and ignored test-result file from fixture copies.
+No physical accessibility or cross-hardware observation was added.
+
+Windows displayed a consent process for the exact reviewed provisioning command
+in the interactive session. The protected destination remained absent during
+verification. No actual consent decision, protected broker activation, elevated
+recovery or distinct-account denial was recorded. Keep the broker's ordinary
+application dispatch unavailable while TL-0317 remains open.
