@@ -55,6 +55,22 @@ As of 2026-08-28, `TL-0102` implements the first bounded structured-store slice 
 
 This checkpoint does not implement final job/handover completion, general attachments, deletion, retention enforcement, backup/export, incompatible-schema rollback, uninstall cleanup, final packaging, or release authorization. Archive is reversible and preserves evidence and gate-decision history. The narrow verified-journal startup interval documented in [`SECURITY.md`](../../SECURITY.md) remains an explicit same-user/local-administrator residual; a custom SQLite VFS is outside this task.
 
+## TL-0308 action journal checkpoint
+
+Schema v5 adds three tables for immutable plan and impact snapshots,
+operator approvals, and correlated action transitions under the existing
+protected job store. Migration v5 preserves existing rows and migration
+bytes. A v4 binary rejects a v5 store and preserves its contents. The journal
+adds no attachment directory or raw output retention.
+
+The repository accepts a new plan from typed planning provenance and verifies
+both retained digests on reopen. Approval and dispatch intent check the exact
+plan, impact and current sanitization decision in a guarded transaction. An
+identical retry returns `AlreadyRecorded`, including after an ambiguous
+commit. Only `Recorded` from a new dispatch intent can advance a caller to
+dispatch. A reopened Started or Applied record requires reconciliation by
+the caller. An independent verification transition follows Applied.
+
 ## Alternatives considered
 
 - **One JSON file per job:** rejected because durable transitions, indexed history, migrations, and concurrent recovery checks require more discipline than ad hoc whole-file replacement provides.

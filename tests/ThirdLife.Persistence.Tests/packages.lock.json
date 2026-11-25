@@ -112,6 +112,17 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "thirdlife.actions": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Catalog": "[1.0.0, )",
+          "ThirdLife.Core": "[1.0.0, )",
+          "ThirdLife.Policy": "[1.0.0, )"
+        }
+      },
+      "thirdlife.catalog": {
+        "type": "Project"
+      },
       "thirdlife.core": {
         "type": "Project"
       },
@@ -120,6 +131,7 @@
         "dependencies": {
           "Microsoft.Data.Sqlite.Core": "[10.0.11, )",
           "SQLitePCLRaw.bundle_winsqlite3": "[2.1.11, )",
+          "ThirdLife.Actions": "[1.0.0, )",
           "ThirdLife.Core": "[1.0.0, )",
           "ThirdLife.Policy": "[1.0.0, )"
         }

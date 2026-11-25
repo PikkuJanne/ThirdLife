@@ -20,6 +20,20 @@ internal static class PlanIdentity
         DispositionDecision? decision,
         PlanBlockReason? reason,
         ImmutableArray<PlannedAction> actions,
+        ImmutableArray<ProfileRecipientChoice> choices) =>
+        Convert.ToHexStringLower(SHA256.HashData(WritePlan(subject, decision, reason, actions, choices).WrittenSpan));
+
+    public static byte[] PlanBytes(ProposedPlan plan) =>
+        WritePlan(
+            new PlanSubject(plan.JobId, plan.GateDecisionId, plan.ProfileSha256, plan.CatalogSha256, plan.PolicySha256,
+                plan.EvidenceSha256, plan.SyntheticData, plan.ActiveCapabilityIds),
+            plan.PolicyDecision, plan.BlockedReason, plan.Actions, plan.RecipientChoices).WrittenSpan.ToArray();
+
+    private static ArrayBufferWriter<byte> WritePlan(
+        PlanSubject subject,
+        DispositionDecision? decision,
+        PlanBlockReason? reason,
+        ImmutableArray<PlannedAction> actions,
         ImmutableArray<ProfileRecipientChoice> choices)
     {
         var buffer = new ArrayBufferWriter<byte>();
@@ -58,7 +72,7 @@ internal static class PlanIdentity
             writer.WriteEndObject();
         }
 
-        return Convert.ToHexStringLower(SHA256.HashData(buffer.WrittenSpan));
+        return buffer;
     }
 
     public static Guid ActionId(PlanSubject subject, DispositionDecision decision, string capabilityId)

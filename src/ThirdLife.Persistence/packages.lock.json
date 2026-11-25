@@ -33,6 +33,17 @@
           "SQLitePCLRaw.core": "2.1.11"
         }
       },
+      "thirdlife.actions": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Catalog": "[1.0.0, )",
+          "ThirdLife.Core": "[1.0.0, )",
+          "ThirdLife.Policy": "[1.0.0, )"
+        }
+      },
+      "thirdlife.catalog": {
+        "type": "Project"
+      },
       "thirdlife.core": {
         "type": "Project"
       },

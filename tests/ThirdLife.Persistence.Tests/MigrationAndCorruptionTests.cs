@@ -245,6 +245,59 @@ public sealed class MigrationAndCorruptionTests
             actual.Checkpoints.Select(checkpoint => checkpoint.Kind));
     }
 
+    [Theory]
+    [InlineData(false, 4)]
+    [InlineData(true, 5)]
+    public async Task InterruptedJournalMigrationRecoversAndPreservesExistingJob(bool afterCommit, int interruptedVersion)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("version-four-journal-upgrade");
+        var sanitization = PersistenceTestData.CreateSanitization("version-four-journal-upgrade");
+        string databasePath;
+        SanitizationGateDecision gate;
+        await using (var versionFour = await SqliteJobStore.OpenForTestingAsync(
+                         workspace.StoreRoot, maximumMigrationVersion: 4, TimeProvider.System, faultInjector: null))
+        {
+            databasePath = versionFour.DatabasePath;
+            await versionFour.CreateJobAsync(job);
+            await versionFour.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [sanitization]));
+            gate = await versionFour.RecordSanitizationGateDecisionAsync(
+                SanitizationGate.Evaluate(job.JobId, sanitization, PersistenceTestData.Timestamp.AddMinutes(2)));
+        }
+
+        var faultPoint = afterCommit ? JobStoreFaultPoint.AfterMigrationCommit : JobStoreFaultPoint.BeforeMigrationCommit;
+        await Assert.ThrowsAsync<InjectedPersistenceException>(() => SqliteJobStore.OpenForTestingAsync(
+            workspace.StoreRoot, maximumMigrationVersion: 5, TimeProvider.System,
+            new ThrowingFaultInjector(faultPoint, detail: 5)));
+        Assert.Equal(interruptedVersion, await SqliteTestControl.ReadUserVersionAsync(databasePath));
+        const string journalQuery = """
+            SELECT COUNT(*)
+            FROM action_journal_plans, action_journal_approvals, action_journal_entries;
+            """;
+        if (!afterCommit)
+        {
+            await Assert.ThrowsAsync<SqliteException>(() =>
+                SqliteTestControl.ExecuteAsync(databasePath, journalQuery));
+        }
+
+        await using (var recovered = await SqliteJobStore.OpenForTestingAsync(
+                         workspace.StoreRoot, maximumMigrationVersion: 5, TimeProvider.System, faultInjector: null))
+        {
+            Assert.Equal(5, await SqliteTestControl.ReadUserVersionAsync(databasePath));
+            await SqliteTestControl.ExecuteAsync(databasePath, journalQuery);
+            var saved = await recovered.LoadJobAsync(job.JobId);
+            Assert.NotNull(saved);
+            Assert.Equal(job, saved.Job);
+            Assert.Equal(sanitization, Assert.Single(saved.SanitizationEvidence));
+            Assert.Equal(gate, Assert.Single(saved.SanitizationGateDecisions));
+        }
+
+        await Assert.ThrowsAsync<JobStoreVersionException>(() =>
+            SqliteJobStore.OpenForTestingAsync(
+                workspace.StoreRoot, maximumMigrationVersion: 4, TimeProvider.System, faultInjector: null));
+        Assert.Equal(5, await SqliteTestControl.ReadUserVersionAsync(databasePath));
+    }
+
     [Fact]
     public async Task FailedThirdMigrationLeavesCompleteVersionTwoAndLaterRetrySucceeds()
     {

@@ -4,22 +4,22 @@
 **Bundle baseline:** 0.6.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
 **Current milestone:** M3 — Safe planning and privilege boundary  
-**Current task:** TL-0307 — Done
+**Current task:** TL-0308 — In progress
 
 ## Continuity
 
-PR #31 integrated [plan review](artifacts/evidence/TL-0306/report.md)
-into `main` at `a6fc98f`. The `codex/tl-0307-plan-reapproval` branch
-contains the completed TL-0307 work and evidence.
+PR #32 integrated [material plan reapproval](artifacts/evidence/TL-0307/report.md)
+into `main` at `b624994`. TL-0308 starts there on
+`codex/tl-0308-durable-action-journal`.
 
 The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-Material changes require a fresh decision and show a plain-language comparison.
-Earlier decisions remain visible in review history. Equivalent rebuilds keep
-active approval. Targeted passed 1,211 tests. [TL-0307 evidence](artifacts/evidence/TL-0307/report.md)
+The additive v5 journal stores exact plans, impact, approvals and typed
+transitions. Restart and interrupted dispatch remain reviewable. The
+integrated Targeted and clean Full checks are pending.
 
 ## Next action
 
-Start TL-0308 after verifying TL-0307 integration on updated `main`.
+Finish verification and integrate TL-0308 before starting TL-0309.
