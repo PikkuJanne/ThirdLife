@@ -162,6 +162,8 @@ Those files contain approved retention guidance and exact synthetic redacted for
 - UI or broker death cannot erase a started record or authorize blind retry.
 - A crash after the started/dispatch-intent commit but before or during `F-06` remains a started ambiguous attempt; recovery checks correlated broker/machine state and never assumes that no mutation occurred.
 - Resume tokens are bound to user, job, action, approved content, and expiry; actual state is re-observed before retry.
+- The TL-0309 checkpoint records internal workshop IDs, plan and impact digests, the source journal entry, and a validity window of at most 24 hours. The current Windows user protects a digest of those fields through DPAPI, scoped to the guarded store file. The stored proof contains no recipient data, logon name, SID, or plaintext credential. A copied or rebuilt store requires manual job review.
+- An operator's resume or abandon choice is committed once in the local SQLite store. A resume opens the saved action for review and leaves its journal state pending fresh verification. Expired checkpoints can be abandoned. Startup adds no scheduled task, launcher, broker session, or elevation. A database restore or a wall clock rolled back within an unobserved validity window cannot prove fresh boot evidence or authorize dispatch.
 - UAC decline means no authorized privileged mutation and leaves a clear resumable/declined state.
 - Full disk, network loss, timeout, cancellation, wrong clock, and unexpected restart preserve truthful ambiguity and a manual/review path.
 - Export uses a temporary bounded file and final atomic placement where supported; partial output is removed or explicitly identified.

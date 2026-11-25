@@ -298,6 +298,53 @@ public sealed class MigrationAndCorruptionTests
         Assert.Equal(5, await SqliteTestControl.ReadUserVersionAsync(databasePath));
     }
 
+    [Theory]
+    [InlineData(false, 5)]
+    [InlineData(true, 6)]
+    public async Task InterruptedRebootCheckpointMigrationPreservesTheJobAndJournalSchema(bool afterCommit, int interruptedVersion)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("version-five-reboot-upgrade");
+        string databasePath;
+        await using (var versionFive = await SqliteJobStore.OpenForTestingAsync(
+                         workspace.StoreRoot, maximumMigrationVersion: 5, TimeProvider.System, faultInjector: null))
+        {
+            databasePath = versionFive.DatabasePath;
+            await versionFive.CreateJobAsync(job);
+        }
+
+        var faultPoint = afterCommit ? JobStoreFaultPoint.AfterMigrationCommit : JobStoreFaultPoint.BeforeMigrationCommit;
+        await Assert.ThrowsAsync<InjectedPersistenceException>(() => SqliteJobStore.OpenForTestingAsync(
+            workspace.StoreRoot, maximumMigrationVersion: 6, TimeProvider.System,
+            new ThrowingFaultInjector(faultPoint, detail: 6)));
+        Assert.Equal(interruptedVersion, await SqliteTestControl.ReadUserVersionAsync(databasePath));
+        const string checkpointQuery = "SELECT COUNT(*) FROM reboot_checkpoints, reboot_checkpoint_dispositions;";
+        if (!afterCommit)
+        {
+            await Assert.ThrowsAsync<SqliteException>(() => SqliteTestControl.ExecuteAsync(databasePath, checkpointQuery));
+        }
+
+        await using (var recovered = await SqliteJobStore.OpenForTestingAsync(
+                         workspace.StoreRoot, maximumMigrationVersion: 6, TimeProvider.System, faultInjector: null))
+        {
+            Assert.Equal(6, await SqliteTestControl.ReadUserVersionAsync(databasePath));
+            await SqliteTestControl.ExecuteAsync(databasePath, checkpointQuery);
+            await SqliteTestControl.ExecuteAsync(databasePath,
+                "SELECT COUNT(*) FROM action_journal_plans, action_journal_approvals, action_journal_entries;");
+            var saved = await recovered.LoadJobAsync(job.JobId);
+            Assert.NotNull(saved);
+            Assert.Equal(job, saved.Job);
+            Assert.Equal(JobCheckpointKind.JobCreated, Assert.Single(saved.Checkpoints).Kind);
+            Assert.Empty(await recovered.ListPendingRebootCheckpointsAsync(job.JobId));
+            Assert.Null(await recovered.LoadLatestRebootDecisionAsync(job.JobId));
+        }
+
+        await Assert.ThrowsAsync<JobStoreVersionException>(() =>
+            SqliteJobStore.OpenForTestingAsync(
+                workspace.StoreRoot, maximumMigrationVersion: 5, TimeProvider.System, faultInjector: null));
+        Assert.Equal(6, await SqliteTestControl.ReadUserVersionAsync(databasePath));
+    }
+
     [Fact]
     public async Task FailedThirdMigrationLeavesCompleteVersionTwoAndLaterRetrySucceeds()
     {
