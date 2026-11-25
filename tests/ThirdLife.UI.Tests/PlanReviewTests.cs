@@ -112,6 +112,89 @@ public sealed class PlanReviewTests
     }
 
     [Fact]
+    public async Task RebuildingRetainsAnActiveApprovalAndAChangedSelectionRequiresASecondDecision()
+    {
+        using var disk = new AuditTestStore();
+        await using var workspace = OpenWorkspace(disk, new PlanFactsProvider());
+        await PrepareAssessmentAsync(workspace);
+
+        InPlanReview(workspace, (window, panel) =>
+        {
+            SelectProfile(window, panel, workspace, "basic");
+            Build(window, panel, workspace);
+            var original = Approve(window, panel, workspace);
+
+            Build(window, panel, workspace);
+            Assert.Same(original, workspace.PlanReviewDecision);
+            Assert.Same(original, Assert.Single(workspace.PlanReviewHistory));
+
+            var optional = Assert.Single(workspace.PlanCapabilities, choice => !choice.IsEssential);
+            Toggle(window, panel, optional);
+            Assert.Null(workspace.PlanReviewDecision);
+            Build(window, panel, workspace);
+            Assert.Null(workspace.PlanReviewDecision);
+            Assert.True(workspace.CanApprovePlanReview);
+            Assert.Contains("The plan changed", workspace.PlanReviewStatus, StringComparison.Ordinal);
+            var details = Named<TextBox>(panel, "PlanDetailsText");
+            Assert.Contains("Plan changes", details.Text, StringComparison.Ordinal);
+            Assert.Contains(original.PlanSha256, details.Text, StringComparison.Ordinal);
+            Assert.DoesNotContain(workspace.PlanReview!.Plan.Actions, action => action.CapabilityId == optional.CapabilityId);
+
+            var updated = Approve(window, panel, workspace);
+            Assert.NotEqual(original.PlanSha256, updated.PlanSha256);
+            Assert.Equal([original, updated], workspace.PlanReviewHistory);
+            Assert.Contains(updated.PlanSha256, details.Text, StringComparison.Ordinal);
+
+            Toggle(window, panel, optional);
+            Build(window, panel, workspace);
+            Assert.Equal(original.PlanSha256, workspace.PlanReview!.Plan.ContentSha256);
+            Assert.Null(workspace.PlanReviewDecision);
+            Assert.True(workspace.CanApprovePlanReview);
+            Assert.Equal([original, updated], workspace.PlanReviewHistory);
+
+            workspace.CloseJob();
+            Assert.Empty(workspace.PlanReviewHistory);
+        });
+    }
+
+    [Fact]
+    public async Task ApprovalClickShowsAChangedPolicySnapshotAndRequiresASecondExplicitClick()
+    {
+        using var disk = new AuditTestStore();
+        var policy = ReadyPolicy;
+        await using var workspace = new AuditWorkspace(
+            async token => await disk.OpenSqliteAsync(token).ConfigureAwait(false),
+            [new PlanFactsProvider()], new FixtureClock(), fixturePlanPolicy: _ => policy);
+        await PrepareAssessmentAsync(workspace);
+
+        InPlanReview(workspace, (window, panel) =>
+        {
+            SelectProfile(window, panel, workspace, "job-seeker");
+            Build(window, panel, workspace);
+            var displayed = workspace.PlanReview!;
+            byte[] changedPolicy = [.. ReadyPolicy.Utf8Json, (byte)' '];
+            policy = PolicySnapshot.Parse(changedPolicy);
+
+            var approve = Named<Button>(panel, "ApprovePlanReviewButton");
+            Invoke(window, approve);
+            PumpUntil(window, () => !workspace.IsBusy && workspace.PlanReview is { } current &&
+                current.Plan.ContentSha256 != displayed.Plan.ContentSha256, () => workspace.PlanReviewStatus);
+            Assert.Null(workspace.PlanReviewDecision);
+            Assert.Empty(workspace.PlanReviewHistory);
+            Assert.True(approve.IsEnabled);
+            Assert.Contains("The plan changed", workspace.PlanReviewStatus, StringComparison.Ordinal);
+            var details = Named<TextBox>(panel, "PlanDetailsText");
+            Assert.Contains("Plan changes", details.Text, StringComparison.Ordinal);
+            Assert.Contains("policy", details.Text, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(policy.Document.ContentSha256, workspace.PlanReview!.Plan.PolicySha256);
+
+            var decision = Approve(window, panel, workspace);
+            Assert.NotEqual(displayed.Plan.ContentSha256, decision.PlanSha256);
+            Assert.Same(decision, Assert.Single(workspace.PlanReviewHistory));
+        });
+    }
+
+    [Fact]
     public async Task CapabilityTogglesInvalidateReviewAndSkippingAnEssentialDisablesApproval()
     {
         using var disk = new AuditTestStore();
@@ -297,6 +380,18 @@ public sealed class PlanReviewTests
         Assert.True(button.IsEnabled, workspace.PlanReviewStatus);
         Invoke(window, button);
         PumpUntil(window, () => workspace.HasPlanReview && !workspace.IsBusy, () => workspace.PlanReviewStatus);
+    }
+
+    private static PlanReviewDecision Approve(Window window, PlanReviewView panel, AuditWorkspace workspace)
+    {
+        var button = Named<Button>(panel, "ApprovePlanReviewButton");
+        Assert.True(button.IsEnabled, workspace.PlanReviewStatus);
+        Invoke(window, button);
+        PumpUntil(window, () => workspace.PlanReviewDecision is not null && !workspace.IsBusy,
+            () => workspace.PlanReviewStatus);
+        var decision = workspace.PlanReviewDecision!;
+        Assert.Equal(PlanReviewOutcome.Approved, decision.Outcome);
+        return decision;
     }
 
     private static void Toggle(Window window, PlanReviewView panel, object item)

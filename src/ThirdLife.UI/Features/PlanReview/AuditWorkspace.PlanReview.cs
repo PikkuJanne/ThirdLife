@@ -1,3 +1,6 @@
+using System.Collections.Immutable;
+using System.Globalization;
+using System.Text;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Planning;
 using ThirdLife.Catalog.Profiles;
@@ -12,27 +15,36 @@ namespace ThirdLife.UI.Shell;
 
 internal sealed partial class AuditWorkspace
 {
+    private const int MaximumPlanReviewDecisions = 128;
     private readonly Func<PolicyDeviceClass, PolicySnapshot?>? _fixturePlanPolicy;
+    private ImmutableArray<PlanReviewDecision> _planReviewHistory = [];
     private PlanProfileOption? _selectedPlanProfile;
+    private string? _planReviewChanges;
+    private string _planReviewStatus = "Open a current assessment to review a synthetic plan.";
 
     public IReadOnlyList<PlanProfileOption> PlanProfiles { get; } = WorkshopPlanCandidate.Options;
     public IReadOnlyList<PlanCapabilityChoice> PlanCapabilities { get; private set; } = [];
     public PlanReviewSnapshot? PlanReview { get; private set; }
     public PlanReviewDecision? PlanReviewDecision { get; private set; }
+    public IReadOnlyList<PlanReviewDecision> PlanReviewHistory => _planReviewHistory;
     public bool HasPlanReview => PlanReview is not null;
     public string PlanReviewTitle => PlanReview?.Title ?? string.Empty;
-    public string PlanReviewDetails => PlanReview?.Details ?? string.Empty;
-    public string PlanReviewStatus { get; private set; } = "Open a current assessment to review a synthetic plan.";
+    public string PlanReviewDetails => DescribePlanReview();
+    public string PlanReviewStatus => CanRecordPlanReviewDecision
+        ? _planReviewStatus
+        : _planReviewStatus + " The decision history for this job session is full. Review remains available.";
 
     public bool CanReviewPlan => CanEditJob && PlanProfiles.Count != 0 &&
         Assessment is { Outcome: AssessmentOutcome.Completed or AssessmentOutcome.RequiresReview } assessment &&
         Gate is { AllowsAssessment: true, Decision: { } gate } && gate.DecisionId == assessment.GateDecisionId &&
         PlanPolicy() is not null;
     public bool CanBuildPlanReview => CanReviewPlan && SelectedPlanProfile is not null && IncludedEssentials;
-    public bool CanApprovePlanReview => CanBuildPlanReview && PlanReviewDecision is null &&
+    public bool CanApprovePlanReview => CanBuildPlanReview && CanRecordPlanReviewDecision && PlanReviewDecision is null &&
         PlanReview?.Plan is { SyntheticData: true, BlockedReason: null, Actions.IsEmpty: false } plan &&
         plan.Actions.All(action => action.Request is NoOpActionRequest);
-    public bool CanDeclinePlanReview => CanReviewPlan && HasPlanReview && PlanReviewDecision is null;
+    public bool CanDeclinePlanReview => CanReviewPlan && CanRecordPlanReviewDecision && HasPlanReview && PlanReviewDecision is null;
+
+    private bool CanRecordPlanReviewDecision => _planReviewHistory.Length < MaximumPlanReviewDecisions;
 
     public PlanProfileOption? SelectedPlanProfile
     {
@@ -57,15 +69,35 @@ internal sealed partial class AuditWorkspace
         ? Task.CompletedTask
         : RunAsync(async () =>
         {
+            var active = PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } approval ? approval : null;
+            var changes = _planReviewChanges;
             ClearPlanReview();
             var plan = await ResolveCurrentPlanAsync();
             if (plan is null)
             {
-                PlanReviewStatus = "The assessment changed. Reopen the job before building a plan.";
+                _planReviewStatus = "The assessment changed. Reopen the job before building a plan.";
                 return;
             }
 
-            PresentPlan(plan);
+            var current = PlanReviewPresentation.Describe(plan);
+            if (active is not null)
+            {
+                var approved = active.Snapshot;
+                var difference = PlanDiff.Compare(approved.Plan, approved.Impact, current.Plan, current.Impact);
+                if (!difference.RequiresReapproval)
+                {
+                    PlanReview = approved;
+                    PlanReviewDecision = active;
+                    _planReviewChanges = changes;
+                    _planReviewStatus = "The recorded approval still applies to this synthetic plan.";
+                    return;
+                }
+
+                PresentPlan(current, difference.PlainLanguage);
+                return;
+            }
+
+            PresentPlan(current);
         });
 
     public Task ApprovePlanReviewAsync()
@@ -77,23 +109,24 @@ internal sealed partial class AuditWorkspace
 
         return RunAsync(async () =>
         {
-            var current = await ResolveCurrentPlanAsync();
-            if (current?.ContentSha256 != displayed.Plan.ContentSha256)
+            var plan = await ResolveCurrentPlanAsync();
+            if (plan is null)
             {
                 ClearPlanReview();
-                if (current is not null)
-                {
-                    PresentPlan(current);
-                }
-
-                PlanReviewStatus = current is null
-                    ? "The assessment changed. Reopen the job before reviewing a plan."
-                    : "The plan changed. Review the updated plan before approving.";
+                _planReviewStatus = "The assessment changed. Reopen the job before reviewing a plan.";
                 return;
             }
 
-            PlanReviewDecision = new PlanReviewDecision(PlanReviewOutcome.Approved, displayed, _timeProvider.GetUtcNow());
-            PlanReviewStatus = "Approval recorded for this synthetic plan. Device readiness still requires verification.";
+            var current = PlanReviewPresentation.Describe(plan);
+            var difference = PlanDiff.Compare(displayed.Plan, displayed.Impact, current.Plan, current.Impact);
+            if (difference.RequiresReapproval)
+            {
+                PresentPlan(current, difference.PlainLanguage);
+                return;
+            }
+
+            RecordPlanReviewDecision(PlanReviewOutcome.Approved, displayed);
+            _planReviewStatus = "Approval recorded for this synthetic plan. Device readiness still requires verification.";
         });
     }
 
@@ -101,8 +134,8 @@ internal sealed partial class AuditWorkspace
     {
         if (CanDeclinePlanReview && PlanReview is { } displayed)
         {
-            PlanReviewDecision = new PlanReviewDecision(PlanReviewOutcome.Declined, displayed, _timeProvider.GetUtcNow());
-            PlanReviewStatus = "Plan declined. No actions were started.";
+            RecordPlanReviewDecision(PlanReviewOutcome.Declined, displayed);
+            _planReviewStatus = "Plan declined. No actions were started.";
             Publish();
         }
 
@@ -149,12 +182,64 @@ internal sealed partial class AuditWorkspace
         });
     }
 
-    private void PresentPlan(ProposedPlan plan)
+    private void PresentPlan(PlanReviewSnapshot current, string? changes = null)
     {
-        PlanReview = PlanReviewPresentation.Describe(plan);
-        PlanReviewStatus = plan.BlockedReason is null
-            ? "Review the included actions and impact before approving."
-            : "Preparation is blocked. Review the reason below.";
+        var previous = _planReviewHistory.LastOrDefault(decision => decision.Outcome == PlanReviewOutcome.Approved);
+        if (changes is null && previous is { Snapshot: var approved })
+        {
+            var difference = PlanDiff.Compare(approved.Plan, approved.Impact, current.Plan, current.Impact);
+            if (difference.RequiresReapproval)
+            {
+                changes = difference.PlainLanguage;
+            }
+        }
+
+        PlanReview = current;
+        PlanReviewDecision = null;
+        _planReviewChanges = changes;
+        _planReviewStatus = current.Plan.BlockedReason is not null
+            ? "Preparation is blocked. Review the reason below."
+            : changes is not null
+                ? "The plan changed. Review the changes before approving."
+                : "Review the included actions and impact before approving.";
+    }
+
+    private void RecordPlanReviewDecision(PlanReviewOutcome outcome, PlanReviewSnapshot displayed)
+    {
+        var decision = new PlanReviewDecision(outcome, displayed, _timeProvider.GetUtcNow());
+        _planReviewHistory = _planReviewHistory.Add(decision);
+        PlanReviewDecision = decision;
+    }
+
+    private string DescribePlanReview()
+    {
+        if (PlanReview is not { } displayed)
+        {
+            return string.Empty;
+        }
+
+        if (_planReviewChanges is null && _planReviewHistory.IsEmpty)
+        {
+            return displayed.Details;
+        }
+
+        var details = new StringBuilder(displayed.Details);
+        if (_planReviewChanges is { } changes)
+        {
+            details.AppendLine().AppendLine("Plan changes").AppendLine(changes);
+        }
+
+        if (!_planReviewHistory.IsEmpty)
+        {
+            details.AppendLine().AppendLine("Decisions in this job session");
+            foreach (var decision in _planReviewHistory)
+            {
+                details.AppendLine(CultureInfo.CurrentCulture,
+                    $"{decision.Outcome} at {decision.DecidedAtUtc:u}. Plan SHA-256 {decision.PlanSha256}");
+            }
+        }
+
+        return details.ToString();
     }
 
     private void ChangePlanSelection()
@@ -167,13 +252,15 @@ internal sealed partial class AuditWorkspace
     {
         PlanReview = null;
         PlanReviewDecision = null;
+        _planReviewChanges = null;
         if (clearSelection)
         {
             _selectedPlanProfile = null;
             PlanCapabilities = [];
+            _planReviewHistory = [];
         }
 
-        PlanReviewStatus = Assessment is null || Job is not { IsArchived: false }
+        _planReviewStatus = Assessment is null || Job is not { IsArchived: false }
             ? "Open a current assessment to review a synthetic plan."
             : SelectedPlanProfile is null
             ? "Select a profile to review a synthetic plan for the current assessment."

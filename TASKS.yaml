@@ -3677,7 +3677,7 @@ tasks:
   workstream: planning
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: any
@@ -3700,7 +3700,17 @@ tasks:
   verification:
   - Mutation-test each material field.
   - Golden-test diff text.
-  evidence: []
+  evidence:
+  - summary: Material source, package, action and impact mutations invalidated approval. Equivalent rebuilds kept active approval and loaded review retained both old and new explicit decisions.
+    task: TL-0307
+    command_or_review: .\eng\verify.ps1 -Tier Targeted with UI and Actions tests
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400, synthetic plans and loaded WPF
+    date: '2026-11-25'
+    duration: 61.069 s, 1211 tests
+    reference: artifacts/evidence/TL-0307/report.md
+    limitation: No dispatch. Approval history is bounded to the open job review session. Full and Extended triggers did not apply.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
