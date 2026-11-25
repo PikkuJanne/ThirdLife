@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Security;
 using ThirdLife.Broker.Protocol;
 using ThirdLife.Broker.Protocol.Transport;
@@ -12,10 +13,18 @@ internal static class Program
 {
     private const int Rejected = 2;
     private const int Interrupted = 3;
+    private const uint LoadLibrarySearchSystem32 = 0x800;
 
     private static Task<int> Main(string[] args)
     {
         var startup = Stopwatch.GetTimestamp();
+        // Static imports are constrained by the PE load configuration. Apply the same rule
+        // to later native loads before probing identity or interacting with the caller.
+        if (!OperatingSystem.IsWindows() || !NativeMethods.SetDefaultDllDirectories(LoadLibrarySearchSystem32))
+        {
+            return Task.FromResult(Rejected);
+        }
+
         return RunOnSupportedPlatform(WindowsPlatform.CheckCurrent(), () => RunAsync(args, startup));
     }
 
@@ -96,4 +105,12 @@ internal static class Program
 
     private static bool SameUserSession(BrokerPeerIdentity expected, BrokerPeerIdentity observed) =>
         expected.SessionId == observed.SessionId && expected.UserSid.Equals(observed.UserSid);
+
+    private static class NativeMethods
+    {
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        [DllImport("kernel32.dll", ExactSpelling = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool SetDefaultDllDirectories(uint directoryFlags);
+    }
 }

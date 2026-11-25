@@ -15,12 +15,70 @@ namespace ThirdLife.UI.Tests;
 public sealed class BrokerBatchClientTests
 {
     [Fact]
-    public async Task DevelopmentApphostDoesNotRequestElevation()
+    public async Task MissingInstallationDoesNotRequestElevation()
     {
-        var result = await new BrokerBatchClient().RunAsync(Request());
+        var launchAttempts = 0;
+        var ticket = BrokerLaunchTicket.Create(Environment.ProcessId, Request());
+        var process = await TrustedBrokerLauncher.LaunchAsync(ticket, static () => null, _ =>
+        {
+            launchAttempts++;
+            return null;
+        }, CancellationToken.None);
 
-        Assert.Equal(BrokerBatchStatus.Unavailable, result.Status);
-        Assert.Empty(result.Results);
+        Assert.Null(process);
+        Assert.Equal(0, launchAttempts);
+    }
+
+    [Fact]
+    public async Task CancellationAfterPreflightDoesNotRequestElevation()
+    {
+        using var cancelled = new CancellationTokenSource();
+        var launchAttempts = 0;
+        var ticket = BrokerLaunchTicket.Create(Environment.ProcessId, Request());
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            TrustedBrokerLauncher.LaunchAsync(ticket, () =>
+            {
+                cancelled.Cancel();
+                return null;
+            }, _ =>
+            {
+                launchAttempts++;
+                return null;
+            }, cancelled.Token));
+        Assert.Equal(0, launchAttempts);
+    }
+
+    [Fact]
+    public async Task ExpiredTicketSkipsInstallationAndElevation()
+    {
+        var request = Request();
+        var envelope = new BrokerEnvelope(request.Envelope.CorrelationId, request.Envelope.Nonce,
+            TimeProvider.System.GetUtcNow().AddSeconds(-1));
+        var expired = new BrokerRequest(envelope, request.JobId, request.ApprovalId,
+            request.PlanSha256, request.ImpactSha256, request.Actions);
+
+        var process = await TrustedBrokerLauncher.LaunchAsync(Ticket(expired),
+            static () => throw new InvalidOperationException("Preflight must not run for an expired ticket."),
+            static _ => throw new InvalidOperationException("Elevation must not be requested for an expired ticket."),
+            CancellationToken.None);
+
+        Assert.Null(process);
+    }
+
+    [Fact]
+    public void ElevationRequestUsesTheExactImageAndTicket()
+    {
+        const string executable = @"C:\Program Files\ThirdLife\Broker\ThirdLife.Broker.exe";
+        var ticket = BrokerLaunchTicket.Create(Environment.ProcessId, Request());
+
+        var info = TrustedBrokerLauncher.CreateStartInfo(ticket, executable);
+
+        Assert.Equal(executable, info.FileName);
+        Assert.Equal(@"C:\Program Files\ThirdLife\Broker", info.WorkingDirectory);
+        Assert.True(info.UseShellExecute);
+        Assert.Equal("runas", info.Verb);
+        Assert.Equal(ticket.CreateArguments(), info.ArgumentList);
     }
 
     [Theory]

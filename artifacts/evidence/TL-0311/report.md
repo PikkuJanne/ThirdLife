@@ -88,6 +88,67 @@ unverified identity at each boundary.
 The reconciliation covers platform admission. Trusted elevated startup, real UAC and
 recovery, and the distinct-account guest remain TL-0311 blockers.
 
+## Native broker implementation checkpoint
+
+The project owner authorized native broker and launcher work on 2026-11-25 and
+deferred preparing the same-machine Hyper-V guest. The distinct-account test
+and its guards remain. This work did not create accounts or start a guest.
+
+The broker now selects Windows x64 Native AOT, requests static System32-only
+imports and requires System32-only dynamic search in its entry point. The
+developer provisioning utility stages the reviewed executable and digest under
+administrator-controlled ACLs before publishing the fixed installation at
+`Program Files\ThirdLife\Broker`. The production client validates and holds the
+installation through explicit Windows consent, checks the returned process image,
+then applies the existing identity and protocol validation. No installed candidate
+was present for these checks.
+
+| Exact local AOT input, all 10.0.14 | Verified NuGet archive SHA-256 |
+| --- | --- |
+| Microsoft.DotNet.ILCompiler | `6744a4a82b31a8568df48e927baaa85378a848966d5712323956f63528ed38b9` |
+| runtime.win-x64.Microsoft.DotNet.ILCompiler | `e4279d8ed9bcc01b1d8a3a9b2c7db16f3249e098dc3081e15c6d93ef462e1bce` |
+| Microsoft.NET.ILLink.Tasks | `e2a71b32b5c135dc2b0c87ea8fba6c9e677332e00bf959fbcdced239b825b75c` |
+| Microsoft.NETCore.App.Runtime.NativeAOT.win-x64 | `76c0f133981113273a0e50dba97a6107eead821f707565443e787f0aa9f9fc69` |
+
+The pinned SDK 10.0.400's default 10.0.11 compiler failed audited restore with
+NU1903. The patched packs restored with locked mode and audit active. `dotnet
+nuget verify --all` passed both Microsoft author and NuGet.org repository
+signatures for the four archives. [Microsoft's advisory](https://github.com/dotnet/runtime/security/advisories/GHSA-p3jp-9v83-76w9)
+
+| Verified Microsoft bootstrapper | Fixed channel catalog advertised and received |
+| --- | --- |
+| Visual Studio Community 2022 17.14.45, build 17.14.37906.3, SHA-256 `051dffb68c39b9a4f15b830fdae8d08dd5620369e923262c46f27e07a428a68c` | Advertised 30,447,538 bytes, `da49c304df0fff4e75c20849171840a06840e845ce814104d709dfb5cd461668`. Received 17,959,942 bytes, `d1d8109899558618035724949673f69f8c1b5704f542a2e76f31d87e425d5710`. |
+| Visual Studio Community 2026 18.12.1, build 18.12.12412.261 | Advertised 31,964,369 bytes, `cc6841a1e5de4eadb9d1dec5c4d75dfe081c2e6b39981c220b6e69c50b557f39`. Received 18,805,701 bytes, `a7194b79768c80787eff90ff29f70d26f6bc89547a87ee21ab0e10cd6663d08f`. |
+
+Both bootstrapper signatures were valid. The fixed official sources were the
+[17.14.45 channel](https://download.visualstudio.microsoft.com/download/pr/95995f57-8355-4ff5-8d90-a7e1669fb3b3/a788dfa3e6f50a33f7dee8396fd40d2946c69a776c0cfa5208f56d461fd1a825/VisualStudio.17.Release.chman)
+and the [18.12.1 catalog](https://download.visualstudio.microsoft.com/download/pr/646c5a89-4d3a-4f43-985e-9c4c6771f304/cc6841a1e5de4eadb9d1dec5c4d75dfe081c2e6b39981c220b6e69c50b557f39/VisualStudio.vsman).
+Both catalog files parsed and claimed
+the correct release. A compression check and a cache-miss request reproduced
+the first mismatch. Setup was not initiated. The sizes and digests for 17.14.45
+also match an independent report. [Microsoft Q&A report](https://learn.microsoft.com/en-us/answers/questions/6070250/visual-studio-build-tools-2022-17-14-45-visualstud)
+
+- On Windows 11 Pro 26H2 x64 build 26300.9974, Release win-x64 publish passed
+  locked restore, runtime pack digest validation and managed compilation before
+  Microsoft Native AOT targets reported `Platform linker not found` in 4.646 s.
+  No native image was linked, inspected, provisioned or elevated.
+- The managed launcher focus set passed 28 tests, including missing or unsuitable
+  installation, expiry and cancellation, exact ticket arguments, ACL, digest and
+  PE loader metadata. Separate deployment checks passed six tests in 2.741 s.
+  Read-only checks on this machine reached the expected absent install after
+  passing the system-drive and Program Files ACL checks. Unelevated installation
+  was refused. These checks exercised the code and fixtures.
+- The isolated MSBuild `VerifyBrokerAotRuntimePack` target accepted the actual
+  archive in 0.825 s, and rejected a mismatched expected digest in 0.805 s.
+  The focused managed broker set passed 33 cases in 7.172 s.
+- `./eng/verify.ps1 -Tier Targeted -Restore` with the Broker and Broker.SecurityTests
+  projects passed 1,267 tests in 74.896 s, including Quick and a warnings-as-errors
+  Release build.
+
+An intact vendor-catalogue installation or a separately verified licensed
+Microsoft x64 C++ toolchain and Windows 11 SDK is the next build input. Consent
+for the rejected catalogs would leave the source-integrity issue unresolved.
+
 ## Remaining evidence
 
 - Trusted, fixed elevated startup before .NET hosting or any broker work.

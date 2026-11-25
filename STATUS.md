@@ -16,15 +16,17 @@ The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-The draft broker authenticates its local pipe peer and accepts one pinned
-no-op batch. The development apphost cannot establish trusted startup before
-elevation, so the UI reports the broker unavailable. The checkpoint retains
-its original [TL-0311 verification evidence](artifacts/evidence/TL-0311/report.md).
-Real UAC, elevated process recovery and the distinct-account Sandbox case
-remain unobserved.
+The draft now configures Windows x64 Native AOT, a protected installation and
+the production launcher. The audited, patched .NET packs restored. Native
+publish stopped at the missing Microsoft linker. Two Microsoft installation
+catalogs failed their advertised size and SHA-256 checks. There is no published
+or installed native candidate on the active machine.
+
+The owner deferred the Hyper-V guest. Real consent, elevated recovery and the
+distinct-account denial remain outstanding. [TL-0311 evidence](artifacts/evidence/TL-0311/report.md)
 
 ## Next action
 
-Resolve the [trusted elevated startup boundary](docs/security/broker-launch.md)
-and complete TL-0311 on the same active machine before integrating it or
-starting TL-0312.
+Acquire a verified Microsoft x64 linker and Windows SDK, then continue
+[native publish and protected deployment verification](docs/security/broker-launch.md)
+on the active machine. Keep PR #36 draft through the remaining TL-0311 evidence.

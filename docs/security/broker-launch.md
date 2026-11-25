@@ -1,44 +1,73 @@
 # Broker launch trust boundary
 
-TL-0311 has a local broker transport and a development apphost. The
-production client returns `Unavailable` before requesting elevation. The
-UI build carries the protocol assembly. The development apphost is a separate
-build output, remains `asInvoker`, and rejects an unelevated launch. Running
-that apphost elevated is outside this candidate's verified scope.
+TL-0311 limits elevated work to one authenticated batch of compiled no-op actions.
+The operator UI stays unelevated. The previous development apphost ran through the
+managed .NET host, whose runtime selection and startup hooks can execute before the
+broker validates the caller. Its output was in a development directory. That build
+remains useful for transport tests. [Earlier checkpoint](../../artifacts/evidence/TL-0311/report.md)
 
-The client checks for Windows 11 on native x64 before invoking its launcher.
-The broker applies the same check before opening a peer or pipe. Both checks
-run in managed code. Elevated startup has the separate trust requirement below.
+## Native broker
 
-## Startup must be trusted before managed code
+Use the repository SDK 10.0.400 and the matching, explicitly pinned Native AOT inputs
+for the broker. The .NET SDK's original AOT compiler package 10.0.11 failed the audited
+restore. The broker project pins the patched 10.0.14 compiler, trim tools, and native
+runtime pack. It checks the downloaded runtime pack archive's SHA-256 because SDK
+package downloads are outside the ordinary NuGet lock graph. [Microsoft advisory](https://github.com/dotnet/runtime/security/advisories/GHSA-p3jp-9v83-76w9)
 
-The current apphost is framework-dependent. An elevated managed `Main` is
-too late to check which executable, runtime or managed startup code Windows
-has already loaded. The .NET host can select runtimes from environment-defined
-locations, and .NET startup hooks run before `Main`. The documented Windows
-shell elevation API does not accept an environment block. A fixed executable
-name or hashing the IPC request cannot secure that earlier startup boundary.
-The build output and its dependencies also sit in a developer-writable tree.
+The publish command for the installed image is
+`dotnet publish ./src/ThirdLife.Broker/ThirdLife.Broker.csproj -c Release -r win-x64`.
+Use a verified Microsoft C++ x64 toolchain and Windows SDK. Record the source revision,
+actual linker and SDK versions, PE import and load-configuration inspection, and exact
+publish SHA-256 before provisioning any bytes. The project requests
+`/DEPENDENTLOADFLAG:0x800` for static imports. The broker also requires System32-only
+dynamic DLL search before it probes Windows identity or opens IPC. Globalization is
+invariant to avoid an app-local ICU dependency. [Native AOT interop](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/interop)
 
-[.NET runtime discovery](https://github.com/dotnet/docs/blob/main/docs/core/runtime-discovery/troubleshoot-app-launch.md) ·
-[.NET startup hook design](https://github.com/dotnet/runtime/blob/main/docs/design/features/host-startup-hook.md) ·
-[Windows shell elevation](https://learn.microsoft.com/en-us/windows/win32/shell/launch) ·
-[ShellExecuteEx parameters](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa)
+## Provisioning and identity
 
-## Required launch evidence
+The TL-0311 provisioning utility is [install-thirdlife-broker.ps1](../../eng/install-thirdlife-broker.ps1).
+Use it from a trusted administrator provisioning context with the exact reviewed
+script bytes and the separately recorded published SHA-256. The executable path
+provided to this utility is a source of bytes. Its SHA-256 and the inspected build
+record establish candidate identity. The x64 PE and load-configuration checks also
+inspect the staged bytes. Those header fields can occur in other Windows executables.
 
-The next candidate needs a supported way to start only approved code before
-the first instruction gains elevation. A possible route is a C# Native AOT
-broker from a protected, integrity-checked deployment, with evidence for
-runtime startup, Windows native loader behavior and deployment permissions.
-The Windows native toolchain and exact AOT inputs need provenance and local
-verification before choosing that route. The current machine has the pinned
-.NET SDK and lacks the Windows C++ build tools and AOT packages needed by
-that candidate. [Windows Native AOT requirements](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/?tabs=windows)
+The utility provisions the fixed system-drive Program Files path
+`ThirdLife\Broker`. It creates private staging on the same filesystem, hashes the
+source read, verifies the protected staged copies and publishes a new directory
+without overwriting. The final directory contains only `ThirdLife.Broker.exe` and
+the 64-byte lowercase ASCII `broker.sha256` identity record. The owner and protected
+ACL allow Administrators and SYSTEM to write. Standard users have read and execute
+access. The utility checks the relevant system ancestors and fails closed on
+unsuitable paths or permissions. A repeat with the same verified candidate can
+audit the existing install. Replacement and release packaging belong to the
+governed installer work.
 
-When that precondition is satisfied, preserve explicit Windows consent with
-the exact fixed candidate and retest real accept, decline, token, peer
-identity, and teardown under the active-machine rule. TL-0314 retains the
-accountable privilege-boundary decision. An unavailable launch produces no
-terminal action and leaves the approval and action journal available to the
-unelevated workflow.
+The administrator supplies the candidate and reviewed SHA-256 with
+`-BrokerArtifact` and `-ExpectedSha256`. The independent `-VerifyOnly` and
+`-ExpectedSha256` path checks an existing installation without making changes.
+If the worktree is used as a source for local verification, pin the script digest
+independently in the already trusted provisioning session. Read and hash the bytes
+once under read sharing, then invoke those exact bytes. The provisioning context
+must trust the administrator's shell and toolchain before any script executes.
+The UI launches only the installed broker. [Microsoft installation guidance](https://learn.microsoft.com/en-us/windows/win32/msi/guidelines-for-authoring-secure-installations)
+
+## Unelevated launch and verification
+
+The production client checks the Windows 11 native-x64 platform and resolves the
+fixed installed path. It checks protected owners and access lists, rejects
+redirected objects and multiply linked files, verifies exact identity and startup
+metadata, and holds handles that prevent substitution through the consent request.
+It asks Windows for explicit elevation of the exact absolute path with a protected
+working directory. It verifies the image path of the process Windows returns
+before the same-user, session and IPC checks. Missing or unsuitable installs stay
+unavailable. Decline and cancellation preserve the unelevated workflow, and ambiguous
+dispatch retains the existing recovery result.
+
+Verified test and runtime outcomes belong in [TL-0311 evidence](../../artifacts/evidence/TL-0311/report.md).
+The real consent rehearsal is separate from the deterministic fixtures and uses
+the production client from an unelevated WPF test window. Its single compiled
+no-op requires the exact reviewed installed candidate. TL-0314 retains the
+accountable privilege-boundary decision. The owner deferred preparation of the
+same-machine Hyper-V VM. The distinct-account denial scenario and its guards
+remain part of TL-0311 verification.

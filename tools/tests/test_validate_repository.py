@@ -186,11 +186,14 @@ class ProjectReferenceLockTests(unittest.TestCase):
                 "inventory": {"type": "Project", "dependencies": {"Core": "[1.0.0, )"}},
             },
         }
+        self.overlays = {}
 
     def validate(self) -> validate_repository.Validation:
         for name, dependencies in self.locks.items():
             (self.root / name / "packages.lock.json").write_text(
-                json.dumps({"version": 2, "dependencies": {"net10.0": dependencies}}),
+                json.dumps({"version": 2, "dependencies": {
+                    "net10.0": dependencies, **self.overlays.get(name, {})
+                }}),
                 encoding="utf-8",
             )
         validation = validate_repository.Validation()
@@ -200,6 +203,54 @@ class ProjectReferenceLockTests(unittest.TestCase):
 
     def test_current_direct_and_transitive_project_graph_is_accepted(self) -> None:
         self.assertEqual(self.validate().errors, [])
+
+    def test_sdk_rid_overlay_inherits_projects_and_extends_package_dependencies(self) -> None:
+        compiler = {
+            "type": "Direct", "requested": "[10.0.14, )",
+            "resolved": "10.0.14", "contentHash": "compiler-content",
+        }
+        self.locks["Tests"]["Example.Compiler"] = compiler
+        self.overlays["Tests"] = {"net10.0/win-x64": {
+            "Example.Compiler": {**compiler, "dependencies": {"Example.Runtime": "10.0.14"}},
+            "Example.Runtime": {"type": "Transitive", "resolved": "10.0.14", "contentHash": "runtime-content"},
+        }}
+        self.assertEqual(self.validate().errors, [])
+
+    def test_overlay_cannot_add_a_project_missing_from_the_base(self) -> None:
+        del self.locks["Tests"]["core"]
+        self.overlays["Tests"] = {"net10.0/win-x64": {"core": {"type": "Project"}}}
+        errors = self.validate().errors
+        self.assertTrue(any("missing=['core']" in error for error in errors), errors)
+        self.assertTrue(any("RID overlay changes Project entry" in error for error in errors), errors)
+
+    def test_overlay_cannot_change_a_package_pin_or_project_type(self) -> None:
+        self.locks["Tests"]["Example.Compiler"] = {
+            "type": "Direct", "requested": "[10.0.14, )",
+            "resolved": "10.0.14", "contentHash": "compiler-content",
+        }
+        self.overlays["Tests"] = {"net10.0/win-x64": {
+            "Example.Compiler": {**self.locks["Tests"]["Example.Compiler"], "resolved": "10.0.15"},
+            "Inventory": {"type": "Transitive", "resolved": "1.0.0", "contentHash": "synthetic"},
+        }}
+        errors = self.validate().errors
+        self.assertTrue(any("RID overlay changes package pin" in error for error in errors), errors)
+        self.assertTrue(any("RID overlay changes Project entry" in error for error in errors), errors)
+
+    def test_malformed_or_orphan_rid_targets_are_rejected(self) -> None:
+        self.overlays["Core"] = {
+            "net10.1/win-x64": {},
+            "net10.0/win-arm64": {},
+            "net10.0/win-x64/extra": {},
+            "net10.0/win-x64": [],
+        }
+        errors = self.validate().errors
+        for target in self.overlays["Core"]:
+            self.assertTrue(any(target in error for error in errors), errors)
+
+    def test_duplicate_package_identity_does_not_overwrite_an_entry(self) -> None:
+        self.locks["Inventory"]["Core"] = {"type": "Project"}
+        errors = self.validate().errors
+        self.assertTrue(any("duplicate lock identity" in error for error in errors), errors)
 
     def test_missing_direct_project_entry_is_rejected(self) -> None:
         self.locks["Inventory"].clear()

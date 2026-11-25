@@ -192,6 +192,7 @@ REQUIRED_FILES = (
     ".github/workflows/verify.yml",
     "eng/verify.ps1",
     "eng/test-manifest.json",
+    "eng/install-thirdlife-broker.ps1",
     "eng/run-tl0102-sandbox.ps1",
     "eng/run-tl0102-sandbox-guest.ps1",
     "tools/tests/test_sandbox_harness.py",

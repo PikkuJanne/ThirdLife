@@ -26,20 +26,24 @@ public sealed record BrokerBatchResult(BrokerBatchStatus Status, ImmutableArray<
 public sealed class BrokerBatchClient
 {
     private const int WindowsConsentDeclined = 1223;
-    private readonly Func<BrokerLaunchTicket, Task<Process?>> _launch;
+    private readonly Func<BrokerLaunchTicket, CancellationToken, Task<Process?>> _launch;
     private readonly Func<WindowsPlatformEligibility> _checkPlatform;
     private int _active;
 
-    public BrokerBatchClient() : this(static _ => Task.FromResult<Process?>(null))
-    {
-        // See docs/security/broker-launch.md for the trust gap before managed broker startup.
-    }
+    public BrokerBatchClient() : this(TrustedBrokerLauncher.LaunchAsync, checkPlatform: null) { }
 
     internal BrokerBatchClient(
         Func<BrokerLaunchTicket, Task<Process?>> launch,
-        Func<WindowsPlatformEligibility>? checkPlatform = null)
+        Func<WindowsPlatformEligibility>? checkPlatform = null) : this((ticket, _) => launch(ticket), checkPlatform)
     {
-        _launch = launch ?? throw new ArgumentNullException(nameof(launch));
+        ArgumentNullException.ThrowIfNull(launch);
+    }
+
+    private BrokerBatchClient(
+        Func<BrokerLaunchTicket, CancellationToken, Task<Process?>> launch,
+        Func<WindowsPlatformEligibility>? checkPlatform)
+    {
+        _launch = launch;
         _checkPlatform = checkPlatform ?? WindowsPlatform.CheckCurrent;
     }
 
@@ -79,7 +83,7 @@ public sealed class BrokerBatchClient
             var ticket = BrokerLaunchTicket.Create(Environment.ProcessId, request);
             using var deadline = new CancellationTokenSource(envelope.ExpiresAtUtc - now);
             using var startup = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token, cancellationToken);
-            var launch = _launch(ticket);
+            var launch = _launch(ticket, startup.Token);
             Process? started;
             try
             {

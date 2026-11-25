@@ -3906,7 +3906,7 @@ tasks:
   kind: code
   priority: P0
   status: blocked
-  blocked_reason: The development apphost cannot establish trusted startup before elevation. The UI fails closed. Trusted startup and real UAC and elevated-process evidence are required. Windows Sandbox initialization also blocked the distinct-account test.
+  blocked_reason: Native AOT publish reaches the missing Microsoft C++ linker. Two official Visual Studio catalogs fail the advertised size and SHA-256 checks. Protected installation and real consent or elevated recovery remain unobserved. The distinct-account guest is separately deferred by the owner.
   size: XL
   executor: codex
   environment: windows
@@ -3978,6 +3978,16 @@ tasks:
     duration: Targeted 78.901 s and 1248 .NET tests, named checks 3.617 s, harness 55.167 s and 41 tests
     reference: artifacts/evidence/TL-0311/report.md, verified source tree 30b2427c113b6c30b82a128380ce5ec0cdc2e44b
     limitation: Platform reconciliation only. Consent was simulated and the distinct-account guest was outside the run.
+  - summary: Native publish, protected installation and production launcher code are prepared. Audited AOT inputs and changed-risk tests pass. Native link and live installation remain blocked by toolchain availability and integrity.
+    task: TL-0311
+    command_or_review: dotnet publish for win-x64, dotnet nuget verify, Targeted with Broker projects, and catalog, ACL and launcher checks
+    tier: targeted
+    result: unavailable
+    environment: Active Windows 11 Pro 26H2 build 26300.9974, native x64, SDK 10.0.400, unelevated
+    date: '2026-11-25'
+    duration: Targeted 74.896 s and 1267 .NET tests, publish attempt 4.646 s
+    reference: artifacts/evidence/TL-0311/report.md
+    limitation: No native artifact, protected deployment or real UAC observed. Owner deferred the Hyper-V guest.
   notes:
   - UAC remains explicit. The attributable privilege-boundary authorization is recorded once at TL-0314.
   - Reconcile retained draft PR #36 with the integrated TL-0315 contract. Preserve the trusted elevated startup and real privilege and recovery evidence gaps.
