@@ -3839,7 +3839,7 @@ tasks:
   kind: code
   priority: P0
   status: blocked
-  blocked_reason: Native publication succeeded with the installed Microsoft x64 toolchain. TL-0317 tracks protected deployment, live consent and recovery, and the owner-deferred distinct-account guest.
+  blocked_reason: Native publication, protected deployment and the consented no-op passed. TL-0317 retains live decline, elevated interruption recovery and the owner-deferred distinct-account test.
   size: XL
   executor: codex
   environment: windows
@@ -4219,7 +4219,7 @@ tasks:
   kind: test
   priority: P0
   status: blocked
-  blocked_reason: Windows consent for exact protected provisioning is pending. Elevated accept, decline and recovery remain unobserved, and the owner-deferred distinct-account Hyper-V test remains open.
+  blocked_reason: Live decline and elevated interruption recovery remain unobserved. The owner-deferred distinct-account Hyper-V test remains open.
   size: L
   executor: codex
   environment: windows
@@ -4252,7 +4252,17 @@ tasks:
     date: '2026-11-25'
     duration: Reconciled publish 16.582 s
     reference: artifacts/evidence/TL-0311/report.md, broker SHA-256 ea3d534d885b46b396e5aa8c31b81666c4fc8d5195a27e86cca464fc90bb3861
-    limitation: Local unsigned qualification candidate. Protected elevation and distinct-account denial require separate evidence.
+    limitation: Local unsigned qualification candidate. Distinct-account denial requires separate evidence.
+  - task: TL-0317
+    summary: Reviewed protected provisioning and actual explicit consent for one authenticated no-op succeeded.
+    command_or_review: Pinned provisioning script, read-only VerifyOnly and opt-in ProtectedBrokerRehearsalTests digest, ACL and consent checks
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 native x64, fixed Program Files installation and an unelevated interactive client
+    date: '2026-11-25'
+    duration: Protected verification and ACL test 3.616 s, live no-op test 6 s
+    reference: artifacts/evidence/TL-0311/report.md, broker SHA-256 ea3d534d885b46b396e5aa8c31b81666c4fc8d5195a27e86cca464fc90bb3861
+    limitation: One consented no-op. Live decline, elevated interruption and the deferred distinct-account guest remain open.
   expected_test_tier: full
   full_test_triggers:
   - Run the full tier for qualification of the protected privilege boundary.

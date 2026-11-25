@@ -233,8 +233,22 @@ mapping and recovery checks. The clean worktree excluded the original checkout's
 untracked attachments and ignored test-result file from fixture copies.
 No physical accessibility or cross-hardware observation was added.
 
-Windows displayed a consent process for the exact reviewed provisioning command
-in the interactive session. The protected destination remained absent during
-verification. No actual consent decision, protected broker activation, elevated
-recovery or distinct-account denial was recorded. Keep the broker's ordinary
-application dispatch unavailable while TL-0317 remains open.
+## Protected provisioning and live consent
+
+The operator approved the specific Windows PowerShell provisioning prompt.
+The signed System32 shell ran the previously pinned script and returned exit 0.
+An independent read-only `-VerifyOnly` run returned `Verified` for the exact
+digest at `Program Files\ThirdLife\Broker`. From the unelevated client,
+`InstalledCandidateMatchesTheReviewedDigestAndRejectsDirectWriteAccess` passed.
+It compared the executable and digest record, denied direct writes to both, and
+opened the production launch guard. Verification and the test took 3.616 s.
+
+`InstalledBrokerCompletesOneNoOpThroughExplicitConsent` passed in 6 s after
+the operator approved the exact installed executable's Windows prompt.
+The production client checked the returned process image, elevated peer token
+and same-user/session identity. The authenticated batch returned one matching
+applied no-op, the pipe closed cleanly, the broker exited with code 0, and the
+WPF client token remained unelevated. No package or other device action used the
+broker. Live decline, elevated interruption recovery and distinct-account denial
+remain separate qualification items. Keep ordinary broker dispatch unavailable
+while TL-0317 remains open.

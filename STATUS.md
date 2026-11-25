@@ -22,9 +22,10 @@ at their engineering scope.
 
 PR #36 contains the verified isolated TL-0316 broker checkpoint, reconciled with the reset.
 The installed Microsoft x64 tools and pinned .NET inputs produced the Native AOT broker.
-Protected provisioning awaits Windows consent. TL-0317 retains live privilege, recovery and
-the owner-deferred distinct-account guest. Broker-dependent actions remain unavailable in
-the ordinary application. [Broker evidence](artifacts/evidence/TL-0311/report.md)
+The protected install verified, and the broker completed one no-op through actual Windows
+consent. TL-0317 retains live decline, elevated recovery and the owner-deferred distinct-account
+guest. Broker-dependent actions remain unavailable in the ordinary application.
+[Broker evidence](artifacts/evidence/TL-0311/report.md)
 
 The live package transaction awaits machine-change authorization and an attributable
 intake fact. Then run the ordinary launched app on the admitted active Windows 11 host,
