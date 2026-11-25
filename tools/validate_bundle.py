@@ -41,6 +41,14 @@ PILOT_CATALOG_YAML = "fixtures/catalog/catalog.yaml"
 PILOT_CATALOG_JSON = "fixtures/catalog/catalog.json"
 PILOT_POLICY_YAML = "fixtures/policies/community-laptop-policy.yaml"
 PILOT_POLICY_JSON = "fixtures/policies/community-laptop-policy.json"
+PILOT_BASIC_PROFILE_YAML = "fixtures/profiles/basic.yaml"
+PILOT_JOB_SEEKER_PROFILE_YAML = "fixtures/profiles/job-seeker.yaml"
+PILOT_JSON_PROJECTIONS = (
+    (PILOT_CATALOG_YAML, PILOT_CATALOG_JSON),
+    (PILOT_POLICY_YAML, PILOT_POLICY_JSON),
+    (PILOT_BASIC_PROFILE_YAML, "fixtures/profiles/basic.json"),
+    (PILOT_JOB_SEEKER_PROFILE_YAML, "fixtures/profiles/job-seeker.json"),
+)
 TL0401_WINGET_ADR_PATH = "docs/adr/0009-winget-backend.md"
 M0_FOUNDATION_GATE_PATH = "artifacts/gates/M0-foundation.md"
 M1_AUDIT_GATE_PATH = "artifacts/gates/M1-audit-only.md"
@@ -135,18 +143,18 @@ REQUIRED_FILES = (
     "docs/privacy/privacy-model.md",
     "docs/privacy/redaction-test-cases.yaml",
     "fixtures/README.md",
-    PILOT_CATALOG_JSON,
+    *(projection for _, projection in PILOT_JSON_PROJECTIONS),
     PILOT_CATALOG_YAML,
     M1_WORKSHOP_REPORT_FIXTURE,
     "fixtures/jobs/assessment-ready.yaml",
     "fixtures/jobs/partial-observations.yaml",
     "fixtures/jobs/sanitization-blocked.yaml",
-    PILOT_POLICY_JSON,
     PILOT_POLICY_YAML,
-    "fixtures/profiles/basic.yaml",
-    "fixtures/profiles/job-seeker.yaml",
+    PILOT_BASIC_PROFILE_YAML,
+    PILOT_JOB_SEEKER_PROFILE_YAML,
     "schemas/catalog.schema.json",
     "schemas/policy.schema.json",
+    "schemas/profile.schema.json",
     "docs/security/abuse-cases.md",
     "docs/security/data-flow.md",
     "docs/security/threat-model.md",
@@ -567,8 +575,8 @@ PILOT_FIXTURE_FILES = (
     "fixtures/jobs/partial-observations.yaml",
     "fixtures/jobs/sanitization-blocked.yaml",
     PILOT_POLICY_YAML,
-    "fixtures/profiles/basic.yaml",
-    "fixtures/profiles/job-seeker.yaml",
+    PILOT_BASIC_PROFILE_YAML,
+    PILOT_JOB_SEEKER_PROFILE_YAML,
 )
 PILOT_FIXTURE_README = "fixtures/README.md"
 PILOT_FIXTURE_SCHEMA_VERSIONS = {
@@ -3083,7 +3091,9 @@ def validate_pilot_fixtures(
     """Validate the bounded TL-0007 candidate contract, not later final schemas."""
 
     fixture_root = root / "fixtures"
-    expected_paths = {*PILOT_FIXTURE_FILES, PILOT_CATALOG_JSON, PILOT_POLICY_JSON}
+    expected_paths = set(PILOT_FIXTURE_FILES) | {
+        projection for _, projection in PILOT_JSON_PROJECTIONS
+    }
     allowed_paths = expected_paths | {PILOT_FIXTURE_README, M1_WORKSHOP_REPORT_FIXTURE}
     actual_paths: set[str] = set()
     if fixture_root.is_dir():
@@ -3125,6 +3135,11 @@ def validate_pilot_fixtures(
             validation.error(f"{relative}: cannot read fixture text as UTF-8")
         else:
             _pilot_scan_fixture(relative, text, document, validation)
+    for source, projection in PILOT_JSON_PROJECTIONS:
+        if source in documents and projection in actual_paths:
+            _validate_pilot_json_projection(
+                root, documents[source], source, projection, validation
+            )
     try:
         digest = pilot_fixture_set_digest(root)
     except OSError:
@@ -3133,10 +3148,6 @@ def validate_pilot_fixtures(
 
     catalog_path = PILOT_CATALOG_YAML
     catalog = _pilot_mapping(documents.get(catalog_path), catalog_path, validation)
-    if catalog and PILOT_CATALOG_JSON in actual_paths:
-        _validate_pilot_json_projection(
-            root, catalog, catalog_path, PILOT_CATALOG_JSON, validation
-        )
     _pilot_fields(
         catalog,
         catalog_path,
@@ -3293,10 +3304,6 @@ def validate_pilot_fixtures(
 
     policy_path = PILOT_POLICY_YAML
     policy = _pilot_mapping(documents.get(policy_path), policy_path, validation)
-    if policy and PILOT_POLICY_JSON in actual_paths:
-        _validate_pilot_json_projection(
-            root, policy, policy_path, PILOT_POLICY_JSON, validation
-        )
     _pilot_fields(
         policy,
         policy_path,
@@ -3483,8 +3490,8 @@ def validate_pilot_fixtures(
 
     profiles: list[dict[str, Any]] = []
     for profile_path in (
-        "fixtures/profiles/basic.yaml",
-        "fixtures/profiles/job-seeker.yaml",
+        PILOT_BASIC_PROFILE_YAML,
+        PILOT_JOB_SEEKER_PROFILE_YAML,
     ):
         profile = _pilot_mapping(documents.get(profile_path), profile_path, validation)
         _pilot_fields(

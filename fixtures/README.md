@@ -39,36 +39,31 @@ The candidate policy thresholds are pilot proposals, not universal hardware
 requirements or cross-hardware certification. Missing required evidence remains
 unknown and cannot satisfy a requirement.
 
-## Candidate policy and catalog JSON
+## Candidate policy, catalog, and profile JSON
 
-The runtime validators read UTF-8 JSON for the candidate policy and catalog.
+The runtime validators read UTF-8 JSON for the candidate policy, catalog, and profiles.
 Their JSON fixtures encode the exact data in the approved candidate YAML files.
-Bundle validation checks both projections byte for byte. The TL-0007 approval
+Bundle validation checks the projections byte for byte. The TL-0007 approval
 and fixture-set digest cover the original YAML inputs.
 
 - [Policy schema](../schemas/policy.schema.json), [policy JSON](policies/community-laptop-policy.json), and [policy YAML](policies/community-laptop-policy.yaml).
 - [Catalog schema](../schemas/catalog.schema.json), [catalog JSON](catalog/catalog.json), and [catalog YAML](catalog/catalog.yaml).
+- [Profile schema](../schemas/profile.schema.json), [Basic JSON](profiles/basic.json), [Basic YAML](profiles/basic.yaml), [Job Seeker JSON](profiles/job-seeker.json), and [Job Seeker YAML](profiles/job-seeker.yaml).
 
 Run this from the repository root with the pinned Python environment to
-regenerate both test projections.
+regenerate the test projections.
 
 ```powershell
 @'
 from tools.validate_bundle import (
-    PILOT_CATALOG_JSON,
-    PILOT_CATALOG_YAML,
-    PILOT_POLICY_JSON,
-    PILOT_POLICY_YAML,
+    PILOT_JSON_PROJECTIONS,
     ROOT,
     Validation,
     load_unique_key_yaml,
     pilot_fixture_json_bytes,
 )
 
-for source, projection in (
-    (PILOT_CATALOG_YAML, PILOT_CATALOG_JSON),
-    (PILOT_POLICY_YAML, PILOT_POLICY_JSON),
-):
+for source, projection in PILOT_JSON_PROJECTIONS:
     validation = Validation()
     fixture = load_unique_key_yaml(ROOT / source, validation)
     if validation.errors:

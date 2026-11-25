@@ -42,7 +42,7 @@ public sealed class CatalogSchemaTests
     [Fact]
     public void AllowsExactVendorVersionAndIndependentRedistributionStatus()
     {
-        var reviewed = Reviewed();
+        var reviewed = CreateReviewedCatalog();
         var catalog = Parse(reviewed.ToJsonString());
 
         Assert.False(catalog.SyntheticData);
@@ -62,7 +62,7 @@ public sealed class CatalogSchemaTests
     [InlineData("declared_license", "noassertion")]
     public void RejectsReservedOrUnsafeReviewedMetadata(string field, string value)
     {
-        var reviewed = Reviewed();
+        var reviewed = CreateReviewedCatalog();
         At(reviewed, "applications.0.review")[field] = value;
         Reject(reviewed.ToJsonString());
     }
@@ -143,7 +143,7 @@ public sealed class CatalogSchemaTests
     [InlineData("verification.expected_package_id", "\"fictional.tests.webbrowser\"")]
     public void RejectsStaleUnsupportedOrInconsistentReviewedMetadata(string field, string jsonValue)
     {
-        var reviewed = Reviewed();
+        var reviewed = CreateReviewedCatalog();
         Set(reviewed, $"applications.0.{field}", JsonNode.Parse(jsonValue));
 
         Reject(reviewed.ToJsonString());
@@ -154,7 +154,7 @@ public sealed class CatalogSchemaTests
     [InlineData("valid_until_utc")]
     public void ReviewedEntriesRequireInstallationAndExpiryFields(string field)
     {
-        var reviewed = Reviewed();
+        var reviewed = CreateReviewedCatalog();
         At(reviewed, "applications.0.review").AsObject().Remove(field);
 
         Reject(reviewed.ToJsonString());
@@ -175,7 +175,7 @@ public sealed class CatalogSchemaTests
     [Fact]
     public void RejectsPackageIdentityCollisionsRegardlessOfCaseOrVersion()
     {
-        var reviewed = Reviewed();
+        var reviewed = CreateReviewedCatalog();
         var applications = reviewed["applications"]!.AsArray();
         var second = applications[0]!.DeepClone();
         second["id"] = "fictional.document-editor";
@@ -255,7 +255,7 @@ public sealed class CatalogSchemaTests
     [Fact]
     public void RejectsReturningFromReviewedCatalogToSyntheticEvenAtHigherVersion()
     {
-        var current = Parse(Reviewed().ToJsonString());
+        var current = Parse(CreateReviewedCatalog().ToJsonString());
         var synthetic = Candidate();
         synthetic["catalog_id"] = current.CatalogId;
         synthetic["version"] = "2.0.0";
@@ -265,7 +265,7 @@ public sealed class CatalogSchemaTests
 
     private static JsonObject Candidate() => JsonNode.Parse(CandidateJson)!.AsObject();
 
-    private static JsonObject Reviewed()
+    internal static JsonObject CreateReviewedCatalog()
     {
         var candidate = Candidate();
         candidate["catalog_id"] = "reviewed-generic-catalog";

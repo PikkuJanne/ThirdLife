@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "The runtime also bounds UTF-8 input size and nesting, rejects duplicate JSON properties and repeated capability IDs, choice IDs, or choice types, and checks the exact catalog reference and capability membership.",
+  "title": "ThirdLife workshop and recipient profile v1",
+  "description": "Generic workshop capability intent, exact policy and catalog references, and deferred recipient choices.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "profile_id", "version", "status", "synthetic_data", "classification",
+    "policy", "catalog", "workshop", "recipient"
+  ],
+  "properties": {
+    "schema_version": { "const": "thirdlife.profile.v1" },
+    "profile_id": { "$ref": "#/$defs/lowerKebabId" },
+    "version": { "$ref": "#/$defs/semanticVersion" },
+    "status": { "enum": ["candidate", "reviewed"] },
+    "synthetic_data": { "type": "boolean" },
+    "classification": { "const": "PUBLIC_REFERENCE" },
+    "policy": { "$ref": "#/$defs/documentReference" },
+    "catalog": { "$ref": "#/$defs/documentReference" },
+    "workshop": { "$ref": "#/$defs/workshop" },
+    "recipient": { "$ref": "#/$defs/recipient" }
+  },
+  "if": { "properties": { "synthetic_data": { "const": true } } },
+  "then": { "properties": { "status": { "const": "candidate" } } },
+  "else": { "properties": { "status": { "const": "reviewed" } } },
+  "$defs": {
+    "lowerKebabId": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$(?![\\s\\S])"
+    },
+    "semanticVersion": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$(?![\\s\\S])"
+    },
+    "documentReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/lowerKebabId" },
+        "version": { "$ref": "#/$defs/semanticVersion" }
+      }
+    },
+    "workshop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capabilities"],
+      "properties": {
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/workshopCapability" },
+          "contains": {
+            "required": ["intent"],
+            "properties": { "intent": { "const": "essential" } }
+          }
+        }
+      }
+    },
+    "workshopCapability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_id", "intent", "reason_code"],
+      "properties": {
+        "capability_id": { "enum": ["web_browsing", "document_editing", "pdf_reading", "video_calling"] },
+        "intent": { "enum": ["essential", "optional"] },
+        "reason_code": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
+        }
+      }
+    },
+    "recipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["choices"],
+      "properties": {
+        "choices": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/recipientChoice" }
+        }
+      }
+    },
+    "recipientChoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["choice_id", "choice_type", "state", "requires_recipient_presence", "workshop_action"],
+      "properties": {
+        "choice_id": { "$ref": "#/$defs/lowerKebabId" },
+        "choice_type": {
+          "enum": ["browser_preference", "accessibility_preferences", "cloud_account_sign_in", "backup_onboarding"]
+        },
+        "state": { "const": "deferred" },
+        "requires_recipient_presence": { "const": true },
+        "workshop_action": { "const": false }
+      }
+    }
+  }
+}
