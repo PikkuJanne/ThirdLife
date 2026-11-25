@@ -37,6 +37,8 @@ TESTING_POLICY_RESET_AMENDMENT_PATH = (
     "docs/amendments/2026-11-24-permanent-testing-policy-reset.md"
 )
 M1_WORKSHOP_REPORT_FIXTURE = "fixtures/expected-reports/M1/workshop-audit.txt"
+PILOT_CATALOG_YAML = "fixtures/catalog/catalog.yaml"
+PILOT_CATALOG_JSON = "fixtures/catalog/catalog.json"
 PILOT_POLICY_YAML = "fixtures/policies/community-laptop-policy.yaml"
 PILOT_POLICY_JSON = "fixtures/policies/community-laptop-policy.json"
 TL0401_WINGET_ADR_PATH = "docs/adr/0009-winget-backend.md"
@@ -133,15 +135,17 @@ REQUIRED_FILES = (
     "docs/privacy/privacy-model.md",
     "docs/privacy/redaction-test-cases.yaml",
     "fixtures/README.md",
-    "fixtures/catalog/catalog.yaml",
+    PILOT_CATALOG_JSON,
+    PILOT_CATALOG_YAML,
     M1_WORKSHOP_REPORT_FIXTURE,
     "fixtures/jobs/assessment-ready.yaml",
     "fixtures/jobs/partial-observations.yaml",
     "fixtures/jobs/sanitization-blocked.yaml",
     PILOT_POLICY_JSON,
-    "fixtures/policies/community-laptop-policy.yaml",
+    PILOT_POLICY_YAML,
     "fixtures/profiles/basic.yaml",
     "fixtures/profiles/job-seeker.yaml",
+    "schemas/catalog.schema.json",
     "schemas/policy.schema.json",
     "docs/security/abuse-cases.md",
     "docs/security/data-flow.md",
@@ -558,7 +562,7 @@ PRIVACY_FIXTURE_MAX_DEPTH = 32
 PRIVACY_FIXTURE_MAX_SCALAR_CHARS = 16_384
 PRIVACY_FIXTURE_MAX_AGGREGATE_SCALAR_CHARS = 128 * 1024
 PILOT_FIXTURE_FILES = (
-    "fixtures/catalog/catalog.yaml",
+    PILOT_CATALOG_YAML,
     "fixtures/jobs/assessment-ready.yaml",
     "fixtures/jobs/partial-observations.yaml",
     "fixtures/jobs/sanitization-blocked.yaml",
@@ -2824,29 +2828,33 @@ def pilot_fixture_set_digest(root: Path = ROOT) -> str:
     return digest.hexdigest()
 
 
-def pilot_policy_json_bytes(policy: dict[str, Any]) -> bytes:
+def pilot_fixture_json_bytes(fixture: dict[str, Any]) -> bytes:
     """Encode the exact fixture data in insertion order as UTF-8 JSON with LF."""
-    return (json.dumps(policy, indent=2, ensure_ascii=False, allow_nan=False) + "\n").encode(
+    return (json.dumps(fixture, indent=2, ensure_ascii=False, allow_nan=False) + "\n").encode(
         "utf-8"
     )
 
 
-def _validate_pilot_policy_projection(
-    root: Path, policy: dict[str, Any], validation: Validation
+def _validate_pilot_json_projection(
+    root: Path,
+    fixture: dict[str, Any],
+    source_relative: str,
+    projection_relative: str,
+    validation: Validation,
 ) -> None:
-    path = root / PILOT_POLICY_JSON
+    path = root / projection_relative
     try:
         path.resolve(strict=True).relative_to(root.resolve(strict=True))
         if path.is_symlink():
             return  # The fixture inventory already rejected the link.
-        expected = pilot_policy_json_bytes(policy)
+        expected = pilot_fixture_json_bytes(fixture)
         with path.open("rb") as stream:
             actual = stream.read(len(expected) + 1)
     except (OSError, RuntimeError, TypeError, ValueError):
-        validation.error(f"{PILOT_POLICY_JSON}: cannot compare the policy fixture projection")
+        validation.error(f"{projection_relative}: cannot compare the fixture projection")
         return
     if actual != expected:
-        validation.error(f"{PILOT_POLICY_JSON}: must exactly encode {PILOT_POLICY_YAML}")
+        validation.error(f"{projection_relative}: must exactly encode {source_relative}")
 
 
 def _pilot_mapping(
@@ -3075,7 +3083,7 @@ def validate_pilot_fixtures(
     """Validate the bounded TL-0007 candidate contract, not later final schemas."""
 
     fixture_root = root / "fixtures"
-    expected_paths = {*PILOT_FIXTURE_FILES, PILOT_POLICY_JSON}
+    expected_paths = {*PILOT_FIXTURE_FILES, PILOT_CATALOG_JSON, PILOT_POLICY_JSON}
     allowed_paths = expected_paths | {PILOT_FIXTURE_README, M1_WORKSHOP_REPORT_FIXTURE}
     actual_paths: set[str] = set()
     if fixture_root.is_dir():
@@ -3123,8 +3131,12 @@ def validate_pilot_fixtures(
         digest = ""
         validation.error("fixtures: cannot compute the exact fixture-set digest")
 
-    catalog_path = "fixtures/catalog/catalog.yaml"
+    catalog_path = PILOT_CATALOG_YAML
     catalog = _pilot_mapping(documents.get(catalog_path), catalog_path, validation)
+    if catalog and PILOT_CATALOG_JSON in actual_paths:
+        _validate_pilot_json_projection(
+            root, catalog, catalog_path, PILOT_CATALOG_JSON, validation
+        )
     _pilot_fields(
         catalog,
         catalog_path,
@@ -3282,7 +3294,9 @@ def validate_pilot_fixtures(
     policy_path = PILOT_POLICY_YAML
     policy = _pilot_mapping(documents.get(policy_path), policy_path, validation)
     if policy and PILOT_POLICY_JSON in actual_paths:
-        _validate_pilot_policy_projection(root, policy, validation)
+        _validate_pilot_json_projection(
+            root, policy, policy_path, PILOT_POLICY_JSON, validation
+        )
     _pilot_fields(
         policy,
         policy_path,

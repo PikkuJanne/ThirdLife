@@ -31,6 +31,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 MATRIX_PATH = Path("docs/supply-chain/license-matrix.csv")
 DEPENDENCIES_PATH = Path("docs/supply-chain/dependencies.md")
+CATALOG_JSON_PROJECTION = "fixtures/catalog/catalog.json"
 MATRIX_HEADERS = (
     "component_type",
     "component_id",
@@ -994,6 +995,12 @@ def _catalog_inputs(validation: _Validation) -> tuple[_CatalogIdentity, ...]:
     for path in paths:
         if not path.is_file():
             continue
+        if (
+            path.relative_to(validation.root).as_posix() == CATALOG_JSON_PROJECTION
+            and not path.is_symlink()
+        ):
+            # Bundle validation binds this runtime projection to the reviewed YAML.
+            continue
         label = validation.relative(path)
         if path.suffix.casefold() not in {".yaml", ".yml"}:
             validation.error(f"{label}: catalog bootstrap inputs must be YAML files")
@@ -1416,7 +1423,10 @@ def _is_governed_git_path(path_text: str) -> bool:
         return True
     if normalized.startswith(("src/", "tests/")):
         return path.suffix.casefold() == ".csproj" or path.name == "packages.lock.json"
-    return normalized.startswith("fixtures/catalog/")
+    return (
+        normalized.startswith("fixtures/catalog/")
+        and normalized != CATALOG_JSON_PROJECTION
+    )
 
 
 def _committed_governed_paths(root: Path, revision: str) -> set[str]:

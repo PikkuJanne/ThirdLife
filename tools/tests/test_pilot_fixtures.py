@@ -122,32 +122,37 @@ class PilotFixtureContractTests(unittest.TestCase):
             golden.with_name("unreviewed.txt").write_text("Unreviewed.\n", encoding="utf-8")
             self.assert_rejected(root, "unexpected pilot fixture files")
 
-    def test_policy_projection_rejects_ambiguous_or_changed_json(self) -> None:
-        with self.fixture_copy() as root:
-            path = root / validate_bundle.PILOT_POLICY_JSON
-            approved_digest = validate_bundle.pilot_fixture_set_digest(root)
-            approved_json = path.read_bytes()
-            mutations = {
-                "duplicate key": approved_json.replace(
-                    b'"synthetic_data": true,',
-                    b'"synthetic_data": true, "synthetic_data": true,',
-                    1,
-                ),
-                "integer in place of boolean": approved_json.replace(
-                    b'"synthetic_data": true,', b'"synthetic_data": 1,', 1
-                ),
-                "extra byte": approved_json + b"\n",
-            }
-            for mutation, mutated_json in mutations.items():
-                with self.subTest(mutation=mutation):
-                    self.assertNotEqual(approved_json, mutated_json)
-                    path.write_bytes(mutated_json)
-                    self.assert_rejected(root, "must exactly encode")
-                    self.assertEqual(
-                        approved_digest, validate_bundle.pilot_fixture_set_digest(root)
-                    )
-            path.unlink()
-            self.assert_rejected(root, "missing required pilot fixtures")
+    def test_projections_reject_ambiguous_or_changed_json(self) -> None:
+        for source, projection in (
+            (validate_bundle.PILOT_CATALOG_YAML, validate_bundle.PILOT_CATALOG_JSON),
+            (validate_bundle.PILOT_POLICY_YAML, validate_bundle.PILOT_POLICY_JSON),
+        ):
+            with self.subTest(projection=projection), self.fixture_copy() as root:
+                self.assertIn(projection, validate_bundle.REQUIRED_FILES)
+                path = root / projection
+                approved_digest = validate_bundle.pilot_fixture_set_digest(root)
+                approved_json = path.read_bytes()
+                mutations = {
+                    "duplicate key": approved_json.replace(
+                        b'"synthetic_data": true,',
+                        b'"synthetic_data": true, "synthetic_data": true,',
+                        1,
+                    ),
+                    "integer in place of boolean": approved_json.replace(
+                        b'"synthetic_data": true,', b'"synthetic_data": 1,', 1
+                    ),
+                    "extra byte": approved_json + b"\n",
+                }
+                for mutation, mutated_json in mutations.items():
+                    with self.subTest(mutation=mutation):
+                        self.assertNotEqual(approved_json, mutated_json)
+                        path.write_bytes(mutated_json)
+                        self.assert_rejected(root, f"{projection}: must exactly encode {source}")
+                        self.assertEqual(
+                            approved_digest, validate_bundle.pilot_fixture_set_digest(root)
+                        )
+                path.unlink()
+                self.assert_rejected(root, "missing required pilot fixtures")
 
     def test_digest_changes_when_any_fixture_byte_changes(self) -> None:
         with self.fixture_copy() as root:

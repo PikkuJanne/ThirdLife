@@ -962,6 +962,28 @@ class ManifestAndApprovalTests(SupplyChainTestCase):
             }
             self.assertEqual(metadata["thirdlife:source-revision"], head)
 
+    def test_only_the_catalog_projection_is_excluded_from_license_inputs(self) -> None:
+        with repository_copy() as root:
+            projection = root / "fixtures/catalog/catalog.json"
+            with_projection = supply_chain.validate_supply_chain(root)
+            self.assertTrue(with_projection.ok, "\n".join(with_projection.errors))
+
+            unreviewed = projection.with_name("unreviewed.json")
+            projection.rename(unreviewed)
+            self.assert_invalid(
+                root,
+                "fixtures/catalog/unreviewed.json",
+                "catalog bootstrap inputs must be YAML files",
+            )
+
+            unreviewed.unlink()
+            without_projection = supply_chain.validate_supply_chain(root)
+            self.assertTrue(without_projection.ok, "\n".join(without_projection.errors))
+            self.assertEqual(with_projection.lock_digest, without_projection.lock_digest)
+            self.assertEqual(with_projection.matrix_digest, without_projection.matrix_digest)
+            self.assertEqual(with_projection.input_digests, without_projection.input_digests)
+            self.assertEqual(with_projection.inventory, without_projection.inventory)
+
     def test_catalog_file_without_catalog_matrix_row_is_rejected(self) -> None:
         with repository_copy() as root:
             catalog_path = root / "fixtures" / "catalog" / "synthetic.yaml"

@@ -39,33 +39,40 @@ The candidate policy thresholds are pilot proposals, not universal hardware
 requirements or cross-hardware certification. Missing required evidence remains
 unknown and cannot satisfy a requirement.
 
-## Candidate policy JSON
+## Candidate policy and catalog JSON
 
-The policy validator reads UTF-8 JSON using the
-[v1 policy schema](../schemas/policy.schema.json). The
-[JSON fixture](policies/community-laptop-policy.json) encodes the exact data from
-the [approved candidate YAML](policies/community-laptop-policy.yaml) for runtime
-tests. Bundle validation checks the projection byte for byte. TL-0007 approval
-and its digest continue to cover the original YAML inputs.
+The runtime validators read UTF-8 JSON for the candidate policy and catalog.
+Their JSON fixtures encode the exact data in the approved candidate YAML files.
+Bundle validation checks both projections byte for byte. The TL-0007 approval
+and fixture-set digest cover the original YAML inputs.
+
+- [Policy schema](../schemas/policy.schema.json), [policy JSON](policies/community-laptop-policy.json), and [policy YAML](policies/community-laptop-policy.yaml).
+- [Catalog schema](../schemas/catalog.schema.json), [catalog JSON](catalog/catalog.json), and [catalog YAML](catalog/catalog.yaml).
 
 Run this from the repository root with the pinned Python environment to
-regenerate the test projection.
+regenerate both test projections.
 
 ```powershell
 @'
 from tools.validate_bundle import (
+    PILOT_CATALOG_JSON,
+    PILOT_CATALOG_YAML,
     PILOT_POLICY_JSON,
     PILOT_POLICY_YAML,
     ROOT,
     Validation,
     load_unique_key_yaml,
-    pilot_policy_json_bytes,
+    pilot_fixture_json_bytes,
 )
 
-validation = Validation()
-policy = load_unique_key_yaml(ROOT / PILOT_POLICY_YAML, validation)
-if validation.errors:
-    raise SystemExit("\n".join(validation.errors))
-(ROOT / PILOT_POLICY_JSON).write_bytes(pilot_policy_json_bytes(policy))
+for source, projection in (
+    (PILOT_CATALOG_YAML, PILOT_CATALOG_JSON),
+    (PILOT_POLICY_YAML, PILOT_POLICY_JSON),
+):
+    validation = Validation()
+    fixture = load_unique_key_yaml(ROOT / source, validation)
+    if validation.errors:
+        raise SystemExit("\n".join(validation.errors))
+    (ROOT / projection).write_bytes(pilot_fixture_json_bytes(fixture))
 '@ | .\.venv\Scripts\python.exe -
 ```

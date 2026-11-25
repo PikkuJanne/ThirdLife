@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "The runtime also bounds UTF-8 input size and nesting, rejects duplicate JSON properties and repeated entry, capability, or package identities, requires exact verification identity matches, and checks trusted version and review dates. The runtime requires byte estimates in integer JSON representation.",
+  "title": "ThirdLife application catalog v1",
+  "description": "Versioned package identity, review, impact, and verification metadata for generic capabilities.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "catalog_id", "version", "status", "synthetic_data", "classification", "applications"],
+  "properties": {
+    "schema_version": { "const": "thirdlife.catalog.v1" },
+    "catalog_id": { "$ref": "#/$defs/lowerKebabId" },
+    "version": { "$ref": "#/$defs/semanticVersion" },
+    "status": { "enum": ["candidate", "reviewed"] },
+    "synthetic_data": { "type": "boolean" },
+    "classification": { "const": "PUBLIC_REFERENCE" },
+    "applications": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/application" }
+    }
+  },
+  "if": { "properties": { "synthetic_data": { "const": true } } },
+  "then": {
+    "properties": {
+      "status": { "const": "candidate" },
+      "applications": { "items": { "$ref": "#/$defs/syntheticApplication" } }
+    }
+  },
+  "else": {
+    "properties": {
+      "status": { "const": "reviewed" },
+      "applications": { "items": { "$ref": "#/$defs/reviewedApplication" } }
+    }
+  },
+  "$defs": {
+    "lowerKebabId": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$(?![\\s\\S])"
+    },
+    "entryId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)+$(?![\\s\\S])"
+    },
+    "packageId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*(?:\\.[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)+$(?![\\s\\S])"
+    },
+    "semanticVersion": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$(?![\\s\\S])"
+    },
+    "packageVersion": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[0-9][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*$(?![\\s\\S])"
+    },
+    "publisher": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?(?: [A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?)*$(?![\\s\\S])"
+    },
+    "license": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$(?![\\s\\S])"
+    },
+    "utcTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,7})?Z$(?![\\s\\S])"
+    },
+    "byteEstimate": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "capability_id", "entry_status", "production_eligible", "package", "review", "behavior", "verification"],
+      "properties": {
+        "id": { "$ref": "#/$defs/entryId" },
+        "version": { "$ref": "#/$defs/semanticVersion" },
+        "capability_id": { "enum": ["web_browsing", "document_editing", "pdf_reading", "video_calling"] },
+        "entry_status": { "enum": ["synthetic_placeholder", "reviewed"] },
+        "production_eligible": { "type": "boolean" },
+        "package": { "$ref": "#/$defs/package" },
+        "review": { "$ref": "#/$defs/review" },
+        "behavior": { "$ref": "#/$defs/behavior" },
+        "verification": { "$ref": "#/$defs/verification" }
+      }
+    },
+    "syntheticApplication": {
+      "properties": {
+        "id": { "pattern": "^generic\\.synthetic\\." },
+        "entry_status": { "const": "synthetic_placeholder" },
+        "production_eligible": { "const": false },
+        "package": {
+          "properties": {
+            "source_id": { "const": "synthetic-fixture-source" },
+            "package_id": { "pattern": "^generic\\.synthetic\\." },
+            "external_artifact": { "const": false }
+          }
+        },
+        "review": {
+          "not": {
+            "anyOf": [
+              { "required": ["installation_status"] },
+              { "required": ["valid_until_utc"] }
+            ]
+          },
+          "properties": {
+            "publisher": { "const": "synthetic-fixture-publisher" },
+            "declared_license": { "const": "NOASSERTION" },
+            "license_review_status": { "const": "pending" },
+            "privacy_review_status": { "const": "pending" },
+            "license_reviewed_at_utc": { "type": "null" },
+            "privacy_reviewed_at_utc": { "type": "null" },
+            "redistribution_status": { "const": "withheld" }
+          }
+        },
+        "behavior": { "properties": { "network_use": { "const": "not_applicable" } } },
+        "verification": { "properties": { "status": { "const": "placeholder_unimplemented" } } }
+      }
+    },
+    "reviewedApplication": {
+      "properties": {
+        "id": { "not": { "pattern": "^generic\\.synthetic\\." } },
+        "entry_status": { "const": "reviewed" },
+        "production_eligible": { "const": true },
+        "package": {
+          "properties": {
+            "source_id": { "not": { "const": "synthetic-fixture-source" } },
+            "package_id": {
+              "not": { "pattern": "^[Gg][Ee][Nn][Ee][Rr][Ii][Cc]\\.[Ss][Yy][Nn][Tt][Hh][Ee][Tt][Ii][Cc]\\." }
+            },
+            "external_artifact": { "const": true }
+          }
+        },
+        "review": {
+          "required": ["installation_status", "valid_until_utc"],
+          "properties": {
+            "publisher": { "not": { "pattern": "^[Ss][Yy][Nn][Tt][Hh][Ee][Tt][Ii][Cc]-[Ff][Ii][Xx][Tt][Uu][Rr][Ee]-[Pp][Uu][Bb][Ll][Ii][Ss][Hh][Ee][Rr]$(?![\\s\\S])" } },
+            "declared_license": { "not": { "pattern": "^[Nn][Oo][Aa][Ss][Ss][Ee][Rr][Tt][Ii][Oo][Nn]$(?![\\s\\S])" } },
+            "license_review_status": { "const": "approved" },
+            "privacy_review_status": { "const": "approved" },
+            "license_reviewed_at_utc": { "$ref": "#/$defs/utcTimestamp" },
+            "privacy_reviewed_at_utc": { "$ref": "#/$defs/utcTimestamp" }
+          }
+        },
+        "behavior": { "properties": { "network_use": { "not": { "const": "not_applicable" } } } },
+        "verification": { "properties": { "status": { "const": "reviewed" } } }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "package_id", "exact_version", "scope", "architectures", "minimum_os", "external_artifact"],
+      "properties": {
+        "source_id": { "$ref": "#/$defs/lowerKebabId" },
+        "package_id": { "$ref": "#/$defs/packageId" },
+        "exact_version": { "$ref": "#/$defs/packageVersion" },
+        "scope": { "enum": ["user", "machine"] },
+        "architectures": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "enum": ["x64", "arm64", "x86"] }
+        },
+        "minimum_os": { "const": "windows_11" },
+        "external_artifact": { "type": "boolean" }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "publisher",
+        "declared_license",
+        "license_review_status",
+        "privacy_review_status",
+        "license_reviewed_at_utc",
+        "privacy_reviewed_at_utc",
+        "redistribution_status"
+      ],
+      "properties": {
+        "publisher": { "$ref": "#/$defs/publisher" },
+        "declared_license": { "$ref": "#/$defs/license" },
+        "license_review_status": { "enum": ["pending", "approved"] },
+        "privacy_review_status": { "enum": ["pending", "approved"] },
+        "license_reviewed_at_utc": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/utcTimestamp" }] },
+        "privacy_reviewed_at_utc": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/utcTimestamp" }] },
+        "redistribution_status": { "enum": ["withheld", "allowed"] },
+        "installation_status": { "const": "allowed" },
+        "valid_until_utc": { "$ref": "#/$defs/utcTimestamp" }
+      }
+    },
+    "behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reboot", "background_service", "auto_update", "network_use", "download_bytes", "installed_bytes"],
+      "properties": {
+        "reboot": { "enum": ["none", "possible", "required", "unknown"] },
+        "background_service": { "enum": ["yes", "no", "unknown"] },
+        "auto_update": { "enum": ["yes", "no", "unknown"] },
+        "network_use": { "enum": ["required", "optional", "none", "not_applicable", "unknown"] },
+        "download_bytes": { "$ref": "#/$defs/byteEstimate" },
+        "installed_bytes": { "$ref": "#/$defs/byteEstimate" }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "type", "expected_source_id", "expected_package_id", "expected_version"],
+      "properties": {
+        "status": { "enum": ["placeholder_unimplemented", "reviewed"] },
+        "type": { "const": "exact_package_identity" },
+        "expected_source_id": { "$ref": "#/$defs/lowerKebabId" },
+        "expected_package_id": { "$ref": "#/$defs/packageId" },
+        "expected_version": { "$ref": "#/$defs/packageVersion" }
+      }
+    }
+  }
+}
