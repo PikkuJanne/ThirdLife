@@ -13,7 +13,7 @@ namespace ThirdLife.Inventory.Tests;
 
 public sealed class OperatingSystemProviderTests(ITestOutputHelper output)
 {
-    private static readonly DateTimeOffset CurrentDate = new(2026, 9, 30, 12, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset CurrentDate = new(2026, 11, 25, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
     public void DescriptorIsLocalUnelevatedAndOwnsDistinctArchitecture()
@@ -21,6 +21,7 @@ public sealed class OperatingSystemProviderTests(ITestOutputHelper output)
         var provider = new OperatingSystemProvider();
         Assert.Equal(ProviderPrivilegeRequirement.StandardUser, provider.Descriptor.MinimumPrivilege);
         Assert.Equal(ProviderNetworkUse.None, provider.Descriptor.NetworkUse);
+        Assert.Equal([ProviderOperatingSystem.Windows11], provider.Descriptor.SupportedOperatingSystems);
         Assert.Equal(TimeSpan.FromSeconds(2), provider.Descriptor.Timeout);
         Assert.Equal(14, provider.Descriptor.EvidenceDefinitions.Count);
         Assert.All(provider.Descriptor.EvidenceDefinitions, definition => Assert.Equal(1, definition.MaximumCardinality));
@@ -32,15 +33,18 @@ public sealed class OperatingSystemProviderTests(ITestOutputHelper output)
     }
 
     [Theory]
-    [InlineData(26200, 48u, (ushort)9, "supported")]
-    [InlineData(19045, 48u, (ushort)9, "audit_only")]
-    [InlineData(22000, 48u, (ushort)9, "unsupported")]
-    [InlineData(26200, 48u, (ushort)12, "unsupported")]
-    public async Task SyntheticWindowsVersionsKeepSupportTargetsDistinct(int build, uint edition, ushort architecture, string expected)
+    [InlineData(26200, 48u, (ushort)9, "windows_11", "supported", "None")]
+    [InlineData(19045, 48u, (ushort)9, "windows_10", "unsupported", "UnsupportedOperatingSystem")]
+    [InlineData(22000, 48u, (ushort)9, "windows_11", "unsupported", "SupportEnded")]
+    [InlineData(26200, 48u, (ushort)12, "windows_11", "unsupported", "UnsupportedArchitecture")]
+    public async Task SyntheticWindowsVersionsKeepSupportTargetsDistinct(
+        int build, uint edition, ushort architecture, string family, string support, string reason)
     {
         var result = await Run(Snapshot(build: build, edition: edition, architecture: architecture));
         Assert.Equal(ProviderRunOutcome.Completed, result.Outcome);
-        Assert.Equal(expected, Value(result, "os.support_target"));
+        Assert.Equal(family, Value(result, "os.family"));
+        Assert.Equal(support, Value(result, "os.support_target"));
+        Assert.Equal(reason, Value(result, "os.lifecycle.reason"));
         Assert.Equal(build, Find(result, "os.build").Value!.IntegerValue);
         Assert.Equal(EvidenceClassification.Inferred, Find(result, "os.support_target").Metadata.EvidenceClassification);
         Assert.All(result.Observations, observation =>
@@ -49,6 +53,27 @@ public sealed class OperatingSystemProviderTests(ITestOutputHelper output)
             Assert.Equal(ProvenanceKind.SyntheticFixture, observation.Metadata.Provenance.Kind);
             Assert.Equal(CurrentDate, observation.Metadata.CollectedAtUtc);
         });
+    }
+
+    [Fact]
+    public async Task ServerRoleAndClientSkusAreReconciledBeforeMappingASharedBuild()
+    {
+        var server = Snapshot(build: 26100, edition: 7, productType: WindowsProductType.Server);
+        var result = await Run(server);
+        Assert.Equal("windows_server", Value(result, "os.family"));
+        Assert.Equal("unsupported", Value(result, "os.support_target"));
+        Assert.Equal("UnsupportedOperatingSystem", Value(result, "os.lifecycle.reason"));
+
+        var conflictingSku = await Run(server with { Edition = SystemInventorySourceValue<uint>.Available(48) });
+        AssertUnknown(conflictingSku, "os.family");
+        AssertUnknown(conflictingSku, "os.support_target");
+        Assert.Equal("UnverifiedIdentity", Value(conflictingSku, "os.lifecycle.reason"));
+
+        var missingProductType = await Run(server with { ProductType = SystemInventorySourceValue<WindowsProductType>.Unavailable() });
+        Assert.Equal(ProviderRunOutcome.Unavailable, missingProductType.Outcome);
+        Assert.Equal(26100, Find(missingProductType, "os.build").Value!.IntegerValue);
+        AssertUnknown(missingProductType, "os.family");
+        AssertUnknown(missingProductType, "os.support_target");
     }
 
     [Theory]
@@ -80,10 +105,12 @@ public sealed class OperatingSystemProviderTests(ITestOutputHelper output)
         var future = await Run(Snapshot(), CurrentDate.AddDays(-1));
         AssertUnknown(stale, "os.support_target");
         Assert.Equal("provider_value_stale", Find(stale, "os.support_target").LimitationCode);
+        Assert.Equal("windows_11", Value(stale, "os.family"));
+        Assert.Equal("StaleData", Value(stale, "os.lifecycle.reason"));
         AssertUnknown(future, "os.support_target");
         Assert.Equal(Value(current, "os.lifecycle.revision"), Value(stale, "os.lifecycle.revision"));
-        Assert.Equal("2026-09-30", Value(current, "os.lifecycle.as_of"));
-        Assert.Equal("2026-09-30", Value(current, "os.lifecycle.evaluated_on"));
+        Assert.Equal("2026-11-25", Value(current, "os.lifecycle.as_of"));
+        Assert.Equal("2026-11-25", Value(current, "os.lifecycle.evaluated_on"));
         Assert.NotNull(Value(current, "os.lifecycle.source"));
         Assert.Equal(oldJson, JsonSerializer.Serialize(current.Observations));
     }
@@ -205,24 +232,27 @@ public sealed class OperatingSystemProviderTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void NativeImportsAreRestrictedToReadOnlySystemProductQuery()
+    public void NativeImportsAreRestrictedToReadOnlySystemProductQueries()
     {
         var imports = typeof(WindowsOperatingSystemSource).GetNestedTypes(BindingFlags.NonPublic)
             .SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.NonPublic))
             .Select(m => (Method: m, Import: m.GetCustomAttribute<DllImportAttribute>()))
             .Where(item => item.Import is not null).ToArray();
-        var import = Assert.Single(imports);
-        Assert.Equal("GetProductInfo", import.Method.Name);
-        Assert.Equal("kernel32.dll", import.Import!.Value);
-        Assert.Equal(DllImportSearchPath.System32,
-            import.Method.GetCustomAttribute<DefaultDllImportSearchPathsAttribute>()!.Paths);
+        Assert.Equal(["GetProductInfo", "VerSetConditionMask", "VerifyVersionInfo"],
+            imports.Select(item => item.Method.Name).Order(StringComparer.Ordinal));
+        Assert.All(imports, import =>
+        {
+            Assert.Equal("kernel32.dll", import.Import!.Value);
+            Assert.Equal(DllImportSearchPath.System32,
+                import.Method.GetCustomAttribute<DefaultDllImportSearchPathsAttribute>()!.Paths);
+        });
     }
 
     [Fact]
     [Trait("Category", "ActiveMachine")]
     public async Task ActiveMachineOsSmokeIsUnelevatedBoundedAndSilent()
     {
-        Assert.True(OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000));
+        Assert.Equal(WindowsPlatformEligibility.Supported, WindowsPlatform.CheckCurrent());
         using var identity = WindowsIdentity.GetCurrent();
         Assert.False(new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator));
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -236,6 +266,7 @@ public sealed class OperatingSystemProviderTests(ITestOutputHelper output)
         Assert.NotNull(Find(result, "os.build").Value);
         Assert.NotNull(Find(result, "os.edition_code").Value);
         Assert.NotNull(Find(result, "os.architecture").Value);
+        Assert.Equal("windows_11", Value(result, "os.family"));
         Assert.InRange(result.Observations.Count, 1, 15);
         Assert.True(timer.Elapsed < TimeSpan.FromSeconds(5));
         Assert.All(result.Observations, o => Assert.Equal(PrivacyClassification.WorkshopRestricted, o.Metadata.PrivacyClassification));
@@ -253,9 +284,12 @@ public sealed class OperatingSystemProviderTests(ITestOutputHelper output)
         }));
     }
 
-    private static OperatingSystemSnapshot Snapshot(int major = 10, int minor = 0, int build = 26200, uint edition = 48, ushort architecture = 9) =>
+    private static OperatingSystemSnapshot Snapshot(
+        int major = 10, int minor = 0, int build = 26200, uint edition = 48, ushort architecture = 9,
+        WindowsProductType productType = WindowsProductType.Workstation) =>
         new(SystemInventorySourceValue<OperatingSystemVersion>.Available(new(major, minor, build)),
-            SystemInventorySourceValue<uint>.Available(edition), SystemInventorySourceValue<ushort>.Available(architecture));
+            SystemInventorySourceValue<uint>.Available(edition), SystemInventorySourceValue<ushort>.Available(architecture),
+            SystemInventorySourceValue<WindowsProductType>.Available(productType));
 
     private static async Task<ProviderRunResult> Run(OperatingSystemSnapshot snapshot, DateTimeOffset? date = null)
     {

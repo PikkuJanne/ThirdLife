@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Minimal Release Interface Sheet
 
 **Status:** Draft placeholder; not a published compatibility contract  
-**Bundle version:** 0.6.0  
+**Bundle version:** 0.7.0  
 **Pilot draft task:** `TL-0610`  
 **Stable completion task:** `TL-0706`  
 **Stable-release gate:** `TL-0710`
@@ -20,7 +20,7 @@ At `TL-0610`, verified pilot behavior is populated and the sheet remains clearly
 | Product version | TBD at release freeze |
 | Publisher | TBD before preview |
 | Licence | TBD at release freeze; the TL-0006 dependency/licence matrix review does not select the final product licence |
-| Supported operating systems | Windows 11 x64 support window to be frozen from release evidence |
+| Platform scope (D-005) | Windows 11 client on native x64 only. Release-qualified editions, builds, and servicing window are TBD at freeze. |
 | Team / queue | Team B / B1 |
 | Maintenance state | Active development until `TL-0710` |
 
@@ -42,7 +42,7 @@ At `TL-0610`, verified pilot behavior is populated and the sheet remains clearly
 
 ## 3. Install, update, repair, and remove
 
-Document at `TL-0706`:
+Qualify install, upgrade, repair and removal against D-005. Record the exact Windows 11 edition, release, build, native x64 architecture, tested artifact and limits. Document at `TL-0706`:
 
 - normal UI or command path;
 - privilege requirement and UAC behavior;
@@ -232,5 +232,5 @@ After `TL-0710`, B4 may use this frozen sheet, installer, hashes, samples, and p
 | Issue/support route | TBD before preview |
 | Security route | TBD before preview; see `SECURITY.md` |
 | Release owner | TBD |
-| Interface revision | Draft 0.6.0 |
+| Interface revision | Draft 0.7.0 |
 | Approved stable version | Not yet approved |

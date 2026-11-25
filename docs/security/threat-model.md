@@ -13,6 +13,8 @@
 
 This document identifies security risks in the planned ThirdLife Setup Core architecture. It is not a new authority tier, a certification, or evidence that a planned control has been implemented. Frozen decisions and the canonical **Owns / Does not own** boundary prevail.
 
+The [Windows 11–only amendment](../amendments/2026-11-25-windows-11-only.md) supersedes the original platform assumption below. The original review remains bound to its cited commit.
+
 ## Purpose and review posture
 
 The model asks what can go wrong while ThirdLife collects inventory, evaluates imported catalogue/profile data, resolves packages and updates, crosses the privilege boundary, persists a journal, verifies outcomes, and produces reports or exports. It uses data-flow decomposition and STRIDE-style prompts, then maps each high-risk threat to binding decisions and one or more roadmap tasks.
@@ -42,7 +44,7 @@ The detailed boundaries and numbered flows are in [`data-flow.md`](data-flow.md)
 
 ## Assumptions and explicit exclusions
 
-- The supported preparation target is Windows 11 x64. Windows 10 is audit-only and cannot reach the normal ready state.
+- Windows 11 client on native x64 is the only supported host and new-workflow target. The entry points verify platform identity before live work. Servicing and other preparation requirements remain separate.
 - Sanitization is an external prerequisite. Core accepts bounded external sanitization evidence; it does not erase donor media or certify that an external process was truthful.
 - Firmware passwords, activation, processor/TPM/Secure Boot requirements, MDM, Autopilot-style enrollment, anti-theft state, and ownership controls are never bypassed. Detection yields a blocker or human review.
 - The refurbished operating system, local API responses, provider output, local files, current clock, and even administrator-controlled state can be malformed, stale, deceptive, or compromised.

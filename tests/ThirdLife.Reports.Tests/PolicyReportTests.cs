@@ -6,6 +6,7 @@ using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.Policy.Decisions;
 using ThirdLife.Policy.Exceptions;
+using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
 using ThirdLife.Reports.WorkshopReport;
 
@@ -17,7 +18,7 @@ public sealed class PolicyReportTests
     private const string SecretShape = "AAAAA-BBBBB-CCCCC-DDDDD-EEEEE";
     private const string PolicyJson = """
         {
-          "schema_version":"thirdlife.policy.v1", "policy_id":"workshop-policy", "version":"1.0.0-candidate.1",
+          "schema_version":"thirdlife.policy.v2", "policy_id":"workshop-policy", "version":"1.0.0-candidate.1",
           "status":"candidate", "synthetic_data":true, "classification":"PUBLIC_REFERENCE", "claim_scope":"pilot_fixture",
           "effective":{"status":"candidate_not_effective","effective_from_utc":null,"effective_until_utc":null},
           "target":{"operating_system":"windows_11","support_state":"supported","architecture":"x64","device_class":"laptop"},
@@ -56,7 +57,9 @@ public sealed class PolicyReportTests
         Assert.Equal(ExpectedDisposition(expected).ReplaceLineEndings("\n") + "\n", report[(start + captured.Length)..]);
         Assert.Contains("\nPolicy\nPolicy ID workshop-policy.\nVersion 1.0.0-candidate.1.\n", report, StringComparison.Ordinal);
         Assert.Contains($"\nSHA-256 {saved.Snapshot.Document.ContentSha256}.\n", report, StringComparison.Ordinal);
-        Assert.Contains("\nCandidate policy evaluation for workshop review.\n", report, StringComparison.Ordinal);
+        Assert.Contains(expected == Disposition.AlternativeOperatingSystemCandidate
+            ? "\nHistorical policy evaluation. Use the current policy for a new preparation decision.\n"
+            : "\nCandidate policy evaluation for workshop review.\n", report, StringComparison.Ordinal);
         Assert.Contains("\nSchema: workshop-disposition-v2\n", report, StringComparison.Ordinal);
         Assert.DoesNotContain('\r', report);
     }
@@ -123,8 +126,10 @@ public sealed class PolicyReportTests
     private static (StoredJob Job, WorkshopAssessmentSummary Assessment, StoredPolicyDecision Saved) Fixture(
         Disposition scenario, bool includeException = false)
     {
-        var snapshot = PolicySnapshot.Parse(Encoding.UTF8.GetBytes(PolicyJson));
         var alternate = scenario == Disposition.AlternativeOperatingSystemCandidate;
+        var snapshot = PolicySnapshot.Parse(Encoding.UTF8.GetBytes(alternate
+            ? PolicyJson.Replace(PolicySchema.Version, PolicySchema.LegacyVersion, StringComparison.Ordinal)
+            : PolicyJson));
         var observations = new List<Observation>
         {
             Fact("evidence-architecture", "system.architecture", "windows-system-inventory", EvidenceValue.FromEnum("x64")),
@@ -212,6 +217,7 @@ public sealed class PolicyReportTests
             Policy rule POL-KBD-001 requires human confirmation. No saved evidence is linked to this check.
             """,
         Disposition.AlternativeOperatingSystemCandidate => """
+            Original recorded disposition and explanation follow.
             Alternative operating system candidate
             A Windows preparation requirement failed. Consider a supported alternative operating system.
             Core rule CORE-OS-RELEASE failed. Evidence ID evidence-release.

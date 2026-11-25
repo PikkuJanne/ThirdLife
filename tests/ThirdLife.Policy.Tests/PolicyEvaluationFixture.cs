@@ -10,6 +10,9 @@ internal static class PolicyEvaluationFixture
     public static byte[] CandidatePolicyJson() =>
         File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "community-laptop-policy.json"));
 
+    public static byte[] HistoricalPolicyJson() =>
+        File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "community-laptop-policy-v1.json"));
+
     public static PolicyDocument CandidatePolicy() => PolicySchema.Parse(CandidatePolicyJson());
 
     // Values mirror the independently authored assessment-ready fixture, not the policy's expectations.

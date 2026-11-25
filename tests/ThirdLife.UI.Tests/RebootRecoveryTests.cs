@@ -22,9 +22,11 @@ public sealed class RebootRecoveryTests
     private static readonly DateTimeOffset Now = new(2026, 10, 2, 14, 0, 0, TimeSpan.Zero);
 
     [Theory]
-    [InlineData(RebootDisposition.Resume, false)]
-    [InlineData(RebootDisposition.Abandon, true)]
-    public async Task ReopenedJobRequiresASelectedCheckpointAndAnExplicitDecision(RebootDisposition disposition, bool expired)
+    [InlineData(RebootDisposition.Resume, false, true)]
+    [InlineData(RebootDisposition.Abandon, true, true)]
+    [InlineData(RebootDisposition.Abandon, false, false)]
+    public async Task ReopenedJobRequiresASelectedCheckpointAndAnExplicitDecision(
+        RebootDisposition disposition, bool expired, bool currentPolicyPlan)
     {
         using var disk = new AuditTestStore();
         var job = new Job(new JobId("job-synthetic-restart-review"), new DeviceId("device-synthetic-restart-review"), Now.AddDays(-1));
@@ -33,7 +35,7 @@ public sealed class RebootRecoveryTests
             await setup.CreateJobAsync(job);
         }
 
-        var candidate = CreateCandidate(job.JobId, expired);
+        var candidate = CreateCandidate(job.JobId, expired, currentPolicyPlan);
         var provider = AuditTestProvider.Available("reboot-recovery");
         RecoveryFixtureStore? openedStore = null;
         await using var workspace = new AuditWorkspace(
@@ -82,7 +84,11 @@ public sealed class RebootRecoveryTests
                 });
                 PumpUntil(window, () => selector.SelectedItem is not null);
                 Assert.Same(candidate, workspace.SelectedRebootRecovery!.Candidate);
-                Assert.Equal(!expired, resume.IsEnabled);
+                Assert.Equal(!expired && currentPolicyPlan, resume.IsEnabled);
+                if (!currentPolicyPlan)
+                {
+                    Assert.Contains("Historical checkpoint", workspace.SelectedRebootRecovery.Label, StringComparison.Ordinal);
+                }
                 Assert.True(abandon.IsEnabled);
                 Assert.Equal(0, store.DecisionCount);
 
@@ -125,12 +131,12 @@ public sealed class RebootRecoveryTests
         PumpUntil(window, () => !workspace.IsBusy && workspace.Job?.Job.JobId == jobId, () => workspace.Status);
     }
 
-    private static RebootResumeCandidate CreateCandidate(JobId jobId, bool expired)
+    private static RebootResumeCandidate CreateCandidate(JobId jobId, bool expired, bool currentPolicyPlan)
     {
         var plan = new JournalPlanKey(jobId, new string('a', 64), new string('b', 64));
         var checkpoint = new RebootCheckpoint(Guid.NewGuid(), plan, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
             Guid.NewGuid(), Now.AddHours(-2), expired ? Now.AddHours(-1) : Now.AddHours(1));
-        return new RebootResumeCandidate(checkpoint, new RebootResumeToken(new byte[] { 1, 2, 3 }));
+        return new RebootResumeCandidate(checkpoint, new RebootResumeToken(new byte[] { 1, 2, 3 }), currentPolicyPlan);
     }
 
     private sealed class FixtureClock : TimeProvider

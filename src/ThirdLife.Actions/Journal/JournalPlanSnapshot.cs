@@ -42,7 +42,8 @@ public sealed class JournalPlanSnapshot
         byte[] canonicalPlan,
         byte[] canonicalImpact,
         ImmutableArray<JournalAction> actions,
-        bool hasPlanningProvenance)
+        bool hasPlanningProvenance,
+        bool isCurrentPolicyPlan)
     {
         Key = key;
         GateDecisionId = gateDecisionId;
@@ -50,6 +51,7 @@ public sealed class JournalPlanSnapshot
         CanonicalImpact = ImmutableArray.CreateRange(canonicalImpact);
         Actions = actions;
         HasPlanningProvenance = hasPlanningProvenance;
+        IsCurrentPolicyPlan = isCurrentPolicyPlan;
     }
 
     public JournalPlanKey Key { get; }
@@ -59,15 +61,20 @@ public sealed class JournalPlanSnapshot
     public ImmutableArray<JournalAction> Actions { get; }
     public bool HasPlanningProvenance { get; }
 
+    /// <summary>Indicates the plan was written using the current policy plan contract.</summary>
+    /// <remarks>The contract version alone does not establish live readiness or dispatch authority.</remarks>
+    public bool IsCurrentPolicyPlan { get; }
+
     /// <summary>Captures the exact proposal and preapproval estimate presented for review.</summary>
     public static JournalPlanSnapshot Create(ProposedPlan plan, PlanImpact impact)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(impact);
         if (plan.BlockedReason is not null || plan.GateDecisionId is null || plan.Actions.IsDefaultOrEmpty ||
-            plan.ContentSha256 != impact.PlanSha256)
+            plan.ContentSha256 != impact.PlanSha256 ||
+            plan.PolicyDecision is not { Evaluation.Policy.IsCurrentSchema: true })
         {
-            throw new ArgumentException("The estimate must belong to a nonblocked proposal.", nameof(impact));
+            throw new ArgumentException("The estimate must belong to a nonblocked proposal under the current policy schema.", nameof(impact));
         }
 
         var canonicalPlan = PlanIdentity.PlanBytes(plan);
@@ -76,7 +83,7 @@ public sealed class JournalPlanSnapshot
         return Open(key, canonicalPlan, canonicalImpact, hasPlanningProvenance: true);
     }
 
-    /// <summary>Verifies the bytes of a saved snapshot against its key and the v1 journal contract.</summary>
+    /// <summary>Verifies the bytes of a saved snapshot against its key and a supported journal contract.</summary>
     /// <remarks>Snapshot integrity alone does not establish approval or authorize execution.</remarks>
     public static JournalPlanSnapshot Restore(
         JournalPlanKey key, ReadOnlyMemory<byte> plan, ReadOnlyMemory<byte> impact) =>
@@ -100,9 +107,9 @@ public sealed class JournalPlanSnapshot
 
         try
         {
-            var (gate, actions) = JournalPlanEncoding.ReadPlan(key, ownedPlan);
+            var (gate, actions, current) = JournalPlanEncoding.ReadPlan(key, ownedPlan);
             JournalPlanEncoding.RequireValidImpact(key, actions, ownedImpact);
-            return new JournalPlanSnapshot(key, gate, ownedPlan, ownedImpact, actions, hasPlanningProvenance);
+            return new JournalPlanSnapshot(key, gate, ownedPlan, ownedImpact, actions, hasPlanningProvenance, current);
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException or FormatException)
         {

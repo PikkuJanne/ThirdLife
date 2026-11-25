@@ -27,6 +27,9 @@
     <None Include="..\..\fixtures\policies\community-laptop-policy.json"
           Link="community-laptop-policy.json"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\fixtures\policies\historical\community-laptop-policy-v1.json"
+          Link="community-laptop-policy-v1.json"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

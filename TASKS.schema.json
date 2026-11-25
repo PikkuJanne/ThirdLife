@@ -79,8 +79,7 @@
           "const": "B4"
         },
         "platform": {
-          "type": "string",
-          "minLength": 1
+          "const": "Windows 11 client on native x64"
         },
         "stack": {
           "type": "array",

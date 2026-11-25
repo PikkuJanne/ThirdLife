@@ -25,7 +25,7 @@ The product provides a local-first, auditable workflow:
 5. **Verify** outcomes independently after actions and required restarts.
 6. **Handover** only when policy, verification, finalization, and reporting gates allow it.
 
-The normal preparation target is supported Windows 11 x64. Windows 10 may be assessed and dispositioned, but it cannot be represented as normally ready. The product does not certify a device as secure, reliable, sanitized, or universally suitable.
+Windows 11 client on native x64 is the only supported application host and the only target for new live assessment, preparation, remediation, and handover. Supported preparation additionally requires reviewed servicing and policy evidence. Existing jobs remain readable with their original observations, policy provenance and decisions. The product does not certify a device as secure, reliable, sanitized, or universally suitable.
 
 ## Delivery cuts and Team B queue
 

@@ -9,13 +9,14 @@ namespace ThirdLife.UI.Features.Disposition;
 internal static class WorkshopPolicyCandidate
 {
     private const string ResourceName = "ThirdLife.UI.community-laptop-policy.json";
-    private const string CandidateSha256 = "967ef27449426a99f001ff09cd11b5e637b62a3f1e33566dd935bb8fd876ac88";
+    private const string CandidateSha256 = "34e60ed972a4f8860196f17f0f3c8d6412d621be786aaac82474a9911a489519";
     private static readonly Lazy<PolicySnapshot?> Candidate = new(Load);
 
     public static PolicySnapshot? ForDeviceClass(PolicyDeviceClass deviceClass)
     {
         var snapshot = Candidate.Value;
-        return snapshot is not null && DeviceClassPolicy.Select(deviceClass, [snapshot.Document]) is not null ? snapshot : null;
+        return snapshot is { Document.IsCurrentSchema: true } &&
+            DeviceClassPolicy.Select(deviceClass, [snapshot.Document]) is not null ? snapshot : null;
     }
 
     private static PolicySnapshot? Load()

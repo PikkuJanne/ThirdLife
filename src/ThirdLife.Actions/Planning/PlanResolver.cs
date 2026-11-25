@@ -123,6 +123,11 @@ public static class PlanResolver
 
     private static bool PolicyApplies(PolicyDocument policy, bool synthetic, DateTimeOffset asOfUtc)
     {
+        if (!policy.IsCurrentSchema)
+        {
+            return false;
+        }
+
         if (synthetic)
         {
             return policy.SyntheticData && policy.Status == PolicyStatus.Candidate;

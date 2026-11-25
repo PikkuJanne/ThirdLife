@@ -30,7 +30,7 @@ public sealed class RebootCheckpointStoreTests
     private static readonly OperatorId Approver = new("operator-reboot-fixture");
     private static readonly PolicyDocument Policy = PolicySchema.Parse("""
         {
-          "schema_version":"thirdlife.policy.v1","policy_id":"community-policy","version":"1.0.0",
+          "schema_version":"thirdlife.policy.v2","policy_id":"community-policy","version":"1.0.0",
           "status":"effective","synthetic_data":false,"classification":"PUBLIC_REFERENCE","claim_scope":"reboot_fixture",
           "effective":{
             "status":"effective","effective_from_utc":"2029-12-01T00:00:00Z","effective_until_utc":"2031-01-01T00:00:00Z"
@@ -59,6 +59,8 @@ public sealed class RebootCheckpointStoreTests
             Assert.Equal(issued.Checkpoint.Id, repeated.Checkpoint.Id);
             Assert.True(issued.Token.AuthenticityBlob.AsSpan().SequenceEqual(repeated.Token.AuthenticityBlob.AsSpan()));
             var pending = Assert.Single(await store.ListPendingRebootCheckpointsAsync(applied.Plan.JobId));
+            Assert.True(issued.IsCurrentPolicyPlan);
+            Assert.True(pending.IsCurrentPolicyPlan);
             Assert.Equal(issued.Checkpoint.Id, pending.Checkpoint.Id);
         }
 
@@ -66,6 +68,7 @@ public sealed class RebootCheckpointStoreTests
         var jobId = applied.Plan.JobId;
         var id = issued.Checkpoint.Id;
         var current = Assert.IsType<RebootResumeCandidate>(await reopened.LoadRebootCheckpointAsync(jobId, id));
+        Assert.True(current.IsCurrentPolicyPlan);
         Assert.Equal(current.Checkpoint.Id, issued.Checkpoint.Id);
         Assert.Equal(issued.Checkpoint.CreateAuthenticationData(), current.Checkpoint.CreateAuthenticationData());
         Assert.True(issued.Token.AuthenticityBlob.AsSpan().SequenceEqual(current.Token.AuthenticityBlob.AsSpan()));

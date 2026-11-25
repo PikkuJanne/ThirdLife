@@ -9,7 +9,8 @@ namespace ThirdLife.Policy.Schema;
 
 public static partial class PolicySchema
 {
-    public const string Version = "thirdlife.policy.v1";
+    public const string Version = "thirdlife.policy.v2";
+    public const string LegacyVersion = "thirdlife.policy.v1";
     public const int MaximumDocumentBytes = 65_536;
     public const int MaximumDepth = 8;
     private const int MaximumRules = 128;
@@ -40,7 +41,7 @@ public static partial class PolicySchema
         catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException)
         {
             // Reader exceptions can contain input property names, input values, or raw bytes.
-            throw new JsonException("Policy input does not satisfy the ThirdLife policy v1 schema.");
+            throw new JsonException("Policy input does not satisfy a supported ThirdLife policy schema.");
         }
     }
 
@@ -56,7 +57,8 @@ public static partial class PolicySchema
     {
         RequireFields(policy,
             ["schema_version", "policy_id", "version", "status", "synthetic_data", "classification", "claim_scope", "effective", "target", "rules"]);
-        if (!policy.GetProperty("schema_version").ValueEquals(Version))
+        var schemaVersion = ReadString(policy.GetProperty("schema_version"));
+        if (schemaVersion is not (Version or LegacyVersion))
         {
             throw new JsonException();
         }
@@ -68,6 +70,7 @@ public static partial class PolicySchema
             _ => throw new JsonException(),
         };
         return new PolicyDocument(
+            schemaVersion,
             ReadLowerKebabId(policy.GetProperty("policy_id")),
             ReadPattern(policy.GetProperty("version"), PolicyVersionPattern(), 64),
             contentSha256,
@@ -77,7 +80,7 @@ public static partial class PolicySchema
             ReadPattern(policy.GetProperty("claim_scope"), TokenPattern(), 128),
             ReadWindow(policy.GetProperty("effective"), status),
             ReadTarget(policy.GetProperty("target")),
-            ReadRules(policy.GetProperty("rules")));
+            ReadRules(policy.GetProperty("rules"), schemaVersion == LegacyVersion));
     }
 
     private static PolicyEffectiveWindow ReadWindow(JsonElement effective, PolicyStatus policyStatus)
@@ -126,14 +129,14 @@ public static partial class PolicySchema
         return new PolicyTarget("windows_11", "supported", "x64", deviceClass);
     }
 
-    private static ImmutableArray<PolicyRule> ReadRules(JsonElement rules)
+    private static ImmutableArray<PolicyRule> ReadRules(JsonElement rules, bool historical)
     {
         var count = RequireArray(rules, MaximumRules);
         var result = ImmutableArray.CreateBuilder<PolicyRule>(count);
         var ids = new HashSet<RequirementId>();
         foreach (var rule in rules.EnumerateArray())
         {
-            var parsed = ReadRule(rule);
+            var parsed = ReadRule(rule, historical);
             if (!ids.Add(parsed.Requirement.RequirementId))
             {
                 throw new JsonException();
@@ -145,7 +148,7 @@ public static partial class PolicySchema
         return result.MoveToImmutable();
     }
 
-    private static PolicyRule ReadRule(JsonElement rule)
+    private static PolicyRule ReadRule(JsonElement rule, bool historical)
     {
         const string capabilitiesField = "active_for_capability_ids";
         const string exceptionAuthorizationField = "exception_authorization_id";
@@ -174,7 +177,7 @@ public static partial class PolicySchema
                 severity),
             hasCapabilities ? ReadTokens(capabilities, CapabilityIdPattern(), MaximumCapabilityIdLength) : [],
             ReadCondition(rule.GetProperty("condition")),
-            ReadDecision(rule.GetProperty("decision"), type),
+            ReadDecision(rule.GetProperty("decision"), type, historical),
             rule.TryGetProperty(exceptionAuthorizationField, out var authorization) ? ReadLowerKebabId(authorization) : null);
     }
 
@@ -226,7 +229,7 @@ public static partial class PolicySchema
         return new MinimumIntegerCondition(threshold, unit);
     }
 
-    private static PolicyRuleDecision ReadDecision(JsonElement decision, RequirementType requirementType)
+    private static PolicyRuleDecision ReadDecision(JsonElement decision, RequirementType requirementType, bool historical)
     {
         RequireFields(decision, ["blocks_ready", "unmet_disposition", "unavailable_disposition"]);
         var blocksReady = decision.GetProperty("blocks_ready").GetBoolean();
@@ -234,7 +237,8 @@ public static partial class PolicySchema
         var unavailable = decision.GetProperty("unavailable_disposition").Deserialize<Disposition?>();
         var valid = requirementType == RequirementType.Advisory
             ? !blocksReady && unmet is null && unavailable is null
-            : blocksReady && unmet is not (null or Disposition.ReadyToPrepare) &&
+            : blocksReady && unmet is { } outcome && outcome != Disposition.ReadyToPrepare &&
+                (historical || DispositionVocabulary.IsCurrent(outcome)) &&
                 unavailable == Disposition.HumanReviewRequired &&
                 (requirementType != RequirementType.Repairable || unmet == Disposition.RepairAndRetest);
         return valid ? new PolicyRuleDecision(blocksReady, unmet, unavailable) : throw new JsonException();

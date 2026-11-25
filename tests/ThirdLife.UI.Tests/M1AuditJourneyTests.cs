@@ -240,7 +240,7 @@ public sealed class M1AuditJourneyTests
         Invoke(window, save);
     }
 
-    private static JourneyResult GenerateAndOpenReport(
+    internal static JourneyResult GenerateAndOpenReport(
         Window window, FrameworkElement view, AuditWorkspace workspace, JobId jobId, AssessmentId assessmentId)
     {
         var generate = Named<Button>(view, "GenerateReportButton");
@@ -257,7 +257,7 @@ public sealed class M1AuditJourneyTests
         Assert.Equal(workspace.ReportPreview, preview.Text);
         var notice = new TextBlockAutomationPeer(Named<TextBlock>(view, "ReportMessage"));
         Assert.Equal(AutomationLiveSetting.Polite, notice.GetLiveSetting());
-        Assert.Contains("readiness is unknown", notice.GetName(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Restricted workshop report opened. Review the saved findings and limits.", notice.GetName());
         var artifact = Assert.IsType<WorkshopReportArtifact>(workspace.ReportArtifact);
         Assert.Equal(jobId, artifact.JobId);
         return new JourneyResult(jobId, assessmentId, preview.Text, artifact.FileName);

@@ -1,12 +1,12 @@
 # ThirdLife Setup Core — Frozen Decision Register
 
-**Bundle version:** 0.6.0  
-**Generated:** 2026-11-24  
+**Bundle version:** 0.7.0  
+**Generated:** 2026-11-25  
 **Status:** Binding for the Team B/B1 ThirdLife Setup Core roadmap
 
 ## Purpose and authority
 
-This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, modest-hardware, testing, continuity, and delivery choices that govern Codex work. Revision 0.6.0 establishes permanent Codex ownership of engineering verification under D-074. Earlier decisions and approved amendments retain their provenance.
+This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, modest-hardware, testing, continuity, and delivery choices that govern Codex work. Revision 0.7.0 implements the Windows 11–only scope. The permanent engineering verification contract established under D-074 remains in force. Earlier decisions and approved amendments retain their provenance.
 
 When implementation pressure conflicts with a decision here, stop, record the conflict, and request an explicit human decision. Do not silently reinterpret a frozen decision.
 
@@ -159,13 +159,15 @@ Codex may propose an amendment, but it may not declare one approved.
 
 ### D-005 — Operating-system target
 
-**Decision.** The v0.1 preparation target is supported Windows 11 x64. Windows 10 may be audited and dispositioned but cannot reach the normal ready state.
+**Decision.** Windows 11 client on native x64 is the only supported application host and operating-system target for new live assessment, preparation, remediation, and handover. The WPF UI runs as a standard user.
 
-**Rationale.** Deployment must not normalize an unsupported operating-system state.
+**Rationale.** Workshops need a single, explicit platform boundary for supported deployment.
 
-**Implementation constraint.** Eligibility evidence must remain explicit; unsupported Windows installations are never represented as supported.
+**Implementation constraint.** Verify the structured Windows version, workstation product type, reviewed Windows 11 build, and native OS architecture before live work. The initial identifying base build is 22000. Unknown or contradictory identity fails closed. Separately evaluate servicing with versioned edition, release, and date evidence. An identified Windows 11 host can open existing work when servicing data is stale. Stale evidence cannot satisfy readiness requirements. Historical evidence retains its original platform facts and carries no current execution authority.
 
-**Revisit trigger.** When Microsoft lifecycle policy or a separately approved platform track changes the target.
+**Approved amendment.** The [Windows 11–only amendment](docs/amendments/2026-11-25-windows-11-only.md) supersedes the former Windows 10 audit and disposition route.
+
+**Revisit trigger.** A change to the platform boundary requires a governed amendment. Reviewed release and servicing data are maintained under D-072.
 
 ### D-006 — Pilot and standalone release cuts
 
@@ -279,13 +281,15 @@ Codex may propose an amendment, but it may not declare one approved.
 
 ### D-017 — Disposition vocabulary
 
-**Decision.** The five dispositions are Ready to prepare, Repair and retest, Human review required, Alternative operating system candidate, and Do not deploy.
+**Decision.** The current dispositions are Ready to prepare, Repair and retest, Human review required, and Do not deploy.
 
-**Rationale.** These states are actionable without obscuring blockers.
+**Rationale.** These dispositions give workshops an action or a clear explanation for withholding Windows 11 deployment.
 
-**Implementation constraint.** Each disposition cites the evidence and policy rules that produced it.
+**Implementation constraint.** Each disposition cites evidence and policy. A verified target outside the platform scope or unable to satisfy preparation policy is Do not deploy. Repair and retest requires an evidenced repair path in the supported workflow. Missing, unavailable, stale, or contradictory evidence requires review. Preserve the serialized alternative-operating-system disposition and its interpretation as a historical result with original policy provenance. Current policies emit no such result.
 
-**Revisit trigger.** Only through a versioned policy and report migration.
+**Approved amendment.** See the [Windows 11–only amendment](docs/amendments/2026-11-25-windows-11-only.md) for versioning and continuity.
+
+**Revisit trigger.** Only through a versioned policy and report change that preserves historical interpretation.
 
 ### D-018 — Facts, policy, and decisions are separate
 
@@ -379,11 +383,13 @@ Codex may propose an amendment, but it may not declare one approved.
 
 ### D-027 — Desktop stack
 
-**Decision.** The Windows-first implementation uses C#, .NET 10, WPF, structured Windows APIs, and testable adapters.
+**Decision.** The Windows 11 client/native-x64 implementation uses C#, .NET 10, WPF, structured Windows APIs, and testable adapters.
 
 **Rationale.** The application is Windows-specific, API integration is central, and WPF exposes UI Automation.
 
-**Implementation constraint.** The UI project is the only WPF-dependent production assembly.
+**Implementation constraint.** The UI project is the only WPF-dependent production assembly. Core and protocol assemblies remain independent of WPF. Production entry points enforce D-005 before live work.
+
+**Approved amendment.** See the [Windows 11–only amendment](docs/amendments/2026-11-25-windows-11-only.md).
 
 **Revisit trigger.** Only through an architecture decision that demonstrates equivalent Windows integration and accessibility.
 
@@ -568,6 +574,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Approved amendment `AMD-2026-08-22-ADR-0009` — unique TL-0401 ADR number (22 August 2026).** Janne Vuorela, Principal Software Architect & Sole Project Owner, approved preserving the completed ADR 0004 at `docs/adr/0004-ephemeral-broker.md` and reserving the next unoccupied identifier, ADR 0009 for TL-0401 at `docs/adr/0009-winget-backend.md`. The future task's deliverable and human-evidence wording change together; its dependencies, status, evidence, package/security requirements, and separate maintainer approval remain unchanged. The complete impact, alternatives, rollout, rollback, and historical-evidence treatment are recorded in [`docs/amendments/2026-08-22-adr-0009-reservation.md`](docs/amendments/2026-08-22-adr-0009-reservation.md). This amendment changes no product, boundary, runtime, data, licence, or release decision.
 
 D-074 supersedes that separate maintainer approval for a compliant TL-0401 selection. The ADR reservation and applicable trust, privilege, licence and architecture authority still apply.
+
+**Approved amendment `AMD-2026-11-25-WINDOWS-11-ONLY` (25 November 2026).** Project owner Janne Vuorela authorized changing D-005, D-017, and D-027 together and implementing TL-0315. The [amendment](docs/amendments/2026-11-25-windows-11-only.md) records the scope, provenance, verification, integration authority, and forward rollback.
 
 **Revisit trigger.** Only through a human-approved governance revision.
 

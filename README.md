@@ -3,14 +3,24 @@
 This repository develops ThirdLife Setup Core: a local-first, auditable Windows refurbishment workflow for volunteer and staff refurbishers. Development follows the frozen decisions, standalone Team B/B1 boundary, and dependency-ordered task graph checked into this repository.
 
 **Current project:** Team B / B1 — ThirdLife Setup Core  
-**Roadmap bundle:** 0.6.0 / ThirdLife Software Portfolio v2.1  
+**Roadmap bundle:** 0.7.0 / ThirdLife Software Portfolio v2.1  
 **Physical validation scope:** active Codex machine only  
 **Pilot gate:** `TL-0611` — controlled v0.1 partner pilot  
 **Standalone release gate:** `TL-0710` — ThirdLife Setup Core 1.0  
 **Next Team B project after stable:** Scam Explainer  
 **Future integration project:** Team B / B4 — ThirdLife Deployment and Suite Assembly
 
-The governed roadmap contains **91 tasks**, **8 milestone gates**, and **74 frozen decisions**. Current progress and the next dependency-ready work are recorded in `TASKS.yaml` and `STATUS.md`.
+The governed roadmap contains **92 tasks**, **8 milestone gates**, and **74 frozen decisions**. Current progress and the next dependency-ready work are recorded in `TASKS.yaml` and `STATUS.md`.
+
+## What changed in governed bundle 0.7.0
+
+- Windows 11 client on native x64 is the sole host and target for new live workflows.
+- TL-0315 retires Windows 10 live audit and current alternative-OS recommendations. Prior
+  jobs retain their original evidence, reports and policy provenance.
+- Application startup checks platform identity. Preparation separately requires reviewed
+  servicing and policy evidence. Pilot and stable package qualification uses the same platform.
+
+See the [owner-authorized platform amendment](docs/amendments/2026-11-25-windows-11-only.md).
 
 ## What changed in governed bundle 0.6.0
 
@@ -66,7 +76,7 @@ See `CHANGELOG.md` for the file-level change record.
 | `LOW_SPEC.md` | Modest-hardware engineering, sanitized reference profile, same-machine constraints, resource evidence, and claim boundaries. |
 | `DEVELOPMENT_WORKFLOW.md` | Git synchronization, divergence safety, checkpoint, push, clean-clone, and handoff rules. |
 | `TESTING.md` | Quick, targeted, full, and extended tiers; fixtures, environments, defect workflow, and evidence rules. |
-| `TASKS.yaml` | Machine-readable DAG with 91 tasks, dependencies, deliverables, acceptance, verification, mutable history, and test-tier triggers. |
+| `TASKS.yaml` | Machine-readable DAG with 92 tasks, dependencies, deliverables, acceptance, verification, mutable history, and test-tier triggers. |
 | `STATUS.md` | Factual current branch/commit/test/handoff state; it cannot weaken higher authority. |
 | `AGENTS.md` | Codex operating contract: read order, task selection, allowed edits, project-vacuum rules, architecture, testing, and reporting. |
 | [`docs/product-contract.md`](docs/product-contract.md) | Concise product identity, outcome, delivery cuts, Team B queue, standalone rules, and quality-baseline map. |
@@ -152,7 +162,7 @@ Apply files in this order:
 
 ## Quick start
 
-Clone the repository on Windows and enter its root:
+For product runtime verification, use Windows 11 client on native x64. Clone the repository and enter its root:
 
 ```powershell
 git clone git@github.com:PikkuJanne/ThirdLife.git
@@ -296,7 +306,7 @@ Run Quick and the relevant Targeted selection from the repository root:
 .\.venv\Scripts\python.exe -m unittest discover -s tools/tests -p "test_*.py"
 ```
 
-For a named Full trigger, run `.\eng\verify.ps1 -Tier Full -Restore`. Quick is the default when `-Tier` is omitted. The scripts resolve repository paths relative to themselves, so an absolute script path also works from another directory. Git Bash on Windows forwards the same arguments through `./eng/verify.sh`. Runtime evidence comes from the active Windows Codex machine; optional remote checks are supplementary.
+For a named Full trigger, run `.\eng\verify.ps1 -Tier Full -Restore`. Quick is the default when `-Tier` is omitted. The scripts resolve repository paths relative to themselves, so an absolute script path also works from another directory. Git Bash on Windows forwards the same arguments through `./eng/verify.sh`. Runtime evidence comes from the active Windows 11 native-x64 Codex machine. The optional Windows Server checks provide a supplementary build and deterministic-test signal.
 
 Quick checks the pinned toolchain, bundle/schema/manifest, repository boundaries, formatting,
 a warnings-as-errors Release build, and fast deterministic Core/Inventory tests. Targeted

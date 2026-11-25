@@ -174,6 +174,8 @@ public sealed class JournalTests
 
         Assert.True(saved.HasPlanningProvenance);
         Assert.False(restored.HasPlanningProvenance);
+        Assert.True(saved.IsCurrentPolicyPlan);
+        Assert.True(restored.IsCurrentPolicyPlan);
         Assert.Equal(proposal.ContentSha256, restored.Key.PlanSha256);
         Assert.Equal(saved.Key, restored.Key);
         Assert.Equal(proposal.GateDecisionId, restored.GateDecisionId);

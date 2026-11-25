@@ -61,7 +61,7 @@ public sealed class FirmwareSecurityProvider : IInventoryProvider
         _source = source ?? throw new ArgumentNullException(nameof(source));
         Descriptor = new(new(ProviderIdentity), ProviderPrivilegeRequirement.StandardUser,
             TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(15), ProviderNetworkUse.None, origin,
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             new(new("firmware_security.provider_status"), "firmware_security.provider.status"),
             Fields.Select(static field => new ProviderEvidenceDefinition(new(field.Key), field.Kind, null, field.Source)));
     }

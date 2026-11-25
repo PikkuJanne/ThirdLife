@@ -13,7 +13,8 @@ internal static class DispositionExplanation
 
     internal static (string Title, string Summary, string Explanation) Describe(
         Disposition disposition,
-        ImmutableArray<DispositionCitation> citations)
+        ImmutableArray<DispositionCitation> citations,
+        bool currentPolicy)
     {
         var (title, summary) = disposition switch
         {
@@ -35,7 +36,7 @@ internal static class DispositionExplanation
         var explanation = new StringBuilder(summary);
         foreach (var citation in citations.OrderByDescending(item => item.Exception is not null).Take(MaximumPreviewRules))
         {
-            AppendCitation(explanation, citation);
+            AppendCitation(explanation, citation, currentPolicy);
         }
 
         var omittedRules = citations.Length - MaximumPreviewRules;
@@ -50,7 +51,7 @@ internal static class DispositionExplanation
         return (title, summary, explanation.ToString());
     }
 
-    private static void AppendCitation(StringBuilder explanation, DispositionCitation citation)
+    private static void AppendCitation(StringBuilder explanation, DispositionCitation citation, bool currentPolicy)
     {
         var source = citation.Source switch
         {
@@ -59,7 +60,7 @@ internal static class DispositionExplanation
             _ => throw new ArgumentOutOfRangeException(nameof(citation), "The citation source is invalid."),
         };
         explanation.Append('\n').Append(source).Append(citation.RuleId.Value)
-            .Append(' ').Append(citation.Exception is null ? DescribeReason(citation.Reason) : "has an authorized exception.");
+            .Append(' ').Append(citation.Exception is null ? DescribeReason(citation, currentPolicy) : "has an authorized exception.");
 
         if (citation.Evidence.IsDefaultOrEmpty)
         {
@@ -78,6 +79,23 @@ internal static class DispositionExplanation
                     ? " more evidence record is linked to this check."
                     : " more evidence records are linked to this check.");
         }
+    }
+
+    private static string DescribeReason(DispositionCitation citation, bool currentPolicy)
+    {
+        if (currentPolicy && citation.Source == DispositionSource.CoreTarget &&
+            citation.Reason == PolicyRuleReason.ConditionUnmet)
+        {
+            return citation.RuleId.Value switch
+            {
+                "CORE-OS-ARCHITECTURE" => "failed because ThirdLife preparation requires native x64.",
+                "CORE-OS-RELEASE" => "failed because ThirdLife preparation requires Windows 11 client.",
+                "CORE-OS-SUPPORT" => "failed because the observed operating system is outside the required Windows 11 servicing scope.",
+                _ => DescribeReason(citation.Reason),
+            };
+        }
+
+        return DescribeReason(citation.Reason);
     }
 
     private static string DescribeReason(PolicyRuleReason reason) => reason switch

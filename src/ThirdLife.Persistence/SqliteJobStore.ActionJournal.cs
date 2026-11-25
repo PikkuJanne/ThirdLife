@@ -71,6 +71,11 @@ public sealed partial class SqliteJobStore : IActionJournalStore
             }
 
             var plan = await RequireJournalPlanAsync(connection, transaction, approval.Plan, token).ConfigureAwait(false);
+            if (!plan.IsCurrentPolicyPlan)
+            {
+                throw new JobStoreConflictException();
+            }
+
             await RequireExpectedSanitizationGateAsync(connection, transaction, plan.Key.JobId, plan.GateDecisionId, token).ConfigureAwait(false);
             var latest = await ReadApprovalAsync(connection, transaction, approval.Plan, null, token).ConfigureAwait(false);
             if (latest?.OccurredAtUtc > approval.OccurredAtUtc ||
@@ -127,6 +132,11 @@ public sealed partial class SqliteJobStore : IActionJournalStore
 
             if (needsCurrentApproval)
             {
+                if (!plan.IsCurrentPolicyPlan)
+                {
+                    throw new JobStoreConflictException();
+                }
+
                 await RequireExpectedSanitizationGateAsync(connection, transaction, plan.Key.JobId, plan.GateDecisionId, token).ConfigureAwait(false);
             }
             else if (entry.State == JournalState.Skipped && await ReadArchiveStateAsync(connection, transaction, plan.Key.JobId, token).ConfigureAwait(false))
@@ -188,7 +198,7 @@ public sealed partial class SqliteJobStore : IActionJournalStore
         var entries = await ReadJournalRecordsAsync(entriesCommand, key, JournalHistory.MaximumEntriesPerJob,
             ReadEntry, token).ConfigureAwait(false);
         var active = await ReadApprovalAsync(_connection, transaction, key, null, token).ConfigureAwait(false);
-        if (active?.Plan != key)
+        if (!plan.IsCurrentPolicyPlan || active?.Plan != key)
         {
             active = null;
         }

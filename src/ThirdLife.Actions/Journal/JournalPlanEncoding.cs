@@ -24,14 +24,15 @@ internal static partial class JournalPlanEncoding
     public static bool IsDigest(string? value) => value is { Length: 64 } &&
         value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
 
-    public static (SanitizationGateDecisionId Gate, ImmutableArray<JournalAction> Actions) ReadPlan(
+    public static (SanitizationGateDecisionId Gate, ImmutableArray<JournalAction> Actions, bool IsCurrentPolicyPlan) ReadPlan(
         JournalPlanKey key, byte[] bytes)
     {
         using var document = Open(bytes);
         var root = document.RootElement;
         RequireCanonical(root, bytes);
         RequireFields(root, ["schema_version", "subject", "decision", "blocked_reason", "actions", "recipient_choices"]);
-        if (!root.GetProperty("schema_version").ValueEquals("thirdlife.plan.v1") ||
+        var schemaVersion = ReadString(root.GetProperty("schema_version"));
+        if (schemaVersion is not (PlanIdentity.CurrentVersion or PlanIdentity.LegacyVersion) ||
             root.GetProperty("blocked_reason").ValueKind != JsonValueKind.Null)
         {
             throw new JsonException();
@@ -56,7 +57,8 @@ internal static partial class JournalPlanEncoding
         var gate = new SanitizationGateDecisionId(ReadString(subject.GetProperty("gate_decision_id")));
         var synthetic = subject.GetProperty("synthetic_data").GetBoolean();
         var capabilities = ReadActiveCapabilities(subject.GetProperty("active_capability_ids"));
-        return (gate, ReadActions(root.GetProperty("actions"), capabilities, synthetic));
+        return (gate, ReadActions(root.GetProperty("actions"), capabilities, synthetic),
+            schemaVersion == PlanIdentity.CurrentVersion);
     }
 
     public static byte[] WriteImpact(ProposedPlan plan, PlanImpact impact)
