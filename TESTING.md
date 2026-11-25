@@ -341,6 +341,14 @@ A new large task-specific runner requires:
 - owner;
 - retirement/replacement condition.
 
+TL-0317 uses `eng/run-thirdlife-hyperv.ps1` and the dedicated profile
+`eng/thirdlife-hyperv-profile.json`. It runs the protected broker scenarios on
+the active machine's Windows 11 Hyper-V guest through PowerShell Direct and
+the existing Basic console session. The named guest cases are independent of
+the default Full filter. Follow the [runner procedure and case
+criteria](artifacts/evidence/TL-0317/report.md) for the reviewed candidate,
+guest admission, interactive consent observations and cleanup.
+
 TL-0116 adds an independently invokable, unelevated Windows desktop scenario. From the
 verified Release checkout, run:
 

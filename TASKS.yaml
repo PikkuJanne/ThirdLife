@@ -3839,7 +3839,7 @@ tasks:
   kind: code
   priority: P0
   status: blocked
-  blocked_reason: Native publication, protected deployment and the elevated no-op passed. TL-0317 retains the unobserved decline, elevated interruption recovery and owner-deferred distinct-account test.
+  blocked_reason: Native publication, host protected deployment and the elevated no-op passed. TL-0317 tracks guest access and the outstanding actual decline, elevated interruption recovery and distinct-account denial.
   size: XL
   executor: codex
   environment: windows
@@ -3933,9 +3933,8 @@ tasks:
     limitation: Managed build and fixtures only. Actual installed Native AOT image, real UAC and isolated distinct-account evidence remain outstanding.
   notes:
   - UAC remains explicit. The attributable privilege-boundary authorization is recorded once at TL-0314.
-  - Reconcile retained draft PR
-  - 'Draft PR #36 retains the historical source and report. TL-0316 tracks managed checkpoint integration; TL-0317 tracks
-    native publication and actual privilege qualification. The original capability remains blocked.'
+  - PR 36 merged through TL-0316. Its historical report retains the earlier implementation and native linker evidence.
+  - TL-0317 tracks protected native qualification. Broker-dependent dispatch remains unavailable.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
@@ -4219,7 +4218,7 @@ tasks:
   kind: test
   priority: P0
   status: blocked
-  blocked_reason: Two decline rehearsals returned Completed instead of Declined. Actual Windows decline and elevated interruption recovery remain unobserved. The owner-deferred distinct-account Hyper-V test remains open.
+  blocked_reason: The owner reported the dedicated Hyper-V guest running and authorized the guest work. The current Codex token was denied at host Get-VM. Resume in an approved local Administrator shell with secure PowerShell Direct guest authentication. Guest deployment, actual decline, elevated recovery and distinct-account denial remain unobserved.
   size: L
   executor: codex
   environment: windows
@@ -4235,6 +4234,7 @@ tasks:
   deliverables:
   - Verified Microsoft native build closure and broker artifact
   - Protected deployment and active-machine privilege, IPC isolation, and recovery records
+  - Reusable Hyper-V profile and runner for host build, guest preparation, named qualification cases and sanitized results
   acceptance_criteria:
   - Native publish uses a provenance-verified Microsoft x64 linker and Windows SDK.
   - The actual protected broker authenticates peers and dispatches only an approved typed batch on an admitted host.
@@ -4242,6 +4242,7 @@ tasks:
   verification:
   - Verify Native AOT publication, protected launch, actual Windows consent and decline, distinct-account denial, and recovery.
   - Reuse the preserved failed toolchain and Sandbox evidence until an input changes.
+  - Bind PowerShell Direct to the dedicated VM identity and run the live consent cases in the admitted unelevated Basic console session.
   evidence:
   - task: TL-0317
     summary: The pinned Windows x64 Native AOT broker linked. Native startup metadata and a direct unelevated rejection were observed.
@@ -4273,6 +4274,26 @@ tasks:
     duration: Rehearsals reported 3 s and 4 s
     reference: artifacts/evidence/TL-0311/report.md
     limitation: Both attempts completed a no-op. The Windows prompt choice was not independently observed. Deterministic Windows cancellation mapping passed separately.
+  - task: TL-0317
+    summary: Host admission stopped before the VM identity could be bound.
+    command_or_review: Get-VM for the named VM and host access-token inspection
+    tier: targeted
+    result: unavailable
+    environment: Active Windows 11 native x64. Medium-integrity Codex process, with neither Administrator nor Hyper-V Administrators access enabled in its token.
+    date: '2026-11-25'
+    duration: Host diagnostic invocation 2.731 s
+    reference: artifacts/evidence/TL-0317/report.md, integrated base 634b49c
+    limitation: VM startup and guest sign-in were reported by the owner. Guest identity, checkpoint, authentication and scenario outcomes still require direct observation.
+  - task: TL-0317
+    summary: The deterministic Full suite and Release build passed with the Hyper-V test fixtures and runner present.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Isolated active Windows 11 native x64 worktree, runtime test sources 029107f
+    date: '2026-11-25'
+    duration: 351.353 s
+    reference: artifacts/evidence/TL-0317/report.md
+    limitation: 303 governance and 2025 .NET tests passed. The default suite excludes ActiveMachine guest cases.
   expected_test_tier: full
   full_test_triggers:
   - Run the full tier for qualification of the protected privilege boundary.
@@ -4282,6 +4303,8 @@ tasks:
   execution_prerequisites:
   - kind: capability
     scope: Verified Microsoft x64 linker and Windows SDK that can link the pinned Native AOT target
+  - kind: capability
+    scope: Authorized local Hyper-V host access and PowerShell Direct authentication to the dedicated guest
   - kind: capability
     scope: Authorized protected-deployment environment and distinct-account isolation observation on the active machine
   - kind: authorization

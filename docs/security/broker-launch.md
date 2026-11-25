@@ -68,10 +68,14 @@ Broker-dependent actions remain unavailable in the ordinary application while
 TL-0317 qualification is open. The launcher is exercised by the opt-in
 rehearsal. Package setup uses its reviewed Windows Installer route.
 
-Verified test and runtime outcomes belong in [TL-0311 evidence](../../artifacts/evidence/TL-0311/report.md).
-The real consent rehearsal is separate from the deterministic fixtures and uses
-the production client from an unelevated WPF test window. Its single compiled
-no-op requires the exact reviewed installed candidate. TL-0314 retains the
-accountable privilege-boundary decision. The owner deferred preparation of the
-same-machine Hyper-V VM. The distinct-account denial scenario and its guards
-remain part of TL-0311 verification.
+The host publication, provisioning and consent observations are preserved in
+[TL-0311 evidence](../../artifacts/evidence/TL-0311/report.md). TL-0314 retains the
+accountable privilege-boundary decision.
+
+TL-0317 uses the dedicated Hyper-V guest on the active machine. The runner checks
+the VM identity and Basic console session, provisions or verifies the reviewed
+candidate, and starts the consent rehearsals from the unelevated interactive
+WPF client. Each rehearsal uses compiled no-op actions. The distinct-account
+case reuses the production pipe ACL check under the Hyper-V profile. Follow the
+[TL-0317 runner procedure](../../artifacts/evidence/TL-0317/report.md) for the
+current access prerequisite and guest evidence.

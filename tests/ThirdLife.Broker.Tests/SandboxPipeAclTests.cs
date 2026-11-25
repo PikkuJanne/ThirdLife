@@ -2,11 +2,14 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Win32;
 using ThirdLife.Broker.Protocol.Transport;
+using ThirdLife.Inventory.Windows;
 
 namespace ThirdLife.Broker.Tests;
 
@@ -15,6 +18,7 @@ public sealed class SandboxPipeAclTests
 {
     private const string RunMarker = "THIRDLIFE_SANDBOX_BROKER_ACL_TEST";
     private const string RequestPath = @"C:\TL0102\Input\Request\run-request.json";
+    private const string HyperVRunMarker = "THIRDLIFE_HYPERV_BROKER_ACL_RUN_ID";
     private const uint UserNotFound = 2221;
     private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(20);
 
@@ -23,14 +27,26 @@ public sealed class SandboxPipeAclTests
     public async Task WindowsSandboxDistinctStandardAccountIsDeniedByProductionPipeAcl()
     {
         RequireVerifiedSandbox();
+        await VerifyProductionPipeDeniesDistinctAccountAsync("TLBroker" + Guid.NewGuid().ToString("N")[..10], null);
+    }
+
+    [Fact]
+    [Trait("Category", "ActiveMachine")]
+    public async Task HyperVDistinctStandardAccountIsDeniedByProductionPipeAcl()
+    {
+        var runId = RequireVerifiedHyperV();
+        await VerifyProductionPipeDeniesDistinctAccountAsync("TLBroker" + runId[..12], "ThirdLife TL-0317 " + runId);
+    }
+
+    private static async Task VerifyProductionPipeDeniesDistinctAccountAsync(string account, string? comment)
+    {
         var pipeId = Guid.NewGuid();
         var initiatingIdentity = WindowsBrokerPeer.CurrentIdentity();
         await using var server = WindowsBrokerPipe.CreateServer(pipeId, initiatingIdentity.LogonSid);
         using var timeout = new CancellationTokenSource(Deadline);
         var accepting = server.WaitForConnectionAsync(timeout.Token);
-        var account = "TLBroker" + Guid.NewGuid().ToString("N")[..10];
         using var password = CreatePassword();
-        CreateGuestAccount(account, password);
+        CreateGuestAccount(account, password, comment);
         try
         {
             await CheckDistinctStandardAccountAsync(account, password, pipeId, timeout.Token);
@@ -75,6 +91,72 @@ public sealed class SandboxPipeAclTests
         });
     }
 
+    private static string RequireVerifiedHyperV()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        Assert.True(Environment.MachineName.Equals("ThirdLife-W11", StringComparison.OrdinalIgnoreCase) &&
+            identity.Name.Equals("ThirdLife-W11\\ThirdLifeAdmin", StringComparison.OrdinalIgnoreCase) &&
+            new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator),
+            "The administrative ThirdLife Hyper-V guest token is required.");
+        Assert.Equal(WindowsPlatformEligibility.Supported, WindowsPlatform.CheckCurrent());
+        using var bios = Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\BIOS");
+        Assert.True(bios?.GetValue("SystemManufacturer") is "Microsoft Corporation" &&
+            bios.GetValue("SystemProductName") is "Virtual Machine", "The Hyper-V guest firmware identity is required.");
+
+        var runId = Environment.GetEnvironmentVariable(HyperVRunMarker);
+        Assert.NotNull(runId);
+        Assert.Matches(@"\A[0-9a-f]{32}\z", runId);
+        var staging = new DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "ThirdLifeVerification"));
+        var run = new DirectoryInfo(Path.Combine(staging.FullName, runId));
+        var request = new FileInfo(Path.Combine(run.FullName, "run-request.json"));
+        const AccessControlSections sections = AccessControlSections.Owner | AccessControlSections.Access;
+        Assert.False(staging.Attributes.HasFlag(FileAttributes.ReparsePoint));
+        Assert.False(run.Attributes.HasFlag(FileAttributes.ReparsePoint));
+        Assert.False(request.Attributes.HasFlag(FileAttributes.ReparsePoint));
+        RequireProtectedHyperVInput(staging.GetAccessControl(sections));
+        RequireProtectedHyperVInput(run.GetAccessControl(sections));
+        RequireProtectedHyperVInput(request.GetAccessControl(sections));
+        Assert.True(request.IsReadOnly);
+
+        using (var file = new FileStream(request.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            Assert.InRange(file.Length, 1, 8192);
+            using var document = JsonDocument.Parse(file, new JsonDocumentOptions { AllowDuplicateProperties = false, MaxDepth = 4 });
+            var root = document.RootElement;
+            Assert.True(root.EnumerateObject().Count() == 3 &&
+                root.GetProperty("task_id").ValueEquals("TL-0317") &&
+                root.GetProperty("scenario").ValueEquals("DistinctAccount") &&
+                root.GetProperty("run_id").ValueEquals(runId),
+                "The protected Hyper-V request must admit this distinct-account scenario.");
+        }
+
+        Assert.Throws<UnauthorizedAccessException>(() =>
+        {
+            using var writable = new FileStream(request.FullName, FileMode.Open, FileAccess.Write, FileShare.ReadWrite);
+        });
+        return runId;
+    }
+
+    private static void RequireProtectedHyperVInput(FileSystemSecurity security)
+    {
+        static bool IsTrustedOwner(SecurityIdentifier sid) => sid.IsWellKnown(WellKnownSidType.LocalSystemSid) ||
+            sid.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid);
+
+        Assert.True(security.GetOwner(typeof(SecurityIdentifier)) is SecurityIdentifier owner && IsTrustedOwner(owner),
+            "The Hyper-V scenario inputs must be owned by Administrators or SYSTEM.");
+        const FileSystemRights readOnly = FileSystemRights.ReadAndExecute | FileSystemRights.Synchronize;
+        var rules = security.GetAccessRules(true, true, typeof(SecurityIdentifier));
+        Assert.NotEmpty(rules);
+        foreach (FileSystemAccessRule rule in rules)
+        {
+            var sid = (SecurityIdentifier)rule.IdentityReference;
+            Assert.True(rule.AccessControlType != AccessControlType.Allow || IsTrustedOwner(sid) ||
+                (rule.FileSystemRights & ~readOnly) == 0,
+                "The Hyper-V scenario input ACL grants write access outside Administrators and SYSTEM.");
+        }
+    }
+
     private static SecureString CreatePassword()
     {
         const string alphabet = "0123456789abcdef";
@@ -93,7 +175,7 @@ public sealed class SandboxPipeAclTests
         return result;
     }
 
-    private static void CreateGuestAccount(string account, SecureString password)
+    private static void CreateGuestAccount(string account, SecureString password, string? comment)
     {
         var nativePassword = Marshal.SecureStringToGlobalAllocUnicode(password);
         try
@@ -103,6 +185,7 @@ public sealed class SandboxPipeAclTests
                 Name = account,
                 Password = nativePassword,
                 Privilege = 1, // USER_PRIV_USER
+                Comment = comment,
                 Flags = 0x201, // UF_NORMAL_ACCOUNT | UF_SCRIPT
             };
             Assert.True(NativeMethods.NetUserAdd(null, 1, in info, out _) == 0,
@@ -194,7 +277,8 @@ public sealed class SandboxPipeAclTests
             public uint PasswordAge;
             public uint Privilege;
             public nint HomeDirectory;
-            public nint Comment;
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string? Comment;
             public uint Flags;
             public nint ScriptPath;
         }
