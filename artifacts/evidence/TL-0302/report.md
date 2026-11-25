@@ -39,3 +39,19 @@ new dependency, release-interface entry, or cross-hardware claim.
   pilot-fixture suite passed 21 tests in 23.024 s.
 - PowerShell `Test-Json` passed 26 cases, including both governed profiles,
   a reviewed sample, and 23 rejected invalid inputs.
+- `.\eng\verify.ps1 -Tier Targeted -TestProject tests\ThirdLife.Catalog.Tests\ThirdLife.Catalog.Tests.csproj`
+  passed in 63.735 s. The invocation included 1,112 Quick checks and 105
+  Catalog tests, including 40 profile cases. Source checkpoint `60a0051`.
+- Two focused existing policy tests passed in 2.205 s. They cover the
+  candidate policy contract and audio-check activation for video calling.
+
+On .NET 10.0.14, 1,000 warm parses of the 1,950-byte Job Seeker fixture
+took 108.27 ms and allocated 10,844,184 bytes on the measuring thread,
+including the PowerShell loop. The active-machine governance job was running
+at the time. This observation covers the exact fixture above.
+
+The clean same-machine worktree passed 287 Python governance tests in
+231.943 s with `python -m unittest discover -s tools/tests -p 'test_*.py' -v`.
+The snapshot tree `66ca0cc27933da5d45cd72ad21be782242a3d600` matched source
+checkpoint `60a005176a4a8aeefedf9b029e578e43efbdee6f`. Neither Full nor
+Extended was triggered by this unprotected metadata-only integration.

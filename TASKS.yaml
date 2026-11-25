@@ -3395,7 +3395,7 @@ tasks:
   workstream: profiles
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: L
   executor: codex
   environment: any
@@ -3427,7 +3427,27 @@ tasks:
   verification:
   - Validate Basic and Job Seeker fixtures.
   - Test scripts, URLs, traversal, size, and duplicate capabilities.
-  evidence: []
+  evidence:
+  - summary: Basic and Job Seeker validated against the exact catalog and retained workshop intent and deferred recipient choices.
+    task: TL-0302
+    command_or_review: .\eng\verify.ps1 -Tier Targeted -TestProject tests\ThirdLife.Catalog.Tests\ThirdLife.Catalog.Tests.csproj
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400 and governed synthetic fixtures
+    date: '2026-11-25'
+    duration: 63.735 s, 1217 tests
+    reference: artifacts/evidence/TL-0302/report.md, source 60a0051
+    limitation: The profile pins the policy reference. Actual policy matching and action mapping belong to plan resolution.
+  - summary: All Python governance tests passed with exact JSON projections and unchanged TL-0007 approval provenance.
+    task: TL-0302
+    command_or_review: python -m unittest discover -s tools/tests -p 'test_*.py' -v
+    tier: targeted governance
+    result: passed
+    environment: Clean same-machine worktree and Python 3.14.7
+    date: '2026-11-25'
+    duration: 231.943 s, 287 tests
+    reference: artifacts/evidence/TL-0302/report.md, verified source tree 66ca0cc
+    limitation: Full and Extended triggers did not apply.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

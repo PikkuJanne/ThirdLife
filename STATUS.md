@@ -4,22 +4,24 @@
 **Bundle baseline:** 0.6.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
 **Current milestone:** M3 — Safe planning and privilege boundary  
-**Current task:** TL-0302 — In progress
+**Current task:** TL-0302 — Done
 
 ## Continuity
 
 PR #26 integrated the [catalog schema](artifacts/evidence/TL-0301/report.md)
-into `main` at `e393f77`. Work on TL-0302 starts there on
-`codex/tl-0302-workshop-recipient-profiles`.
+into `main` at `e393f77`. The
+`codex/tl-0302-workshop-recipient-profiles` branch contains the completed
+TL-0302 work and evidence.
 
 The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-The profile schema binds Basic and Job Seeker to the exact catalog and policy
-references. Workshop capabilities carry explicit intent and recipient choices
-remain deferred. Targeted verification is in progress.
+Basic and Job Seeker validate against their exact catalog, pin their policy
+references, and keep recipient choices deferred. Targeted passed 1,217 tests.
+The clean worktree passed 287 governance tests.
+[TL-0302 evidence](artifacts/evidence/TL-0302/report.md)
 
 ## Next action
 
-Finish verification and integrate TL-0302 before starting TL-0303.
+Start TL-0303 after verifying TL-0302 integration on updated `main`.
