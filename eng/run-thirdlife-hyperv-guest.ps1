@@ -374,6 +374,8 @@ exit `$LASTEXITCODE
                             }
                         }
                         else {
+                            $stackNode = $case[0].SelectSingleNode(".//*[local-name()='ErrorInfo']/*[local-name()='StackTrace']")
+                            $insidePipeProbe = $stackNode -and $stackNode.InnerText.Contains('CheckHyperVDistinctStandardAccount')
                             $testFailure = switch -Regex ($message) {
                                 'administrative ThirdLife Hyper-V guest token is required' { 'GuestTokenRejected'; break }
                                 'Expected:\s*Supported' { 'GuestPlatformRejected'; break }
@@ -381,9 +383,21 @@ exit `$LASTEXITCODE
                                 'scenario inputs must be owned by Administrators or SYSTEM' { 'RequestOwnerRejected'; break }
                                 'scenario input ACL grants write access' { 'RequestAclRejected'; break }
                                 'protected Hyper-V request must admit' { 'RequestMetadataRejected'; break }
-                                'Expected:\s*typeof\(System\.UnauthorizedAccessException\)' { 'RequestWriteDenialMissing'; break }
+                                'Expected:\s*typeof\(System\.UnauthorizedAccessException\)' {
+                                    if (-not $insidePipeProbe) { 'RequestWriteDenialMissing' }
+                                    elseif ($message.Contains('No exception was thrown')) { 'UnexpectedProbeConnection' }
+                                    else { 'ProbeDidNotReportAccessDenied' }
+                                    break
+                                }
                                 'disposable guest could not create its standard test account' { 'AccountCreationRejected'; break }
                                 'owned guest test account was not fully removed' { 'AccountCleanupFailed'; break }
+                                'The Hyper-V probe could not authenticate its owned standard account\. NativeErrorCode=([0-9]{1,10})\.' {
+                                    $nativeCode = 0
+                                    if ([int]::TryParse($Matches[1], [ref]$nativeCode)) { $testNativeErrorCode = $nativeCode }
+                                    'ProbeLogonRejected'
+                                    break
+                                }
+                                'The Hyper-V probe did not receive its distinct standard account token' { 'ProbeTokenRejected'; break }
                                 'The owned guest probe did not start\. NativeErrorCode=([0-9]{1,10})\.' {
                                     $nativeCode = 0
                                     if ([int]::TryParse($Matches[1], [ref]$nativeCode)) { $testNativeErrorCode = $nativeCode }
