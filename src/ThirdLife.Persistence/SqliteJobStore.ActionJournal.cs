@@ -6,7 +6,7 @@ using ThirdLife.Core.Jobs;
 
 namespace ThirdLife.Persistence;
 
-public sealed partial class SqliteJobStore : IActionJournalStore
+public sealed partial class SqliteJobStore : IBrokerExecutionJournal
 {
     private const int JournalRecordLimit = 4096;
     private const string JournalPlanWhere = "job_id = $job_id AND plan_sha256 = $plan AND impact_sha256 = $impact";
@@ -59,7 +59,6 @@ public sealed partial class SqliteJobStore : IActionJournalStore
     {
         ArgumentNullException.ThrowIfNull(approval);
         ThrowIfDisposed();
-        var payload = SerializePayload(approval, JournalRecordLimit);
         var outcome = JournalWriteResult.AlreadyRecorded;
         await ExecuteWriteAsync(async (connection, transaction, token) =>
         {
@@ -72,27 +71,7 @@ public sealed partial class SqliteJobStore : IActionJournalStore
             }
 
             var plan = await RequireJournalPlanAsync(connection, transaction, approval.Plan, token).ConfigureAwait(false);
-            if (!plan.IsCurrentPolicyPlan)
-            {
-                throw new JobStoreConflictException();
-            }
-
-            await RequireExpectedSanitizationGateAsync(connection, transaction, plan.Key.JobId, plan.GateDecisionId, token).ConfigureAwait(false);
-            var latest = await ReadApprovalAsync(connection, transaction, approval.Plan, null, token).ConfigureAwait(false);
-            if (latest?.OccurredAtUtc > approval.OccurredAtUtc ||
-                await HasUnreconciledJournalActionAsync(connection, transaction, approval.Plan, token).ConfigureAwait(false))
-            {
-                throw new JobStoreConflictException();
-            }
-
-            await RequireJournalCapacityAsync(connection, transaction, plan.Key,
-                "SELECT count(*) FROM action_journal_approvals WHERE job_id = $job_id;", JournalHistory.MaximumApprovalsPerJob, token).ConfigureAwait(false);
-            await using var insert = JournalCommand(connection, transaction, approval.Plan, """
-                INSERT INTO action_journal_approvals (job_id, approval_id, plan_sha256, impact_sha256, payload_json, payload_sha256)
-                VALUES ($job_id, $id, $plan, $impact, $json, $sha);
-                """);
-            AddJournalPayload(insert, approval.ApprovalId, payload);
-            await insert.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+            await InsertJournalApprovalAsync(connection, transaction, plan, approval, token).ConfigureAwait(false);
             outcome = JournalWriteResult.Recorded;
         }, cancellationToken).ConfigureAwait(false);
         return outcome;
@@ -102,13 +81,17 @@ public sealed partial class SqliteJobStore : IActionJournalStore
     {
         ArgumentNullException.ThrowIfNull(entry);
         ThrowIfDisposed();
-        var payload = SerializePayload(entry, JournalRecordLimit);
+        if (entry.Checkpoint is JournalCheckpoint.BrokerApproval or JournalCheckpoint.BrokerDispatchIntent or
+            JournalCheckpoint.BrokerPreDispatchFailure)
+        {
+            throw new JobStoreConflictException();
+        }
+
         var outcome = JournalWriteResult.AlreadyRecorded;
         await ExecuteWriteAsync(async (connection, transaction, token) =>
         {
             _layout.ValidateJobDirectory(entry.Plan.JobId);
-            var existing = await ReadEntryAsync(connection, transaction, entry.Plan,
-                EntryProjection + "WHERE job_id = $job_id AND entry_id = $id;", entry.EntryId, token).ConfigureAwait(false);
+            var existing = await ReadJournalEntryByIdAsync(connection, transaction, entry, token).ConfigureAwait(false);
             if (existing is not null)
             {
                 if (existing != entry) { throw new JobStoreConflictException(); }
@@ -117,9 +100,13 @@ public sealed partial class SqliteJobStore : IActionJournalStore
             }
 
             var plan = await RequireJournalPlanAsync(connection, transaction, entry.Plan, token).ConfigureAwait(false);
-            var previous = await ReadEntryAsync(connection, transaction, entry.Plan,
-                EntryProjection + "WHERE " + JournalPlanWhere + " AND action_id = $id ORDER BY entry_sequence DESC LIMIT 1;",
-                entry.ActionId, token).ConfigureAwait(false);
+            var previous = await ReadLatestActionEntryAsync(connection, transaction, entry, token).ConfigureAwait(false);
+            if (previous?.Checkpoint == JournalCheckpoint.BrokerApproval || (IsBrokerOutcome(entry) &&
+                await HasMatchingBrokerDispatchAsync(connection, transaction, entry, previous, token).ConfigureAwait(false)))
+            {
+                throw new JobStoreConflictException();
+            }
+
             var needsCurrentApproval = entry.State is JournalState.Approved or JournalState.Started;
             var approval = needsCurrentApproval
                 ? await ReadApprovalAsync(connection, transaction, entry.Plan, null, token).ConfigureAwait(false)
@@ -133,12 +120,7 @@ public sealed partial class SqliteJobStore : IActionJournalStore
 
             if (needsCurrentApproval)
             {
-                if (!plan.IsCurrentPolicyPlan)
-                {
-                    throw new JobStoreConflictException();
-                }
-
-                await RequireExpectedSanitizationGateAsync(connection, transaction, plan.Key.JobId, plan.GateDecisionId, token).ConfigureAwait(false);
+                await RequireCurrentJournalPlanAsync(connection, transaction, plan, token).ConfigureAwait(false);
                 if (entry.Checkpoint == JournalCheckpoint.PackageDispatchIntent &&
                     await HasUnreconciledJournalActionAsync(connection, transaction, plan.Key, token).ConfigureAwait(false))
                 {
@@ -152,18 +134,64 @@ public sealed partial class SqliteJobStore : IActionJournalStore
 
             await RequireJournalCapacityAsync(connection, transaction, plan.Key,
                 "SELECT count(*) FROM action_journal_entries WHERE job_id = $job_id;", JournalHistory.MaximumEntriesPerJob, token).ConfigureAwait(false);
-            await using var insert = JournalCommand(connection, transaction, entry.Plan, """
-                INSERT INTO action_journal_entries (job_id, entry_id, plan_sha256, impact_sha256, action_id, state, payload_json, payload_sha256)
-                VALUES ($job_id, $id, $plan, $impact, $action, $state, $json, $sha);
-                """);
-            AddJournalPayload(insert, entry.EntryId, payload);
-            insert.Parameters.AddWithValue("$action", entry.ActionId.ToString("D"));
-            insert.Parameters.AddWithValue("$state", (int)entry.State);
-            await insert.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+            await InsertJournalEntryAsync(connection, transaction, entry, token).ConfigureAwait(false);
             outcome = JournalWriteResult.Recorded;
         }, cancellationToken).ConfigureAwait(false);
         return outcome;
     }
+
+    private async Task InsertJournalApprovalAsync(SqliteConnection connection, SqliteTransaction transaction,
+        JournalPlanSnapshot plan, JournalApproval approval, CancellationToken token)
+    {
+        await RequireCurrentJournalPlanAsync(connection, transaction, plan, token).ConfigureAwait(false);
+        var latest = await ReadApprovalAsync(connection, transaction, approval.Plan, null, token).ConfigureAwait(false);
+        if (latest?.OccurredAtUtc > approval.OccurredAtUtc ||
+            await HasUnreconciledJournalActionAsync(connection, transaction, approval.Plan, token).ConfigureAwait(false))
+        {
+            throw new JobStoreConflictException();
+        }
+
+        await RequireJournalCapacityAsync(connection, transaction, plan.Key,
+            "SELECT count(*) FROM action_journal_approvals WHERE job_id = $job_id;", JournalHistory.MaximumApprovalsPerJob, token).ConfigureAwait(false);
+        await using var insert = JournalCommand(connection, transaction, approval.Plan, """
+            INSERT INTO action_journal_approvals (job_id, approval_id, plan_sha256, impact_sha256, payload_json, payload_sha256)
+            VALUES ($job_id, $id, $plan, $impact, $json, $sha);
+            """);
+        AddJournalPayload(insert, approval.ApprovalId, SerializePayload(approval, JournalRecordLimit));
+        await insert.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+    }
+
+    private async Task RequireCurrentJournalPlanAsync(SqliteConnection connection, SqliteTransaction transaction,
+        JournalPlanSnapshot plan, CancellationToken token)
+    {
+        if (!plan.IsCurrentPolicyPlan)
+        {
+            throw new JobStoreConflictException();
+        }
+
+        await RequireExpectedSanitizationGateAsync(connection, transaction, plan.Key.JobId, plan.GateDecisionId, token).ConfigureAwait(false);
+    }
+
+    private async Task InsertJournalEntryAsync(SqliteConnection connection, SqliteTransaction transaction,
+        JournalEntry entry, CancellationToken token)
+    {
+        await using var insert = JournalCommand(connection, transaction, entry.Plan, """
+            INSERT INTO action_journal_entries (job_id, entry_id, plan_sha256, impact_sha256, action_id, state, payload_json, payload_sha256)
+            VALUES ($job_id, $id, $plan, $impact, $action, $state, $json, $sha);
+            """);
+        AddJournalPayload(insert, entry.EntryId, SerializePayload(entry, JournalRecordLimit));
+        insert.Parameters.AddWithValue("$action", entry.ActionId.ToString("D"));
+        insert.Parameters.AddWithValue("$state", (int)entry.State);
+        await insert.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+    }
+
+    private Task<JournalEntry?> ReadJournalEntryByIdAsync(SqliteConnection connection, SqliteTransaction transaction,
+        JournalEntry entry, CancellationToken token) => ReadEntryAsync(connection, transaction, entry.Plan,
+        EntryProjection + "WHERE job_id = $job_id AND entry_id = $id;", entry.EntryId, token);
+
+    private Task<JournalEntry?> ReadLatestActionEntryAsync(SqliteConnection connection, SqliteTransaction transaction,
+        JournalEntry entry, CancellationToken token) => ReadEntryAsync(connection, transaction, entry.Plan,
+        EntryProjection + "WHERE " + JournalPlanWhere + " AND action_id = $id ORDER BY entry_sequence DESC LIMIT 1;", entry.ActionId, token);
 
     public Task<JournalHistory?> LoadJournalAsync(JournalPlanKey key, CancellationToken cancellationToken = default)
     {
@@ -388,11 +416,16 @@ public sealed partial class SqliteJobStore : IActionJournalStore
         return rows.ToImmutable();
     }
 
+    private static Task RequireJournalCapacityAsync(
+        SqliteConnection connection, SqliteTransaction transaction, JournalPlanKey key, string sql, int maximum,
+        CancellationToken token) => RequireJournalCapacityAsync(connection, transaction, key, sql, maximum, 1, token);
+
     private static async Task RequireJournalCapacityAsync(
-        SqliteConnection connection, SqliteTransaction transaction, JournalPlanKey key, string sql, int maximum, CancellationToken token)
+        SqliteConnection connection, SqliteTransaction transaction, JournalPlanKey key, string sql, int maximum, int additional,
+        CancellationToken token)
     {
         await using var command = JournalCommand(connection, transaction, key, sql);
-        if (await command.ExecuteScalarAsync(token).ConfigureAwait(false) is not long count || count >= maximum)
+        if (await command.ExecuteScalarAsync(token).ConfigureAwait(false) is not long count || count > maximum - additional)
         {
             throw new JobStoreConflictException();
         }

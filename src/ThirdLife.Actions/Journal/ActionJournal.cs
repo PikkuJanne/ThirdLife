@@ -15,6 +15,18 @@ public interface IActionJournalStore
     Task<ImmutableArray<JournalHistory>> LoadJobJournalsAsync(JobId jobId, CancellationToken cancellationToken = default);
 }
 
+/// <summary>Commits the approval, dispatch intents and outcomes of a bounded broker attempt.</summary>
+public interface IBrokerExecutionJournal : IActionJournalStore
+{
+    const int MaximumBatchActions = 4;
+
+    Task<JournalWriteResult> RecordBrokerApprovalAsync(JournalApproval approval, ImmutableArray<JournalEntry> entries,
+        CancellationToken cancellationToken = default);
+
+    Task<JournalWriteResult> AppendBrokerBatchAsync(ImmutableArray<JournalEntry> entries,
+        CancellationToken cancellationToken = default);
+}
+
 public enum JournalWriteResult
 {
     Recorded = 1,
@@ -69,6 +81,9 @@ public enum JournalCheckpoint
     Reconcile,
     PackageDispatchIntent,
     PackagePlanApproval,
+    BrokerApproval,
+    BrokerDispatchIntent,
+    BrokerPreDispatchFailure,
 }
 
 public sealed record JournalApproval

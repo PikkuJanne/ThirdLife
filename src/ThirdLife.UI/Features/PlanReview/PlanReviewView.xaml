@@ -1,6 +1,7 @@
 <UserControl x:Class="ThirdLife.UI.Features.PlanReview.PlanReviewView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:execution="clr-namespace:ThirdLife.UI.Features.Execution">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="PlanReviewVisibility" />
   </UserControl.Resources>
@@ -64,6 +65,11 @@
           <TextBox x:Name="PackageOperator" MaxLength="64" Text="{Binding PackageOperatorCode, UpdateSourceTrigger=PropertyChanged}"
                    IsEnabled="{Binding CanEditPackageOperator}" AutomationProperties.Name="Workshop operator code for this approval" />
         </StackPanel>
+        <StackPanel Visibility="{Binding HasBrokerPlan, Converter={StaticResource PlanReviewVisibility}}">
+          <Label Content="Workshop operator code for this approval" Target="{Binding ElementName=BrokerOperator}" />
+          <TextBox x:Name="BrokerOperator" MaxLength="64" Text="{Binding BrokerOperatorCode, UpdateSourceTrigger=PropertyChanged}"
+                   IsEnabled="{Binding CanEditBrokerOperator}" AutomationProperties.Name="Workshop operator code for this approval" />
+        </StackPanel>
         <WrapPanel Margin="0,6,0,0">
           <Button x:Name="ApprovePlanReviewButton" Content="Approve plan" Click="ApprovePlanReview"
                   IsEnabled="{Binding CanApprovePlanReview}" Margin="0,0,8,4" />
@@ -74,6 +80,8 @@
                   IsEnabled="{Binding CanInstallPackage}" Click="InstallPackage" Margin="0,0,0,4" />
         </WrapPanel>
       </StackPanel>
+      <execution:BrokerExecutionView x:Name="BrokerExecutionPanel" Margin="0,6,0,0"
+                                     Visibility="{Binding ShowsBrokerExecution, Converter={StaticResource PlanReviewVisibility}}" />
       <TextBox x:Name="SavedPackageHistory" Text="{Binding PackageHistoryText, Mode=OneWay}" TextWrapping="Wrap"
                IsReadOnly="True" IsReadOnlyCaretVisible="True" AcceptsReturn="True" MaxHeight="220"
                VerticalScrollBarVisibility="Auto" Margin="0,6,0,0"

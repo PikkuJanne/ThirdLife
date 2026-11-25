@@ -47,8 +47,11 @@ public sealed class BrokerBatchClient
         _checkPlatform = checkPlatform ?? WindowsPlatform.CheckCurrent;
     }
 
-    public async Task<BrokerBatchResult> RunAsync(BrokerRequest request, IProgress<BrokerProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+    public Task<BrokerBatchResult> RunAsync(BrokerRequest request, IProgress<BrokerProgress>? progress = null,
+        CancellationToken cancellationToken = default) => RunAsync(request, progress, canDispatch: null, cancellationToken);
+
+    internal async Task<BrokerBatchResult> RunAsync(BrokerRequest request, IProgress<BrokerProgress>? progress,
+        Func<CancellationToken, Task<bool>>? canDispatch, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (cancellationToken.IsCancellationRequested)
@@ -124,7 +127,17 @@ public sealed class BrokerBatchClient
                 return new BrokerBatchResult(BrokerBatchStatus.Unavailable, []);
             }
 
+            if (canDispatch is not null && !await canDispatch(startup.Token).ConfigureAwait(false))
+            {
+                return new BrokerBatchResult(BrokerBatchStatus.Unavailable, []);
+            }
+
             startup.Token.ThrowIfCancellationRequested();
+            if (!BrokerProtocolLimits.IsWithinWindow(envelope.ExpiresAtUtc, TimeProvider.System.GetUtcNow()))
+            {
+                return new BrokerBatchResult(BrokerBatchStatus.Unavailable, []);
+            }
+
             dispatchAttempted = true;
             await BrokerPipeFrames.WriteAsync(pipe, request, deadline.Token).ConfigureAwait(false);
             await ReceiveBatchAsync(pipe, ticket, request, results, progress, cancellationToken, deadline.Token).ConfigureAwait(false);

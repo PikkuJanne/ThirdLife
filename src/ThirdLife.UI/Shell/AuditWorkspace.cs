@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using ThirdLife.Actions.Execution;
+using ThirdLife.Actions.Journal;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
@@ -55,7 +57,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         TimeProvider timeProvider,
         WorkshopReportStore? reportStore = null,
         Func<PolicyDeviceClass, PolicySnapshot?>? fixturePlanPolicy = null,
-        PilotPackageService? packageService = null)
+        PilotPackageService? packageService = null,
+        Func<IBrokerExecutionJournal, ExecutionCoordinator>? fixtureBrokerCoordinator = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -83,6 +86,12 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         }
 
         _fixturePlanPolicy = fixturePlanPolicy;
+        if (fixtureBrokerCoordinator is not null && !IsFixtureScenario)
+        {
+            throw new ArgumentException("A fixture coordinator requires a fixture workspace.", nameof(fixtureBrokerCoordinator));
+        }
+
+        _fixtureBrokerCoordinator = fixtureBrokerCoordinator;
         if (packageService is not null && IsFixtureScenario)
         {
             throw new ArgumentException("Live package execution requires a live workspace.", nameof(packageService));
@@ -182,7 +191,13 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             return;
         }
 
+        var alreadyOpen = Job?.Job.JobId == id;
         await ApplyJobAsync(stored);
+        if (alreadyOpen)
+        {
+            await LoadBrokerHistoryAsync(id, reconcile: true);
+        }
+
         Status = "Job opened. The committed records are shown below.";
     });
 
@@ -195,6 +210,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ApplyAssessment(null);
         ClearPlanReview(clearSelection: true);
         PackageHistoryText = string.Empty;
+        ClearBrokerHistory();
         ClearRebootRecovery();
         ClearRepairs();
         ClearPolicyView();
@@ -307,6 +323,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         CancelAssessment();
         CancelReport();
         CancelPackageOperation();
+        CancelBrokerExecution();
         await _active;
         if (_store is { } store)
         {
@@ -451,6 +468,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             _packageCancellation?.Dispose();
             _packageCancellation = null;
             _packageActivity = null;
+            _brokerCancellation?.Dispose();
+            _brokerCancellation = null;
             IsBusy = false;
             Publish();
         }
@@ -465,6 +484,13 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             _orchestrator = new AssessmentOrchestrator(store, _providers, _timeProvider);
             _jobs = new JobService(store, _timeProvider);
             _manualTests = new ManualTestService(store, _timeProvider);
+            if (store is IBrokerExecutionJournal brokerJournal)
+            {
+                // Only a fixture can supply a backend until the ordinary dispatch candidate has privilege authorization.
+                _brokerExecution = IsFixtureScenario ? _fixtureBrokerCoordinator?.Invoke(brokerJournal)
+                    : new ExecutionCoordinator(brokerJournal, timeProvider: _timeProvider);
+            }
+
             _store = store;
         }
         catch
@@ -546,6 +572,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         Job = job;
         if (jobChanged)
         {
+            ClearBrokerHistory();
             ClearReport();
             ClearRepairs();
             ClearRebootRecovery();
@@ -561,6 +588,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         if (jobChanged)
         {
             await LoadPackageHistoryAsync(job.Job.JobId);
+            await LoadBrokerHistoryAsync(job.Job.JobId, reconcile: true);
         }
     }
 

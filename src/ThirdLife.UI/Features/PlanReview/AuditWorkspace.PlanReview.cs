@@ -42,7 +42,8 @@ internal sealed partial class AuditWorkspace
     public bool CanBuildPlanReview => CanReviewPlan && SelectedPlanProfile is not null && IncludedEssentials && PlanPolicy() is not null;
     public bool CanApprovePlanReview => CanBuildPlanReview && CanRecordPlanReviewDecision && PlanReviewDecision is null &&
         PlanReview?.Plan is { BlockedReason: null, Actions.IsEmpty: false } plan &&
-        (plan.SyntheticData ? plan.Actions.All(action => action.Request is NoOpActionRequest) :
+        (plan.SyntheticData ? plan.Actions.All(action => action.Request is NoOpActionRequest) &&
+            (_brokerExecution is null || CanApproveBrokerPlan) :
             CanApprovePackagePlan && PackageRequest(plan) is not null);
     public bool CanDeclinePlanReview => CanReviewPlan && CanRecordPlanReviewDecision && HasPlanReview && PlanReviewDecision is null;
 
@@ -74,6 +75,8 @@ internal sealed partial class AuditWorkspace
             var active = PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } approval ? approval : null;
             var changes = _planReviewChanges;
             var savedApproval = _packageApproval;
+            var savedBrokerPlan = _brokerPlan;
+            var savedBrokerApproval = _brokerApproval;
             ClearPlanReview();
             var plan = await ResolveCurrentPlanAsync();
             if (plan is null)
@@ -97,9 +100,11 @@ internal sealed partial class AuditWorkspace
                     PlanReview = approved;
                     PlanReviewDecision = active;
                     _packageApproval = savedApproval;
+                    _brokerPlan = savedBrokerPlan;
+                    _brokerApproval = savedBrokerApproval;
                     _planReviewChanges = changes;
                     _planReviewStatus = plan.SyntheticData
-                        ? "The recorded approval still applies to this synthetic plan."
+                        ? DescribeBrokerApproval()
                         : "The recorded approval still applies to this machine-wide plan.";
                     return;
                 }
@@ -141,9 +146,14 @@ internal sealed partial class AuditWorkspace
                 return;
             }
 
+            if (plan.SyntheticData && _brokerExecution is not null)
+            {
+                await SaveBrokerApprovalAsync();
+            }
+
             RecordPlanReviewDecision(PlanReviewOutcome.Approved, displayed);
             _planReviewStatus = plan.SyntheticData
-                ? "Approval recorded for this synthetic plan. Device readiness still requires verification."
+                ? DescribeBrokerApproval()
                 : "Approval saved for this exact plan. Select Install approved package to continue.";
         });
     }
@@ -225,6 +235,7 @@ internal sealed partial class AuditWorkspace
 
         PlanReview = current;
         PlanReviewDecision = null;
+        SetBrokerPlan(current);
         _planReviewChanges = changes;
         _planReviewStatus = current.Plan.BlockedReason is not null
             ? "Preparation is blocked. Review the reason below."
@@ -283,6 +294,7 @@ internal sealed partial class AuditWorkspace
         PlanReviewDecision = null;
         _packageApproval = null;
         _packageResolution = null;
+        ClearBrokerPlan(clearSelection);
         _planReviewChanges = null;
         if (clearSelection)
         {
