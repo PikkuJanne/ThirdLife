@@ -49,6 +49,7 @@ public enum JournalResult
     RollbackVerified,
     Interrupted,
     Declined,
+    NoChangeConfirmed,
 }
 
 public enum JournalCheckpoint

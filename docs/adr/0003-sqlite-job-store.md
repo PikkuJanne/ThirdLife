@@ -70,6 +70,8 @@ identical retry returns `AlreadyRecorded`, including after an ambiguous
 commit. Only `Recorded` from a new dispatch intent can advance a caller to
 dispatch. A reopened Started or Applied record requires reconciliation by
 the caller. An independent verification transition follows Applied.
+Restart-pending records wait for boot evidence. An independent no-change
+confirmation can resolve an interrupted synthetic no-op without dispatch.
 
 ## Alternatives considered
 

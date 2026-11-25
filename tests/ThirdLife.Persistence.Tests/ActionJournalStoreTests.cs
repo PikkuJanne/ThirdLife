@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -147,6 +148,34 @@ public sealed class ActionJournalStoreTests
         Assert.Null(history.ActiveApproval);
     }
 
+    [Fact]
+    public async Task AnIndexedStateThatDisagreesWithItsPayloadBlocksAnotherPlanApproval()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        JournalPlanSnapshot proposed;
+        string databasePath;
+        await using (var store = await OpenAsync(workspace))
+        {
+            var approved = await SaveApprovedPlanAsync(store);
+            Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(Start(approved)));
+            var stored = await store.LoadJobAsync(approved.Key.JobId);
+            Assert.NotNull(stored);
+            proposed = CreateSnapshot(stored, Assert.Single(stored.SanitizationEvidence), "0.1.0-candidate.2");
+            Assert.NotEqual(approved.Key, proposed.Key);
+            Assert.Equal(JournalWriteResult.Recorded, await store.SaveJournalPlanAsync(proposed));
+            databasePath = store.DatabasePath;
+        }
+
+        // Intentionally corrupt only the index projection in this disposable test database.
+        await SqliteTestControl.ExecuteAsync(databasePath, string.Create(CultureInfo.InvariantCulture,
+            $"UPDATE action_journal_entries SET state = {(int)JournalState.Verified} WHERE state = {(int)JournalState.Started};"));
+
+        await using var reopened = await OpenAsync(workspace);
+        var replacementApproval = new JournalApproval(new Guid("6ad285fe-8912-4dc8-a4bb-f4089582825a"),
+            proposed.Key, Approver, CorrelationId, Now.AddMinutes(2));
+        await Assert.ThrowsAsync<JobStoreCorruptionException>(() => reopened.AppendJournalApprovalAsync(replacementApproval));
+    }
+
     private static async Task<JournalPlanSnapshot> SaveApprovedPlanAsync(SqliteJobStore store)
     {
         var job = PersistenceTestData.CreateJob("action-journal");
@@ -157,9 +186,26 @@ public sealed class ActionJournalStoreTests
             SanitizationGate.Evaluate(job.JobId, intake, PersistenceTestData.Timestamp.AddMinutes(2)));
         var stored = await store.LoadJobAsync(job.JobId);
         Assert.NotNull(stored);
+        var plan = CreateSnapshot(stored, intake, "0.1.0-candidate.1");
+        Assert.Equal(gate.DecisionId, plan.GateDecisionId);
+        var restoredOnly = JournalPlanSnapshot.Restore(plan.Key, plan.CanonicalPlan.ToArray(), plan.CanonicalImpact.ToArray());
+        await Assert.ThrowsAsync<ArgumentException>(() => store.SaveJournalPlanAsync(restoredOnly));
+        Assert.Equal(JournalWriteResult.Recorded, await store.SaveJournalPlanAsync(plan));
+        Assert.Equal(JournalWriteResult.AlreadyRecorded, await store.SaveJournalPlanAsync(plan));
+        var approval = new JournalApproval(ApprovalId, plan.Key, Approver, CorrelationId, Now.AddMinutes(-1));
+        Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalApprovalAsync(approval));
+        Assert.Equal(JournalWriteResult.AlreadyRecorded, await store.AppendJournalApprovalAsync(approval));
+        var approved = Entry(plan, ApprovedEntryId, JournalState.Planned, JournalState.Approved,
+            JournalActor.Operator, JournalResult.None, Now);
+        Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(approved));
+        return plan;
+    }
 
+    private static JournalPlanSnapshot CreateSnapshot(StoredJob stored, SanitizationEvidence intake, string profileVersion)
+    {
         var catalog = CatalogSchema.Parse(ReadFixture("catalog"), Now);
         var profileJson = JsonNode.Parse(ReadFixture("basic"))!;
+        profileJson["version"] = profileVersion;
         profileJson["policy"]!["id"] = Policy.PolicyId;
         profileJson["policy"]!["version"] = Policy.Version;
         var workshop = profileJson["workshop"]!;
@@ -174,19 +220,7 @@ public sealed class ActionJournalStoreTests
         ];
         var proposal = PlanResolver.Resolve(stored, Policy, profile, catalog, facts, [], Now);
         Assert.Null(proposal.BlockedReason);
-        var plan = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
-        Assert.Equal(gate.DecisionId, plan.GateDecisionId);
-        var restoredOnly = JournalPlanSnapshot.Restore(plan.Key, plan.CanonicalPlan.ToArray(), plan.CanonicalImpact.ToArray());
-        await Assert.ThrowsAsync<ArgumentException>(() => store.SaveJournalPlanAsync(restoredOnly));
-        Assert.Equal(JournalWriteResult.Recorded, await store.SaveJournalPlanAsync(plan));
-        Assert.Equal(JournalWriteResult.AlreadyRecorded, await store.SaveJournalPlanAsync(plan));
-        var approval = new JournalApproval(ApprovalId, plan.Key, Approver, CorrelationId, Now.AddMinutes(-1));
-        Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalApprovalAsync(approval));
-        Assert.Equal(JournalWriteResult.AlreadyRecorded, await store.AppendJournalApprovalAsync(approval));
-        var approved = Entry(plan, ApprovedEntryId, JournalState.Planned, JournalState.Approved,
-            JournalActor.Operator, JournalResult.None, Now);
-        Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(approved));
-        return plan;
+        return JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
     }
 
     private static JournalEntry Start(JournalPlanSnapshot plan) =>

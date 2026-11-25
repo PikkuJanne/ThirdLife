@@ -13,7 +13,7 @@
 | Independent verification | Backend results can record Applied. A separate Verifier role and matching typed postcondition are required for Verified. |
 | Sanitized payload | Entries have bounded opaque IDs, typed results and typed checkpoints. The API takes no backend, error, command or installer output text. |
 | Transaction and replay | A guarded immediate transaction validates current approval and intake before Started. A matching duplicate returns `AlreadyRecorded`. A different payload under the same ID is a conflict. |
-| Recovery | The repository retains Started, Applied and RequiresReview without automatic redispatch. A new approval cannot bypass an unreconciled action in the job. |
+| Recovery | The repository retains Started, Applied and RequiresReview without automatic redispatch. A new approval checks the hashed event history for unresolved actions. An independent no-change confirmation can close an interrupted synthetic no-op. |
 
 V5 is additive. The new records live in the existing protected SQLite job
 store with no new cache or attachment paths. Prior migration bytes and
@@ -31,3 +31,20 @@ journal adds no external backend, reboot token, or automatic resume path.
 - Solution force-evaluate and locked restores passed in 1.675 s and 1.730 s.
   Only the four expected project-reference lock closures changed. External
   package records and the approved licence-matrix digest were preserved.
+- The narrow Actions journal suite passed 29 tests in 3.671 s and the
+  SQLite journal suite passed four in 5.720 s. They cover typed transition
+  rules, separate verification, exact plan and impact validation, stale gate,
+  and identical replay after faults before and after commit.
+- Persistence and Actions Targeted passed 1,370 tests in 112.312 s,
+  including 130 Persistence and 121 Actions tests at source checkpoint
+  `bbc3a3b`.
+- Review of that checkpoint found that verification could pass while restart
+  was pending, an interrupted no-op had no independent no-change resolution,
+  and the cross-plan check trusted indexed state before validating its
+  payload. The initial broad run stopped. The correction adds a typed
+  no-change outcome, holds restart-pending actions, and validates the
+  bounded event history before taking a new approval.
+- After the correction the focused Actions journal suite passed 35 tests and
+  the focused SQLite journal and migration selection passed eight. The
+  sequential command took 9.526 s. The corrupt-state regression uses only a
+  disposable job store and verifies that a new approval fails closed.

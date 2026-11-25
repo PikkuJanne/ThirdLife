@@ -34,7 +34,8 @@ public static class JournalStateMachine
             return false;
         }
 
-        if (candidate.State != JournalState.Verified && candidate.Verification is not null)
+        if (candidate.State != JournalState.Verified && candidate.Result != JournalResult.NoChangeConfirmed &&
+            candidate.Verification is not null)
         {
             return false;
         }
@@ -60,9 +61,14 @@ public static class JournalStateMachine
                 candidate.Actor is JournalActor.Coordinator or JournalActor.Broker && IsInterruption(candidate),
             (JournalState.Applied, JournalState.Verified) =>
                 candidate.Actor == JournalActor.Verifier && candidate.Result == JournalResult.VerificationPassed &&
-                candidate.Verification == action.Definition.Verification && candidate.Checkpoint == JournalCheckpoint.None,
+                candidate.Verification == action.Definition.Verification && candidate.Checkpoint == JournalCheckpoint.None &&
+                previous?.Checkpoint != JournalCheckpoint.RestartRequired,
             (JournalState.Applied, JournalState.RequiresReview) =>
                 candidate.Actor is JournalActor.Coordinator or JournalActor.Verifier && IsInterruption(candidate),
+            (JournalState.RequiresReview, JournalState.Failed) =>
+                candidate.Actor == JournalActor.Verifier && candidate.Result == JournalResult.NoChangeConfirmed &&
+                candidate.Checkpoint == JournalCheckpoint.None && candidate.Verification == ActionVerification.NoMachineChange &&
+                action.Definition.Availability == ActionAvailability.BrokerNoOp,
             (JournalState.Applied or JournalState.Failed or JournalState.RequiresReview, JournalState.RolledBack) =>
                 candidate.Actor == JournalActor.Verifier && candidate.Result == JournalResult.RollbackVerified &&
                 candidate.Checkpoint == JournalCheckpoint.None && action.Definition.Rollback == ActionRollback.ManualReview,

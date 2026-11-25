@@ -328,23 +328,26 @@ public sealed partial class SqliteJobStore : IActionJournalStore
         }
     }
 
-    private static async Task<bool> HasUnreconciledJournalActionAsync(
+    private async Task<bool> HasUnreconciledJournalActionAsync(
         SqliteConnection connection, SqliteTransaction transaction, JournalPlanKey key, CancellationToken token)
     {
-        await using var command = JournalCommand(connection, transaction, key, """
-            SELECT 1 FROM action_journal_entries AS entry
-            WHERE entry.job_id = $job_id AND entry.state IN ($started, $applied, $review)
-              AND NOT EXISTS (
-                SELECT 1 FROM action_journal_entries AS newer
-                WHERE newer.job_id = entry.job_id AND newer.plan_sha256 = entry.plan_sha256
-                  AND newer.impact_sha256 = entry.impact_sha256 AND newer.action_id = entry.action_id
-                  AND newer.entry_sequence > entry.entry_sequence)
-            LIMIT 1;
-            """);
-        command.Parameters.AddWithValue("$started", (int)JournalState.Started);
-        command.Parameters.AddWithValue("$applied", (int)JournalState.Applied);
-        command.Parameters.AddWithValue("$review", (int)JournalState.RequiresReview);
-        return await command.ExecuteScalarAsync(token).ConfigureAwait(false) is not null;
+        // Check the hashed records before using projected states or action IDs to decide if the job is clear.
+        await using var command = JournalCommand(connection, transaction, key,
+            EntryProjection + "WHERE job_id = $job_id ORDER BY entry_sequence;");
+        var entries = await ReadJournalRecordsAsync(command, key, JournalHistory.MaximumEntriesPerJob, ReadEntry, token).ConfigureAwait(false);
+        var latest = new Dictionary<(JournalPlanKey Plan, Guid ActionId), JournalState>();
+        foreach (var entry in entries)
+        {
+            var action = (entry.Plan, entry.ActionId);
+            if (entry.PriorState != latest.GetValueOrDefault(action, JournalState.Planned))
+            {
+                throw new JobStoreCorruptionException("store_payload_mismatch");
+            }
+
+            latest[action] = entry.State;
+        }
+
+        return latest.Values.Any(state => state is JournalState.Started or JournalState.Applied or JournalState.RequiresReview);
     }
 
     private static SqliteCommand JournalCommand(SqliteConnection connection, SqliteTransaction transaction, JournalPlanKey key, string sql)

@@ -42,6 +42,14 @@ public sealed class JournalTests
         JournalCheckpoint.None, ActionVerification.ExactPackageIdentity, false)]
     [InlineData(JournalState.Applied, JournalState.Verified, JournalActor.Verifier, JournalResult.VerificationPassed, JournalCheckpoint.None, null, false)]
     [InlineData(JournalState.Applied, JournalState.RolledBack, JournalActor.Verifier, JournalResult.RollbackVerified, JournalCheckpoint.None, null, false)]
+    [InlineData(JournalState.RequiresReview, JournalState.Failed, JournalActor.Verifier, JournalResult.NoChangeConfirmed,
+        JournalCheckpoint.None, ActionVerification.NoMachineChange, true)]
+    [InlineData(JournalState.RequiresReview, JournalState.Failed, JournalActor.Coordinator, JournalResult.NoChangeConfirmed,
+        JournalCheckpoint.None, ActionVerification.NoMachineChange, false)]
+    [InlineData(JournalState.RequiresReview, JournalState.Failed, JournalActor.Verifier, JournalResult.NoChangeConfirmed,
+        JournalCheckpoint.None, null, false)]
+    [InlineData(JournalState.RequiresReview, JournalState.Failed, JournalActor.Verifier, JournalResult.NoChangeConfirmed,
+        JournalCheckpoint.Reconcile, ActionVerification.NoMachineChange, false)]
     [InlineData(JournalState.Verified, JournalState.Started, JournalActor.Coordinator, JournalResult.None, JournalCheckpoint.DispatchIntent, null, false)]
     public void RequiresTheLegalPriorStateActorCheckpointAndVerification(
         JournalState prior,
@@ -114,6 +122,34 @@ public sealed class JournalTests
 
         Assert.True(JournalStateMachine.CanAppend(plan, approval, started, applied));
         Assert.True(JournalStateMachine.CanAppend(plan, approval, applied, rolledBack));
+    }
+
+    [Fact]
+    public void RestartPendingPackageCannotVerifyFromItsAppliedResult()
+    {
+        var proposal = PlanResolverTests.CreateReviewedPlan();
+        var plan = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+        var actionId = Assert.Single(plan.Actions).ActionId;
+        var applied = Entry(plan, actionId, PreviousEntryId, JournalState.Started, JournalState.Applied,
+            JournalActor.Broker, JournalResult.BackendApplied, JournalCheckpoint.RestartRequired,
+            occurredAt: ApprovalTime.AddMinutes(1));
+        var verified = Entry(plan, actionId, CandidateEntryId, JournalState.Applied, JournalState.Verified,
+            JournalActor.Verifier, JournalResult.VerificationPassed, verification: ActionVerification.ExactPackageIdentity);
+
+        Assert.False(JournalStateMachine.CanAppend(plan, Approval(plan), applied, verified));
+    }
+
+    [Fact]
+    public void InterruptedPackageCannotUseNoOpReconciliation()
+    {
+        var proposal = PlanResolverTests.CreateReviewedPlan();
+        var plan = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+        var actionId = Assert.Single(plan.Actions).ActionId;
+        var interrupted = Previous(plan, actionId, JournalState.RequiresReview);
+        var reconciled = Entry(plan, actionId, CandidateEntryId, JournalState.RequiresReview, JournalState.Failed,
+            JournalActor.Verifier, JournalResult.NoChangeConfirmed, verification: ActionVerification.NoMachineChange);
+
+        Assert.False(JournalStateMachine.CanAppend(plan, Approval(plan), interrupted, reconciled));
     }
 
     [Fact]
@@ -218,6 +254,9 @@ public sealed class JournalTests
             JournalActor.Broker, JournalResult.BackendApplied, occurredAt: ApprovalTime.AddMinutes(1)),
         JournalState.Verified => Entry(plan, actionId, PreviousEntryId, JournalState.Applied, state,
             JournalActor.Verifier, JournalResult.VerificationPassed, verification: ActionVerification.NoMachineChange,
+            occurredAt: ApprovalTime.AddMinutes(1)),
+        JournalState.RequiresReview => Entry(plan, actionId, PreviousEntryId, JournalState.Started, state,
+            JournalActor.Coordinator, JournalResult.Interrupted, JournalCheckpoint.Reconcile,
             occurredAt: ApprovalTime.AddMinutes(1)),
         _ => throw new ArgumentOutOfRangeException(nameof(state)),
     };

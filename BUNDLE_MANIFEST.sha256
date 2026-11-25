@@ -22,7 +22,7 @@ da283e66406b9fa3440439e0ccbe06c5196acb9be0740bdf0916ae6c8e44b465  TL-0008_TRANSI
 d71c86194c92e47591405d4fdd74e94d3899a657a7f119c9f2a7d3cb5dabc043  artifacts/gates/M1-audit-only.md
 bf5f7b09962229dbcedcbb378379b6d7ca2f823f1aea2502de4981b017562775  docs/adr/0001-windows-wpf-stack.md
 340f0830d420d2c00799dd21f6584d1cd0557fcaf440872c984fe7315af54314  docs/adr/0002-evidence-policy-separation.md
-a6b377c5474c9edf3b0853a573207bcd2c3bebb9177bbca0e5f7c4028c9fbb27  docs/adr/0003-sqlite-job-store.md
+5694f48b0b76e03acd9effb093c142e96533a130338c8bbe6dde73279216e995  docs/adr/0003-sqlite-job-store.md
 9d3e841d3fb38c77539555ddbaf4b7ca76ca7f99c8c9a3895056f8b814ac2977  docs/adr/0004-ephemeral-broker.md
 d349086469a7ec5fd9ba4d5b5c9ac23b0c3804a366808c1277ff38b2fb2ce8db  docs/adr/0005-package-adapter.md
 922d3bdfc5d0b391fe31796e891561144935fce7ad4e049dd5cbade5369e9370  docs/adr/0006-report-privacy-classes.md
