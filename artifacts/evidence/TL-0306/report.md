@@ -35,6 +35,24 @@ screen-reader results.
   The presentation now uses explicit current culture for user-facing values.
 - `dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter FullyQualifiedName~PlanReviewTests`
   passed all five loaded-window tests in 9.416 s.
+- The review initially opened the plan details collapsed. Details now open
+  with each newly displayed preview and remain collapsible by keyboard.
+  The same five focused tests passed after the visible-details change in
+  9.433 s.
 - The first-party UI references trigger Full. Force-evaluate and locked
   solution restores passed in 1.599 s and 1.640 s. Exactly two lock files
   changed. All third-party records and the approved licence matrix are intact.
+- The UI and Actions Targeted selection passed 1,185 tests in 64.225 s.
+  Pushed source checkpoint `5517e07` matches the clean Full snapshot tree.
+- The named active-machine `ShellProcessSmokeTests` case passed and closed
+  its owned unelevated apphost. UI Automation observed the live navigation
+  announcement. Elapsed time was 1,140 ms, peak working set 212,832,256
+  bytes, and CPU time 1,156.250 ms. This measures startup and navigation on
+  the reference machine. The UI assembly SHA-256 was
+  `d06dab160d168ff20871bea04cbb12ba01e57e7d4e29d2fafe5d512a1071c38a`.
+- `.\eng\verify.ps1 -Tier Full -Restore` passed 287 governance tests and
+  1,748 .NET tests in 323.95 s on the clean same-machine worktree, including
+  locked restore and a Release build with zero warnings. Its source tree
+  `f1818707fac36743a4651ab26a4079fe3e35b82b` matches pushed checkpoint
+  `5517e07f2e5b16016a0db8bdb5615eedcb3994d0`. Extended was outside the
+  task's triggers.

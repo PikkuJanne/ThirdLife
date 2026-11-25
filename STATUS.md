@@ -4,22 +4,23 @@
 **Bundle baseline:** 0.6.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
 **Current milestone:** M3 — Safe planning and privilege boundary  
-**Current task:** TL-0306 — In progress
+**Current task:** TL-0306 — Done
 
 ## Continuity
 
 PR #30 integrated [impact estimation](artifacts/evidence/TL-0305/report.md)
-into `main` at `be79922`. TL-0306 starts there on
-`codex/tl-0306-plan-review-approval`.
+into `main` at `be79922`. The `codex/tl-0306-plan-review-approval`
+branch contains the completed TL-0306 work and evidence.
 
 The original workspace still contains the documented untracked Word reference.
 
 ## Outcome and evidence
 
-The audit workspace can review a synthetic no-op plan, choose optional actions,
-and record an exact-digest review decision. The loaded WPF tests passed.
-Targeted and clean Full verification are in progress.
+The audit workspace reviews synthetic no-op plans and binds approve or
+decline to the displayed plan digest and impact. The 200% loaded WPF test
+passed. Clean Full passed 287 governance tests and 1,748 .NET tests.
+[TL-0306 evidence](artifacts/evidence/TL-0306/report.md)
 
 ## Next action
 
-Finish verification and integrate TL-0306 before starting TL-0307.
+Start TL-0307 after verifying TL-0306 integration on updated `main`.
