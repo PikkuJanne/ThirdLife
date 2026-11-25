@@ -1,21 +1,13 @@
 # ThirdLife Setup Core — Development and GitHub Continuity Workflow
 
-**Bundle version:** 0.7.0  
+**Bundle version:** 0.8.0  
 **Continuity source of truth:** GitHub repository  
 **Authoritative runtime hardware:** active Codex machine only  
 **Remote CI classification:** supplementary
 
-## 1. Purpose
+## 1. Start from known source
 
-The pushed repository must be sufficient for another Codex session or another machine to
-continue safely without chat history, IDE state, local-only files, or human memory.
-
-Continuity requires more than pushing a task branch. Completed task work must return to one
-unambiguous default-branch line before the next roadmap task begins.
-
-## 2. Start every session safely
-
-Before proposing or changing implementation:
+Verify source before editing.
 
 ```powershell
 git remote -v
@@ -25,290 +17,48 @@ git rev-parse HEAD
 git log -1 --decorate --oneline
 git fetch --all --prune
 git status --short --branch
-git rev-list --left-right --count HEAD...@{upstream}
+git rev-list --left-right --count 'HEAD...@{upstream}'
+git rev-list --left-right --count HEAD...origin/main
+git worktree list
 ```
 
-If no upstream exists, record that fact and identify the intended remote branch from the
-documented branch/PR state. Do not guess.
+Record an absent upstream explicitly. Identify the intended repository, base and pull request through GitHub or existing records. Preserve dirty work, divergent histories and unique branch commits. If the checkout is unsafe or ambiguous, resolve source identity before editing it. Prefer a fresh isolated branch or worktree from a verified base. Do not reset, force-push or rewrite another line to resolve divergence. If GitHub is unavailable, commit safe work locally and explain the unverified remote state.
 
-Stop before implementation when:
+Read `STATUS.md`, the current product contract and affected specifications. Confirm the outcome and actual component dependencies in `TASKS.yaml`, then inspect relevant source and evidence and run the narrowest baseline.
 
-- the remote is unexpected;
-- the task branch is not the intended branch;
-- the worktree contains unexplained changes;
-- local and remote histories diverge;
-- the expected completed-task/default-branch integration cannot be identified;
-- preserving work would require reset, force push, or history rewriting.
+## 2. Integrate coherent work
 
-Then read:
+Keep one intelligible default-branch continuation and use scoped branches based on verified `main` or a documented dependency. An outcome can span multiple tasks and pull requests. When work depends on an unmerged branch, identify the exact base and head, dependent components, owning pull requests and integration order. One delayed branch leaves independent work free to proceed.
 
-1. `STATUS.md`;
-2. `DECISIONS.md`;
-3. `ROADMAP.md`;
-4. `PROJECT_BOUNDARY.md`;
-5. `SECURITY.md`;
-6. `ACCESSIBILITY.md`;
-7. `LOW_SPEC.md`;
-8. this file;
-9. `TESTING.md`;
-10. `AGENTS.md`;
-11. the selected `TASKS.yaml` entry and its durable evidence.
+A checkpoint may integrate when its scope is verified, production behavior remains safe, and unavailable or unqualified paths are visibly unavailable and unreachable. Keep remaining qualification or consent in the task record. Real execution and release decisions stay bound to the affected capability or exposure. Never infer a capability or release claim from merge state.
 
-Run the narrowest relevant baseline before editing.
+For each meaningful checkpoint:
 
-## 3. Branch lifecycle
+1. Review the scoped diff, changed task state, affected security/privacy/accessibility/resource requirements, and applicable evidence. Exclude secrets, personal data, raw run output, caches and local setup files.
+2. Run the applicable checks from `TESTING.md`. Record any gate or qualification still outstanding. Full applies when triggered by a major shared contract, migration, dependency, release or cumulative integration change.
+3. Commit, push and open or update the applicable pull request. Respect enforced review, access and merge policies. Verify base/head and inspect the remote commit and merge result.
+4. Preserve inactive branch history and evidence. Before closing a superseded pull request or deleting a branch, verify ancestry and unique intended content, record the disposition, and obtain owner approval for the retirement. Never delete the only copy of work.
+5. Verify the worktree and upstream SHAs. Update the continuation with an exact next action and any true external blocker. Keep working toward the authorized outcome when a next step is available.
 
-### 3.1 Normal rule
+## 3. Evidence and handoff
 
-Use one short-lived branch per roadmap task:
+`STATUS.md` is a short factual summary derived from `TASKS.yaml`. Record task, command/review, tier, result, date, duration, tested source/artifact, environment or constraint and concise limitation in the task. Use these locations for durable details.
 
 ```text
-codex/tl-0107-os-lifecycle-activation
-```
-
-The branch contains one coherent task outcome. It must not contain sibling work, future B4
-integration, unrelated cleanup, or the next task.
-
-### 3.2 Merge before the next task
-
-A product task is not ready for handoff to the next product task until:
-
-- intended changes and evidence are committed and pushed;
-- a pull request or documented direct-integration path exists;
-- required review/gate evidence is complete;
-- the task is integrated into `main`;
-- `main` contains the reported commit or merge commit;
-- stale task branches are classified;
-- live `STATUS.md` points to updated `main`.
-
-Do not begin the next roadmap task on top of an unmerged completed-task stack.
-
-For an explicitly assigned sequence, verify each merge and continue from updated `main`
-without waiting for a conversational handoff. Use one active task and branch at a time.
-The [permanent testing policy reset](docs/amendments/2026-11-24-permanent-testing-policy-reset.md)
-authorizes the synchronized contract changes and M1 repair, verification and routine integration
-in PR #17. That assignment ended at the integrated TL-0116 technical gate.
-
-The [Windows 11–only amendment](docs/amendments/2026-11-25-windows-11-only.md)
-authorizes TL-0315 from integrated TL-0310. Keep the blocked broker checkpoint on its
-own branch. Reconcile it with the integrated platform contract before continuing TL-0311.
-
-### 3.3 Temporary stacked-work exception
-
-A stack is allowed only for a named recovery, cumulative stabilization, or approved
-dependency sequence. Record:
-
-- why integration cannot yet occur;
-- exact base and head;
-- included task IDs;
-- owning pull request;
-- collapse/merge plan;
-- stop condition;
-- branch-retirement plan.
-
-The 0.4.0 cumulative stabilization is such an exception. It ends when the advanced TL-0106
-line is integrated into `main`.
-
-## 4. Checkpoint commits
-
-Commit and push coherent buildable checkpoints:
-
-- after each meaningful unit;
-- before pausing or ending a session;
-- before changing machines/worktrees;
-- before a risky migration or mutating test;
-- before presenting an applicable accountable decision;
-- before updating a cumulative pull request.
-
-A checkpoint:
-
-- references the task or amendment;
-- includes related source, tests, fixtures, schemas, migrations, docs, and state together;
-- passes Quick;
-- excludes secrets, personal data, caches, generated raw logs, and local environments;
-- records broader verification still pending.
-
-## 5. Pull-request and branch discipline
-
-Before opening a pull request:
-
-- fetch/prune;
-- verify base/head;
-- inspect commit range and changed files;
-- verify the branch contains no unrelated task;
-- update status/evidence;
-- run required active-machine tiers.
-
-Before closing a superseded PR or deleting a branch:
-
-1. verify its intended commits are reachable from the retained line or intentionally rejected;
-2. record any unique commits/content;
-3. obtain project-owner approval;
-4. add a clear supersession/retirement note;
-5. never delete the only copy of intended work.
-
-Do not merge an older divergent PR merely to make it disappear.
-
-## 6. Push and handoff
-
-A session handoff is complete only when:
-
-- changes are committed and pushed;
-- local/upstream SHAs match or the exact difference is documented;
-- `TASKS.yaml` and concise `STATUS.md` are current;
-- durable evidence artifacts are committed;
-- tests run/not run and rationale are recorded;
-- the worktree is clean except for explicitly documented local artifacts;
-- the next action is executable without the prior chat.
-
-Verify:
-
-```powershell
-git status --short --branch
-git rev-parse HEAD
-git rev-parse @{upstream}
-```
-
-## 7. Evidence storage
-
-`STATUS.md` is a current snapshot, not an archive.
-
-Codex owns technical verification, from preparing the verified build and isolated starting
-state to running, diagnosing, repairing, cleaning up and mapping results to criteria. Record
-technical results, actual human observations, unobserved behavior, reported defects and
-scope-bound decisions with distinct provenance. Preserve failed cases and known blockers.
-
-Use [D-074](DECISIONS.md#d-074) for an exceptional request. A required later decision
-does not block safe preparation and verification of the candidate. Present the prepared
-result, material limits and the exact proposed action when requesting real authorization.
-Finishing engineering creates no routine human QA or technical sign-off.
-
-New detailed evidence belongs in:
-
-```text
-artifacts/evidence/TL-XXXX/
+artifacts/evidence/<task>/
 artifacts/gates/
 docs/reviews/
 docs/adr/
 ```
 
-A task evidence entry remains compact and contains:
+Keep automated results, actual observations, unavailable behavior, reported defects and decisions distinct. Reuse unchanged relevant evidence with its provenance. Codex owns preparation, technical verification, diagnosis, repair and cleanup. Actual authority for an action remains a prerequisite for that action. Prepare candidates before decisions where safe, with zero routine owner QA or technical sign-off.
 
-- task;
-- command/review;
-- tier;
-- result;
-- duration;
-- environment/constraint;
-- commit/artifact/digest;
-- concise limitation.
+A handoff names the observed outcome, exact tested source and artifact, branch/commit/push/merge state, test tiers, limitations and next executable action. When independent engineering is complete and execution remains unavailable, record precisely which action is blocked and how to reopen it.
 
-Do not paste raw logs, secrets, personal data, or multi-page design analysis into
-`TASKS.yaml`.
+## 4. Clean-clone continuity and runtime evidence
 
-Carry forward evidence with its original provenance when relevant inputs remain unchanged.
-If an interaction changes or a result fails, Codex rechecks the affected part. When a session
-must pause, record one resumable handoff with the authorization, current evidence and next
-executable action.
+At named gates, applicable cumulative integration and shared-contract changes, use a separate clean clone or worktree on the active Codex machine. Restore verified assets and locked dependencies. Build/start the project as applicable, run Quick and required broader checks, and confirm the current work and evidence are discoverable without a sibling repository or local-only files.
 
-## 8. Clean-clone continuation
+Use the active Codex machine for authoritative implementation, Windows runtime, provider/hardware, accessibility, performance and release evidence. Its VMs, Windows Sandbox, containers, virtual disks and safe process constraints can support these checks. Cover unavailable hardware variants with deterministic fixtures, sanitized samples, bounded observation and explicit evidence limits. Do not make another physical PC, a hardware lab or cloud matrix a dependency.
 
-At milestone, preview, pilot, stable, cumulative-integration, and named task gates, use a
-separate clean clone/worktree or allowed hosted environment on the active physical machine.
-
-The clean environment must:
-
-1. restore verified external assets from checked-in manifests;
-2. restore locked dependencies;
-3. build/start the project;
-4. run Quick;
-5. locate the current task and evidence;
-6. contain no dependency on sibling repositories or undocumented local files.
-
-This proves source continuity, not multi-hardware support.
-
-## 9. Physical and runtime test scope
-
-All authoritative implementation and validation occur on the active Codex machine, including
-host checks, clean clones/worktrees, Windows Sandbox, VMs, containers, virtual disks,
-constraints, and any exceptional observations under D-074.
-
-Do not create dependencies on:
-
-- another physical PC;
-- a lower-performance device;
-- a volunteer lab;
-- missing peripheral classes;
-- GitHub-hosted runtime behavior;
-- a cloud hardware matrix.
-
-Use deterministic fixtures, sanitized captured samples, safe same-machine constraints,
-bounded observation, and explicit limitations.
-
-## 10. Remote CI
-
-GitHub Actions is permitted only as a supplementary clean-checkout signal. It may run format,
-build, static, and deterministic tests, but it cannot satisfy:
-
-- active-machine runtime evidence;
-- hardware/provider observation;
-- active-machine accessibility evidence;
-- performance/resource evidence;
-- milestone/pilot/stable gates;
-- release authorization.
-
-Workflow and evidence text must not call remote output authoritative.
-
-## 11. Divergence and recovery
-
-When histories diverge:
-
-1. stop implementation;
-2. preserve worktree and identify commits;
-3. inspect actual changes and ownership;
-4. choose the documented merge/rebase strategy;
-5. do not use `reset --hard`, force push, or history rewriting for convenience;
-6. request owner authorization before discarding or rewriting work.
-
-If GitHub is unavailable, local commits may continue when safe, but no handoff, merge,
-machine switch, or claim of remote publication is complete.
-
-## 12. Historical TL-0008 transition
-
-The TL-0008 single-machine transition is complete. The transition prompt and superseded
-physical-device procedure remain historical audit records only.
-
-Normal task selection comes from live `STATUS.md` and `TASKS.yaml`. Do not rerun the old
-device-pool walkthrough.
-
-## 13. End-of-session report
-
-```text
-Task/amendment:
-Branch:
-Base:
-Commit:
-Push/upstream:
-Working tree:
-Default-branch integration state:
-Pull request:
-
-User outcome:
-Changed files:
-Durable evidence:
-
-Testing:
-- Quick:
-- Targeted:
-- Full:
-- Extended:
-- Supplementary CI:
-
-Security/privacy:
-Accessibility/modest hardware:
-Data/migration:
-Project boundary/release interface:
-Known limitations:
-Owner decision required:
-Next action:
-```
+GitHub Actions may run supplementary clean-checkout formatting, build, static and deterministic checks. Active-machine evidence remains required for runtime, provider, accessibility, resource, pilot, and release claims.

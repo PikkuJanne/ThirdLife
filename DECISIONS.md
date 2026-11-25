@@ -1,40 +1,21 @@
-# ThirdLife Setup Core — Frozen Decision Register
+# ThirdLife Setup Core — Decision Register
 
-**Bundle version:** 0.7.0  
+**Bundle version:** 0.8.0  
 **Generated:** 2026-11-25  
-**Status:** Binding for the Team B/B1 ThirdLife Setup Core roadmap
+**Status:** Rationale and decision history for Team B/B1
 
-## Purpose and authority
+## Purpose and status
 
-This register freezes the product, portfolio boundary, architecture, safety, privacy, accessibility, modest-hardware, testing, continuity, and delivery choices that govern Codex work. Revision 0.7.0 implements the Windows 11–only scope. The permanent engineering verification contract established under D-074 remains in force. Earlier decisions and approved amendments retain their provenance.
+The [product contract](docs/product-contract.md) defines the current outcomes and
+invariants. This register records their rationale and the choices made at each
+stage. Entries are current rationale unless marked historical or qualified by
+a later decision. The applicable product contract and scoped specifications
+govern implementation. Historical choices retain their original evidence and
+do not impose sequencing or independent approval requirements.
 
-When implementation pressure conflicts with a decision here, stop, record the conflict, and request an explicit human decision. Do not silently reinterpret a frozen decision.
-
-Authority precedence for this bundle is:
-
-1. `DECISIONS.md`
-2. `ROADMAP.md`
-3. `PROJECT_BOUNDARY.md`
-4. `SECURITY.md`
-5. `ACCESSIBILITY.md`
-6. `LOW_SPEC.md`
-7. `DEVELOPMENT_WORKFLOW.md`
-8. `TESTING.md`
-9. `AGENTS.md`
-10. `TASKS.yaml`
-11. `STATUS.md`
-12. `CODEX_START_PROMPT.md`
-13. `README.md`
-
-A decision may be changed only by a human-approved amendment that:
-
-- keeps the superseded decision/history visible;
-- records the new decision, rationale, approver, and date;
-- identifies affected tasks, tests, schemas, reports, release-interface fields, and threat/privacy assumptions;
-- identifies any effect on the Team B queue or future B4 assembly; and
-- updates every conflicting bundle artifact in the same change.
-
-Codex may propose an amendment, but it may not declare one approved.
+D-075 records the current development model and identifies the implementation
+constraints that have been superseded. [Change control](docs/change-control.md)
+covers recording a material product, trust, licensing or exposure decision.
 
 ## Index
 
@@ -63,7 +44,7 @@ Codex may propose an amendment, but it may not declare one approved.
 | [D-021](#d-021) | Recipient-controlled settings and secrets |
 | [D-022](#d-022) | Curated application catalog |
 | [D-023](#d-023) | Profiles are non-executable data |
-| [D-024](#d-024) | Structured WinGet integration |
+| [D-024](#d-024) | Structured package integration |
 | [D-025](#d-025) | Package trust controls |
 | [D-026](#d-026) | No WinGet Configuration in Core 1.0 |
 | [D-027](#d-027) | Desktop stack |
@@ -84,7 +65,7 @@ Codex may propose an amendment, but it may not declare one approved.
 | [D-042](#d-042) | Offline degradation and deferred suite cache |
 | [D-043](#d-043) | Dependency and licensing control |
 | [D-044](#d-044) | Additional Core 1.0 non-goals |
-| [D-045](#d-045) | Authority and change control |
+| [D-045](#d-045) | Original authority and change control (historical) |
 | [D-046](#d-046) | Portfolio component and queue position |
 | [D-047](#d-047) | Standalone release independence |
 | [D-048](#d-048) | Project-vacuum development |
@@ -106,7 +87,7 @@ Codex may propose an amendment, but it may not declare one approved.
 | [D-064](#d-064) | TL-0008 draft 1 and the immediate MHT walkthrough are superseded |
 | [D-065](#d-065) | Manual hardware-test workflow remains, hardware-matrix certification does not |
 | [D-066](#d-066) | Hardware and resource claims are limited to observed evidence |
-| [D-067](#d-067) | Integrate completed work before the next task |
+| [D-067](#d-067) | Prior task integration policy (historical) |
 | [D-068](#d-068) | Remote CI remains supplementary |
 | [D-069](#d-069) | Compact live status and durable evidence |
 | [D-070](#d-070) | Reusable test runners and declarative profiles |
@@ -114,8 +95,11 @@ Codex may propose an amendment, but it may not declare one approved.
 | [D-072](#d-072) | Versioned and stale-safe lifecycle knowledge |
 | [D-073](#d-073) | Focused human testing and bounded continuation |
 | [D-074](#d-074) | Codex owns technical verification and accountable decisions remain explicit |
+| [D-075](#d-075) | Current product contract and capability-specific engineering |
 
 ## Decisions
+
+<a id="d-001"></a>
 
 ### D-001 — Project and component identity
 
@@ -127,6 +111,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only after an explicit human-approved naming, legal, or portfolio-architecture decision before public release.
 
+<a id="d-002"></a>
+
 ### D-002 — Product outcome
 
 **Decision.** ThirdLife Setup Core is a local-first, auditable refurbishment workflow that assesses a sanitized device, applies an approved plan, verifies the outcome, and produces a clear handover.
@@ -136,6 +122,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Every feature must support Intake, Inspect, Decide, Prepare, Verify, Handover, recipient-controlled Core accessibility/backup onboarding, or the standalone release lifecycle.
 
 **Revisit trigger.** Only through a new product charter approved by the project and portfolio owners.
+
+<a id="d-003"></a>
 
 ### D-003 — Primary Core operator
 
@@ -147,6 +135,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** After the standalone Core 1.0 release and a separately approved product milestone.
 
+<a id="d-004"></a>
+
 ### D-004 — Starting-state boundary
 
 **Decision.** v0.1 assumes sanitized, replaced, or absent donor storage and a fresh or known Windows installation. Existing personal-PC repair or cleanup is out of scope.
@@ -156,6 +146,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Do not add preservation, malware-removal, migration, or unknown-application cleanup behavior.
 
 **Revisit trigger.** Only as a separately threat-modeled, initially read-only product mode.
+
+<a id="d-005"></a>
 
 ### D-005 — Operating-system target
 
@@ -169,6 +161,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** A change to the platform boundary requires a governed amendment. Reviewed release and servicing data are maintained under D-072.
 
+<a id="d-006"></a>
+
 ### D-006 — Pilot and standalone release cuts
 
 **Decision.** Milestones M0 through M6 produce the controlled v0.1 partner pilot. Milestone M7 completes and freezes ThirdLife Setup Core 1.0 as the independently releasable Team B/B1 product.
@@ -178,6 +172,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Passing `TL-0611` does not complete B1 or authorize suite integration. B1 completes only at human gate `TL-0710`.
 
 **Revisit trigger.** Only by an approved roadmap revision that preserves completed milestone evidence and records the effect on the Team B queue.
+
+<a id="d-007"></a>
 
 ### D-007 — Sanitization gate
 
@@ -189,6 +185,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only in a separately released component with its own threat model and validation program.
 
+<a id="d-008"></a>
+
 ### D-008 — OS installation and imaging
 
 **Decision.** Windows installation, imaging, Sysprep automation, and product-key installation are external prerequisites for v0.1.
@@ -198,6 +196,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** ThirdLife may record and verify the resulting state but must not silently absorb imaging responsibilities.
 
 **Revisit trigger.** After v0.1 through a separate architecture and operational review.
+
+<a id="d-009"></a>
 
 ### D-009 — No compatibility, ownership, or activation bypasses
 
@@ -209,6 +209,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Never for bypass behavior; only evidence providers may evolve.
 
+<a id="d-010"></a>
+
 ### D-010 — No optimizer scope
 
 **Decision.** ThirdLife is not a PC cleaner, optimizer, debloater, registry cleaner, driver-download utility, or general IT toolbox.
@@ -218,6 +220,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Reject features without a direct refurbishment acceptance or handover outcome.
 
 **Revisit trigger.** Only by replacing the product charter, not by incremental scope creep.
+
+<a id="d-011"></a>
 
 ### D-011 — Local-first data model
 
@@ -229,6 +233,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** A future optional service requires separate consent, privacy, and threat-model decisions.
 
+<a id="d-012"></a>
+
 ### D-012 — Network categories
 
 **Decision.** The application exposes network use as package-catalog update, software download, Windows Update, or optional self-update.
@@ -238,6 +244,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** No hidden or catch-all network category; tests use fakes unless integration behavior is under test.
 
 **Revisit trigger.** When a new approved network capability is introduced.
+
+<a id="d-013"></a>
 
 ### D-013 — Telemetry default
 
@@ -249,6 +257,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only with explicit opt-in design and privacy approval.
 
+<a id="d-014"></a>
+
 ### D-014 — Identity and minimization
 
 **Decision.** Recipient identity is not required for workshop jobs. Full serial numbers remain in the workshop record; support exports omit or truncate them.
@@ -258,6 +268,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** No names in log filenames, temporary paths, package commands, or ordinary diagnostic logs.
 
 **Revisit trigger.** Only if an approved operational requirement cannot be met with an internal job identifier.
+
+<a id="d-015"></a>
 
 ### D-015 — Evidence semantics
 
@@ -269,6 +281,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only by extending the vocabulary without weakening provenance.
 
+<a id="d-016"></a>
+
 ### D-016 — No aggregate health score
 
 **Decision.** ThirdLife does not calculate or display a universal numeric device-health score.
@@ -278,6 +292,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Show requirements, evidence, and dispositions instead.
 
 **Revisit trigger.** Never for deployment decisions; analytics may use separate non-decisional metrics later.
+
+<a id="d-017"></a>
 
 ### D-017 — Disposition vocabulary
 
@@ -291,6 +307,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only through a versioned policy and report change that preserves historical interpretation.
 
+<a id="d-018"></a>
+
 ### D-018 — Facts, policy, and decisions are separate
 
 **Decision.** Observed facts are immutable job evidence, organization policy is versioned input, and disposition is a reproducible evaluation result.
@@ -300,6 +318,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Policy changes do not retroactively rewrite historical jobs.
 
 **Revisit trigger.** Only if an equally auditable model replaces the separation.
+
+<a id="d-019"></a>
 
 ### D-019 — Explicit exceptions
 
@@ -311,6 +331,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only through policy-governance changes.
 
+<a id="d-020"></a>
+
 ### D-020 — Outcome-based profiles
 
 **Decision.** Profiles express user outcomes and split workshop capabilities from recipient choices. During B1 they use generic capabilities and do not name or require sibling portfolio applications.
@@ -320,6 +342,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Profiles reference reviewed catalogue capabilities and compiled actions, not raw installers, scripts, sibling identifiers, or private cross-project schemas.
 
 **Revisit trigger.** Sibling-product profile entries are created only by the formal B4 suite-assembly project against frozen releases.
+
+<a id="d-021"></a>
 
 ### D-021 — Recipient-controlled settings and secrets
 
@@ -331,6 +355,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only for an explicitly authorized organizational deployment model.
 
+<a id="d-022"></a>
+
 ### D-022 — Curated application catalog
 
 **Decision.** ThirdLife Setup Core exposes only a small reviewed catalogue. B1 development uses generic free essentials and synthetic test packages; sibling portfolio applications are not catalogue entries until B4.
@@ -340,6 +366,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Every Core entry records publisher, licence, privacy, architecture, storage, background behavior, update behavior, verification, and redistribution status. Do not add PaperWorkShell-specific or other sibling-specific catalogue code in B1.
 
 **Revisit trigger.** B4 may add exact frozen sibling releases through its own compatibility process.
+
+<a id="d-023"></a>
 
 ### D-023 — Profiles are non-executable data
 
@@ -351,7 +379,11 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Never for v0.1; any future extension requires a new trust model.
 
+<a id="d-024"></a>
+
 ### D-024 — Structured WinGet integration
+
+**Current in part.** The replaceable structured adapter and localized-table prohibition continue. D-075 supersedes the original WinGet-only comparison and permits supported package routes within the same trust boundary. The original decision follows.
 
 **Decision.** Package operations use a replaceable structured adapter. v0.1 begins with a spike comparing Microsoft.WinGet.Client and the WinGet COM API; localized CLI tables are not parsed.
 
@@ -360,6 +392,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** CLI invocation may exist only as a controlled fallback with structured or invariant output and tests.
 
 **Revisit trigger.** After the spike or when Microsoft support boundaries materially change.
+
+<a id="d-025"></a>
 
 ### D-025 — Package trust controls
 
@@ -371,6 +405,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only to strengthen verification or support an equally reviewed backend.
 
+<a id="d-026"></a>
+
 ### D-026 — No WinGet Configuration in Core 1.0
 
 **Decision.** Core 1.0 does not execute WinGet Configuration or profile-provided PowerShell DSC resources.
@@ -380,6 +416,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Use ThirdLife schemas and compiled allowlisted actions.
 
 **Revisit trigger.** After a dedicated supply-chain and execution-boundary review in a later roadmap.
+
+<a id="d-027"></a>
 
 ### D-027 — Desktop stack
 
@@ -393,6 +431,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only through an architecture decision that demonstrates equivalent Windows integration and accessibility.
 
+<a id="d-028"></a>
+
 ### D-028 — Persistence
 
 **Decision.** Job state uses SQLite plus a restrictive per-job directory for attachments and raw reports.
@@ -403,7 +443,11 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only with a migration plan preserving historical job evidence.
 
+<a id="d-029"></a>
+
 ### D-029 — Privilege separation
+
+**Current in part.** The unelevated UI, bounded privilege, durable recovery and no-permanent-service protections continue. D-075 supersedes the broker-exclusive route for suitable supported package operations. The original decision follows.
 
 **Decision.** The main UI runs unelevated. Approved privileged batches run through an ephemeral elevated broker that exits after the batch.
 
@@ -412,6 +456,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Declined UAC leaves the job consistent and no permanent LocalSystem service is required for v0.1.
 
 **Revisit trigger.** Only after focused security review of an alternative model.
+
+<a id="d-030"></a>
 
 ### D-030 — Broker protocol
 
@@ -423,6 +469,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only to strengthen authentication or transport guarantees.
 
+<a id="d-031"></a>
+
 ### D-031 — No always-on privileged service
 
 **Decision.** Core 1.0 does not install a permanently running LocalSystem service.
@@ -432,6 +480,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Privileged work is explicit, approved, bounded, and ephemeral.
 
 **Revisit trigger.** Only if a demonstrated future requirement cannot be met safely by the broker and a focused security review approves an alternative.
+
+<a id="d-032"></a>
 
 ### D-032 — Action journal and completion
 
@@ -443,6 +493,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only by extending states with a migration and unchanged audit semantics.
 
+<a id="d-033"></a>
+
 ### D-033 — Separate verification and cold boot
 
 **Decision.** Verification is a distinct phase, and final acceptance includes a cold boot followed by re-verification.
@@ -452,6 +504,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Final reports distinguish attempted, applied, and verified outcomes. Under D-074, TL-0509 verifies checkpoint and re-verification behavior with approved same-machine VM cold-start evidence for development. Record any physical host power cycle as unverified unless directly evidenced. Final product acceptance still requires its actual cold boot. Any explicitly required physical development or release evidence must use the active Codex machine and a bounded authorized procedure. TL-0008 only specifies the procedure.
 
 **Revisit trigger.** Only if a stronger reproducible verification model replaces it.
+
+<a id="d-034"></a>
 
 ### D-034 — Windows Update integration
 
@@ -463,6 +517,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** When Microsoft replaces the supported API boundary.
 
+<a id="d-035"></a>
+
 ### D-035 — Finalization is blocking
 
 **Decision.** Known workshop accounts, credentials, Wi-Fi profiles, test media, diagnostic exports, package residue, remote-support access, and similar artifacts are checked before handover.
@@ -472,6 +528,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** ThirdLife reports exactly what it checked or removed and does not claim forensic removal.
 
 **Revisit trigger.** The detector catalog may expand, but the blocking phase remains.
+
+<a id="d-036"></a>
 
 ### D-036 — Three output classes
 
@@ -483,6 +541,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Additional outputs may be added without merging these privacy classes.
 
+<a id="d-037"></a>
+
 ### D-037 — Diagnostic redaction
 
 **Decision.** Ordinary diagnostic exports omit names, usernames, Wi-Fi names, serial numbers, IP addresses, package download URLs, and personal paths unless explicitly reviewed and included.
@@ -492,6 +552,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Redaction has automated adversarial tests and structured fields are preferred over raw command output.
 
 **Revisit trigger.** Only to tighten minimization or add explicit reviewed fields.
+
+<a id="d-038"></a>
 
 ### D-038 — Encryption recovery ownership
 
@@ -503,6 +565,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Only with a defined recovery-ownership workflow.
 
+<a id="d-039"></a>
+
 ### D-039 — Accessibility baseline and recipient control
 
 **Decision.** The operator UI supports keyboard-only use, screen-reader names, logical focus, high contrast, 200% scaling, non-color status, accessible progress, cancellation, and clear error recovery. Core 1.0 also supports a recipient-present, previewable and reversible accessibility setup for approved Windows settings.
@@ -512,6 +576,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Custom WPF controls require UI Automation peers and verification. Sealed handover applies no recipient-specific preference and records onboarding as pending.
 
 **Revisit trigger.** Only to raise the baseline or add a separately reviewed supported setting.
+
+<a id="d-040"></a>
 
 ### D-040 — Basic operating-system backup scope
 
@@ -523,6 +589,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Advanced encrypted backup, repository management, or Backup Circle coordination requires its own product or future B4 work against a frozen release.
 
+<a id="d-041"></a>
+
 ### D-041 — No AI in Core 1.0
 
 **Decision.** Core 1.0 contains no AI model, AI cloud service, or AI-based disposition logic.
@@ -532,6 +600,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Do not add AI dependencies or generated safety recommendations to the runtime product.
 
 **Revisit trigger.** Only after a separate product, privacy, safety, and explainability decision.
+
+<a id="d-042"></a>
 
 ### D-042 — Offline degradation and deferred suite cache
 
@@ -543,6 +613,8 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** B4 may add verified offline suite deployment against frozen releases and redistribution evidence.
 
+<a id="d-043"></a>
+
 ### D-043 — Dependency and licensing control
 
 **Decision.** Every runtime dependency and catalog application has known provenance and license review; releases produce an SBOM.
@@ -552,6 +624,8 @@ Codex may propose an amendment, but it may not declare one approved.
 **Implementation constraint.** Installation rights and redistribution rights are tracked separately.
 
 **Revisit trigger.** Only to strengthen governance or replace tooling.
+
+<a id="d-044"></a>
 
 ### D-044 — Additional Core 1.0 non-goals
 
@@ -563,7 +637,11 @@ Codex may propose an amendment, but it may not declare one approved.
 
 **Revisit trigger.** Each capability requires a named later project/milestone and threat/data review.
 
+<a id="d-045"></a>
+
 ### D-045 — Authority and change control
+
+**Historical.** Superseded prospectively by [D-075](#d-075). Historical task contracts and evidence retain provenance. The old file precedence, restricted task fields and approval gate for engineering changes have retired.
 
 **Decision.** Authority order is DECISIONS.md, ROADMAP.md, PROJECT_BOUNDARY.md, SECURITY.md, ACCESSIBILITY.md, LOW_SPEC.md, DEVELOPMENT_WORKFLOW.md, TESTING.md, AGENTS.md, TASKS.yaml, STATUS.md, then prompts and README. Codex may update task execution fields but may not alter frozen decisions, project boundaries, portfolio posture, dependencies, or acceptance criteria without human approval.
 
@@ -579,6 +657,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** Only through a human-approved governance revision.
 
+<a id="d-046"></a>
+
 ### D-046 — Portfolio component and queue position
 
 **Decision.** ThirdLife Setup Core is the active Team B/B1 project. After its standalone stable gate, Team B proceeds to Scam Explainer. ThirdLife Deployment and Suite Assembly is a separate future Team B/B4 project.
@@ -588,6 +668,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 **Implementation constraint.** Current tasks may build only Core B1. Passing M6 or M7 does not authorize B4 work; M7 records the transition to Scam Explainer.
 
 **Revisit trigger.** Only through a portfolio queue decision affecting unstarted work.
+
+<a id="d-047"></a>
 
 ### D-047 — Standalone release independence
 
@@ -599,6 +681,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** Any exception requires a formal portfolio architecture, failure-mode, migration, and sustainability review.
 
+<a id="d-048"></a>
+
 ### D-048 — Project-vacuum development
 
 **Decision.** B1 is developed in its own repository and vacuum. Codex does not browse, import, modify, or depend on sibling repositories, private interfaces, active branches, databases, or services.
@@ -608,6 +692,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 **Implementation constraint.** `TASKS.yaml` contains only project-local dependency edges. A sibling idea is deferred, not implemented around.
 
 **Revisit trigger.** Only when B4 is the formal active Team B project or the user explicitly assigns a portfolio-governance task.
+
+<a id="d-049"></a>
 
 ### D-049 — Late-binding suite assembly
 
@@ -619,6 +705,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** Only through a portfolio architecture change.
 
+<a id="d-050"></a>
+
 ### D-050 — No early shared integration infrastructure
 
 **Decision.** B1 does not create a shared SDK, universal handoff schema, plugin framework, monorepo mandate, universal job/findings engine, portfolio background service, or shared user-content database.
@@ -628,6 +716,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 **Implementation constraint.** Add an interface or command only when it independently benefits Core users, testing, automation, or support. Do not scaffold empty future extension layers.
 
 **Revisit trigger.** Requires evidence from at least two stable products and a named owning project.
+
+<a id="d-051"></a>
 
 ### D-051 — Future adapter ownership and integration order
 
@@ -639,6 +729,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** A custom adapter requires documented repeated user value, safety, independence, maintenance, data ownership, and fallback evidence.
 
+<a id="d-052"></a>
+
 ### D-052 — Minimal release interface envelope
 
 **Decision.** Core 1.0 publishes a human-readable `RELEASE_INTERFACE.md` covering identity, artifacts, install/update/repair/remove, data locations, inputs/outputs, launch, offline/resource behavior, privilege/security, support bundle, samples, contacts, and known limitations.
@@ -648,6 +740,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 **Implementation constraint.** Unknown fields remain explicit. Unsupported behavior is not invented. The sheet is frozen with the exact stable release at `TL-0710`.
 
 **Revisit trigger.** Add a field only when a released product or a B4 black-box test proves it necessary.
+
+<a id="d-053"></a>
 
 ### D-053 — Portfolio data ownership
 
@@ -659,6 +753,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** Only through a formal portfolio data-boundary and privacy decision.
 
+<a id="d-054"></a>
+
 ### D-054 — Cross-project ideas are backlog only
 
 **Decision.** Cross-project opportunities discovered during B1 are recorded in `FUTURE_ASSEMBLY_NOTES.md` and do not become active tasks, dependencies, or code.
@@ -668,6 +764,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 **Implementation constraint.** A note must identify a manual fallback and why it belongs to B4. Codex continues the selected project-local task.
 
 **Revisit trigger.** When B4 begins and the portfolio owner promotes a note into its own governed task graph.
+
+<a id="d-055"></a>
 
 ### D-055 — Generic Core catalogue and profiles
 
@@ -679,6 +777,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** B4 may add a sibling only after its exact stable artifacts and release-interface sheet are frozen.
 
+<a id="d-056"></a>
+
 ### D-056 — Core 1.0 stable gate and portfolio handoff
 
 **Decision.** `TL-0710` is the only gate that completes Team B/B1. It freezes Core 1.0 artifacts and release evidence and supplies the minimal portfolio handoff.
@@ -688,6 +788,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 **Implementation constraint.** The gate requires lifecycle, offline-core, same-machine modest-hardware, accessibility, security/privacy, licence, data-preservation, sample, and release-interface evidence. It sends Team B to Scam Explainer and does not authorize B4. Release wording must not imply cross-hardware certification.
 
 **Revisit trigger.** Only by a portfolio-owner decision that changes the queue or stable-release standard.
+
+<a id="d-057"></a>
 
 ### D-057 — Core 1.0 accessibility and backup completion boundary
 
@@ -699,6 +801,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** Broader onboarding or advanced backup requires a later project or milestone with its own threat/data decisions.
 
+<a id="d-058"></a>
+
 ### D-058 — Portfolio v2.1 development baseline
 
 **Decision.** ThirdLife Setup Core adopts the ThirdLife Software Portfolio v2.1 baseline dated 15 August 2026: GitHub-continuous development, efficient single-machine validation, staged risk-based testing, and late-binding suite assembly.
@@ -708,6 +812,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 **Implementation constraint.** Bundle metadata, task contracts, Codex prompts, test evidence, and release wording must follow v2.1. A lower-authority repository document cannot reintroduce a lab or external runtime dependency.
 
 **Revisit trigger.** Only through a later human-approved portfolio baseline and synchronized project-bundle amendment.
+
+<a id="d-059"></a>
 
 ### D-059 — Active Codex machine is the only physical validation hardware
 
@@ -719,6 +825,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** Broader hardware validation may be added only as a separate explicitly staffed activity with new evidence and claim rules; it is not an implicit release prerequisite.
 
+<a id="d-060"></a>
+
 ### D-060 — Modest-hardware readiness is engineered, not lab-certified
 
 **Decision.** ThirdLife is designed for modest supported hardware through streaming/chunking, bounded resource use, conservative configurable concurrency, CPU fallback, preflighted disk space, cancellation/checkpointing, bounded caches, and graceful degradation.
@@ -728,6 +836,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 **Implementation constraint.** Same-machine no-GPU, reduced-concurrency, low-priority, low-space, offline, interrupted-network, slow-destination, and representative-workload scenarios are used only to answer concrete risks. They do not simulate or certify a particular untested device.
 
 **Revisit trigger.** Numerical budgets may be frozen after measurement; the engineering principles and honest-evidence rule remain.
+
+<a id="d-061"></a>
 
 ### D-061 — Quick, targeted, full, and extended test tiers
 
@@ -739,6 +849,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** Per-tier time budgets may change through `DECISIONS.md`; the staged principle and trigger documentation remain mandatory.
 
+<a id="d-062"></a>
+
 ### D-062 — Focused deterministic regressions and independently invokable slow scenarios
 
 **Decision.** Every reproducible defect is reduced to the smallest practical deterministic regression case, and each slow/failure/resource scenario is independently invokable and checkpointed when long-running.
@@ -748,6 +860,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 **Implementation constraint.** Run the failed case first, then the related targeted set. Rerun the full or extended matrix only when its trigger applies or a shared cause is suspected. Flaky tests are defects, not evidence obtained by blind rerun.
 
 **Revisit trigger.** An exception requires a documented technical reason, owner, bounded follow-up task, risk, and removal condition.
+
+<a id="d-063"></a>
 
 ### D-063 — GitHub continuity and no remote-runtime dependency
 
@@ -759,6 +873,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** Only through a documented continuity architecture change that preserves local reproducibility and the single-machine hardware scope.
 
+<a id="d-064"></a>
+
 ### D-064 — TL-0008 draft 1 and the immediate MHT walkthrough are superseded
 
 **Decision.** `TL-0008 draft 1`, source commit `4fa3ea050fd5e9985fde9cc8218281698d371cc8`, digest `ef150dbf14b5db208582b7b526c7e0c6d0a5b912736e9e6519b8918abcf0928b`, and its immediate physical device-pool `MHT-001`–`MHT-021` walkthrough are superseded.
@@ -769,6 +885,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 
 **Revisit trigger.** The historical procedure never becomes active again by implication. Any future field validation is separately scoped and cannot silently change release claims.
 
+<a id="d-065"></a>
+
 ### D-065 — Manual hardware-test workflow remains, hardware-matrix certification does not
 
 **Decision.** ThirdLife retains guided manual functional tests because software inventory cannot prove keyboard, pointer, display, audio, camera, microphone, charging, sleep/wake, or port behavior. Development verification does not require possession of every capability or hardware class.
@@ -778,6 +896,8 @@ D-074 supersedes that separate maintainer approval for a compliant TL-0401 selec
 **Implementation constraint.** Later named tasks may perform bounded operator observation of capabilities available on the active Codex machine. Absent capabilities use deterministic fixtures and explicit limitations. A workflow pass is not device certification or long-term reliability proof.
 
 **Revisit trigger.** Separate real-world validation may add observations but cannot weaken evidence semantics or make missing hardware a hidden development dependency.
+
+<a id="d-066"></a>
 
 ### D-066 — Hardware and resource claims are limited to observed evidence
 
@@ -798,6 +918,8 @@ The cumulative merge and branch/PR retirement remain pending separate owner revi
 <a id="d-067"></a>
 
 ### D-067 — Completed task work is integrated before the next roadmap task
+
+**Historical.** Superseded prospectively by [D-075](#d-075). Source continuity and history protections continue under the current development workflow. The earlier sequencing rule follows.
 
 **Decision.** A completed task branch is integrated into the repository’s default branch
 before the next roadmap task begins. A temporary stacked branch is permitted only for an
@@ -934,6 +1056,8 @@ Each diagnostic repeat identifies the changed input or expected new information.
 
 ### D-074 — Codex owns technical verification and accountable decisions remain explicit
 
+**Current.** Engineering ownership, evidence, and scope-bound decisions continue. D-075 supersedes the historical M1 assignment endpoint and the old integration and task-dependency rules.
+
 **Decision.** Codex owns preparation, implementation, functional and regression testing, technical accessibility checks, defect resolution, evidence and integration. Completing engineering creates zero routine human QA assignments or owner sign-offs. Codex finishes objectively verifiable engineering when its acceptance evidence exists and known defects that affect required behavior are resolved. Actual observations, objective results, evidence limits, reported defects and accountable decisions retain distinct provenance.
 
 **Rationale.** Required workflows need demonstrated outcomes through their real entry points. Perceptual and physical limits constrain claims. A candidate can be prepared and verified before a decision about using, accepting or releasing it.
@@ -944,8 +1068,22 @@ Request exceptional human input only when available verification and prior evide
 
 Preserve product ownership and sanitization confirmation, UAC, recipient settings and credentials, policy and privilege-boundary decisions, and pilot/public-release consent. Codex may administer a task state based on an actual attributable scope-bound decision. A decision required before an action remains a prerequisite for that action. Technical engineering and evidence preparation can proceed where safe before a later decision about the candidate. Retain independent specialist evidence where genuinely required, limit claims within authorized scope, or hold the affected exposure.
 
-TL-0610 is the technical pilot-candidate prerequisite for TL-0701 and TL-0702. TL-0611 remains the explicit controlled-pilot authorization and a direct prerequisite of TL-0710. Preserve required pilot evidence. Integrate under D-067, keep active-machine, Full and named risk checks in force, and end the current execution assignment at M1.
+The previous assignment ended with the integrated M1 technical gate. TL-0611 remains the actual controlled-pilot authorization and the required pilot evidence contributes to TL-0710. Keep active-machine, Full and named risk checks in force. Apply the current execution and release prerequisites in TASKS.yaml.
 
 **Approved amendment.** On 24 November 2026, project owner Janne Vuorela directed application of the permanent testing policy reset and M1 completion in the active Codex conversation. The [amendment record](docs/amendments/2026-11-24-permanent-testing-policy-reset.md) records the scope and authority.
 
-**Revisit trigger.** A change to accountable authority, evidence requirements or an exposure prerequisite requires an approved synchronized amendment under D-045.
+**Revisit trigger.** Changes affecting accountable authority or product safeguards require the applicable decision under [change control](docs/change-control.md).
+
+<a id="d-075"></a>
+
+### D-075 — Current product contract and capability-specific engineering
+
+**Current.** The [product contract](docs/product-contract.md) defines product outcomes, scope, invariants and delegated engineering. Technical specifications govern their affected behavior. TASKS.yaml records live work, implementation dependencies, execution and release prerequisites, evidence and limits. ROADMAP.md describes delivery goals. Decisions, ADRs and prior evidence preserve rationale and provenance.
+
+**Decision.** Codex can split and resequence work, refine implementation and its tests, choose supported routes and integrate verified isolated checkpoints. An unavailable execution capability blocks the action that needs it. A release prerequisite gates the corresponding claim or exposure. Keep actual authorization, evidence and access controls in force.
+
+**Decision.** Keep the WPF UI unelevated. Use a qualified supported Windows, WinGet or vendor route for suitable approved package operations. Retain the independently validating ephemeral broker for ThirdLife-owned privileged code. Both routes require the exact approved plan, trust and scope binding, durable dispatch intent and independent postcondition verification. Preserve ordinary Windows consent and any applicable operation-specific restrictions.
+
+**Rationale.** Separating engineering, runtime capability and release authority keeps the product moving when one route needs qualification and prevents a merged checkpoint from enabling unqualified execution.
+
+**Approved amendment.** Project owner Janne Vuorela approved the [development contract reset](docs/amendments/2026-11-25-development-contract-reset.md) on 25 November 2026. It supersedes D-045 and D-067 prospectively, narrows D-029 and replaces the historical D-074 assignment endpoint. The current product contract identifies when a material change still requires a decision.

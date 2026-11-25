@@ -2,11 +2,11 @@
 
 ## Status and authority
 
-**Status:** Accepted for `TL-0009`.
+**Status:** Accepted adapter boundary. D-075 allows supported Windows and vendor routes alongside WinGet.
 
 **Task:** [`TL-0009`](../../TASKS.yaml)
 
-This ADR records existing binding decisions as planned architecture constraints. It does not amend [`DECISIONS.md`](../../DECISIONS.md) or [`PROJECT_BOUNDARY.md`](../../PROJECT_BOUNDARY.md), and it is not evidence that the planned behavior is implemented or verified.
+The [current product contract](../product-contract.md) and applicable specifications govern implementation. See the linked task evidence for the verified scope.
 
 ## Decision IDs
 
@@ -18,10 +18,11 @@ This ADR records existing binding decisions as planned architecture constraints.
 - [D-032](../../DECISIONS.md) — Action journal and completion
 - [D-043](../../DECISIONS.md) — Dependency and licensing control
 - [D-055](../../DECISIONS.md) — Generic Core catalogue and profiles
+- [D-075](../../DECISIONS.md) — Current product contract and capability-specific engineering
 
 ## Context
 
-ThirdLife needs structured package resolution, progress, cancellation, error, and installed-state behavior without binding domain contracts to one WinGet interface or localized command output. The production backend decision is intentionally deferred until [`TL-0401`](../../TASKS.yaml), which compares Microsoft.WinGet.Client and the WinGet COM API under the real privilege, scope, cancellation, and verification requirements.
+ThirdLife needs structured package resolution, progress, cancellation, error, and installed-state behavior without binding domain contracts to one WinGet interface or localized command output. The original M0 plan deferred backend selection to TL-0401 for a WinGet comparison. D-075 allows TL-0401 to choose an independently qualified supported Windows, WinGet or vendor route against the actual privilege, scope, cancellation and verification requirements.
 
 The seam must not become a generic execution surface, and an adapter must not hide supply-chain changes between operator approval and execution.
 
@@ -35,7 +36,7 @@ The seam must not become a generic execution surface, and an adapter must not hi
 - allow deterministic fakes and conformance tests to exercise the same typed behavior; and
 - separate backend application from independent package identity/state/launch verification.
 
-Backend selection remains open until `TL-0401`. Structured supported APIs are preferred. A controlled CLI fallback may be considered only when it produces structured or invariant bounded output and preserves the same validation contract; localized human-readable WinGet tables are never parsed as the production interface.
+TL-0401 records the selected route in ADR 0009. Structured supported APIs are preferred. A controlled CLI fallback may be considered only when it produces structured or invariant bounded output and preserves the same validation contract; localized human-readable WinGet tables are never parsed as the production interface.
 
 Profiles select reviewed generic capabilities. Catalogue entries and deterministic resolution bind those capabilities to exact reviewed identities. Neither profiles nor catalogue data can provide package commands, executable paths, URLs, source switches, installer arguments, scripts, WinGet Configuration, or PowerShell DSC resources. Only a compiled allowlisted action may call the adapter.
 
@@ -53,7 +54,7 @@ Licence-to-use, installation rights, and redistribution rights remain separate r
 
 ## Consequences
 
-- Package planning and actions can be tested without network access or host mutation, and the backend can change after a governed comparison without changing domain policy.
+- Package planning and actions can be tested without network access or host mutation. A qualified backend can change within the product contract without changing the domain policy.
 - The common contract may expose fewer backend-specific features; a new feature needs an independently useful Core outcome, typed semantics, trust review, and tests.
 - Resolution and execution require duplicate trust checks by design. Metadata drift creates visible reapproval work rather than silent substitution.
 - Network use, cancellation, timeout, restart, non-rollback behavior, and recovery remain explicit to the operator and journal.

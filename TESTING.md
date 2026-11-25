@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Testing Strategy and Execution Contract
 
-**Bundle version:** 0.7.0  
+**Bundle version:** 0.8.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1  
 **Authoritative runtime hardware:** active Codex machine only  
 **Remote CI:** supplementary
@@ -35,7 +35,9 @@ Keep objective results, actual observations, reported defects, unexercised behav
 accountable decisions distinct. A known failure of a required workflow blocks completion.
 A missing physical or perceptual observation limits claims. A later decision on a prepared
 candidate does not block its preparation or verification. Authorizations required for an
-action remain prerequisites to that action.
+action remain prerequisites to that action. A verified isolated checkpoint may integrate
+while an affected capability remains unavailable. Verify that the unavailable action stays
+unreachable and record the qualification limit. Test only the applicable route and risks.
 
 Reuse earlier results when the applicable gate allows and relevant code, tests, runner,
 profile, dependencies, environment, configuration and workload are unchanged. Retain the
@@ -167,7 +169,7 @@ Full is required:
 
 - at milestone, preview, pilot, stable, and protected-merge gates;
 - for cumulative default-branch integration;
-- after major refactors;
+- after major shared-contract changes or refactors;
 - after migrations;
 - after dependency/engine changes;
 - when a task explicitly triggers it.

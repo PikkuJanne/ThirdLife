@@ -60,7 +60,7 @@ public static class PlanResolver
 
         if (!gate.AllowsAssessment || gate.Decision is not { } currentGate ||
             currentGate.EvaluatedAtUtc > asOfUtc || job.Job.CreatedAtUtc > asOfUtc ||
-            !IsKnownIntakeVersion(currentGate.PolicyVersion, policy, profile.SyntheticData))
+            !IsKnownIntakeVersion(currentGate.PolicyVersion, policy))
         {
             return Block(PlanBlockReason.SanitizationRequired);
         }
@@ -117,8 +117,8 @@ public static class PlanResolver
         return new ProposedPlan(subject, result, null, actions.MoveToImmutable(), choices);
     }
 
-    private static bool IsKnownIntakeVersion(string version, PolicyDocument policy, bool synthetic) =>
-        (synthetic && version == SanitizationGate.WorkshopIntakePolicyVersion) ||
+    private static bool IsKnownIntakeVersion(string version, PolicyDocument policy) =>
+        version == SanitizationGate.WorkshopIntakePolicyVersion ||
         version == string.Concat(policy.PolicyId, "@", policy.Version);
 
     private static bool PolicyApplies(PolicyDocument policy, bool synthetic, DateTimeOffset asOfUtc)

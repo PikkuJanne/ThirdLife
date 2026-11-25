@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Glossary
 
 **Status:** Governed working vocabulary  
-**Authority:** Exact frozen decisions and versioned schemas/policies prevail over this summary
+**Authority:** Current product contract and applicable specifications, versioned schemas and policies
 
 Terms are deliberately narrow. Similar everyday words do not relax the evidence, state, approval, or portfolio boundaries below.
 
@@ -96,3 +96,19 @@ ThirdLife Setup Core 1.0 after the complete M7 evidence package and human gate `
 ### Release interface
 
 The human-readable black-box facts in `RELEASE_INTERFACE.md` for a verified preview or frozen release: identity, lifecycle, launch, data, inputs/outputs, offline/network/resource behavior, privilege, support, samples, and limitations. It is not a shared runtime API.
+
+## Implementation dependency
+
+Code, data or an interface required to build or verify the next component. TASKS.yaml
+records actual dependencies. A milestone label alone conveys no dependency.
+
+## Execution prerequisite
+
+Capability, evidence or authorization required before one action can run. Missing
+prerequisites keep the affected dispatch unavailable. Independent engineering or
+verification may continue where safe.
+
+## Release prerequisite
+
+Evidence or consent required before a defined claim or exposure. Preparation and
+verification of an isolated candidate may proceed with that prerequisite pending.

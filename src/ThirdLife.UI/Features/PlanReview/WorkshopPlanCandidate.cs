@@ -4,10 +4,12 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using ThirdLife.Catalog.Profiles;
 using ThirdLife.Catalog.Schema;
+using ThirdLife.Policy.Versioning;
 
 namespace ThirdLife.UI.Features.PlanReview;
 
-internal sealed record PlanProfileOption(string DisplayName, ProfileDocument Profile, CatalogDocument Catalog);
+internal sealed record PlanProfileOption(
+    string DisplayName, ProfileDocument Profile, CatalogDocument Catalog, PolicySnapshot? PackagePolicy = null);
 
 internal static class WorkshopPlanCandidate
 {
@@ -44,19 +46,19 @@ internal static class WorkshopPlanCandidate
         }
     }
 
-    private static byte[] ReadPinned(string resourceName, int maximumBytes, string expectedSha256)
+    internal static byte[] ReadPinned(string resourceName, int maximumBytes, string expectedSha256)
     {
         using var stream = typeof(WorkshopPlanCandidate).Assembly.GetManifestResourceStream(resourceName);
         if (stream is null || stream.Length < 1 || stream.Length > maximumBytes)
         {
-            throw new IOException("A bundled planning fixture is unavailable.");
+            throw new IOException("A bundled planning document is unavailable.");
         }
 
         var bytes = new byte[(int)stream.Length];
         stream.ReadExactly(bytes);
         if (Convert.ToHexStringLower(SHA256.HashData(bytes)) != expectedSha256)
         {
-            throw new IOException("A bundled planning fixture failed its integrity check.");
+            throw new IOException("A bundled planning document failed its integrity check.");
         }
 
         return bytes;

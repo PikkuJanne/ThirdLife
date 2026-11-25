@@ -167,3 +167,46 @@ for the rejected catalogs would leave the source-integrity issue unresolved.
 - Guest execution of the distinct standard-account connection case.
 - A capability and exact artifact for the supported Windows native build
   toolchain if the project uses the C# Native AOT route.
+
+## Native toolchain recovery and reset reconciliation
+
+The project owner reported the C++ workload and Windows 11 SDK installation.
+`vswhere` found one complete instance, Visual Studio Community 2026 18.12.1
+(18.12.12412.261), with Microsoft x64 C++ tools. Microsoft-signed
+`Launch-VsDevShell.ps1` selected x64 host and target. Compiler 19.52.37029.0
+and linker/DUMPBIN 14.52.37029.0 had valid signatures. The VC toolset
+directory was 14.52.37025. Signed RC, MT and SignTool resolved with the
+10.0.28000.0 SDK. The x64 SDK supplied `kernel32.lib`, `advapi32.lib`
+and `ucrt.lib`. The active host remained unelevated.
+
+The pre-edit broker IPC baseline passed 33 cases. The pinned .NET SDK
+10.0.400 published the original `642e629` checkpoint in 23.431 s.
+After reconciling with reset merge `0492cb7`, all four previously
+signature-verified 10.0.14 NuGet archives matched their recorded SHA-256.
+Locked Release `dotnet publish ./src/ThirdLife.Broker/ThirdLife.Broker.csproj
+-c Release -r win-x64 -p:RestoreLockedMode=true` succeeded in 16.582 s
+on the reconciled production sources.
+
+The 2,889,728-byte native executable had SHA-256
+`ea3d534d885b46b396e5aa8c31b81666c4fc8d5195a27e86cca464fc90bb3861`.
+DUMPBIN observed x64 PE32+, Windows GUI subsystem, ASLR, high-entropy VA,
+NX, CET compatibility, security cookie, System32 dependent-load flag
+`0x0800`, and zero managed and delay-import directories. Static dependencies
+were `ADVAPI32`, `bcrypt`, `KERNEL32`, `ole32` and UCRT API sets for math,
+heap, string, conversion, stdio, runtime and locale. The import table contains
+`SetDefaultDllDirectories`. MT extracted `asInvoker` and `uiAccess=false`.
+The unsigned local candidate returned exit 2 on an ordinary launch without
+a ticket. Only the executable and its identity record are provisioning inputs.
+
+Before provisioning, the exact reviewed script SHA-256 matched
+`cd8c8d67d943872b9206fc14379df428406785d10a4b7b1122e9cf248c6a90da`.
+The broker installation was absent. A pinned read-only script invocation
+reached that expected absence after the system-drive and Program Files ACL
+checks. Windows PowerShell's default policy rejected direct `-File` execution.
+The reviewed byte-reading invocation used the signed System32 shell and
+executed the same verified script body without changing the execution policy.
+
+The development reset supersedes the original integration hold for safe
+isolated work. TL-0316 covers that integration. TL-0317 covers live
+qualification, including the owner-deferred distinct-account scenario.
+The ordinary package path has no call to the broker launcher.

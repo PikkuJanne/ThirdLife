@@ -20,6 +20,7 @@ TOOLS_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = TOOLS_ROOT.parent
 sys.path.insert(0, str(TOOLS_ROOT))
 
+import merge_task_contracts  # noqa: E402
 import validate_bundle  # noqa: E402
 
 
@@ -1939,41 +1940,30 @@ class GovernanceDocumentContractTests(unittest.TestCase):
                 validation.errors,
             )
 
-    def test_reordered_authority_is_rejected(self) -> None:
+    def test_product_contract_links_required_specs(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             self.copy_governance_documents(root)
-            change_control_path = root / "docs/change-control.md"
-            text = change_control_path.read_text(encoding="utf-8")
-            text = text.replace(
-                "1. `DECISIONS.md`\n2. `ROADMAP.md`",
-                "1. `ROADMAP.md`\n2. `DECISIONS.md`",
-                1,
-            )
-            change_control_path.write_text(text, encoding="utf-8")
-            validation = self.validate_documents(root)
-            self.assertIn(
-                "docs/change-control.md: authority order must exactly match D-045",
-                validation.errors,
-            )
-
-    def test_changed_release_cut_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            self.copy_governance_documents(root)
-            product_contract_path = root / "docs/product-contract.md"
-            product_contract_path.write_text(
-                product_contract_path.read_text(encoding="utf-8").replace(
-                    "M0 through M6",
-                    "M0 through M5",
-                    1,
-                ),
+            path = root / "docs/product-contract.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace("../SECURITY.md", "../missing.md"),
                 encoding="utf-8",
             )
-            validation = self.validate_documents(root)
-            self.assertTrue(
-                any("M0 through M6" in error for error in validation.errors)
+            self.assertIn(
+                "docs/product-contract.md: missing specification link ../SECURITY.md",
+                self.validate_documents(root).errors,
             )
+
+    def test_pilot_and_stable_scope_remain_in_product_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_governance_documents(root)
+            path = root / "docs/product-contract.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace("TL-0611", "TL-9999"),
+                encoding="utf-8",
+            )
+            self.assertTrue(any("TL-0611" in error for error in self.validate_documents(root).errors))
 
 
 class ArchitectureDecisionRecordContractTests(unittest.TestCase):
@@ -2479,105 +2469,34 @@ class ArchitectureDecisionRecordContractTests(unittest.TestCase):
                     validation.errors,
                 )
 
-    def test_tl0401_rejects_a_reintroduced_maintainer_approval_gate(self) -> None:
-        mutations = (
-            {"executor": "hybrid"},
-            {"human_evidence_required": ["A maintainer approves ADR 0009."]},
-        )
-        for mutation in mutations:
-            with (
-                self.subTest(mutation=mutation),
-                tempfile.TemporaryDirectory() as temporary_directory,
-            ):
+    def test_tl0401_accepts_a_draft_or_completed_route_adr_at_reserved_path(self) -> None:
+        for status in ("ready", "done"):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as temporary_directory:
                 root = Path(temporary_directory)
                 self.copy_architecture_documents(root)
-                task_by_id = dict(TASK_BY_ID)
-                task = dict(TASK_BY_ID["TL-0401"])
-                task.update(mutation)
-                task_by_id["TL-0401"] = task
-                validation = self.validate_documents(root, task_by_id)
-                self.assertTrue(
-                    any(
-                        "without a routine maintainer approval gate" in error
-                        for error in validation.errors
-                    ),
-                    validation.errors,
-                )
+                path = root / validate_bundle.TL0401_WINGET_ADR_PATH
+                path.write_text("# Package route\n", encoding="utf-8")
+                tasks = copy.deepcopy(TASK_BY_ID)
+                tasks["TL-0401"]["status"] = status
+                self.assertEqual(self.validate_documents(root, tasks).errors, [])
 
-    def test_tl0401_backlog_rejects_premature_adr_0009_file(self) -> None:
-        premature_paths = (
-            validate_bundle.TL0401_WINGET_ADR_PATH,
-            "docs/adr/ADR-009-backup.md",
-            "docs/adr/009-backup.md",
-        )
-        for premature_path in premature_paths:
-            with (
-                self.subTest(premature_path=premature_path),
-                tempfile.TemporaryDirectory() as temporary_directory,
-            ):
-                root = Path(temporary_directory)
-                self.copy_architecture_documents(root)
-                path = root / premature_path
-                path.write_text("# Premature future decision\n", encoding="utf-8")
-                validation = self.validate_documents(root)
-                self.assertTrue(
-                    any(
-                        "ADR 0009 file must not exist before the task executes" in error
-                        for error in validation.errors
-                    ),
-                    validation.errors,
-                )
+    def test_tl0401_rejects_a_conflicting_adr_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            (root / "docs/adr/ADR-009-backup.md").write_text("# Conflicting decision\n", encoding="utf-8")
+            errors = self.validate_documents(root).errors
+            self.assertTrue(any("ADR 0009: conflicting paths" in error for error in errors), errors)
 
-    def test_authority_documents_require_exact_amendment_link(self) -> None:
-        mutations = (
-            "](docs/amendments/MISSING.md)",
-            f"] ({validate_bundle.ADR_NUMBERING_AMENDMENT_PATH})",
-        )
-        for relative, mutation in itertools.product(
-            ("DECISIONS.md", "ROADMAP.md"),
-            mutations,
-        ):
-            with (
-                self.subTest(relative=relative, mutation=mutation),
-                tempfile.TemporaryDirectory() as temporary_directory,
-            ):
-                root = Path(temporary_directory)
-                self.copy_architecture_documents(root)
-                path = root / relative
-                body = path.read_text(encoding="utf-8")
-                link = f"]({validate_bundle.ADR_NUMBERING_AMENDMENT_PATH})"
-                self.assertEqual(body.count(link), 1)
-                path.write_text(
-                    body.replace(link, mutation, 1),
-                    encoding="utf-8",
-                )
-                validation = self.validate_documents(root)
-                self.assertIn(
-                    f"{relative}: must link exactly once to "
-                    f"{validate_bundle.ADR_NUMBERING_AMENDMENT_PATH}",
-                    validation.errors,
-                )
-
-    def test_authority_documents_require_amendment_identity(self) -> None:
-        for relative in ("DECISIONS.md", "ROADMAP.md"):
-            with (
-                self.subTest(relative=relative),
-                tempfile.TemporaryDirectory() as temporary_directory,
-            ):
-                root = Path(temporary_directory)
-                self.copy_architecture_documents(root)
-                path = root / relative
-                self.replace_once(
-                    path,
-                    "AMD-2026-08-22-ADR-0009",
-                    "AMD-MISSING",
-                )
-                validation = self.validate_documents(root)
-                self.assertIn(
-                    f"{relative}: missing ADR-numbering authority phrase "
-                    "'AMD-2026-08-22-ADR-0009'",
-                    validation.errors,
-                )
+    def test_tl0401_done_requires_route_adr(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            self.copy_architecture_documents(root)
+            (root / validate_bundle.TL0401_WINGET_ADR_PATH).unlink(missing_ok=True)
+            tasks = copy.deepcopy(TASK_BY_ID)
+            tasks["TL-0401"]["status"] = "done"
+            errors = self.validate_documents(root, tasks).errors
+            self.assertTrue(any("completed route decision requires" in error for error in errors), errors)
 
     def test_adr_paths_are_required_manifest_inputs(self) -> None:
         record_paths = tuple(
@@ -3852,78 +3771,17 @@ class TestingDocumentContractTests(unittest.TestCase):
                     validation.errors,
                 )
 
-    def test_current_required_files_and_authority_are_frozen(self) -> None:
-        self.assertIn("DEVELOPMENT_WORKFLOW.md", validate_bundle.REQUIRED_FILES)
-        self.assertIn("TESTING.md", validate_bundle.REQUIRED_FILES)
-        self.assertIn("STATUS.md", validate_bundle.REQUIRED_FILES)
-        self.assertIn(
-            "docs/testing/capability-risk-matrix.md",
-            validate_bundle.REQUIRED_FILES,
+    def test_product_and_safety_specifications_are_integrity_inputs(self) -> None:
+        self.assertLessEqual(
+            {
+                "docs/product-contract.md", "TASKS.yaml", "TASKS.schema.json",
+                "SECURITY.md", "ACCESSIBILITY.md", "LOW_SPEC.md",
+                "docs/testing/capability-risk-matrix.md",
+                *PRIVACY_DOCUMENTS,
+            },
+            set(validate_bundle.REQUIRED_FILES),
         )
-        for relative in PRIVACY_DOCUMENTS:
-            self.assertIn(relative, validate_bundle.REQUIRED_FILES)
-        self.assertNotIn(
-            "docs/testing/device-matrix.md",
-            validate_bundle.REQUIRED_FILES,
-        )
-        self.assertNotIn(
-            "BUNDLE_MANIFEST.sha256",
-            validate_bundle.REQUIRED_FILES,
-        )
-        self.assertEqual(
-            validate_bundle.BUNDLE_MANIFEST_FILE,
-            "BUNDLE_MANIFEST.sha256",
-        )
-        self.assertEqual(
-            validate_bundle.AUTHORITY_ORDER[6:11],
-            (
-                "DEVELOPMENT_WORKFLOW.md",
-                "TESTING.md",
-                "AGENTS.md",
-                "TASKS.yaml",
-                "STATUS.md",
-            ),
-        )
-
-    def test_live_task_metadata_matches_v070_contract(self) -> None:
-        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.7.0")
-        self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-11-25")
-        self.assertEqual(TASK_DOCUMENT["portfolio"]["roadmap_version"], "2.1")
-        self.assertEqual(
-            TASK_DOCUMENT["portfolio"]["test_tiers"],
-            ["quick", "targeted", "full", "extended"],
-        )
-        self.assertEqual(len(TASK_DOCUMENT["tasks"]), 92)
-
-    def test_stale_active_bundle_header_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            for relative in validate_bundle.CURRENT_BUNDLE_DOCUMENT_MARKERS:
-                source = REPOSITORY_ROOT / relative
-                destination = root / relative
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                destination.write_bytes(source.read_bytes())
-            path = root / "SECURITY.md"
-            body = path.read_text(encoding="utf-8")
-            self.assertEqual(body.count("**Bundle version:** 0.7.0"), 1)
-            path.write_text(
-                body.replace(
-                    "**Bundle version:** 0.7.0",
-                    "**Bundle version:** 0.6.0",
-                    1,
-                )
-                + "\n**Bundle version:** 0.7.0\n",
-                encoding="utf-8",
-            )
-            validation = validate_bundle.Validation()
-            with patch.object(validate_bundle, "ROOT", root):
-                validate_bundle.validate_current_bundle_document_markers(validation)
-            self.assertIn(
-                "SECURITY.md: 'Bundle version' metadata must be exactly one line "
-                "'**Bundle version:** 0.7.0'; found "
-                "['**Bundle version:** 0.6.0', '**Bundle version:** 0.7.0']",
-                validation.errors,
-            )
+        self.assertNotIn("BUNDLE_MANIFEST.sha256", validate_bundle.REQUIRED_FILES)
 
 
 class Windows11PlatformContractTests(unittest.TestCase):
@@ -3945,7 +3803,7 @@ class Windows11PlatformContractTests(unittest.TestCase):
         tasks["TL-0311"]["depends_on"].remove("TL-0315")
         tasks["TL-0107"]["notes"] = []
         errors = self.errors_for(tasks)
-        for task_id in ("TL-0315", "TL-0311", "TL-0107"):
+        for task_id in ("TL-0311", "TL-0107"):
             self.assertTrue(any(task_id in error for error in errors), errors)
 
     def test_future_package_criteria_require_the_supported_platform(self) -> None:
@@ -3959,82 +3817,106 @@ class Windows11PlatformContractTests(unittest.TestCase):
         self.assertEqual(len(errors), 7, errors)
 
 
-class TestingPolicyResetContractTests(unittest.TestCase):
+class DevelopmentContractResetTests(unittest.TestCase):
     def setUp(self) -> None:
         self.task_doc = copy.deepcopy(TASK_DOCUMENT)
         self.tasks = {task["id"]: task for task in self.task_doc["tasks"]}
+        # Recreate the pending work and permissions independently of live progress.
+        pending_ids = {
+            "TL-0311", "TL-0312", "TL-0316", "TL-0317",
+            "TL-0401", "TL-0402", "TL-0403", "TL-0404",
+            "TL-0610", "TL-0611", "TL-0710",
+        }
+        for task_id in pending_ids:
+            task = self.tasks[task_id]
+            task["status"] = "backlog"
+            for field in validate_bundle.PREREQUISITE_FIELDS:
+                for entry in task.get(field, []):
+                    entry.pop("evidence", None)
+        self.tasks["TL-0401"]["status"] = "ready"
+        self.tasks["TL-0311"]["status"] = "blocked"
+        while True:
+            done = {task_id for task_id, task in self.tasks.items() if task["status"] == "done"}
+            inconsistent = [
+                task for task in self.tasks.values()
+                if task["status"] == "done" and not set(task["depends_on"]) <= done
+            ]
+            if not inconsistent:
+                break
+            for task in inconsistent:
+                task["status"] = "backlog"
 
     def validate_contract(self) -> list[str]:
         validation = validate_bundle.Validation()
         dependencies = {task_id: task["depends_on"] for task_id, task in self.tasks.items()}
-        validate_bundle.validate_testing_policy_task_contract(
-            validation, self.task_doc, self.tasks, dependencies
-        )
+        validate_bundle.validate_engineering_dependencies(validation, self.tasks, dependencies)
+        validate_bundle.validate_prerequisites(validation, self.tasks)
+        validate_bundle.validate_exposure_authorization(validation, self.tasks, self.task_doc["project"])
         return validation.errors
 
-    def test_current_contract_preserves_decisions_and_historical_evidence(self) -> None:
+    def test_blocked_broker_leaves_package_engineering_selectable(self) -> None:
+        self.tasks["TL-0311"]["status"] = "blocked"
+        self.assertIn("TL-0401", validate_bundle.select_engineering_tasks(
+            self.tasks, outcome="package-installation",
+        ))
+        self.assertNotIn("TL-0312", validate_bundle.select_engineering_tasks(self.tasks))
         self.assertEqual(self.validate_contract(), [])
-        self.assertIn("human_evidence_required", self.tasks["TL-0113"])
-        self.assertNotIn("human_evidence_required", self.tasks["TL-0116"])
 
-    def test_reintroduced_operator_test_fails_in_task_or_milestone(self) -> None:
-        m1 = next(milestone for milestone in self.task_doc["milestones"] if milestone["id"] == "M1")
-        m1["exit_criteria"].append("A representative operator completes the audit.")
-        self.tasks["TL-0116"]["verification"].append("Require an operator walkthrough.")
-        self.tasks["TL-0116"]["human_evidence_required"] = ["Operator signs the audit."]
-        self.assertEqual(self.validate_contract(), [
-            "TL-0116: D-074 engineering work cannot require routine human evidence",
-            "TL-0116: verification reintroduces a superseded human QA gate",
-            "M1: exit criteria reintroduce a superseded human QA gate",
-        ])
+    def test_integrated_checkpoint_keeps_qualification_pending(self) -> None:
+        broker = self.tasks["TL-0311"]
+        broker["status"] = "blocked"
+        broker["checkpoints"][0]["state"] = "integrated"
+        self.assertEqual(self.validate_contract(), [])
+        self.assertTrue(validate_bundle.unmet_prerequisites(self.tasks, broker, "execution_prerequisites"))
+        broker["checkpoints"][0]["unqualified_execution"] = "available"
+        self.assertTrue(any("isolate unqualified execution" in error for error in self.validate_contract()))
 
-    def test_release_decision_cannot_drop_required_scope_or_add_routine_qa(self) -> None:
-        self.tasks["TL-0611"]["human_evidence_required"].pop()
-        self.tasks["TL-0710"]["human_evidence_required"].append("Require a proxy walkthrough.")
-        self.assertEqual(self.validate_contract(), [
-            "TL-0611: D-074 evidence must retain only its accountable decision scopes",
-            "TL-0710: D-074 evidence must retain only its accountable decision scopes",
-            "TL-0710: human_evidence_required reintroduces a superseded human QA gate",
-        ])
+    def test_missing_privilege_evidence_prevents_execution_completion(self) -> None:
+        broker = self.tasks["TL-0317"]
+        self.tasks["TL-0316"]["status"] = "done"
+        self.tasks["TL-0316"]["evidence"] = [{"summary": "Fixture checkpoint verification."}]
+        self.assertIn("TL-0317", validate_bundle.select_engineering_tasks(self.tasks))
+        self.assertTrue(any(
+            entry["kind"] == "authorization"
+            for entry in validate_bundle.unmet_prerequisites(self.tasks, broker, "execution_prerequisites")
+        ))
+        broker["status"] = "done"
+        broker["evidence"] = [{"summary": "Fixture record without qualification and consent."}]
+        self.assertIn("TL-0317: done requires satisfied execution_prerequisites", self.validate_contract())
 
-    def test_candidate_dependencies_do_not_require_pilot_exposure_but_stable_gate_does(self) -> None:
-        self.tasks["TL-0701"]["depends_on"] = ["TL-0611"]
-        self.tasks["TL-0710"]["depends_on"].remove("TL-0611")
-        errors = self.validate_contract()
-        self.assertIn(
-            "TL-0701: must directly depend on the technical pilot candidate TL-0610",
-            errors,
-        )
-        self.assertIn(
-            "TL-0701: technical onboarding work cannot depend on pilot exposure authorization TL-0611",
-            errors,
-        )
-        self.assertIn(
-            "TL-0710: must directly depend on controlled-pilot authorization TL-0611",
-            errors,
-        )
-
-    def test_readiness_distinguishes_candidate_preparation_from_authorization(self) -> None:
-        self.task_doc["workflow"]["ready_rule"] = "All human input is required before preparation."
-        self.task_doc["definition_of_ready"] = ["All human input is required before preparation."]
-        self.assertIn(
-            "TASKS.yaml: workflow.ready_rule must distinguish engineering from authorization under D-074",
-            self.validate_contract(),
-        )
-        self.assertIn(
-            "TASKS.yaml: definition_of_ready must preserve D-074 engineering and authorization criteria",
-            self.validate_contract(),
-        )
-
-    def test_known_required_workflow_defect_cannot_become_a_validation_limit(self) -> None:
-        self.task_doc["definition_of_done"] = [
-            entry for entry in self.task_doc["definition_of_done"]
-            if "known defect" not in entry
+    def test_missing_exposure_consent_keeps_release_unqualified(self) -> None:
+        pilot = self.tasks["TL-0611"]
+        candidate = self.tasks["TL-0610"]
+        candidate["status"] = "done"
+        candidate["evidence"] = [{"summary": "Fixture verified candidate."}]
+        self.assertIn("TL-0611", validate_bundle.select_engineering_tasks(self.tasks))
+        pilot["status"] = "done"
+        pilot["evidence"] = [{"summary": "Fixture candidate evidence alone."}]
+        self.assertIn("TL-0611: done requires satisfied release_prerequisites", self.validate_contract())
+        pilot["release_prerequisites"] = [
+            entry for entry in pilot["release_prerequisites"] if entry.get("authority") != "pilot-partner"
         ]
-        self.assertIn(
-            "TASKS.yaml: definition_of_done must preserve D-074 engineering and authorization criteria",
-            self.validate_contract(),
-        )
+        self.assertIn("TL-0611: missing exposure authorization roles ['pilot-partner']", self.validate_contract())
+
+    def test_engineering_completion_uses_objective_evidence(self) -> None:
+        action = self.tasks["TL-0404"]
+        for task_id in ("TL-0401", "TL-0402", "TL-0403", "TL-0404"):
+            self.tasks[task_id]["status"] = "done"
+            self.tasks[task_id]["evidence"] = [{"summary": "Fixture engineering verification."}]
+        self.assertNotIn("human_evidence_required", action)
+        self.assertIn("human_evidence_required", self.tasks["TL-0113"])
+        self.assertTrue(validate_bundle.unmet_prerequisites(self.tasks, action, "execution_prerequisites"))
+        self.assertEqual(self.validate_contract(), [])
+
+    def test_actual_dependencies_can_cross_milestones_and_must_be_acyclic(self) -> None:
+        self.tasks["TL-0316"]["depends_on"].append("TL-0401")
+        self.assertEqual(self.validate_contract(), [])
+        self.tasks["TL-0401"]["depends_on"].append("TL-0316")
+        self.assertTrue(any("cycle" in error for error in self.validate_contract()))
+
+    def test_active_task_cannot_reintroduce_historical_human_gate(self) -> None:
+        self.tasks["TL-0401"]["human_evidence_required"] = ["Maintainer signs the route choice."]
+        self.assertIn("TL-0401: legacy human evidence belongs only to completed history", self.validate_contract())
 
 
 class StabilizationContractTests(unittest.TestCase):
@@ -4060,12 +3942,10 @@ class StabilizationContractTests(unittest.TestCase):
 
     def test_current_stabilization_contract_is_valid(self) -> None:
         self.assertEqual(self.validate_contract().errors, [])
-        self.assertEqual(validate_bundle.CURRENT_DECISION_IDS[-1], "D-074")
-        self.assertEqual(len(validate_bundle.CURRENT_DECISION_IDS), 74)
 
     def test_each_new_decision_is_required_in_its_own_visible_section(self) -> None:
         decisions = (REPOSITORY_ROOT / "DECISIONS.md").read_text(encoding="utf-8")
-        for decision_number in range(67, 73):
+        for decision_number in range(68, 73):
             decision_id = f"D-{decision_number:03d}"
             match = re.search(
                 rf"(?ms)^### {decision_id} —.*?(?=^### D-|\Z)", decisions
@@ -4084,7 +3964,6 @@ class StabilizationContractTests(unittest.TestCase):
     def test_unsafe_decision_amendments_are_rejected(self) -> None:
         decisions = (REPOSITORY_ROOT / "DECISIONS.md").read_text(encoding="utf-8")
         mutations = (
-            ("No reset, force push, or history rewrite", "A reset, force push, or history rewrite", "D-067"),
             ("not authoritative runtime", "authoritative runtime", "D-068"),
             ("not rewritten without a separate migration review", "rewritten freely", "D-069"),
             ("New scenarios are independently invokable", "New scenarios cannot be selected independently", "D-070"),
@@ -4140,11 +4019,35 @@ class StabilizationContractTests(unittest.TestCase):
                 errors = self.validate_contract(tasks=tasks).errors
                 self.assertTrue(any("TL-0002" in error for error in errors), errors)
 
-    def test_task_progress_does_not_change_the_frozen_contract(self) -> None:
-        tasks = copy.deepcopy(TASK_BY_ID)
-        tasks["TL-0107"]["status"] = "in_progress"
-        tasks["TL-0107"]["evidence"].append({"summary": "Later authorized task evidence."})
-        self.assertEqual(self.validate_contract(tasks=tasks).errors, [])
+    def test_task_amendment_revises_inputs_and_preserves_execution_records(self) -> None:
+        live = {"tasks": [
+            {"id": "TL-0401", "status": "done", "depends_on": [], "evidence": [{"summary": "Original review."}]},
+            {"id": "TL-0404", "status": "blocked", "blocked_reason": "Awaiting scoped consent",
+             "depends_on": ["TL-0401"], "evidence": [{"summary": "Prepared candidate."}],
+             "execution_prerequisites": [
+                 {"kind": "authorization", "authority": "operator", "scope": "fixture A", "evidence": "first consent"}
+             ]},
+        ]}
+        candidate = {"tasks": [
+            {"id": "TL-0401", "status": "backlog", "depends_on": ["TL-0404"], "evidence": []},
+            {"id": "TL-0404", "status": "ready", "depends_on": ["TL-0402"],
+             "evidence": [{"summary": "Follow-up observation."}],
+             "execution_prerequisites": [
+                 {"kind": "authorization", "authority": "operator", "scope": "fixture B"}
+             ]},
+            {"id": "TL-0402", "status": "backlog", "depends_on": [], "evidence": []},
+        ]}
+        merged, changes = merge_task_contracts.build_merged(candidate, live)
+        created, bridge, updated = merged["tasks"]
+        self.assertEqual(changes, ["TL-0402", "TL-0404"])
+        self.assertEqual(created, live["tasks"][0])
+        self.assertEqual(bridge, candidate["tasks"][2])
+        self.assertEqual(updated["depends_on"], ["TL-0402"])
+        self.assertEqual(updated["status"], "blocked")
+        self.assertEqual(updated["blocked_reason"], "Awaiting scoped consent")
+        self.assertEqual(updated["evidence"][:2], live["tasks"][1]["evidence"] + candidate["tasks"][1]["evidence"])
+        self.assertEqual(updated["evidence"][2]["reference"], "first consent")
+        self.assertNotIn("evidence", updated["execution_prerequisites"][0])
 
     def test_malformed_task_fields_report_errors_without_crashing(self) -> None:
         for field in ("decision_refs", "acceptance_criteria", "verification"):

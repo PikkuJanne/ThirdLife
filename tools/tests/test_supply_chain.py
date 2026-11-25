@@ -13,7 +13,6 @@ import sys
 import tempfile
 import unittest
 import urllib.parse
-from collections import Counter
 from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
@@ -237,39 +236,19 @@ class SupplyChainTestCase(unittest.TestCase):
 
 
 class CurrentInventoryTests(SupplyChainTestCase):
-    def test_real_repository_inventory_has_current_complete_counts(self) -> None:
+    def test_runtime_installer_pin_must_match_the_matrix(self) -> None:
+        with repository_copy() as root:
+            path = root / supply_chain.RUNTIME_CATALOG_PATH
+            catalog = json.loads(path.read_text(encoding="utf-8"))
+            catalog["applications"][0]["package"]["installer_sha256"] = "0" * 64
+            path.write_text(json.dumps(catalog), encoding="utf-8")
+            self.assert_invalid(root, "catalog application", "does not match reviewed installer digest")
+
+    def test_real_repository_inventory_retains_scoped_package_and_dependency_pins(self) -> None:
         result = supply_chain.validate_supply_chain(REPOSITORY_ROOT)
 
         self.assertTrue(result.ok, "\n".join(result.errors))
-        self.assertEqual(len(result.inventory), 32)
-        self.assertEqual(
-            Counter(component.component_type for component in result.inventory),
-            Counter(
-                {
-                    "catalog-application": 4,
-                    "github-action": 3,
-                    "nuget": 22,
-                    "pypi": 1,
-                    "toolchain": 2,
-                }
-            ),
-        )
-        self.assertEqual(
-            Counter(component.scope for component in result.inventory),
-            Counter(
-                {
-                    "build-only": 10,
-                    "catalog-application": 4,
-                    "runtime": 4,
-                    "test-only": 14,
-                }
-            ),
-        )
-        self.assertEqual(
-            Counter(component.relationship for component in result.inventory),
-            Counter({"ci": 3, "direct": 14, "toolchain": 2, "transitive": 13}),
-        )
-        self.assertEqual(result.approval_state.casefold(), "pending")
+        self.assertEqual(result.approval_state, "pending")
         self.assertRegex(result.lock_digest, r"\A[0-9a-f]{64}\Z")
         self.assertRegex(result.matrix_digest, r"\A[0-9a-f]{64}\Z")
         self.assertTrue(result.dependency_graph)
@@ -301,8 +280,16 @@ class CurrentInventoryTests(SupplyChainTestCase):
                 for component in result.inventory
                 if component.component_type == "catalog-application"
             },
-            catalog_ids,
+            catalog_ids | {"generic.plain-text-editor"},
         )
+        workshop_component = by_identity[("catalog-application", "generic.plain-text-editor")]
+        self.assertEqual(workshop_component.version, "8.9.9.1")
+        self.assertEqual(workshop_component.declared_license, "GPL-3.0-or-later")
+        self.assertEqual(workshop_component.distribution_plan, "not-shipped")
+        self.assertEqual(workshop_component.integrity_algorithm, "sha256")
+        self.assertEqual(workshop_component.integrity_value,
+                         "e3b0607a092ce2604fbdac027db2c94915995e8e568ebd226f8c5493c2f61a80")
+        self.assertEqual(workshop_component.evidence_paths, (supply_chain.RUNTIME_CATALOG_PATH.as_posix(),))
         for component_id in catalog_ids:
             component = by_identity[("catalog-application", component_id)]
             self.assertEqual(component.version, "0.0.0-fixture.1")

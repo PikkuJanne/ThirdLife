@@ -52,16 +52,24 @@ internal static class PlanReviewPresentation
     public static PlanReviewSnapshot Describe(ProposedPlan plan)
     {
         var impact = ImpactEstimator.Estimate(plan);
-        var title = plan.BlockedReason is null ? "Synthetic no-op proposal" : "Preparation blocked";
+        var title = plan.BlockedReason is null
+            ? plan.SyntheticData ? "Synthetic no-op proposal" : "Machine-wide package proposal"
+            : "Preparation blocked";
         var details = new StringBuilder();
         details.AppendLine(CultureInfo.CurrentCulture, $"Plan SHA-256 {plan.ContentSha256}");
         if (plan.BlockedReason is { } blocked)
         {
             details.AppendLine(BlockedMessage(blocked, plan));
+            if (!plan.SyntheticData && blocked == PlanBlockReason.PolicyBlocksPreparation && plan.PolicyDecision is { } decision)
+            {
+                details.AppendLine(decision.Explanation);
+            }
         }
         else
         {
-            details.AppendLine("Preparation uses synthetic no-op actions. Expected readiness requires independent verification.");
+            details.AppendLine(plan.SyntheticData
+                ? "Preparation uses synthetic no-op actions. Expected readiness requires independent verification."
+                : "Installation changes this computer for all users and may prompt for Windows consent. ThirdLife checks the exact installed version after the installer exits. Device readiness needs a separate assessment.");
             details.AppendLine(CultureInfo.CurrentCulture, $"Estimated download {Total(impact.Download)}");
             details.AppendLine(CultureInfo.CurrentCulture, $"Estimated installation {Total(impact.Installation)}");
             foreach (var row in impact.Actions)
@@ -109,6 +117,10 @@ internal static class PlanReviewPresentation
         details.AppendLine(CultureInfo.CurrentCulture, $"Source {entry.Package.SourceId}");
         details.AppendLine(CultureInfo.CurrentCulture, $"Publisher {entry.Review.Publisher}");
         details.AppendLine(CultureInfo.CurrentCulture, $"Version {entry.Package.ExactVersion}");
+        if (entry.Package.InstallerSha256 is { } installer)
+        {
+            details.AppendLine(CultureInfo.CurrentCulture, $"Installer SHA-256 {installer}");
+        }
         details.AppendLine(CultureInfo.CurrentCulture, $"Scope {(impact.Scope == ActionScope.Machine ? "Machine" : "Current user")}");
         details.AppendLine(CultureInfo.CurrentCulture, $"Privilege {(impact.Privilege == ActionPrivilege.Elevated ? "Elevation required" : "Unelevated")}");
         details.AppendLine(CultureInfo.CurrentCulture, $"Download {Bytes(impact.DownloadBytes)}");

@@ -142,6 +142,13 @@
           "ThirdLife.Core": "[1.0.0, )"
         }
       },
+      "thirdlife.packages": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Actions": "[1.0.0, )",
+          "ThirdLife.Inventory": "[1.0.0, )"
+        }
+      },
       "thirdlife.persistence": {
         "type": "Project",
         "dependencies": {
@@ -174,6 +181,7 @@
           "ThirdLife.Catalog": "[1.0.0, )",
           "ThirdLife.Core": "[1.0.0, )",
           "ThirdLife.Inventory": "[1.0.0, )",
+          "ThirdLife.Packages": "[1.0.0, )",
           "ThirdLife.Persistence": "[1.0.0, )",
           "ThirdLife.Policy": "[1.0.0, )",
           "ThirdLife.Reports": "[1.0.0, )"

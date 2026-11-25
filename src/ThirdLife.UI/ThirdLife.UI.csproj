@@ -20,6 +20,7 @@
                       LogicalName="ThirdLife.UI.basic.json" />
     <EmbeddedResource Include="..\..\fixtures\profiles\job-seeker.json"
                       LogicalName="ThirdLife.UI.job-seeker.json" />
+    <EmbeddedResource Include="Features\PlanReview\PackageSetup\*.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,6 +29,7 @@
     <ProjectReference Include="..\ThirdLife.Catalog\ThirdLife.Catalog.csproj" />
     <ProjectReference Include="..\ThirdLife.Core\ThirdLife.Core.csproj" />
     <ProjectReference Include="..\ThirdLife.Inventory\ThirdLife.Inventory.csproj" />
+    <ProjectReference Include="..\ThirdLife.Packages\ThirdLife.Packages.csproj" />
     <ProjectReference Include="..\ThirdLife.Persistence\ThirdLife.Persistence.csproj" />
     <ProjectReference Include="..\ThirdLife.Policy\ThirdLife.Policy.csproj" />
     <ProjectReference Include="..\ThirdLife.Reports\ThirdLife.Reports.csproj" />

@@ -1,4 +1,4 @@
-# TL-0114 audit workspace
+# Audit workspace and package setup
 
 The unelevated six-stage shell exposes **Go to audit controls**. The workspace
 creates a durable job with generated job and device codes. Copy the displayed job code to
@@ -65,6 +65,51 @@ tokens, with the historical `not_tested` token displayed as **Not run**. Guided 
 adds an optional details field to the evidence payload. Older prerelease binaries with
 strict payload readers cannot reopen jobs containing the enriched records. Preserve the
 store and use a compatible build to reopen such jobs.
+
+## Machine-wide package setup
+
+The first package workflow is scoped to the reviewed Notepad++ `8.9.9.1` x64
+Windows Installer package, source `notepad-plus-plus-releases`. It applies to a
+writable workshop job with current verified external sanitization, replacement storage
+or no donor storage, lawful ownership and a current completed live assessment. The package
+plan requires supported Windows 11 client on native x64 and evidence meeting the current
+operation-scoped policy. Unknown, stale, contradictory or synthetic admission evidence
+leaves the action unavailable. The existing whole-device disposition and readiness rules
+continue to govern device acceptance, finalization and handover.
+
+1. Open the job, complete intake and run the read-only assessment. Open **Prepare**,
+   select **Plain-text editor (machine-wide setup)** and choose **Build plan review**.
+   Building the plan reads actual installed state and checks the exact signed installer
+   from the reviewed source. An existing installation, unavailable state, changed
+   artifact or inadequate staging/system free space prevents dispatch.
+2. Review the exact package, source, requested machine scope, network use, disk impact,
+   Windows consent, restart limits, recovery and verification. Enter the responsible
+   workshop operator code and choose **Approve plan** only with actual authority for
+   the shown machine change. ThirdLife saves the approval for the exact plan.
+3. Choose **Install approved package**. ThirdLife checks that the job, plan and approval
+   still apply, records dispatch intent and rechecks artifact trust and installed state.
+   Windows Installer applies the approved machine-wide operation. Respond to any
+   Windows consent prompt only with actual authority for that action. The ThirdLife
+   window stays unelevated.
+4. Review the saved setup journal. ThirdLife independently queries Windows Installer's
+   machine registration for the exact product and version. The report distinguishes
+   verified installation from failure, restart pending, cancellation and review.
+   Close and reopen the job by its code, then generate a workshop report from the saved
+   transaction.
+
+**Cancel package operation** requests cancellation. After installer dispatch Windows
+Installer may still be completing work. An interrupted or uncertain result can require
+review of actual installed state. ThirdLife does not automatically retry, uninstall,
+restart or undo the installer operation. The route may clean up its own transient installer
+files. The workshop journal and report omit raw installer output, download redirects and
+staging paths.
+
+This scope is one package action. The exact candidate, evidence and limits govern its
+qualification. Pilot and public exposure retain their separate decisions.
+
+[Product contract](../product-contract.md) ·
+[Backend rationale](../adr/0009-winget-backend.md) ·
+[Release interface](../../RELEASE_INTERFACE.md)
 
 ## Workshop report
 

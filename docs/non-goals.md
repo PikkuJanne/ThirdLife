@@ -1,9 +1,9 @@
 # ThirdLife Setup Core — Non-Goals
 
-**Status:** Scope guard derived from frozen decisions and `PROJECT_BOUNDARY.md`  
+**Status:** Scope guard under the [current product contract](product-contract.md) and [project boundary](../PROJECT_BOUNDARY.md)  
 **Applies to:** Team B / B1 development, the controlled v0.1 pilot, and Core 1.0
 
-These exclusions are safety and ownership boundaries, not a list of unfinished features. An ordinary implementation task cannot turn one into scope. Any genuine amendment follows `docs/change-control.md` and requires explicit human approval at the correct authority level.
+These exclusions define safety and ownership boundaries. A material change follows [change control](change-control.md) and requires the actual scope-bound decision.
 
 ## No existing personal-PC repair or donor-media erasure
 
@@ -12,6 +12,7 @@ ThirdLife Setup Core starts from donor storage that is sanitized, replaced, or a
 - donor-media erasure inside the live Core application;
 - preservation or migration of an unknown previous owner's data;
 - malware cleanup, unknown-software removal, broad repair, or incident response on an existing personal PC;
+- personal data recovery or password migration;
 - forensic proof that sanitization succeeded; or
 - destructive stress or repair operations presented as routine assessment.
 
@@ -29,7 +30,7 @@ No unsupported Windows bypass is provided. The product does not:
 - report a numeric health/security score, certification, blanket guarantee, or unsupported minimum-hardware claim; or
 - weaken provenance, hash, signature, approval, verification, accessibility, or recovery checks to make a workflow pass.
 
-Unsupported or unknown states remain explicit and may block preparation or handover.
+Unsupported or unknown states remain explicit and may block preparation or handover. Core excludes firmware flashing, third-party driver-download services, project cloud storage, and always-on remote management.
 
 ## Platform scope
 
@@ -40,6 +41,11 @@ Windows 10, earlier Windows, Windows Server, Linux, macOS, and ARM64 are outside
 The workshop does not create personal cloud accounts, infer accessibility preferences, retain passwords or recovery keys, take custody of backup credentials, or make recipient-specific choices while the recipient is absent. Sealed handover records these choices as pending.
 
 Core 1.0 may guide a present recipient through supported accessibility settings and basic operating-system backup onboarding. It does not build a backup engine, invent a repository format, or control another product's backup data.
+
+## No fleet or AI product scope
+
+Core 1.0 excludes fleet administration, runtime AI models and AI cloud services.
+Assessment and disposition use explicit versioned policy and reproducible evidence.
 
 ## No sibling-domain ownership
 
@@ -68,6 +74,6 @@ A later B4 project may consume only exact frozen releases, cryptographic hashes,
 ## Handling an out-of-scope proposal
 
 1. Ask whether the capability has a complete, independently useful Core outcome.
-2. If it does and is already inside the selected task's contract, implement it there. Otherwise route it as a separately authorized project-local follow-on without silently expanding the task or editing the task graph.
+2. If the capability supports the assigned product outcome within scope, use or revise the actual implementation graph. Record other useful Core work as a project-local follow-up.
 3. If its value depends on a sibling product, record only a concise non-binding entry in `FUTURE_ASSEMBLY_NOTES.md` with a manual fallback and why it belongs to B4.
 4. Continue the selected B1 task without adding code, acceptance criteria, dependencies, or release promises from the note.

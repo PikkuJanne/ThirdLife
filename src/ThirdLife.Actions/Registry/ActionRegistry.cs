@@ -88,7 +88,7 @@ public static partial class ActionRegistry
     [GeneratedRegex(@"\A[a-z][a-z0-9]*(?:-[a-z0-9]+)*\z", RegexOptions.NonBacktracking)]
     private static partial Regex SourceIdPattern();
 
-    [GeneratedRegex(@"\A(?:[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\.)+[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\z", RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"\A(?:[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\+*\.)+[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*\+*\z", RegexOptions.NonBacktracking)]
     private static partial Regex PackageIdPattern();
 
     [GeneratedRegex(@"\A[0-9][A-Za-z0-9]*(?:[._-][A-Za-z0-9]+)*\z", RegexOptions.NonBacktracking)]

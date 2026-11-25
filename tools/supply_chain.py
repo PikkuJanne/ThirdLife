@@ -35,6 +35,7 @@ DEPENDENCIES_PATH = Path("docs/supply-chain/dependencies.md")
 BROKER_PROJECT_PATH = Path("src/ThirdLife.Broker/ThirdLife.Broker.csproj")
 BROKER_NATIVE_RUNTIME_PACK = "Microsoft.NETCore.App.Runtime.NativeAOT.win-x64"
 CATALOG_JSON_PROJECTION = "fixtures/catalog/catalog.json"
+RUNTIME_CATALOG_PATH = Path("src/ThirdLife.UI/Features/PlanReview/PackageSetup/catalog.json")
 MATRIX_HEADERS = (
     "component_type",
     "component_id",
@@ -1085,6 +1086,7 @@ def _catalog_inputs(validation: _Validation) -> tuple[_CatalogIdentity, ...]:
                 validation,
             )
         )
+    identities.extend(_runtime_catalog_identities(validation))
 
     seen: dict[tuple[str, str], _CatalogIdentity] = {}
     folded_ids: dict[tuple[str, str], tuple[str, str]] = {}
@@ -1103,6 +1105,51 @@ def _catalog_inputs(validation: _Validation) -> tuple[_CatalogIdentity, ...]:
             seen[key] = identity
             folded_ids[folded_key] = key
     return tuple(sorted(seen.values(), key=lambda item: (item.component_id.casefold(), item.version)))
+
+
+def _runtime_catalog_identities(validation: _Validation) -> list[_CatalogIdentity]:
+    path = validation.root / RUNTIME_CATALOG_PATH
+    label = RUNTIME_CATALOG_PATH.as_posix()
+    catalog = _safe_json(path, validation, maximum=MAX_DOCUMENT_BYTES)
+    if catalog is None:
+        return []
+    applications = catalog.get("applications")
+    if (
+        catalog.get("status") != "reviewed"
+        or catalog.get("synthetic_data") is not False
+        or not isinstance(applications, list)
+        or not 1 <= len(applications) <= MAX_COMPONENTS
+    ):
+        validation.error(f"{label}: expected a bounded reviewed runtime catalogue")
+        return []
+    identities = []
+    for application in applications:
+        if not isinstance(application, dict):
+            validation.error(f"{label}: invalid runtime catalogue application")
+            continue
+        component_id = application.get("id")
+        package = application.get("package")
+        if (
+            not isinstance(component_id, str)
+            or not PACKAGE_NAME_RE.fullmatch(component_id)
+            or application.get("production_eligible") is not True
+            or not isinstance(package, dict)
+            or package.get("external_artifact") is not True
+        ):
+            validation.error(f"{label}: expected a reviewed external package identity")
+            continue
+        version = package.get("exact_version")
+        digest = package.get("installer_sha256")
+        if (
+            not isinstance(version, str)
+            or not _validate_version(version, label, validation)
+            or not isinstance(digest, str)
+            or not SHA256_RE.fullmatch(digest)
+        ):
+            validation.error(f"{label}: external package requires an exact version and installer SHA-256")
+            continue
+        identities.append(_CatalogIdentity(component_id, version, label, "sha256", digest))
+    return identities
 
 
 def _record_build_graph_inputs(validation: _Validation) -> None:
@@ -1476,6 +1523,7 @@ def _is_governed_git_path(path_text: str) -> bool:
         "tools/supply_chain.py",
         DEPENDENCIES_PATH.as_posix(),
         MATRIX_PATH.as_posix(),
+        RUNTIME_CATALOG_PATH.as_posix(),
     }:
         return True
     if normalized.startswith(".github/workflows/"):
@@ -1773,7 +1821,7 @@ def _compare_inventory(
     for identity in sorted(set(catalog_by_identity) - set(catalog_matrix_by_identity)):
         validation.error(
             "license matrix is missing catalog application "
-            f"{identity[0]}@{identity[1]} discovered in fixtures/catalog"
+            f"{identity[0]}@{identity[1]} discovered in the checked-in catalogues"
         )
     for identity in sorted(set(catalog_matrix_by_identity) - set(catalog_by_identity)):
         validation.error(
@@ -1790,10 +1838,13 @@ def _compare_inventory(
                 f"for {catalog_identity.evidence_path}"
             )
         elif matrix_component.integrity_value != catalog_identity.integrity_value:
+            evidence = (
+                "reviewed installer digest" if catalog_identity.evidence_path == RUNTIME_CATALOG_PATH.as_posix()
+                else "exact source fixture bytes"
+            )
             validation.error(
                 "license matrix catalog application "
-                f"{identity[0]}@{identity[1]} sha256 does not match exact source "
-                f"fixture bytes at {catalog_identity.evidence_path}"
+                f"{identity[0]}@{identity[1]} sha256 does not match {evidence} at {catalog_identity.evidence_path}"
             )
 
     enriched: list[SupplyChainComponent] = []

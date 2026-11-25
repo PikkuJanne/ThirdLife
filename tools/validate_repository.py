@@ -78,7 +78,8 @@ EXPECTED_TEST_MANIFEST = {
     "tiers": {
         "quick": {
             "target_seconds": 120,
-            "purpose": "format, build, governance contracts, and fast deterministic code feedback",
+            "purpose": "format, build, work contract verification, and fast deterministic code feedback",
+            "work_contract_regression": "tools.tests.test_validate_bundle.DevelopmentContractResetTests",
             "test_projects": [
                 {
                     "path": f"tests/{name}/{name}.csproj",
@@ -109,6 +110,7 @@ EXPECTED_TEST_MANIFEST = {
                 "major refactor",
                 "data migration",
                 "dependency or engine change",
+                "work contract migration or new execution route",
                 "explicit TASKS.yaml trigger",
             ],
             "includes": [

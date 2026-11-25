@@ -2,11 +2,11 @@
 
 ## Status and authority
 
-**Status:** Accepted for `TL-0009`.
+**Status:** Accepted for ThirdLife-owned privileged code. D-075 supersedes the original broker-exclusive package assumption.
 
 **Task:** [`TL-0009`](../../TASKS.yaml)
 
-This ADR records existing binding decisions as planned architecture constraints. It does not amend [`DECISIONS.md`](../../DECISIONS.md) or [`PROJECT_BOUNDARY.md`](../../PROJECT_BOUNDARY.md), and it is not evidence that the planned behavior is implemented or verified.
+The [current product contract](../product-contract.md) and applicable specifications govern implementation. See the linked task evidence for the verified scope.
 
 ## Decision IDs
 
@@ -16,16 +16,17 @@ This ADR records existing binding decisions as planned architecture constraints.
 - [D-031](../../DECISIONS.md) — No always-on privileged service
 - [D-032](../../DECISIONS.md) — Action journal and completion
 - [D-033](../../DECISIONS.md) — Separate verification and cold boot
+- [D-075](../../DECISIONS.md) — Current product contract and capability-specific engineering
 
 ## Context
 
-Some approved machine-wide package, update, and system actions require elevation, but the normal operator interface, policy evaluation, persistence, reporting, and verification do not need to remain privileged. Trusting UI validation would create a confused-deputy boundary, while an always-running privileged service would create an unnecessary persistent attack and lifecycle surface.
+Some approved machine-wide package, update and system actions require elevation. The operator interface, policy evaluation, persistence, reporting and verification continue unelevated. Trusting UI validation would create a confused-deputy boundary, while an always-running privileged service would create an unnecessary persistent attack and lifecycle surface.
 
 Approval, dispatch, privileged execution, journaling, and verification must remain distinct even when the UI, broker, or machine is interrupted.
 
 ## Decision
 
-The WPF UI remains unelevated. An ephemeral elevated `ThirdLife.Broker` process handles only the exact approved batch and exits when that batch completes, fails, expires, or is abandoned.
+The WPF UI remains unelevated. An ephemeral elevated `ThirdLife.Broker` process handles only the exact approved batch for ThirdLife-owned privileged code and exits when the batch completes, fails, expires or is abandoned. A qualified supported package route can use ordinary Windows/installer elevation under its own fixed contract. It requires the same durable approval, trust, dispatch intent and independent verification.
 
 - Before dispatch, the unelevated authoritative journal service reloads the current durable approval, validates its exact plan/content digest, and durably records a correlated started/dispatch-intent checkpoint.
 - The unelevated client authenticates the expected broker/server identity, and the broker independently validates the initiating caller's user/session. Both rely on restrictive named-pipe ACLs, authenticated framing, and bounded messages. The broker also validates protocol version, schema, nonce, expiry, correlation, replay state, job/action identity, approval digest, action type, and every parameter.

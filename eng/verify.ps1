@@ -210,7 +210,7 @@ try {
     }
 
     Invoke-CheckedCommand `
-        -Label "Validate governed roadmap bundle" `
+        -Label "Validate ThirdLife product and work contracts" `
         -Command $pythonCommand `
         -CommandArguments @("tools/validate_bundle.py")
 
@@ -218,6 +218,13 @@ try {
         -Label "Validate repository boundaries, locks, and controls" `
         -Command $pythonCommand `
         -CommandArguments @("tools/validate_repository.py")
+
+    if ($Tier -ne "Full") {
+        Invoke-CheckedCommand `
+            -Label "Verify work selection and scoped prerequisites" `
+            -Command $pythonCommand `
+            -CommandArguments @("-m", "unittest", [string]$manifest.tiers.quick.work_contract_regression)
+    }
 
     if ($Restore -or $Tier -eq "Full") {
         Invoke-CheckedCommand `

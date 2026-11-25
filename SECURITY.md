@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Security Policy and Threat Baseline
 
-**Status:** Binding baseline; expanded and evidenced by roadmap tasks  
-**Bundle version:** 0.7.0
+**Status:** Security specification for the [current product contract](docs/product-contract.md)  
+**Bundle version:** 0.8.0
 
 ## 1. Security objective
 
@@ -35,7 +35,7 @@ Do not place vulnerability details, device records, secrets, diagnostic archives
 2. Windows/CIM/API/provider output;
 3. package and update sources;
 4. unelevated UI to elevated broker IPC;
-5. broker to package/update/system APIs;
+5. approved package or broker-backed execution to supported installer, update and system APIs;
 6. SQLite and per-job files;
 7. report and support-bundle export destinations;
 8. recipient-present onboarding operations;
@@ -54,7 +54,9 @@ Security tests follow `TESTING.md`: quick checks during iteration, targeted chec
 ## 6. Security invariants
 
 - The main UI runs unelevated.
-- Privileged work occurs only through an ephemeral broker for the approved batch.
+- Operations that require ThirdLife-owned privileged code run through an ephemeral broker for the approved batch.
+- Suitable package operations may use a qualified supported Windows, WinGet or vendor route with the operating system's consent and elevation. Qualify the route for the exact action and scope. Missing qualification, trust or consent keeps that dispatch unavailable.
+- Every route loads the durable approved plan, checks material identity and trust, commits correlated dispatch intent before mutation, and obtains a fresh independent postcondition. Unavailable broker execution leaves independent package resolution, installed-state queries and separately qualified routes available.
 - The broker accepts typed, versioned, bounded, expiring, nonce-protected, digest-bound allowlisted requests.
 - No profile or catalogue can supply shell commands, PowerShell, arbitrary executable paths, arbitrary URLs, arbitrary registry paths, or unrestricted file operations.
 - Profiles are declarative data. Executable behavior stays in reviewed compiled code.
@@ -69,7 +71,7 @@ Security tests follow `TESTING.md`: quick checks during iteration, targeted chec
 
 ## 7. Privileged broker requirements
 
-The broker must independently validate:
+For actions that require ThirdLife-owned privileged code, the broker must independently validate:
 
 - initiating user/session and restrictive IPC ACL;
 - protocol version, schema, message size, collection bounds, and unknown fields;
@@ -88,7 +90,9 @@ Tests must cover cross-user connection, replay, stale request, oversized input, 
 - Use exact package identities and approved sources.
 - Resolve and record exact metadata before approval.
 - Require reapproval when resolved material changes.
-- Prefer structured WinGet and Windows Update APIs over localized screen parsing.
+- Use supported structured Windows, WinGet or vendor contracts. If the supported mechanism requires process invocation, use a fixed trusted executable with bounded typed arguments and structured or invariant status. Never parse localized WinGet display tables.
+- A supported installer may elevate via Windows. Keep invocation inputs within the compiled allowlist. Independently verify package identity, version and scope after execution.
+- Make the verified artifact and its staging/launch path resistant to substitution at the privilege boundary. Keep the broker unavailable until its own protected startup, identity, IPC and required privilege evidence are verified.
 - Keep the package backend replaceable behind a tested adapter.
 - Track licence-to-use and right-to-redistribute separately.
 - Pin runtime dependencies and release inputs; produce an SBOM.
@@ -97,7 +101,7 @@ Tests must cover cross-user connection, replay, stale request, oversized input, 
 
 B1 uses generic essentials and synthetic packages. Sibling products enter only through a future B4 compatibility cut against frozen artifacts.
 
-The subordinate [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) and [`docs/supply-chain/license-matrix.csv`](docs/supply-chain/license-matrix.csv) govern the dependency inventory, exact provenance, deterministic SBOM, audit limits, and rights proposals. TL-0311 adds Native AOT build inputs with exact source and integrity records for local technical verification. Release use of the changed matrix is pending exact candidate review. Janne Vuorela's previous approvals retain their original 24- and 28-component matrix scope and recorded limitations.
+The [dependency inventory](docs/supply-chain/dependencies.md) and [licence matrix](docs/supply-chain/license-matrix.csv) record provenance, integrity, deterministic SBOM generation, audit limits and proposed rights. The current matrix includes reviewed Native AOT build inputs for local engineering and a scoped direct-vendor package route. Release use awaits exact candidate review. Janne Vuorela's prior approvals retain their original 24- and 28-component matrix scope, exact commit and digest, documented limits and withheld rights.
 
 ## 9. Data, secrets, and logging
 
@@ -113,6 +117,13 @@ Never place the following in command arguments, ordinary logs, crash reports, su
 - sibling-application user content.
 
 Use structured allowlisted fields and stable result codes. Redact before persistence, not only at export. Support bundles are previewable and use an allowlist.
+
+An independent package route may fetch only the exact reviewed release artifact. Send no
+job, device or operator identity to the package source. Keep any staged installer transient,
+bounded and access-restricted, and remove only the route's own files. Record the package,
+scope, attempt, normalized result and verification in the guarded job store. Keep staged
+paths, redirect URLs and raw installer output out of the workshop report and diagnostics.
+Recipient and support projections keep their existing allowlists.
 
 The subordinate [`docs/privacy/privacy-model.md`](docs/privacy/privacy-model.md), [`docs/privacy/logging-standard.md`](docs/privacy/logging-standard.md), and synthetic [`docs/privacy/redaction-test-cases.yaml`](docs/privacy/redaction-test-cases.yaml) define the current `TL-0005` classification, approved retention guidance, diagnostic-field, and expected-redaction contracts. Named privacy-owner approval is recorded for the exact reviewed commit. `TL-0104` implements the first runtime subset: a closed typed event schema, explicit sensitive-value wrappers, redact-before-file-persistence, sanitized exception records/display guidance, an exact fixture-only 25-field in-memory support projection, and protected bounded local sanitized-log retention. The log root and files have restrictive ACLs and validated identities; instances/processes share a bounded lock; corrupt, linked, replaced, reparse, wrong-clock, expired, or over-count objects fail closed; crash residue is recovered without broad deletion. An append becomes a bounded durable `.txn-*` intent before any final record is evicted; the transaction is revalidated immediately before eviction, and the next locked operation validates and either completes an in-window transaction or deletes a verified expired intent, so final `evt-*` records remain within their configured age/byte ceiling and an ambiguous committed write is never reported as a safe blind retry. Verified orphan temporaries are removed before another append stages bytes, preventing ordinary repeated pre-commit crashes from accumulating residue. These controls detect bounded accidental/concurrent replacement but do not make current-user or administrator-controlled local files tamper-proof; a detected change stops mutation and preserves the object for review. Windows active-machine deletion is bound to the validated open file handle; the portable fallback remains path-bound after revalidation and makes no non-Windows production or equivalent deletion-race assurance. Raw output, arbitrary diagnostic fields, database logging, telemetry, upload, preview UI, archive creation, destination handling, and release support remain absent or deferred to their named later tasks.
 
@@ -205,7 +216,7 @@ A future adapter may use only a frozen installer, hash, `RELEASE_INTERFACE.md`, 
 Before Core 1.0:
 
 - threat model and residual-risk register;
-- broker and package adversarial tests;
+- package-route adversarial tests and broker tests for any supported broker-dependent action;
 - path and export-destination tests;
 - secrets/redaction fixture results;
 - dependency inventory, SBOM, licence and vulnerability results;

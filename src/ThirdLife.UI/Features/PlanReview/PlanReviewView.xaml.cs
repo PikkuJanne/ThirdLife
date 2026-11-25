@@ -12,6 +12,7 @@ public partial class PlanReviewView : UserControl
 {
     private IInputElement? _detailsHeaderFocus;
     private string? _announcedStatus;
+    private string? _announcedPackageStatus;
 
     public PlanReviewView() => InitializeComponent();
 
@@ -48,6 +49,26 @@ public partial class PlanReviewView : UserControl
             var hadFocus = DeclinePlanReviewButton.IsKeyboardFocused;
             await workspace.DeclinePlanReviewAsync();
             RestoreFocus(PlanStatusMessage, hadFocus);
+        }
+    }
+
+    private async void InstallPackage(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanInstallPackage)
+        {
+            var hadFocus = InstallPackageButton.IsKeyboardFocused;
+            await workspace.InstallPackageAsync();
+            RestoreFocus(workspace.HasPackageHistory ? SavedPackageHistory : PlanStatusMessage, hadFocus);
+        }
+    }
+
+    private void CancelPackageOperation(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanCancelPackage)
+        {
+            var hadFocus = CancelPackageButton.IsKeyboardFocused;
+            workspace.CancelPackageOperation();
+            RestoreFocus(PackageSourceMessage, hadFocus);
         }
     }
 
@@ -111,12 +132,19 @@ public partial class PlanReviewView : UserControl
 
     private void AnnounceStatus(object sender, DataTransferEventArgs args)
     {
-        if (PlanStatusMessage is { IsLoaded: true, IsVisible: true, Text.Length: > 0 } message &&
-            !string.Equals(_announcedStatus, message.Text, StringComparison.Ordinal))
+        if (args.TargetObject is not TextBlock { IsLoaded: true, IsVisible: true, Text.Length: > 0 } message)
         {
-            _announcedStatus = message.Text;
-            var peer = UIElementAutomationPeer.FromElement(message) ?? UIElementAutomationPeer.CreatePeerForElement(message);
-            peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+            return;
         }
+
+        ref var announced = ref (ReferenceEquals(message, PackageSourceMessage) ? ref _announcedPackageStatus : ref _announcedStatus);
+        if (string.Equals(announced, message.Text, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        announced = message.Text;
+        var peer = UIElementAutomationPeer.FromElement(message) ?? UIElementAutomationPeer.CreatePeerForElement(message);
+        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 }
