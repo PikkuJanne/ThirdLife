@@ -13,11 +13,13 @@ protocol and session behavior locally. [Security requirements](../../SECURITY.md
 | --- | --- | --- |
 | AC-001 and AC-002 · Executable data, unknown actions and invalid frames | `BrokerRequestSecurityTests.RejectsExecutionFieldsWithoutDisclosingInput` rejects inputs for executables, commands, URLs and registry paths. `ProtocolTests` verifies the closed v1 envelope and action vocabulary. `IpcIntegrationTests` checks the frame length before reading a body. | The codec accepts only typed no-ops. Any future action that receives new inputs needs its own validation and evidence. |
 | AC-003 · Stale or mismatched session authority | `IpcIntegrationTests` and `ProtocolTests` check bound content and expiry, reject a second request, and preserve a single authorized batch. The guest `Timeout` case observes expiration of an authenticated no-op session. | Planning tests cover the stored plan and journal contracts. TL-0313 owns their integration into application execution and recovery. See [FI-011](../../docs/testing/failure-injection.md#5-canonical-scenario-and-invocation-register). |
-| AC-004 · Cross-account access and peer identity | `WindowsPipeHasAProtectedLogonAclAndKernelIdentifiesBothPeers` checks the native ACL and process/session identity. `SessionRechecksPeerAuthenticationBeforeDispatch` requires a fresh peer decision at dispatch and rejects the batch without progress or results if it fails. TL-0317 `DistinctAccount` observes real Windows ACL denial. | The guest exercised a different standard local logon token against the production pipe implementation, then verified the initiating account could still connect. The separate-process attempt did not establish a result. |
+| AC-004 · Cross-account access and peer identity | `WindowsPipeHasAProtectedLogonAclAndKernelIdentifiesBothPeers` checks the native ACL, single pipe instance, and kernel process/session identity. `SessionRechecksPeerAuthenticationBeforeDispatch` requires a fresh peer decision at dispatch and rejects the batch without progress or results if it fails. TL-0317 `DistinctAccount` observes real Windows ACL denial. | The guest exercised a different standard local logon token against the production pipe implementation, then verified the initiating account could still connect. The separate-process attempt did not establish a result. |
 | AC-007 · Untrusted path and filesystem object | `InstalledBrokerTests` and `tools.tests.test_broker_deployment` cover fixed installation identity, protected ownership and permissions, and reviewed provisioning guards. The guest `Verify` case ran the launch guard and observed standard-user denial of writes to the protected binary and metadata. | Current actions accept no filesystem path and write no temporary action output. Qualify additional destinations, link handling and interruption semantics before any future file-mutating action. |
 | AC-008 · Diagnostic disclosure | The focused request test and `ProtocolTests` require a fixed diagnostic for rejected inputs. Review `BrokerNonce` redaction, ticket contents, broker exit codes and the guest runner's bounded diagnostic projection against the logging contract. | Assert without echoing request bytes or nonce values. Keep raw local logs, traces, screenshots and credentials out of stored evidence. This scope covers broker diagnostics and the test result projection. |
 | AC-009 · Decline, cancellation, interruption and process lifetime | `BufferedCancellationProducesOnlyItsScopedNoOpResult` verifies scoped cancellation. UI client fixtures verify consent mapping and result retention. Guest `Decline`, `Interrupt`, `Timeout`, `Disconnect` and `RetainObservation` provide protected-runtime evidence for return state, process exit and cleanup. | Prior failed guest runs retain their results and cleanup findings. TL-0313 owns durable job continuity, actual UI exit and reopen, and accessible recovery. Future mutation or power-loss scenarios require their own reconciliation evidence. See [FI-005 and FI-006](../../docs/testing/failure-injection.md#5-canonical-scenario-and-invocation-register). |
 | AC-014 · Input and lifetime bounds | The named Extended selection below exercises bounded seeded inputs offline and requires the fixed decoder diagnostic. Transport tests check framing and request bounds. Guest `Timeout` observes bounded protected process lifetime. | The fixture measures the fixed parser workload. Workload-wide resource measurements and future mutating actions need their own evidence. |
+| AC-017 · Approval and visible Windows consent | The guest verifies the Windows prompt, actual allow/decline outcome, and unelevated client identity for the reviewed candidate. | The development artifact displayed an unknown publisher. Approval UX and durable decisions remain with TL-0313 and TL-0314. |
+| AC-019 · Broker artifact provenance | TL-0311 and TL-0317 bind the pinned Native AOT inputs, protected provisioner and installed candidate by digest. The launch guard checks the protected image before Windows consent. | The reviewed local artifact is unsigned. A signed release and any new executable or build input require their own provenance evidence. |
 
 Case IDs refer to the [broker-relevant abuse cases](../../docs/security/abuse-cases.md).
 
@@ -44,6 +46,18 @@ $project = 'tests/ThirdLife.Broker.Tests/ThirdLife.Broker.Tests.csproj'
 $case = 'ThirdLife.Broker.Tests.ProtocolTests.BoundedSeededInvalidInputsAlwaysUseTheSanitizedDecoderError'
 dotnet test $project -c Release -p:RestoreLockedMode=true --filter "FullyQualifiedName=$case" -- RunConfiguration.TreatNoTestsAsError=true
 ```
+
+For the FI-011 session slice, set `$case` in the command above to any one of
+these fully qualified names and run that selection independently.
+
+- `ThirdLife.Broker.Tests.IpcIntegrationTests.InvalidInitialMessagesFailBeforePeerAuthentication`
+- `ThirdLife.Broker.Tests.IpcIntegrationTests.ACurrentEnvelopeCannotAuthorizeDifferentRequestContent`
+- `ThirdLife.Broker.Tests.IpcIntegrationTests.ASecondRequestInTheSameSessionIsRejected`
+
+For the standard-token startup check, use
+`ThirdLife.Broker.Tests.IpcIntegrationTests.UnelevatedApphostRejectsAValidTicketWithoutStartingAPipe`
+in the same command from the unelevated Windows host. It runs the managed
+development apphost directly and checks the refusal, empty output, and closed pipe.
 
 Follow the protected Windows guest procedure for any required repeat of a named live
 case. It binds the reviewed artifact and admitted guest, checks the limited client

@@ -3965,7 +3965,7 @@ tasks:
   workstream: broker
   kind: security
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -3993,7 +3993,57 @@ tasks:
   verification:
   - Run the applicable approved standard-user and elevated scenarios and retain explicit UAC behavior.
   - Inspect process token, pipe ACL, and teardown through available technical checks. Record scope, findings, and limits.
-  evidence: []
+  evidence:
+  - task: TL-0312
+    summary: Forbidden execution-related fields received fixed rejection diagnostics without nonce or fixture values. A failed peer recheck produced no progress or results.
+    command_or_review: eng/verify.ps1 -Tier Targeted -Restore for Actions, Broker Security, Broker and UI test projects, including Quick
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 client build 26300 native x64, .NET SDK 10.0.400 and Python 3.14.7
+    date: '2026-11-25'
+    duration: 99.115 s, 1428 .NET cases
+    reference: artifacts/evidence/TL-0312/report.md, source e734b5f1feca0fb3fb6c78f12c3636dd6f95d716
+    limitation: Deterministic selection with local native pipe ACL checks. Protected elevation observations retain TL-0317 provenance.
+  - task: TL-0312
+    summary: The standard-token development apphost refused a valid typed test ticket, emitted no output and left no broker process or open pipe.
+    command_or_review: Independently filtered UnelevatedApphostRejectsAValidTicketWithoutStartingAPipe and post-run process count
+    tier: targeted
+    result: passed
+    environment: Unelevated active Windows 11 client native x64
+    date: '2026-11-25'
+    duration: 2.080 s, one ActiveMachine case
+    reference: artifacts/evidence/TL-0312/report.md, source e734b5f1feca0fb3fb6c78f12c3636dd6f95d716
+    limitation: Managed development apphost. The protected Native AOT candidate retains its own artifact and evidence.
+  - task: TL-0312
+    summary: The fixed bounded parser workload returned the sanitized decoder diagnostic for all 128 offline samples.
+    command_or_review: Independently filtered BoundedSeededInvalidInputsAlwaysUseTheSanitizedDecoderError
+    tier: extended
+    result: passed
+    environment: Active native x64 Windows 11 host, in-memory deterministic fixture
+    date: '2026-11-25'
+    duration: 1.982 s, one scenario
+    reference: artifacts/evidence/TL-0312/report.md, source e734b5f1feca0fb3fb6c78f12c3636dd6f95d716
+    limitation: Fixed 256-byte sample ceiling and seed. Broader workload resource limits remain outside this measurement.
+  - task: TL-0312
+    summary: The broker security plan maps the protected no-op evidence for distinct-account denial, privilege and consent, interruption and cleanup.
+    command_or_review: Reused TL-0317 named guest observations and checked source identity of broker, protocol, UI and pinned launch/build inputs
+    tier: targeted
+    result: passed
+    environment: Same-machine Windows 11 Hyper-V guest using the reviewed Native AOT no-op broker
+    date: '2026-11-25'
+    duration: 92.176 to 159.661 s per passing guest case, final guest cleanup 4.149 s
+    reference: artifacts/evidence/TL-0317/report.md and artifacts/security/broker-test-plan.md
+    limitation: The distinct standard local logon token was verified through scoped impersonation. The earlier separate-process attempt remains unclassified.
+  - task: TL-0312
+    summary: The clean integration candidate passed the complete default suite and zero-warning Release build.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Separate clean same-machine Windows 11 native x64 worktree with the pinned .NET and Python tools
+    date: '2026-11-25'
+    duration: 352.673 s, 303 Python governance and 2030 .NET cases
+    reference: artifacts/evidence/TL-0312/report.md, source e734b5f1feca0fb3fb6c78f12c3636dd6f95d716
+    limitation: Default Full filter. Named ActiveMachine, Extended and guest evidence is recorded at the applicable scope.
   notes:
   - TL-0314 carries the actual privilege-boundary decision on the prepared evidence.
   expected_test_tier: targeted
