@@ -115,3 +115,56 @@ pre-dispatch pause, where the fixture invokes the WPF Cancel control. The broker
 reply carries no independent postcondition verification.
 The ordinary product startup remains gated by qualification and the applicable
 TL-0314 privilege decision.
+
+### Follow-on verification on 2026-11-25
+
+The follow-on worktree started at the merged PR #44 head `388a75d`. The initial
+PlanReview and BrokerBatchClient test selection passed 25 tests in 31.690 s on
+the unelevated Windows 11 x64 host. Source `da3b01b` adds the bounded guest cases
+and preserves the TL-0317 executable, protocol, provisioning and ordinary
+startup composition.
+
+| Command or review | Tier | Result and elapsed | Scope and limit |
+| --- | --- | --- | --- |
+| `eng/verify.ps1 -Tier Targeted -Restore -TestProject` with UI, Actions, Broker, Broker.SecurityTests and Persistence | Targeted including Quick | Passed 7 governed checks and 1,587 .NET tests in 149.902 s | Follow-on source with locked SDK 10.0.400 and Python 3.14.7. The default deterministic filter excludes the interactive guest cases. |
+| `eng/verify.ps1 -Tier Full -Restore` | Full | Passed 303 governance and 2,051 .NET tests in 453.300 s | Clean same-machine worktree at `da3b01b`, with locked restore, formatting and a warning-free Release build. Default filters exclude interactive guest cases and the independently checked Extended interruption scenario. |
+| PowerShell parsing and synthetic application trace cases | Focused | Passed on PowerShell 7.6.9 and Windows PowerShell 5.1 | Exercises matching approval digests, typed observations and rejection of invalid or unapproved traces. The host missing-VM-ID guard was invoked in PowerShell 7. |
+| `eng/run-thirdlife-hyperv.ps1 -Prepare` | Qualification preparation | Passed in 28.771 s | Committed source `da3b01bbc4a51dddfc521683d2ae827fcec059d3`, payload SHA-256 `3b80ab2d5fcddfb82fc5b70dfbd1fe3dbc8a1f8ecbf042edeb2f650e0c956987`. The archived Native AOT broker and SDK matched the existing pins. |
+| `eng/run-thirdlife-hyperv.ps1 -Scenario ApplicationPreview` | Targeted active-machine guest | Passed in 113.876 s | The limited-token WPF review displayed the exact three-action plan. SQLite reopened the same plan and impact with zero approvals and zero journal entries. Protected broker verification and owned guest cleanup passed. No consent process or broker dispatch was observed. |
+
+The approval-free preview binds only its own synthetic job. Each live case
+creates a fresh exact plan, requires its own operator approval in WPF and uses
+the operator's separate Windows consent choice. Preview readiness provides no
+privilege authorization for ordinary startup.
+
+The `ApplicationAccept` attempt used the same source and payload. The guest
+displayed its saved plan and requested operator input. The run timed out after
+260 s including stage and cleanup, with `CandidateReady` as its only observation.
+The run produced no confirmed approval, consent process or dispatch result.
+Protected-broker verification and owned guest cleanup passed. Reopen the live
+work with a newly staged plan during an attended operator window. The previous
+run's plan and approval window have expired.
+
+### Actual WPF client interruption and recovery
+
+The [Extended scenario](../../../TESTING.md#6-test-manifest-and-reusable-runners)
+opened an owned, unelevated WPF fixture process. The UI saved the synthetic
+operator approval and the actual coordinator committed each action's durable
+intent. The backend held at that boundary without a broker connection or send
+path. The parent read the held job independently in SQLite. After the parent's
+acknowledgment, the exact WPF client terminated itself and the parent verified
+the client exit and the expected nonzero test wrapper exit.
+
+A new WPF workspace reopened that database and displayed the same plan and
+started entries. Advancing the fixture clock to the dispatch-window deadline
+and using **Check recovery** added one correlated `RequiresReview` entry per
+action. A second reopen added no entries and the reopen backend saw zero calls.
+The run's temporary directory was removed. Timing at the deadline is controlled
+fixture evidence. TL-0317 retains the actual protected broker termination and
+teardown observation in the separate transport case.
+
+The focused Extended invocation passed in 13.558 s. The integration worktree
+then ran Targeted with Quick and the named Extended test. All 7 governed
+checks and 1,198 .NET tests passed in 142.916 s. The test source file
+`PlanReviewTests.BrokerInterruption.cs` had SHA-256
+`5ab20dfefac892af7191fc67790ddf2d9f2fb1a3b24dbac1352d54d9ad72ed38`.
