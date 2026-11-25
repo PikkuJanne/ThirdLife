@@ -4,30 +4,36 @@
 
 These providers return bounded observations through `InventoryProviderRunner`. They run
 without elevation, request no network access, write no files or settings, and contain no
-shell execution. They do not mark a job ready. Assessment orchestration remains TL-0112.
+shell execution. The [Windows 11 platform amendment](../amendments/2026-11-25-windows-11-only.md)
+sets the current live provider and application scope.
 
 | Provider | Collected input | Evidence and limitation |
 | --- | --- | --- |
-| `windows-operating-system` | Numeric .NET OS version, `GetProductInfo` edition code, .NET OS architecture | `os.version`, `os.build`, `os.edition_code`, mapped `os.edition`, and `os.architecture`; no localized display text or product ID |
-| Lifecycle mapping in OS provider | Compiled reviewed data and UTC evaluation date | `os.support_target`, `os.family`, and `os.lifecycle.*`; source, revision, as-of date, freshness deadline, evaluation date, release, and reason are retained |
+| `windows-operating-system` | Numeric .NET OS version, Win32 workstation product type, `GetProductInfo` edition code, and .NET native OS architecture | `os.version`, `os.build`, `os.edition_code`, mapped `os.edition`, `os.architecture` and `os.family` |
+| Lifecycle mapping in OS provider | Compiled reviewed Windows 11 data and UTC evaluation date | `os.support_target` and `os.lifecycle.*` retain the support result and available source, revision, as-of date, freshness deadline, evaluation date, release, and reason |
 | `windows-activation` | SLC status integers for the fixed Windows application | `activation.state`; unanimous known status only, no legal ownership conclusion |
 | `windows-pending-reboot` | Three fixed local registry indicators in the 64-bit view | `reboot.{cbs,windows_update,file_rename}.{indicator,confidence,collection_status,recovery}` and `reboot.pending_status`; incomplete indicators with explicit confidence |
 
-Version and architecture are observations. Edition labels and lifecycle conclusions are
-inferences from exact numeric facts and versioned mappings. Lifecycle coverage and refresh
-are documented in [the data record](windows-lifecycle-data.md). Unknown or stale data cannot
-return supported. Windows 10 remains audit-only.
+The operating system source uses numeric, read-only APIs. It queries the product type
+using the Win32 workstation, domain controller, and server codes. The type comparison
+uses no version fields. The shared platform gate then confirms a Windows 11 client build
+and native OS x64 using the exact reviewed build identities and the Windows 11 build 22000
+floor. The existing .NET 10/WPF stack and queried Windows APIs require no higher product
+build floor. Startup uses this check independently of the reviewed edition's servicing dates.
+[Lifecycle coverage and refresh](windows-lifecycle-data.md)
+
+Version and architecture are observations. Family, edition, and lifecycle labels are
+inferences from numeric facts and reviewed mappings. A known Windows 11 family remains
+available when stale lifecycle data withholds support. A confirmed Windows 10 workstation
+or Server role is out of scope for live work.
 
 `system.architecture` remains owned by TL-0106. The OS provider publishes `os.architecture`
 with distinct provenance. Tests retain conflicting values in either provider order and reject
 duplicate OS keys. Reconciliation belongs to TL-0112; collection order selects no winner.
 
-References:
-
-- [Environment.OSVersion](https://learn.microsoft.com/en-us/dotnet/api/system.environment.osversion?view=net-10.0)
-  documents actual Windows version reporting on .NET 5 and later.
-- [GetProductInfo](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getproductinfo)
-  defines edition codes. Server and specialized editions do not inherit a client lifecycle.
+- .NET reports the actual Windows version and the native OS architecture, including in an emulated process. [Environment.OSVersion](https://learn.microsoft.com/en-us/dotnet/core/compatibility/core-libraries/5.0/environment-osversion-returns-correct-version) · [RuntimeInformation.OSArchitecture](https://learn.microsoft.com/en-us/dotnet/core/compatibility/interop/7.0/osarchitecture-emulation)
+- The Windows product type identifies workstation, domain controller, and server roles. [IsWindowsServer](https://learn.microsoft.com/en-us/windows/win32/api/versionhelpers/nf-versionhelpers-iswindowsserver) · [OSVERSIONINFOEXW](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-osversioninfoexw) · [VerifyVersionInfoW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-verifyversioninfow)
+- The edition code determines eligibility for the reviewed lifecycle mapping. [GetProductInfo](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getproductinfo)
 
 ## Activation privacy and interpretation
 
@@ -88,7 +94,7 @@ OS and reboot providers have a two-second caller timeout; activation has five se
 Each provider instance admits one worker, including after a caller timeout until the native
 read and cleanup return. There is no polling, retry loop, background service, cache, GPU,
 temporary output, database write, or migration. The lifecycle catalog is bounded to 64 rows
-(40 currently), activation to 128 status integers, and output to fixed descriptor cardinality.
+(12 currently), activation to 128 status integers, and output to fixed descriptor cardinality.
 Registry metadata is checked without allocating the reported value size.
 
 Synchronous Windows calls cannot be forcibly cancelled. The runner returns a typed timeout
@@ -97,14 +103,11 @@ cleanup completes. A fresh request on the same busy instance returns unavailable
 must reuse instances rather than create replacement instances to bypass this bound. The
 future orchestrator owns batch-level concurrency. No native hard-termination claim is made.
 
-There are no UI controls or interactive host changes in this task. Existing classifications,
-fixed error codes, and recovery guidance remain available for accessible presentation in
-later UI tasks. Keyboard, focus, screen readers, scaling, and contrast are unchanged and no
-human accessibility review is claimed. Tests prove deterministic cancellation/recovery and
-bounded output; active measurements describe only the recorded machine and test process.
+Inventory publishes fixed statuses and recovery guidance for accessible presentation.
+Tests prove deterministic cancellation, recovery, and bounded output. Active measurements
+describe the recorded machine and test process only.
 
 Captured replay uses only published non-identity OS facts from `REF-CODEX-001`, revision
-`2026-08-29.1`. Lifecycle conclusions are recomputed for the explicit replay date; they are
-not represented as a historical support decision. No activation or reboot capture is invented.
-Windows 10 and missing/failure variants use deterministic synthetic equivalents. The release
-interface remains a draft; no released runtime compatibility or broad hardware claim is added.
+`2026-08-29.1`. Synthetic replay evaluates lifecycle at an explicit date. A saved historical
+job instead retains its original observations, including its original support conclusion.
+Rejection and unavailable cases use deterministic synthetic equivalents.

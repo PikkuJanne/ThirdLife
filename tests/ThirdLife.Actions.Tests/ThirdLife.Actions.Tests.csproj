@@ -30,6 +30,9 @@
     <None Include="..\..\fixtures\profiles\basic.json"
           Link="basic.json"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\fixtures\profiles\historical\basic-v1.json"
+          Link="basic-v1.json"
+          CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\fixtures\profiles\job-seeker.json"
           Link="job-seeker.json"
           CopyToOutputDirectory="PreserveNewest" />

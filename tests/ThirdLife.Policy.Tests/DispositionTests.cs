@@ -117,7 +117,7 @@ public sealed class DispositionTests
     }
 
     [Fact]
-    public void AnIndependentBlockingRulePreservesTheNonControllingTargetOutcome()
+    public void OwnershipAndConfirmedScopeFailuresBothControlWithoutLosingTheirEvidence()
     {
         var facts = WithFacts(
             Fact("ownership-lock", "ownership.lock_state", EvidenceValue.FromEnum("locked")),
@@ -126,7 +126,10 @@ public sealed class DispositionTests
         var decision = Evaluate(CandidatePolicy(), facts);
 
         Assert.Equal(Disposition.DoNotDeploy, decision.Disposition);
-        AssertFailure(Assert.Single(decision.Citations), "POL-OWNERSHIP-001", "ownership-lock");
+        Assert.Collection(decision.Citations,
+            citation => Assert.Equal("CORE-OS-RELEASE", citation.RuleId.Value),
+            citation => AssertFailure(citation, "POL-OS-001", "other-windows-release"),
+            citation => AssertFailure(citation, "POL-OWNERSHIP-001", "ownership-lock"));
         var release = Assert.Single(decision.TargetOutcomes,
             outcome => outcome.Rule.Requirement.RequirementId.Value == "CORE-OS-RELEASE");
         Assert.Equal(PolicyRuleState.Unmet, release.State);
@@ -205,23 +208,29 @@ public sealed class DispositionTests
         var facts = WithFacts(Fact("unrecognized-lifecycle", "operating_system.support_state",
             EvidenceValue.FromEnum("unknown"), EvidenceClassification.Inferred));
 
-        var decision = Evaluate(AdvisoryOnlyPolicy(), facts);
+        var decision = Evaluate(CandidatePolicy(), facts);
 
         Assert.Equal(Disposition.HumanReviewRequired, decision.Disposition);
-        var citation = Assert.Single(decision.Citations);
-        Assert.Equal("CORE-OS-SUPPORT", citation.RuleId.Value);
-        Assert.Equal(PolicyRuleState.Unavailable, citation.State);
-        Assert.Equal(PolicyRuleReason.EvidenceValueUnrecognized, citation.Reason);
-        Assert.Equal("unrecognized-lifecycle", Assert.Single(citation.Evidence).EvidenceId.Value);
+        Assert.Equal(["CORE-OS-SUPPORT", "POL-OS-002"], decision.Citations.Select(citation => citation.RuleId.Value));
+        Assert.All(decision.Citations, citation =>
+        {
+            Assert.Equal(PolicyRuleState.Unavailable, citation.State);
+            Assert.Equal(PolicyRuleReason.EvidenceValueUnrecognized, citation.Reason);
+            Assert.Equal("unrecognized-lifecycle", Assert.Single(citation.Evidence).EvidenceId.Value);
+        });
         Assert.Contains("has an unrecognized evidence value.", decision.Explanation, StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData("x86", "windows_11", "supported", "CORE-OS-ARCHITECTURE")]
-    [InlineData("x64", "windows_10", "supported", "CORE-OS-RELEASE")]
-    [InlineData("x64", "windows_11", "unsupported", "CORE-OS-SUPPORT")]
-    public void KnownUnsupportedTargetFactsCannotProduceReadyEvenWithoutOrganizationRules(
-        string architecture, string release, string support, string ruleId)
+    [InlineData("x86", "windows_11", "supported", "CORE-OS-ARCHITECTURE", "requires native x64")]
+    [InlineData("arm64", "windows_11", "supported", "CORE-OS-ARCHITECTURE", "requires native x64")]
+    [InlineData("x64", "windows_10", "supported", "CORE-OS-RELEASE", "requires Windows 11 client")]
+    [InlineData("x64", "windows_server", "supported", "CORE-OS-RELEASE", "requires Windows 11 client")]
+    [InlineData("x64", "windows_other", "supported", "CORE-OS-RELEASE", "requires Windows 11 client")]
+    [InlineData("x64", "windows_11", "unsupported", "CORE-OS-SUPPORT", "Windows 11 servicing scope")]
+    [InlineData("x64", "windows_11", "audit_only", "CORE-OS-SUPPORT", "Windows 11 servicing scope")]
+    public void KnownUnsupportedTargetFactsPreventDeploymentEvenWithoutOrganizationRules(
+        string architecture, string release, string support, string ruleId, string finding)
     {
         var facts = WithFacts(
             Fact("architecture-fact", "system.architecture", EvidenceValue.FromEnum(architecture)),
@@ -230,11 +239,40 @@ public sealed class DispositionTests
 
         var decision = Evaluate(AdvisoryOnlyPolicy(), facts);
 
-        Assert.Equal(Disposition.AlternativeOperatingSystemCandidate, decision.Disposition);
+        Assert.Equal(Disposition.DoNotDeploy, decision.Disposition);
+        Assert.Contains(finding, decision.Explanation, StringComparison.Ordinal);
         var citation = Assert.Single(decision.Citations);
         Assert.Equal(DispositionSource.CoreTarget, citation.Source);
         Assert.Equal(ruleId, citation.RuleId.Value);
         Assert.Equal(PolicyRuleState.Unmet, citation.State);
+    }
+
+    [Theory]
+    [InlineData("processor.windows_11_eligibility", "ineligible", "POL-CPU-001", Disposition.DoNotDeploy)]
+    [InlineData("processor.windows_11_eligibility", "unknown", "POL-CPU-001", Disposition.HumanReviewRequired)]
+    [InlineData("firmware.mode", "bios", "POL-FIRMWARE-001", Disposition.DoNotDeploy)]
+    [InlineData("firmware.mode", "unknown", "POL-FIRMWARE-001", Disposition.HumanReviewRequired)]
+    public void SupportedWindowsDoesNotEstablishHardwareEligibility(
+        string key, string value, string ruleId, Disposition disposition)
+    {
+        var decision = Evaluate(CandidatePolicy(), WithFacts(Fact("hardware-fact", key, EvidenceValue.FromEnum(value))));
+
+        Assert.Equal(disposition, decision.Disposition);
+        var citation = Assert.Single(decision.Citations);
+        Assert.Equal(ruleId, citation.RuleId.Value);
+        Assert.Equal("hardware-fact", Assert.Single(citation.Evidence).EvidenceId.Value);
+    }
+
+    [Fact]
+    public void SecureBootDisabledCitesOnlyTheEnabledStateWhenCapabilityIsEstablished()
+    {
+        var decision = Evaluate(CandidatePolicy(), WithFacts(
+            Fact("secure-boot-disabled", "secure_boot.enabled", EvidenceValue.FromBoolean(false))));
+
+        Assert.Equal(Disposition.RepairAndRetest, decision.Disposition);
+        AssertFailure(Assert.Single(decision.Citations), "POL-SECUREBOOT-002", "secure-boot-disabled");
+        Assert.Equal(PolicyRuleState.Met, Assert.Single(decision.Evaluation.Outcomes,
+            outcome => outcome.Rule.Requirement.RequirementId.Value == "POL-SECUREBOOT-001").State);
     }
 
     [Fact]
@@ -261,7 +299,7 @@ public sealed class DispositionTests
         Disposition.ReadyToPrepare => Evaluate(AdvisoryOnlyPolicy(), ReadyObservations()),
         Disposition.RepairAndRetest => Evaluate(CandidatePolicy(), WithFacts(LowStorage())),
         Disposition.HumanReviewRequired => Evaluate(CandidatePolicy(), WithFacts(StaleLifecycle())),
-        Disposition.AlternativeOperatingSystemCandidate => Evaluate(AdvisoryOnlyPolicy(), WithFacts(
+        Disposition.AlternativeOperatingSystemCandidate => Evaluate(AdvisoryOnlyPolicy(historical: true), WithFacts(
             Fact("other-windows-release", "operating_system.release", EvidenceValue.FromEnum("windows_10")),
             Fact("audit-only-lifecycle", "operating_system.support_state", EvidenceValue.FromEnum("audit_only"), EvidenceClassification.Inferred))),
         Disposition.DoNotDeploy => Evaluate(CandidatePolicy(), WithFacts(
@@ -285,9 +323,9 @@ public sealed class DispositionTests
         Fact("stale-lifecycle", "operating_system.support_state", null, EvidenceClassification.NotAvailable,
             availability: ValueAvailability.Unknown, limitation: "provider_value_stale");
 
-    private static PolicyDocument AdvisoryOnlyPolicy()
+    private static PolicyDocument AdvisoryOnlyPolicy(bool historical = false)
     {
-        var json = JsonNode.Parse(CandidatePolicyJson())!.AsObject();
+        var json = JsonNode.Parse(historical ? HistoricalPolicyJson() : CandidatePolicyJson())!.AsObject();
         var advisory = Assert.Single(json["rules"]!.AsArray(), rule =>
             rule!["id"]!.GetValue<string>() == "POL-BATTERY-003");
         json["rules"] = new JsonArray(advisory!.DeepClone());

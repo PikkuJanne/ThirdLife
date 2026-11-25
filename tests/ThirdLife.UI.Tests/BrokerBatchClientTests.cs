@@ -7,6 +7,7 @@ using ThirdLife.Actions.Registry;
 using ThirdLife.Broker.Protocol;
 using ThirdLife.Broker.Protocol.Transport;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Inventory.Windows;
 using ThirdLife.UI.BrokerClient;
 
 namespace ThirdLife.UI.Tests;
@@ -20,6 +21,32 @@ public sealed class BrokerBatchClientTests
 
         Assert.Equal(BrokerBatchStatus.Unavailable, result.Status);
         Assert.Empty(result.Results);
+    }
+
+    [Theory]
+    [InlineData(WindowsPlatformEligibility.UnsupportedOperatingSystem)]
+    [InlineData(WindowsPlatformEligibility.UnsupportedArchitecture)]
+    [InlineData(WindowsPlatformEligibility.UnverifiedIdentity)]
+    public async Task PlatformRefusalDoesNotInvokeTheLauncher(WindowsPlatformEligibility eligibility)
+    {
+        var platformChecks = 0;
+        var launcherCalls = 0;
+        var client = new BrokerBatchClient(_ =>
+        {
+            launcherCalls++;
+            return Task.FromResult<Process?>(null);
+        }, () =>
+        {
+            platformChecks++;
+            return eligibility;
+        });
+
+        var result = await client.RunAsync(Request());
+
+        Assert.Equal(BrokerBatchStatus.Unavailable, result.Status);
+        Assert.Empty(result.Results);
+        Assert.Equal(1, platformChecks);
+        Assert.Equal(0, launcherCalls);
     }
 
     [Fact]

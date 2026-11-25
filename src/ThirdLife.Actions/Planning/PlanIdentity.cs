@@ -13,6 +13,8 @@ namespace ThirdLife.Actions.Planning;
 
 internal static class PlanIdentity
 {
+    internal const string CurrentVersion = "thirdlife.plan.v2";
+    internal const string LegacyVersion = "thirdlife.plan.v1";
     private static readonly JsonSerializerOptions EvidenceJson = DomainJson.CreateStrictOptions();
 
     public static string PlanHash(
@@ -40,7 +42,7 @@ internal static class PlanIdentity
         using (var writer = new Utf8JsonWriter(buffer))
         {
             writer.WriteStartObject();
-            writer.WriteString("schema_version", "thirdlife.plan.v1");
+            writer.WriteString("schema_version", CurrentVersion);
             WriteSubject(writer, subject);
             WriteDecision(writer, decision);
             if (reason is { } blocked)

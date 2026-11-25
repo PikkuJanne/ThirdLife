@@ -10,6 +10,7 @@ public sealed class OperatingSystemProvider : IInventoryProvider
     private const string VersionSource = "os.dotnet.environment.version";
     private const string EditionSource = "os.kernel32.product_info";
     private const string ArchitectureSource = "os.dotnet.os_architecture";
+    private const string IdentitySource = "os.windows.identity";
     private const string LifecycleSource = "os.lifecycle.catalog";
 
     private readonly IOperatingSystemSource _source;
@@ -37,7 +38,7 @@ public sealed class OperatingSystemProvider : IInventoryProvider
             ProviderPrivilegeRequirement.StandardUser,
             TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(2),
             ProviderNetworkUse.None, evidenceOrigin,
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             new ProviderFailureDefinition(new EvidenceKey("os.provider_status"), "os.provider.status"),
             [
                 Definition("os.version", EvidenceValueKind.Text, VersionSource),
@@ -52,7 +53,7 @@ public sealed class OperatingSystemProvider : IInventoryProvider
                 Definition("os.lifecycle.fresh_through", EvidenceValueKind.Text, LifecycleSource),
                 Definition("os.lifecycle.evaluated_on", EvidenceValueKind.Text, LifecycleSource),
                 Definition("os.lifecycle.release", EvidenceValueKind.Text, LifecycleSource),
-                Definition("os.family", EvidenceValueKind.Enum, LifecycleSource),
+                Definition("os.family", EvidenceValueKind.Enum, IdentitySource),
                 Definition("os.lifecycle.reason", EvidenceValueKind.Enum, LifecycleSource),
             ]);
     }
@@ -86,7 +87,7 @@ public sealed class OperatingSystemProvider : IInventoryProvider
         var evidence = new List<NormalizedEvidence>();
         var version = snapshot.Version.Status == SystemInventorySourceStatus.Available
             ? snapshot.Version.GetRequiredValue() : null;
-        var validVersion = version is { Major: >= 0 and <= 100, Minor: >= 0 and <= 100, Build: > 0 and <= 1_000_000 };
+        var validVersion = WindowsPlatform.IsValidVersion(version);
         if (validVersion)
         {
             evidence.Add(Observed("os.version", EvidenceValue.FromString(
@@ -109,27 +110,25 @@ public sealed class OperatingSystemProvider : IInventoryProvider
             ? NormalizedEvidence.Inferred(new EvidenceKey("os.edition"), EvidenceValue.FromEnum(editionName), sourceReference: EditionSource)
             : Missing("os.edition", EditionSource, SourceLimitation(snapshot.Edition.Status)));
 
-        var architecture = snapshot.Architecture.Status == SystemInventorySourceStatus.Available
-            ? snapshot.Architecture.GetRequiredValue() switch
-            {
-                0 => "x86",
-                5 => "arm32",
-                6 => "ia64",
-                9 => "x64",
-                12 => "arm64",
-                _ => null,
-            } : null;
+        var architecture = WindowsPlatform.GetArchitecture(snapshot.Architecture);
         evidence.Add(architecture is not null
             ? Observed("os.architecture", EvidenceValue.FromEnum(architecture), ArchitectureSource)
             : Missing("os.architecture", ArchitectureSource, SourceLimitation(snapshot.Architecture.Status)));
 
         var date = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
-        var lifecycle = _catalog?.Evaluate(
-            validVersion && version is { Major: 10, Minor: 0 } ? (uint)version.Build : 0,
-            edition ?? 0, architecture, date);
-        AddLifecycle(evidence, lifecycle, date);
+        var identity = WindowsPlatform.Evaluate(snapshot);
+        var lifecycle = identity.Family == "windows_11"
+            ? _catalog?.Evaluate((uint)version!.Build, edition ?? 0, architecture, date)
+            : null;
+        evidence.Add(identity.Family is { } family
+            ? NormalizedEvidence.Inferred(new EvidenceKey("os.family"), EvidenceValue.FromEnum(family), sourceReference: IdentitySource)
+            : Missing("os.family", IdentitySource, SourceLimitation(snapshot.ProductType.Status)));
+        AddLifecycle(evidence, identity, lifecycle, date);
 
-        var statuses = new[] { snapshot.Version.Status, snapshot.Edition.Status, snapshot.Architecture.Status };
+        var statuses = new[]
+        {
+            snapshot.Version.Status, snapshot.Edition.Status, snapshot.Architecture.Status, snapshot.ProductType.Status,
+        };
         if (statuses.Contains(SystemInventorySourceStatus.AccessDenied))
         {
             return ProviderReadResult.AccessDenied(evidence);
@@ -145,23 +144,31 @@ public sealed class OperatingSystemProvider : IInventoryProvider
             : ProviderReadResult.Collected(evidence);
     }
 
-    private static void AddLifecycle(List<NormalizedEvidence> evidence, WindowsLifecycleResult? lifecycle, DateOnly date)
+    private static void AddLifecycle(
+        List<NormalizedEvidence> evidence, WindowsPlatformIdentity identity, WindowsLifecycleResult? lifecycle, DateOnly date)
     {
-        var limitation = lifecycle?.Limitation switch
+        var reason = identity.Eligibility switch
+        {
+            WindowsPlatformEligibility.UnsupportedOperatingSystem => WindowsLifecycleLimitation.UnsupportedOperatingSystem,
+            WindowsPlatformEligibility.UnsupportedArchitecture => WindowsLifecycleLimitation.UnsupportedArchitecture,
+            _ => lifecycle?.Limitation ?? (identity.Family == "windows_11"
+                ? WindowsLifecycleLimitation.MissingData
+                : identity.Limitation),
+        };
+        var limitation = reason switch
         {
             WindowsLifecycleLimitation.StaleData => ProviderLimitation.SourceValueStale,
             WindowsLifecycleLimitation.ContradictoryData => ProviderLimitation.SourceValuesConflict,
             WindowsLifecycleLimitation.MissingData => ProviderLimitation.SourceValueMissing,
-            null => ProviderLimitation.SourceValueMissing,
             _ => ProviderLimitation.SourceValueMalformed,
         };
-        var status = lifecycle?.Status switch
-        {
-            WindowsLifecycleStatus.Supported => "supported",
-            WindowsLifecycleStatus.Unsupported => "unsupported",
-            WindowsLifecycleStatus.AuditOnly => "audit_only",
-            _ => null,
-        };
+        var status = identity.Eligibility is WindowsPlatformEligibility.UnsupportedOperatingSystem or
+            WindowsPlatformEligibility.UnsupportedArchitecture ? "unsupported" : lifecycle?.Status switch
+            {
+                WindowsLifecycleStatus.Supported => "supported",
+                WindowsLifecycleStatus.Unsupported => "unsupported",
+                _ => null,
+            };
         evidence.Add(status is null
             ? Missing("os.support_target", LifecycleSource, limitation)
             : NormalizedEvidence.Inferred(new EvidenceKey("os.support_target"), EvidenceValue.FromEnum(status), sourceReference: LifecycleSource));
@@ -171,11 +178,8 @@ public sealed class OperatingSystemProvider : IInventoryProvider
         AddText(evidence, "os.lifecycle.fresh_through", FormatDate(lifecycle?.FreshThrough), limitation);
         AddText(evidence, "os.lifecycle.evaluated_on", FormatDate(date), limitation);
         AddText(evidence, "os.lifecycle.release", lifecycle?.Release, limitation);
-        evidence.Add(lifecycle?.Family is { } family
-            ? NormalizedEvidence.Inferred(new EvidenceKey("os.family"), EvidenceValue.FromEnum(family), sourceReference: LifecycleSource)
-            : Missing("os.family", LifecycleSource, limitation));
         evidence.Add(NormalizedEvidence.Inferred(new EvidenceKey("os.lifecycle.reason"),
-            EvidenceValue.FromEnum((lifecycle?.Limitation ?? WindowsLifecycleLimitation.MissingData).ToString()),
+            EvidenceValue.FromEnum(reason.ToString()),
             sourceReference: LifecycleSource));
     }
 

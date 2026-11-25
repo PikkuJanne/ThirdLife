@@ -1,6 +1,7 @@
 using System.Security.Principal;
 using System.Xml;
 using System.Xml.Linq;
+using ThirdLife.Inventory.Windows;
 using ThirdLife.UI.Shell;
 
 namespace ThirdLife.UI.Tests;
@@ -18,6 +19,30 @@ public sealed class StartupSafetyTests
         Assert.Equal(expected, StartupSafety.AllowsShell(access));
         Assert.Contains("without Run as administrator", StartupSafety.RecoveryMessage, StringComparison.Ordinal);
         Assert.Contains("No job was opened", StartupSafety.RecoveryMessage, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(WindowsPlatformEligibility.UnsupportedOperatingSystem, StartupAccess.StandardUser, "outside that scope")]
+    [InlineData(WindowsPlatformEligibility.UnsupportedArchitecture, StartupAccess.StandardUser, "different system architecture")]
+    [InlineData(WindowsPlatformEligibility.UnverifiedIdentity, StartupAccess.StandardUser, "could not verify")]
+    [InlineData(WindowsPlatformEligibility.Supported, StartupAccess.Elevated, "standard-user session")]
+    [InlineData(WindowsPlatformEligibility.Supported, StartupAccess.Unknown, "standard-user session")]
+    [InlineData(WindowsPlatformEligibility.Supported, StartupAccess.StandardUser, null)]
+    public void RefusalNeverInvokesLiveWorkspaceStartup(
+        WindowsPlatformEligibility platform, StartupAccess access, string? expectedRefusal)
+    {
+        var opened = false;
+        var refusal = StartupSafety.OpenShell(platform, access, () => opened = true);
+
+        Assert.Equal(expectedRefusal is null, opened);
+        if (expectedRefusal is null)
+        {
+            Assert.Null(refusal);
+        }
+        else
+        {
+            Assert.Contains(expectedRefusal, refusal, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

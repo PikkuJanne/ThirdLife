@@ -1,0 +1,48 @@
+schema_version: thirdlife.profile.v1
+profile_id: job-seeker
+version: 0.1.0-candidate.1
+status: candidate
+synthetic_data: true
+classification: PUBLIC_REFERENCE
+policy:
+  id: community-laptop-policy
+  version: 0.1.0-candidate.1
+catalog:
+  id: community-laptop-candidate
+  version: 0.1.0-candidate.1
+workshop:
+  capabilities:
+    - capability_id: web_browsing
+      intent: essential
+      reason_code: job_search_web_access
+    - capability_id: document_editing
+      intent: essential
+      reason_code: job_application_documents
+    - capability_id: pdf_reading
+      intent: essential
+      reason_code: job_document_reading
+    - capability_id: video_calling
+      intent: essential
+      reason_code: remote_interview_participation
+recipient:
+  choices:
+    - choice_id: job-seeker-browser-preference
+      choice_type: browser_preference
+      state: deferred
+      requires_recipient_presence: true
+      workshop_action: false
+    - choice_id: job-seeker-accessibility-preferences
+      choice_type: accessibility_preferences
+      state: deferred
+      requires_recipient_presence: true
+      workshop_action: false
+    - choice_id: job-seeker-cloud-account-sign-in
+      choice_type: cloud_account_sign_in
+      state: deferred
+      requires_recipient_presence: true
+      workshop_action: false
+    - choice_id: job-seeker-backup-onboarding
+      choice_type: backup_onboarding
+      state: deferred
+      requires_recipient_presence: true
+      workshop_action: false

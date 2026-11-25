@@ -4,6 +4,7 @@ using System.IO.Pipes;
 using System.Security;
 using ThirdLife.Broker.Protocol;
 using ThirdLife.Broker.Protocol.Transport;
+using ThirdLife.Inventory.Windows;
 
 namespace ThirdLife.Broker;
 
@@ -12,9 +13,17 @@ internal static class Program
     private const int Rejected = 2;
     private const int Interrupted = 3;
 
-    private static async Task<int> Main(string[] args)
+    private static Task<int> Main(string[] args)
     {
         var startup = Stopwatch.GetTimestamp();
+        return RunOnSupportedPlatform(WindowsPlatform.CheckCurrent(), () => RunAsync(args, startup));
+    }
+
+    internal static Task<int> RunOnSupportedPlatform(WindowsPlatformEligibility platform, Func<Task<int>> run) =>
+        platform == WindowsPlatformEligibility.Supported ? run() : Task.FromResult(Rejected);
+
+    private static async Task<int> RunAsync(string[] args, long startup)
+    {
         var ticket = BrokerLaunchTicket.TryParse(args);
         if (ticket is null || ticket.ClientProcessId == Environment.ProcessId ||
             !BrokerProtocolLimits.IsWithinWindow(ticket.ExpiresAtUtc, TimeProvider.System.GetUtcNow()))

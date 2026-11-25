@@ -63,6 +63,31 @@ toolchain, and remaining proof are documented in the
   identifies a Sandbox startup blocker independent of the governed mounts.
   The distinct-account test remains unobserved and no host policy was changed.
 
+## Windows 11 platform reconciliation
+
+The draft incorporates integrated `main` at `af51598904b60f6f4fadf0bc09efe6857a51a95b`.
+Both retained broker commits are ancestors of this checkpoint. The client checks the shared
+platform contract before identity lookup or launch. The broker independently checks it before
+ticket processing, token checks or IPC. The default trusted launcher remains unavailable.
+Synthetic refusal cases covered unsupported OS, unsupported native architecture and
+unverified identity at each boundary.
+
+- The pre-reconciliation IPC selection passed 29 cases in 8.074 s. Targeted
+  with `-Restore` and the Broker and Broker.SecurityTests projects passed 1,248 .NET
+  tests, including Quick, in 78.901 s on tree `30b2427c113b6c30b82a128380ce5ec0cdc2e44b`.
+- The `test_sandbox_harness.py` unittest selection passed 41 static and function cases
+  in 55.167 s. The distinct-account guest was outside this reconciliation run.
+- On the active unelevated Windows 11 Pro 26H2 native-x64 host, build 26300.9974,
+  `UnelevatedApphostRejectsAValidTicketWithoutStartingAPipe` passed in 1.881 s.
+  Two simulated consent-path cases passed in 1.736 s.
+- The exercised Broker apphost SHA-256 was
+  `e339183b291080f53b3103ba0ce7c7a0b6817fe8bff15acd279f94f6c23590a8`.
+  The Broker assembly was `74e6370d888e537c0b997f9cf50acb01bb5cc1be83a651dabfc23391e365ceca`
+  and UI assembly was `7a5b3ea94eb920aff32bf6d0e91e4b99de1caf313fade3df18c5a4e2041d3052`.
+
+The reconciliation covers platform admission. Trusted elevated startup, real UAC and
+recovery, and the distinct-account guest remain TL-0311 blockers.
+
 ## Remaining evidence
 
 - Trusted, fixed elevated startup before .NET hosting or any broker work.

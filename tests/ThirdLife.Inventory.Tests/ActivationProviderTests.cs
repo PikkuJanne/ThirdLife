@@ -28,7 +28,7 @@ public sealed class ActivationProviderTests
         Assert.Equal(ProviderNetworkUse.None, provider.Descriptor.NetworkUse);
         Assert.Equal(TimeSpan.FromSeconds(5), provider.Descriptor.Timeout);
         Assert.Equal(
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             provider.Descriptor.SupportedOperatingSystems);
         Assert.Empty(Assert.Single(typeof(ActivationProvider).GetConstructors()).GetParameters());
     }

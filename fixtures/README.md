@@ -42,9 +42,11 @@ unknown and cannot satisfy a requirement.
 ## Candidate policy, catalog, and profile JSON
 
 The runtime validators read UTF-8 JSON for the candidate policy, catalog, and profiles.
-Their JSON fixtures encode the exact data in the approved candidate YAML files.
-Bundle validation checks the projections byte for byte. The TL-0007 approval
-and fixture-set digest cover the original YAML inputs.
+Bundle validation checks the JSON projections byte for byte. The TL-0007 approval
+and original fixture-set digest cover the original YAML inputs, including the
+archived policy and profiles in their historical directories. The job fixtures
+retain their original policy and profile references. The current policy and
+profile revisions apply the [Windows 11–only amendment](../docs/amendments/2026-11-25-windows-11-only.md).
 
 - [Policy schema](../schemas/policy.schema.json), [policy JSON](policies/community-laptop-policy.json), and [policy YAML](policies/community-laptop-policy.yaml).
 - [Catalog schema](../schemas/catalog.schema.json), [catalog JSON](catalog/catalog.json), and [catalog YAML](catalog/catalog.yaml).

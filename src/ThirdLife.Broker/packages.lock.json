@@ -23,6 +23,12 @@
       "thirdlife.core": {
         "type": "Project"
       },
+      "thirdlife.inventory": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Core": "[1.0.0, )"
+        }
+      },
       "thirdlife.policy": {
         "type": "Project",
         "dependencies": {

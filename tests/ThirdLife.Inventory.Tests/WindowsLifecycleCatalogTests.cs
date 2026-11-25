@@ -4,14 +4,13 @@ namespace ThirdLife.Inventory.Tests;
 
 public sealed class WindowsLifecycleCatalogTests
 {
-    private static readonly DateOnly EvaluationDate = new(2026, 9, 30);
+    private static readonly DateOnly EvaluationDate = new(2026, 11, 25);
 
     [Theory]
-    [InlineData(26100U, 0x65U, "24H2")]
+    [InlineData(26100U, 0x04U, "24H2")]
     [InlineData(26200U, 0x30U, "25H2")]
     [InlineData(26300U, 0x30U, "26H2")]
-    [InlineData(22631U, 0x04U, "23H2")]
-    [InlineData(22631U, 0x79U, "23H2")]
+    [InlineData(26200U, 0x79U, "25H2")]
     public void CurrentExactWindows11MappingsRetainAttributableRevision(
         uint build,
         uint edition,
@@ -22,9 +21,9 @@ public sealed class WindowsLifecycleCatalogTests
         Assert.Equal(WindowsLifecycleStatus.Supported, result.Status);
         Assert.Equal(WindowsLifecycleLimitation.None, result.Limitation);
         Assert.Equal("microsoft.windows-client.release-health", result.SourceId);
-        Assert.Equal("thirdlife.windows-lifecycle.2026-09-30.v1", result.Revision);
+        Assert.Equal("thirdlife.windows-lifecycle.2026-11-25.v1", result.Revision);
         Assert.Equal(EvaluationDate, result.AsOf);
-        Assert.Equal(new DateOnly(2026, 10, 30), result.FreshThrough);
+        Assert.Equal(new DateOnly(2026, 12, 25), result.FreshThrough);
         Assert.Equal(release, result.Release);
         Assert.Equal("windows_11", result.Family);
     }
@@ -57,6 +56,9 @@ public sealed class WindowsLifecycleCatalogTests
     [InlineData(22621U, 0x30U)]
     [InlineData(22621U, 0x04U)]
     [InlineData(22631U, 0x30U)]
+    [InlineData(22631U, 0x04U)]
+    [InlineData(26100U, 0x30U)]
+    [InlineData(26100U, 0x65U)]
     public void EndedWindows11ReleaseAndEditionPairsAreUnsupported(uint build, uint edition)
     {
         var result = WindowsLifecycleCatalog.Current.Evaluate(build, edition, "x64", EvaluationDate);
@@ -69,39 +71,45 @@ public sealed class WindowsLifecycleCatalogTests
     [Fact]
     public void PublishedEndDateAndFollowingDayAreDistinguishedByControlledDate()
     {
-        var catalog = WindowsLifecycleCatalog.Current;
+        // The previously reviewed 24H2 Home/Pro boundary precedes the refresh date.
+        // Exercise the same inclusive comparison with controlled rows inside the new snapshot window.
+        var end = EvaluationDate.AddDays(14);
+        var home = CurrentEntry() with { SupportEnds = end };
+        var enterprise = CurrentEntry() with { EditionGroup = WindowsLifecycleEditionGroup.EnterpriseAndEducation };
+        var catalog = Catalog([home, enterprise]);
 
         Assert.Equal(WindowsLifecycleStatus.Supported,
-            catalog.Evaluate(26100, 0x30, "x64", new(2026, 10, 13)).Status);
+            catalog.Evaluate(home.Build, 0x30, "x64", end).Status);
         Assert.Equal(WindowsLifecycleStatus.Unsupported,
-            catalog.Evaluate(26100, 0x30, "x64", new(2026, 10, 14)).Status);
+            catalog.Evaluate(home.Build, 0x30, "x64", end.AddDays(1)).Status);
         Assert.Equal(WindowsLifecycleStatus.Supported,
-            catalog.Evaluate(26100, 0x04, "x64", new(2026, 10, 14)).Status);
+            catalog.Evaluate(home.Build, 0x04, "x64", end.AddDays(1)).Status);
     }
 
     [Theory]
-    [InlineData(10240U, "1507")]
-    [InlineData(10586U, "1511")]
-    [InlineData(14393U, "1607")]
-    [InlineData(15063U, "1703")]
-    [InlineData(16299U, "1709")]
-    [InlineData(17134U, "1803")]
-    [InlineData(17763U, "1809")]
-    [InlineData(18362U, "1903")]
-    [InlineData(18363U, "1909")]
-    [InlineData(19041U, "2004")]
-    [InlineData(19042U, "20H2")]
-    [InlineData(19043U, "21H1")]
-    [InlineData(19044U, "21H2")]
-    [InlineData(19045U, "22H2")]
-    public void KnownWindows10BuildsRemainAuditOnlyWithoutAnEsuOverride(uint build, string release)
+    [InlineData(10240U)]
+    [InlineData(10586U)]
+    [InlineData(14393U)]
+    [InlineData(15063U)]
+    [InlineData(16299U)]
+    [InlineData(17134U)]
+    [InlineData(17763U)]
+    [InlineData(18362U)]
+    [InlineData(18363U)]
+    [InlineData(19041U)]
+    [InlineData(19042U)]
+    [InlineData(19043U)]
+    [InlineData(19044U)]
+    [InlineData(19045U)]
+    public void KnownWindows10BuildsHaveNoLiveWindows11ServicingMapping(uint build)
     {
         var result = WindowsLifecycleCatalog.Current.Evaluate(build, 0x30, "x64", EvaluationDate);
 
-        Assert.Equal(WindowsLifecycleStatus.AuditOnly, result.Status);
-        Assert.Equal(WindowsLifecycleLimitation.Windows10AuditOnly, result.Limitation);
-        Assert.Equal("windows_10", result.Family);
-        Assert.Equal(release, result.Release);
+        Assert.Equal(WindowsLifecycleStatus.Unknown, result.Status);
+        Assert.Equal(WindowsLifecycleLimitation.UnrecognizedBuild, result.Limitation);
+        Assert.False(WindowsLifecycleCatalog.Current.RecognizesWindows11Build(build));
+        Assert.Null(result.Family);
+        Assert.Null(result.Release);
     }
 
     [Theory]
@@ -110,10 +118,9 @@ public sealed class WindowsLifecycleCatalogTests
     [InlineData(21999U)]
     [InlineData(26101U)]
     [InlineData(26220U)]
-    [InlineData(28000U)]
     [InlineData(99999U)]
     [InlineData(uint.MaxValue)]
-    public void NoRangeInferenceRecognizesUnknownOrExcludedBuilds(uint build)
+    public void NoRangeInferenceRecognizesUnknownBuilds(uint build)
     {
         var result = WindowsLifecycleCatalog.Current.Evaluate(build, 0x30, "x64", EvaluationDate);
 
@@ -171,21 +178,19 @@ public sealed class WindowsLifecycleCatalogTests
     }
 
     [Fact]
-    public void ThirtyDayFreshnessWindowIsBoundedAndStaleWindows10AlsoRemainsUnknown()
+    public void ThirtyDayFreshnessWindowWithholdsSupportButRetainsKnownBuildIdentity()
     {
         var catalog = WindowsLifecycleCatalog.Current;
 
         Assert.Equal(WindowsLifecycleStatus.Supported,
             catalog.Evaluate(26200, 0x30, "x64", EvaluationDate.AddDays(30)).Status);
-        foreach (var build in new uint[] { 26200, 19045 })
-        {
-            var stale = catalog.Evaluate(build, 0x30, "x64", EvaluationDate.AddDays(31));
-            Assert.Equal(WindowsLifecycleStatus.Unknown, stale.Status);
-            Assert.Equal(WindowsLifecycleLimitation.StaleData, stale.Limitation);
-            Assert.NotNull(stale.SourceId);
-            Assert.NotNull(stale.Revision);
-            Assert.Equal(EvaluationDate, stale.AsOf);
-        }
+        var stale = catalog.Evaluate(26200, 0x30, "x64", EvaluationDate.AddDays(31));
+        Assert.Equal(WindowsLifecycleStatus.Unknown, stale.Status);
+        Assert.Equal(WindowsLifecycleLimitation.StaleData, stale.Limitation);
+        Assert.NotNull(stale.SourceId);
+        Assert.NotNull(stale.Revision);
+        Assert.Equal(EvaluationDate, stale.AsOf);
+        Assert.True(catalog.RecognizesWindows11Build(26200));
     }
 
     [Fact]
@@ -198,10 +203,11 @@ public sealed class WindowsLifecycleCatalogTests
     }
 
     [Theory]
-    [InlineData(null, "thirdlife.windows-lifecycle.2026-09-30.v1")]
+    [InlineData(null, "thirdlife.windows-lifecycle.2026-11-25.v1")]
     [InlineData("microsoft.windows-client.release-health", null)]
     [InlineData("unrecognized-source", "thirdlife.windows-lifecycle.2026-09-30.v1")]
     [InlineData("microsoft.windows-client.release-health", "thirdlife.windows-lifecycle.2027-01-01.v2")]
+    [InlineData("microsoft.windows-client.release-health", "thirdlife.windows-lifecycle.2026-09-30.v1")]
     [InlineData("microsoft.windows-client.release-health", "unrecognized-revision")]
     public void MissingAndUnknownSourceOrRevisionCannotPassOrPublishUnverifiedMetadata(
         string? source,

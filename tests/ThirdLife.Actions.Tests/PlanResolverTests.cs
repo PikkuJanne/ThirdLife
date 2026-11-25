@@ -13,13 +13,13 @@ namespace ThirdLife.Actions.Tests;
 
 public sealed class PlanResolverTests
 {
-    private const string PolicyReference = "community-laptop-policy@0.1.0-candidate.1";
+    private const string PolicyReference = "community-laptop-policy@0.1.0-candidate.2";
     private const string VideoCalling = "video_calling";
     private const string PolicyJson = """
         {
-          "schema_version": "thirdlife.policy.v1",
+          "schema_version": "thirdlife.policy.v2",
           "policy_id": "community-laptop-policy",
-          "version": "0.1.0-candidate.1",
+          "version": "0.1.0-candidate.2",
           "status": "candidate",
           "synthetic_data": true,
           "classification": "PUBLIC_REFERENCE",
@@ -64,9 +64,9 @@ public sealed class PlanResolverTests
     private static readonly PolicyDocument Policy = PolicySchema.Parse(Encoding.UTF8.GetBytes(PolicyJson.ReplaceLineEndings("\n")));
 
     [Theory]
-    [InlineData("basic", false, "c53f588c6406222f9b249055c72246d7ce8f6f38ab2f61b37ba57e73a60146a3")]
-    [InlineData("basic", true, "0e912b4aa3d5c1480299a9a4749c633fe1c8376151bcae6820033db0790b3e1b")]
-    [InlineData("job-seeker", false, "7a37bda000ca4f86ad8102050914540010f839249d2e195b78872e013b6cfe58")]
+    [InlineData("basic", false, "3a8395258a910c6c70ce682908c6bc57cfd84a35604c7b0a879a8a50d14bdf52")]
+    [InlineData("basic", true, "464bcafc17b32a0d3e97326088f7170a86c1aa46f90206aad39bbb64d631bfe8")]
+    [InlineData("job-seeker", false, "1b496fde1cadc3b12b5c05eb0549e229b1644f610e91c75f77f843a1698c1c4c")]
     public void ResolvesTheGovernedSyntheticProfileToAnOrderedNoOpPlan(string fixture, bool selectVideo, string expectedPlanSha256)
     {
         var profile = ProfileSchema.Parse(ReadFixture(fixture), Catalog);
@@ -230,7 +230,24 @@ public sealed class PlanResolverTests
         var plan = Resolve(Store(observations), observations, selected: [VideoCalling]);
 
         AssertBlocked(PlanBlockReason.PolicyBlocksPreparation, plan);
-        Assert.Equal(Disposition.AlternativeOperatingSystemCandidate, plan.PolicyDecision?.Disposition);
+        Assert.Equal(Disposition.DoNotDeploy, plan.PolicyDecision?.Disposition);
+    }
+
+    [Fact]
+    public void HistoricalPolicyCannotProduceAPlanEvenWithMatchingProfileAndPassingEvidence()
+    {
+        var legacy = PolicySchema.Parse(Encoding.UTF8.GetBytes(PolicyJson
+            .Replace(PolicySchema.Version, PolicySchema.LegacyVersion, StringComparison.Ordinal)
+            .Replace("0.1.0-candidate.2", "0.1.0-candidate.1", StringComparison.Ordinal)));
+        var legacyProfile = ProfileSchema.Parse(ReadFixture("basic-v1"), Catalog);
+        var intake = CreateIntake("historical", "community-laptop-policy@0.1.0-candidate.1");
+        var observations = ReadyObservations(intake);
+        var job = Store(observations, intakes: [intake], decisions: [EvaluateGate(intake)]);
+
+        var plan = PlanResolver.Resolve(job, legacy, legacyProfile, Catalog, observations, [], AsOfUtc);
+
+        AssertBlocked(PlanBlockReason.PolicyNotApplicable, plan);
+        Assert.Null(plan.PolicyDecision);
     }
 
     [Fact]
@@ -272,7 +289,7 @@ public sealed class PlanResolverTests
     public void RequiresThePolicyIdAndVersionFromTheProfile()
     {
         var profileJson = JsonNode.Parse(ReadFixture("basic"))!;
-        profileJson["policy"]!["version"] = "0.1.0-candidate.2";
+        profileJson["policy"]!["version"] = "0.1.0-candidate.1";
         var alternate = ProfileSchema.Parse(Encoding.UTF8.GetBytes(profileJson.ToJsonString()), Catalog);
         var observations = ReadyObservations();
 
@@ -434,7 +451,7 @@ public sealed class PlanResolverTests
 
     private static StoredJob StoreWithDifferentGatePolicy(IReadOnlyList<Observation> observations)
     {
-        var intake = CreateIntake("current", "community-laptop-policy@0.1.0-candidate.2");
+        var intake = CreateIntake("current", "community-laptop-policy@0.1.0-candidate.1");
         return Store(observations, intakes: [intake], decisions: [EvaluateGate(intake)]);
     }
 

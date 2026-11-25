@@ -8,6 +8,7 @@ using ThirdLife.Actions.Registry;
 using ThirdLife.Broker.Protocol;
 using ThirdLife.Broker.Protocol.Transport;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Inventory.Windows;
 
 namespace ThirdLife.Broker.Tests;
 
@@ -344,10 +345,28 @@ public sealed class IpcIntegrationTests
         Assert.IsType<BrokerHelloAck>(Assert.Single(responses));
     }
 
+    [Theory]
+    [InlineData(WindowsPlatformEligibility.UnsupportedOperatingSystem)]
+    [InlineData(WindowsPlatformEligibility.UnsupportedArchitecture)]
+    [InlineData(WindowsPlatformEligibility.UnverifiedIdentity)]
+    public async Task PlatformRefusalStopsBeforeBrokerStartup(WindowsPlatformEligibility eligibility)
+    {
+        var startupCalls = 0;
+        var result = await Program.RunOnSupportedPlatform(eligibility, () =>
+        {
+            startupCalls++;
+            return Task.FromResult(0);
+        });
+
+        Assert.Equal(2, result);
+        Assert.Equal(0, startupCalls);
+    }
+
     [Fact]
     [Trait("Category", "ActiveMachine")]
     public async Task UnelevatedApphostRejectsAValidTicketWithoutStartingAPipe()
     {
+        Assert.Equal(WindowsPlatformEligibility.Supported, WindowsPlatform.CheckCurrent());
         Assert.False(WindowsBrokerPeer.CurrentIdentity().IsElevated);
         var apphost = Path.Combine(AppContext.BaseDirectory, "ThirdLife.Broker.exe");
         Assert.True(File.Exists(apphost), "The built broker apphost is required.");

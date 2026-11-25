@@ -1,7 +1,7 @@
 {
-  "schema_version": "thirdlife.policy.v1",
+  "schema_version": "thirdlife.policy.v2",
   "policy_id": "community-laptop-policy",
-  "version": "0.1.0-candidate.1",
+  "version": "0.1.0-candidate.2",
   "status": "candidate",
   "synthetic_data": true,
   "classification": "PUBLIC_REFERENCE",
@@ -48,7 +48,7 @@
       },
       "decision": {
         "blocks_ready": true,
-        "unmet_disposition": "alternative_operating_system_candidate",
+        "unmet_disposition": "do_not_deploy",
         "unavailable_disposition": "human_review_required"
       }
     },
@@ -63,7 +63,7 @@
       },
       "decision": {
         "blocks_ready": true,
-        "unmet_disposition": "alternative_operating_system_candidate",
+        "unmet_disposition": "do_not_deploy",
         "unavailable_disposition": "human_review_required"
       }
     },
@@ -78,7 +78,7 @@
       },
       "decision": {
         "blocks_ready": true,
-        "unmet_disposition": "alternative_operating_system_candidate",
+        "unmet_disposition": "do_not_deploy",
         "unavailable_disposition": "human_review_required"
       }
     },
@@ -93,7 +93,7 @@
       },
       "decision": {
         "blocks_ready": true,
-        "unmet_disposition": "alternative_operating_system_candidate",
+        "unmet_disposition": "do_not_deploy",
         "unavailable_disposition": "human_review_required"
       }
     },
@@ -217,7 +217,7 @@
       },
       "decision": {
         "blocks_ready": true,
-        "unmet_disposition": "alternative_operating_system_candidate",
+        "unmet_disposition": "do_not_deploy",
         "unavailable_disposition": "human_review_required"
       }
     },

@@ -8,6 +8,15 @@ namespace ThirdLife.Core.Tests;
 public sealed class VocabularySerializationTests
 {
     [Fact]
+    public void CurrentDispositionsExcludeTheHistoricalValueWithoutRenumberingIt()
+    {
+        Assert.Equal([Disposition.ReadyToPrepare, Disposition.RepairAndRetest, Disposition.HumanReviewRequired, Disposition.DoNotDeploy],
+            Enum.GetValues<Disposition>().Where(DispositionVocabulary.IsCurrent));
+        Assert.Equal(4, (int)Disposition.AlternativeOperatingSystemCandidate);
+        Assert.Equal(5, (int)Disposition.DoNotDeploy);
+    }
+
+    [Fact]
     public void EveryGovernedEnumHasOneExactStableWireName()
     {
         AssertWireNames(new Dictionary<PrivacyClassification, string>

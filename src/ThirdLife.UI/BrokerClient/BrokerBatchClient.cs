@@ -6,6 +6,7 @@ using System.Security;
 using System.Text.Json;
 using ThirdLife.Broker.Protocol;
 using ThirdLife.Broker.Protocol.Transport;
+using ThirdLife.Inventory.Windows;
 
 namespace ThirdLife.UI.BrokerClient;
 
@@ -26,6 +27,7 @@ public sealed class BrokerBatchClient
 {
     private const int WindowsConsentDeclined = 1223;
     private readonly Func<BrokerLaunchTicket, Task<Process?>> _launch;
+    private readonly Func<WindowsPlatformEligibility> _checkPlatform;
     private int _active;
 
     public BrokerBatchClient() : this(static _ => Task.FromResult<Process?>(null))
@@ -33,8 +35,13 @@ public sealed class BrokerBatchClient
         // See docs/security/broker-launch.md for the trust gap before managed broker startup.
     }
 
-    internal BrokerBatchClient(Func<BrokerLaunchTicket, Task<Process?>> launch) =>
+    internal BrokerBatchClient(
+        Func<BrokerLaunchTicket, Task<Process?>> launch,
+        Func<WindowsPlatformEligibility>? checkPlatform = null)
+    {
         _launch = launch ?? throw new ArgumentNullException(nameof(launch));
+        _checkPlatform = checkPlatform ?? WindowsPlatform.CheckCurrent;
+    }
 
     public async Task<BrokerBatchResult> RunAsync(BrokerRequest request, IProgress<BrokerProgress>? progress = null,
         CancellationToken cancellationToken = default)
@@ -57,7 +64,8 @@ public sealed class BrokerBatchClient
         {
             var now = TimeProvider.System.GetUtcNow();
             var envelope = request.Envelope;
-            if (!BrokerProtocolLimits.IsWithinWindow(envelope.ExpiresAtUtc, now))
+            if (!BrokerProtocolLimits.IsWithinWindow(envelope.ExpiresAtUtc, now) ||
+                _checkPlatform() != WindowsPlatformEligibility.Supported)
             {
                 return new BrokerBatchResult(BrokerBatchStatus.Unavailable, []);
             }

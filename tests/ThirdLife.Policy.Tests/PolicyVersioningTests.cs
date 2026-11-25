@@ -37,7 +37,7 @@ public sealed class PolicyVersioningTests
         Assert.Equal(expectedHash, restored.Document.ContentSha256);
         Assert.Equal(snapshot.Document.Version, withWhitespace.Document.Version);
         Assert.NotEqual(expectedHash, withWhitespace.Document.ContentSha256);
-        Assert.Equal("0.1.0-candidate.1", restored.Document.Version);
+        Assert.Equal("0.1.0-candidate.2", restored.Document.Version);
     }
 
     [Fact]
@@ -96,7 +96,8 @@ public sealed class PolicyVersioningTests
     [Fact]
     public void HistoricalReportRemainsReproducibleAfterAnExplicitReevaluation()
     {
-        var older = PolicySnapshot.Parse(CandidatePolicyJson());
+        var older = PolicySnapshot.Restore(HistoricalPolicyJson(),
+            "967ef27449426a99f001ff09cd11b5e637b62a3f1e33566dd935bb8fd876ac88");
         var evidence = ReadyObservations();
         var ids = EvidenceIds(evidence);
         var prior = Capture(older, Evaluate(older, evidence), ids, EvaluationTime);
@@ -116,6 +117,9 @@ public sealed class PolicyVersioningTests
         Assert.Equal(prior.AssessmentId, subsequent.AssessmentId);
         Assert.Equal(prior.JobId, subsequent.JobId);
         Assert.Equal(prior.EvidenceIds.AsEnumerable(), subsequent.EvidenceIds.AsEnumerable());
+        Assert.False(older.Document.IsCurrentSchema);
+        Assert.True(updated.Document.IsCurrentSchema);
+        Assert.NotEqual(prior.PolicyVersion, subsequent.PolicyVersion);
         Assert.Equal(older.Document.PolicyId, prior.PolicyId);
         Assert.Equal(older.Document.Version, prior.PolicyVersion);
         Assert.Equal(updated.Document.Version, subsequent.PolicyVersion);
@@ -126,6 +130,38 @@ public sealed class PolicyVersioningTests
         Assert.Equal(prior.Explanation, historicDecision.Explanation);
         Assert.Equal(prior.RuleReport, PolicyRuleReport.Render(historicDecision, includeExceptionAttribution: false));
         Assert.Equal(originalOutput, JsonSerializer.Serialize(prior));
+    }
+
+    [Fact]
+    public void ArchivedWindows10DispositionRetainsItsTokenAndReplaysUnderItsOriginalPolicy()
+    {
+        const string originalDigest = "967ef27449426a99f001ff09cd11b5e637b62a3f1e33566dd935bb8fd876ac88";
+        var archivedBytes = HistoricalPolicyJson();
+        var oldPolicy = PolicySnapshot.Restore(archivedBytes, originalDigest);
+        var evidence = ReadyObservations().Where(fact =>
+                fact.EvidenceKey.Value is not ("operating_system.release" or "operating_system.support_state"))
+            .Append(Fact("legacy-family", "operating_system.release", EvidenceValue.FromEnum("windows_10")))
+            .Append(Fact("legacy-support", "operating_system.support_state", EvidenceValue.FromEnum("audit_only")))
+            .ToArray();
+
+        var oldResult = Evaluate(oldPolicy, evidence);
+        var oldRecord = Capture(oldPolicy, oldResult, EvidenceIds(evidence), EvaluationTime);
+        var savedJson = JsonSerializer.Serialize(oldRecord);
+        var loaded = JsonSerializer.Deserialize<PolicyDecisionRecord>(savedJson)!;
+        var current = PolicySnapshot.Parse(CandidatePolicyJson());
+        var newResult = Evaluate(current, evidence);
+
+        Assert.Equal(Disposition.AlternativeOperatingSystemCandidate, loaded.Disposition);
+        Assert.Contains("\"Disposition\":\"alternative_operating_system_candidate\"", savedJson, StringComparison.Ordinal);
+        Assert.Equal("0.1.0-candidate.1", loaded.PolicyVersion);
+        Assert.Equal(originalDigest, loaded.PolicySha256);
+        Assert.Equal(oldResult.Explanation, loaded.Explanation);
+        Assert.Equal(archivedBytes, oldPolicy.Utf8Json.AsEnumerable());
+        Assert.Equal(Disposition.DoNotDeploy, newResult.Disposition);
+        Assert.Contains("requires Windows 11 client", newResult.Explanation, StringComparison.Ordinal);
+        Assert.DoesNotContain("alternative operating system", newResult.Explanation, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(savedJson, JsonSerializer.Serialize(loaded));
+        Assert.Contains(evidence, fact => fact.Value?.StringValue == "audit_only");
     }
 
     [Fact]
@@ -276,7 +312,6 @@ public sealed class PolicyVersioningTests
     private static byte[] NewPolicyBytes()
     {
         var document = JsonNode.Parse(CandidatePolicyJson())!.AsObject();
-        document["version"] = "0.1.0-candidate.2";
         FindStorageRule(document)["condition"]!["value"] = 206_158_430_208L;
         return Encoding.UTF8.GetBytes(document.ToJsonString());
     }

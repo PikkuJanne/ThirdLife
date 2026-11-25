@@ -20,7 +20,7 @@ to actual device checks.
 
 The workflow does not erase donor media, repair an existing personal computer, certify a device, diagnose every intermittent fault, or prove future service life. Automation, fixtures, constraints, and a single manual run cannot prove long-term hardware reliability or cross-hardware compatibility. A result describes only the exact job, machine, environment, specification revision, time, procedure, and evidence recorded.
 
-The normal target is supported Windows 11 x64. An unsupported operating system, processor, TPM state, Secure Boot state, activation state, ownership control, or management state must remain visible and may block normal readiness. This procedure never authorizes a bypass.
+New live tests run on Windows 11 client on native x64. Servicing, processor eligibility, TPM state, Secure Boot capability and state, activation, ownership, and management evidence remain distinct and can block preparation. This procedure never authorizes a bypass.
 
 ## 2. Invocation, preconditions, and safety stops
 

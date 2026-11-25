@@ -89,7 +89,7 @@ public sealed class StorageProvider : IInventoryProvider
             TimeSpan.FromSeconds(5),
             ProviderNetworkUse.None,
             origin,
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             new ProviderFailureDefinition(new EvidenceKey("storage.provider_status"), "storage.provider.status"),
             definitions);
     }

@@ -1,8 +1,14 @@
+using System.IO;
+using System.Text;
+using System.Text.Json.Nodes;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
+using ThirdLife.Policy.Decisions;
+using ThirdLife.Policy.Versioning;
+using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Features.Disposition;
 using ThirdLife.UI.Shell;
 using static ThirdLife.UI.Tests.AuditWorkflowTests;
@@ -69,11 +75,122 @@ public sealed class AuditPolicyEvidenceTests
 
         var status = Fact(expired, "operating_system.support_state");
         Assert.Equal("provider_value_stale", status.LimitationCode);
-        Assert.Equal("provider_value_stale", Fact(expired, "operating_system.release").LimitationCode);
+        var family = Fact(expired, "operating_system.release");
+        Assert.Equal("windows_11", family.Value!.StringValue);
+        Assert.Null(family.LimitationCode);
         Assert.Same(originalStatus.Metadata, status.Metadata);
         Assert.Null(originalStatus.LimitationCode);
         var stored = Assert.Single(job.Observations, fact => fact.Metadata.EvidenceId == originalStatus.Metadata.EvidenceId);
         Assert.Equal(originalStatus, stored);
+    }
+
+    [Theory]
+    [InlineData("windows_10", "audit_only", "legacy_windows_10_audit")]
+    [InlineData("windows_10", "unsupported", null)]
+    [InlineData("windows_server", "unsupported", null)]
+    [InlineData("windows_10", "supported", "provider_values_conflict")]
+    [InlineData("windows_11", "audit_only", "provider_values_conflict")]
+    public async Task CurrentProjectionPreservesFamilyAndRetiresHistoricalAuditEntitlement(
+        string family, string support, string? expectedLimit)
+    {
+        using var disk = new AuditTestStore();
+        await using var workspace = disk.OpenWorkspace(
+            [OperatingSystem(LifecycleSource, "x64", family: family, support: support), SystemInventory()], new FixedClock());
+        await AssessAsync(workspace);
+
+        var observed = Fact(workspace.Assessment!.Observations, "os.support_target");
+        var projected = AuditPolicyEvidence.Create(workspace.Job!, workspace.Assessment, SampleTime);
+        var projectedFamily = Fact(projected, "operating_system.release");
+        var projectedSupport = Fact(projected, "operating_system.support_state");
+
+        Assert.Equal(family, projectedFamily.Value!.StringValue);
+        Assert.Equal(support, projectedSupport.Value!.StringValue);
+        Assert.Equal(expectedLimit, projectedSupport.LimitationCode);
+        Assert.Equal(expectedLimit == "provider_values_conflict" ? expectedLimit : null, projectedFamily.LimitationCode);
+        Assert.Null(observed.LimitationCode);
+        Assert.Same(observed.Metadata, projectedSupport.Metadata);
+    }
+
+    [Theory]
+    [InlineData("windows_11", "supported", Disposition.HumanReviewRequired, Disposition.HumanReviewRequired)]
+    [InlineData("windows_10", "audit_only", Disposition.AlternativeOperatingSystemCandidate, Disposition.DoNotDeploy)]
+    public async Task HistoricalPolicyAndObservationsReopenAndExportBeforeExplicitReevaluation(
+        string family, string support, Disposition historicalOutcome, Disposition currentOutcome)
+    {
+        using var disk = new AuditTestStore();
+        var os = OperatingSystem(LifecycleSource, "x64", ProviderEvidenceOrigin.SyntheticFixture, family: family, support: support,
+            identitySource: LifecycleSource);
+        var system = SystemInventory(origin: ProviderEvidenceOrigin.SyntheticFixture);
+        var originalCandidate = PolicySnapshot.Restore(
+            await File.ReadAllBytesAsync(Path.Combine(AppContext.BaseDirectory, "community-laptop-policy-v1.json")),
+            "967ef27449426a99f001ff09cd11b5e637b62a3f1e33566dd935bb8fd876ac88");
+        var legacy = family == "windows_11" ? originalCandidate : HistoricalIntakePolicy(originalCandidate);
+        PolicyDecisionRecord historical;
+        Observation[] originalObservations;
+        await using (var original = disk.OpenWorkspace([os, system], new FixedClock()))
+        {
+            await AssessAsync(original);
+            var assessment = Assert.IsType<AssessmentSnapshot>(original.Assessment);
+            var job = Assert.IsType<StoredJob>(original.Job);
+            originalObservations = job.Observations.ToArray();
+            var facts = AuditPolicyEvidence.Create(job, assessment, SampleTime)
+                .Select(fact => fact.EvidenceKey.Value == "operating_system.support_state"
+                    ? new Observation(fact.Metadata, fact.EvidenceKey, fact.Value, fact.Unit, null)
+                    : fact)
+                .ToArray();
+            var decision = DispositionEngine.Evaluate(legacy.Document, facts, activeCapabilityIds: null);
+            Assert.Equal(historicalOutcome, decision.Disposition);
+            historical = PolicyDecisionRecord.Create(legacy, assessment.JobId, assessment.AssessmentId.Value,
+                decision, facts.Select(fact => fact.Metadata.EvidenceId), SampleTime);
+            await using var store = await disk.OpenSqliteAsync();
+            await store.AppendPolicyDecisionAsync(legacy, historical);
+        }
+
+        var reportStore = new WorkshopReportStore(Path.Combine(disk.Root, "historical-workshop-reports"));
+        await using var reopened = new AuditWorkspace(
+            async token => await disk.OpenSqliteAsync(token).ConfigureAwait(false), [os, system], new FixedClock(), reportStore);
+        await reopened.OpenJobAsync(historical.JobId.Value);
+        Assert.Equal(historical.Title, reopened.PolicyDispositionTitle);
+        Assert.StartsWith("Historical policy decision.", reopened.PolicyStatus, StringComparison.Ordinal);
+        Assert.DoesNotContain("Consider a supported alternative", reopened.PolicyDispositionSummary, StringComparison.Ordinal);
+        Assert.Equal(originalObservations, reopened.Job!.Observations);
+
+        await reopened.GenerateReportAsync();
+        await reopened.OpenReportAsync();
+        var historicalExport = reopened.ReportPreview;
+        var artifact = Assert.IsType<WorkshopReportArtifact>(reopened.ReportArtifact);
+        Assert.Contains("Historical policy evaluation.", historicalExport, StringComparison.Ordinal);
+        Assert.Contains($"os.family: {family}", historicalExport, StringComparison.Ordinal);
+        Assert.Contains($"os.support_target: {support}", historicalExport, StringComparison.Ordinal);
+        Assert.Contains(historical.PolicySha256, historicalExport, StringComparison.Ordinal);
+        Assert.Contains(historical.Explanation, historicalExport, StringComparison.Ordinal);
+
+        await using var readback = await disk.OpenSqliteAsync();
+        var before = Assert.IsType<StoredPolicyDecision>(
+            await readback.LoadLatestPolicyDecisionAsync(historical.JobId, historical.AssessmentId));
+        Assert.Equal(historical.DecisionId, before.Decision.DecisionId);
+        Assert.Equal(legacy.Utf8Json.AsEnumerable(), before.Snapshot.Utf8Json.AsEnumerable());
+
+        await reopened.ReevaluatePolicyAsync();
+        var current = Assert.IsType<StoredPolicyDecision>(
+            await readback.LoadLatestPolicyDecisionAsync(historical.JobId, historical.AssessmentId));
+        Assert.True(current.Snapshot.Document.IsCurrentSchema);
+        Assert.Equal(currentOutcome, current.Decision.Disposition);
+        Assert.Equal(historical.DecisionId, current.Decision.PreviousDecisionId);
+        Assert.NotEqual(historical.PolicySha256, current.Decision.PolicySha256);
+        var old = Assert.IsType<StoredPolicyDecision>(await readback.LoadPolicyDecisionAsync(historical.JobId, historical.DecisionId));
+        Assert.Equal(historical.Explanation, old.Decision.Explanation);
+        Assert.Equal(originalObservations, (await readback.LoadJobAsync(historical.JobId))!.Observations);
+        Assert.Equal(historicalExport, await File.ReadAllTextAsync(Path.Combine(disk.Root, "historical-workshop-reports", artifact.FileName)));
+    }
+
+    private static PolicySnapshot HistoricalIntakePolicy(PolicySnapshot originalCandidate)
+    {
+        // The v1 Windows 10 fixture has a previously valid intake policy without unrelated pending checks.
+        var json = JsonNode.Parse(originalCandidate.Utf8Json.AsSpan())!;
+        var intake = json["rules"]!.AsArray().Single(rule => rule!["id"]!.GetValue<string>() == "POL-SAN-001");
+        json["rules"] = new JsonArray(intake!.DeepClone());
+        return PolicySnapshot.Parse(Encoding.UTF8.GetBytes(json.ToJsonString()));
     }
 
     [Theory]
@@ -156,12 +273,13 @@ public sealed class AuditPolicyEvidenceTests
 
     private static ProjectionProvider OperatingSystem(
         string? freshnessSource, string architecture, ProviderEvidenceOrigin origin = ProviderEvidenceOrigin.ActiveMachine,
-        string revision = LifecycleRevision)
+        string revision = LifecycleRevision, string family = "windows_11", string support = "supported",
+        string identitySource = "os.windows.identity")
     {
         List<NormalizedEvidence> facts =
         [
-            LifecycleEnum("os.family", "windows_11"),
-            LifecycleEnum("os.support_target", "supported"),
+            NormalizedEvidence.Inferred(new EvidenceKey("os.family"), EvidenceValue.FromEnum(family), sourceReference: identitySource),
+            LifecycleEnum("os.support_target", support),
             LifecycleText("os.lifecycle.source", "microsoft.windows-client.release-health"),
             LifecycleText("os.lifecycle.revision", revision),
             LifecycleText("os.lifecycle.as_of", "2026-09-30"),
@@ -178,8 +296,9 @@ public sealed class AuditPolicyEvidenceTests
         return new ProjectionProvider("windows-operating-system", facts.ToArray(), origin);
     }
 
-    private static ProjectionProvider SystemInventory(string architecture = "x64") => new("windows-system-inventory",
-        [EnumFact("system.architecture", architecture, "system_inventory.dotnet.os_architecture")]);
+    private static ProjectionProvider SystemInventory(
+        string architecture = "x64", ProviderEvidenceOrigin origin = ProviderEvidenceOrigin.ActiveMachine) => new("windows-system-inventory",
+        [EnumFact("system.architecture", architecture, "system_inventory.dotnet.os_architecture")], origin);
 
     private static NormalizedEvidence LifecycleEnum(string key, string value) =>
         NormalizedEvidence.Inferred(new EvidenceKey(key), EvidenceValue.FromEnum(value), sourceReference: LifecycleSource);

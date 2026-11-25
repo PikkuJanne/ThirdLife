@@ -5,7 +5,6 @@ internal enum WindowsLifecycleStatus
     Unknown = 0,
     Supported,
     Unsupported,
-    AuditOnly,
 }
 
 internal enum WindowsLifecycleLimitation
@@ -23,7 +22,9 @@ internal enum WindowsLifecycleLimitation
     UnknownArchitecture,
     NotYetReleased,
     SupportEnded,
-    Windows10AuditOnly,
+    UnsupportedOperatingSystem,
+    UnverifiedIdentity,
+    UnreviewedReleaseCoverage,
 }
 
 internal sealed record WindowsLifecycleResult(
@@ -114,7 +115,9 @@ internal sealed class WindowsLifecycleCatalog
         var buildEntries = _entries.Where(entry => entry.Build == build).ToArray();
         if (buildEntries.Length == 0)
         {
-            return Result(WindowsLifecycleStatus.Unknown, WindowsLifecycleLimitation.UnrecognizedBuild);
+            return Result(WindowsLifecycleStatus.Unknown, build == WindowsLifecycleData.DeviceSpecificWindows11Build
+                ? WindowsLifecycleLimitation.UnreviewedReleaseCoverage
+                : WindowsLifecycleLimitation.UnrecognizedBuild);
         }
 
         var group = GetEditionGroup(edition);
@@ -124,11 +127,6 @@ internal sealed class WindowsLifecycleCatalog
             // Server and other products can share a client base build. Without a
             // recognized client edition, even the family/release must stay unknown.
             return Result(WindowsLifecycleStatus.Unknown, WindowsLifecycleLimitation.UnrecognizedEdition);
-        }
-
-        if (entry.Family == "windows_10")
-        {
-            return Result(WindowsLifecycleStatus.AuditOnly, WindowsLifecycleLimitation.Windows10AuditOnly, entry);
         }
 
         if (architecture is not ("x64" or "x86" or "arm64" or "arm32" or "ia64"))
@@ -150,6 +148,13 @@ internal sealed class WindowsLifecycleCatalog
             ? Result(WindowsLifecycleStatus.Unsupported, WindowsLifecycleLimitation.SupportEnded, entry)
             : Result(WindowsLifecycleStatus.Supported, WindowsLifecycleLimitation.None, entry);
     }
+
+    // Base-build identity does not expire with the edition-specific servicing snapshot.
+    // 26H1 is independently identified by Microsoft's release information; its
+    // device-specific servicing coverage remains unreviewed for ThirdLife.
+    internal bool RecognizesWindows11Build(uint build) =>
+        _dataLimitation == WindowsLifecycleLimitation.None &&
+        (build == WindowsLifecycleData.DeviceSpecificWindows11Build || _entries.Any(entry => entry.Build == build));
 
     internal static string? GetEditionName(uint edition) => edition switch
     {
@@ -196,12 +201,10 @@ internal sealed class WindowsLifecycleCatalog
         foreach (var entry in entries)
         {
             if (entry is null || entry.Build == 0 || !Enum.IsDefined(entry.EditionGroup) ||
-                entry.Family is not ("windows_10" or "windows_11") ||
+                entry.Family != "windows_11" ||
                 entry.Release is not { Length: >= 1 and <= 8 } ||
                 !entry.Release.All(char.IsAsciiLetterOrDigit) ||
-                (entry.Family == "windows_11" &&
-                    (entry.Released is null || entry.SupportEnds is null || entry.SupportEnds < entry.Released)) ||
-                (entry.Family == "windows_10" && (entry.Released is not null || entry.SupportEnds is not null)))
+                entry.Released is null || entry.SupportEnds is null || entry.SupportEnds < entry.Released)
             {
                 return WindowsLifecycleLimitation.InvalidData;
             }

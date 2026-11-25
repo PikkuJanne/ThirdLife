@@ -3885,15 +3885,15 @@ class TestingDocumentContractTests(unittest.TestCase):
             ),
         )
 
-    def test_live_task_metadata_matches_v060_contract(self) -> None:
-        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.6.0")
-        self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-11-24")
+    def test_live_task_metadata_matches_v070_contract(self) -> None:
+        self.assertEqual(TASK_DOCUMENT["bundle_version"], "0.7.0")
+        self.assertEqual(str(TASK_DOCUMENT["generated_on"]), "2026-11-25")
         self.assertEqual(TASK_DOCUMENT["portfolio"]["roadmap_version"], "2.1")
         self.assertEqual(
             TASK_DOCUMENT["portfolio"]["test_tiers"],
             ["quick", "targeted", "full", "extended"],
         )
-        self.assertEqual(len(TASK_DOCUMENT["tasks"]), 91)
+        self.assertEqual(len(TASK_DOCUMENT["tasks"]), 92)
 
     def test_stale_active_bundle_header_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -3905,14 +3905,14 @@ class TestingDocumentContractTests(unittest.TestCase):
                 destination.write_bytes(source.read_bytes())
             path = root / "SECURITY.md"
             body = path.read_text(encoding="utf-8")
-            self.assertEqual(body.count("**Bundle version:** 0.6.0"), 1)
+            self.assertEqual(body.count("**Bundle version:** 0.7.0"), 1)
             path.write_text(
                 body.replace(
+                    "**Bundle version:** 0.7.0",
                     "**Bundle version:** 0.6.0",
-                    "**Bundle version:** 0.5.0",
                     1,
                 )
-                + "\n**Bundle version:** 0.6.0\n",
+                + "\n**Bundle version:** 0.7.0\n",
                 encoding="utf-8",
             )
             validation = validate_bundle.Validation()
@@ -3920,10 +3920,43 @@ class TestingDocumentContractTests(unittest.TestCase):
                 validate_bundle.validate_current_bundle_document_markers(validation)
             self.assertIn(
                 "SECURITY.md: 'Bundle version' metadata must be exactly one line "
-                "'**Bundle version:** 0.6.0'; found "
-                "['**Bundle version:** 0.5.0', '**Bundle version:** 0.6.0']",
+                "'**Bundle version:** 0.7.0'; found "
+                "['**Bundle version:** 0.6.0', '**Bundle version:** 0.7.0']",
                 validation.errors,
             )
+
+
+class Windows11PlatformContractTests(unittest.TestCase):
+    @staticmethod
+    def errors_for(tasks: dict[str, dict[str, object]]) -> list[str]:
+        validation = validate_bundle.Validation()
+        dependencies = {task_id: task["depends_on"] for task_id, task in tasks.items()}
+        validate_bundle.validate_windows_11_task_contract(validation, tasks, dependencies)
+        return validation.errors
+
+    def test_current_platform_amendment_and_delivery_contract(self) -> None:
+        self.assertIn(validate_bundle.WINDOWS_11_AMENDMENT_PATH, validate_bundle.REQUIRED_FILES)
+        self.assertEqual(TASK_DOCUMENT["project"]["platform"], "Windows 11 client on native x64")
+        self.assertEqual(self.errors_for(TASK_BY_ID), [])
+
+    def test_broker_must_reconcile_independent_migration_and_historical_contract(self) -> None:
+        tasks = copy.deepcopy(TASK_BY_ID)
+        tasks["TL-0315"]["depends_on"] = ["TL-0311"]
+        tasks["TL-0311"]["depends_on"].remove("TL-0315")
+        tasks["TL-0107"]["notes"] = []
+        errors = self.errors_for(tasks)
+        for task_id in ("TL-0315", "TL-0311", "TL-0107"):
+            self.assertTrue(any(task_id in error for error in errors), errors)
+
+    def test_future_package_criteria_require_the_supported_platform(self) -> None:
+        tasks = copy.deepcopy(TASK_BY_ID)
+        for task_id in ("TL-0609", "TL-0610", "TL-0704", "TL-0706", "TL-0707", "TL-0708", "TL-0710"):
+            tasks[task_id]["acceptance_criteria"] = [
+                item.replace("Windows 11", "Windows")
+                for item in tasks[task_id]["acceptance_criteria"]
+            ]
+        errors = self.errors_for(tasks)
+        self.assertEqual(len(errors), 7, errors)
 
 
 class TestingPolicyResetContractTests(unittest.TestCase):

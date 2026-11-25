@@ -27,7 +27,7 @@ public sealed class DeviceEnumerationProvider : IInventoryProvider
         }).Append(new(new("devices.functional_test"), EvidenceValueKind.Enum, null, "device_enumeration.scope.v1"));
         Descriptor = new(new(ProviderIdentity), ProviderPrivilegeRequirement.StandardUser,
             TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(15), ProviderNetworkUse.None, origin,
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             new(new("devices.provider_status"), "device_enumeration.provider.status"), definitions);
     }
 

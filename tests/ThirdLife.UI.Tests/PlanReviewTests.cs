@@ -27,9 +27,9 @@ public sealed class PlanReviewTests
     private static readonly DateTimeOffset EvaluationTime = new(2026, 10, 1, 14, 0, 0, TimeSpan.Zero);
     private static readonly PolicySnapshot ReadyPolicy = PolicySnapshot.Parse("""
         {
-          "schema_version": "thirdlife.policy.v1",
+          "schema_version": "thirdlife.policy.v2",
           "policy_id": "community-laptop-policy",
-          "version": "0.1.0-candidate.1",
+          "version": "0.1.0-candidate.2",
           "status": "candidate",
           "synthetic_data": true,
           "classification": "PUBLIC_REFERENCE",

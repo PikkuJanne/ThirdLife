@@ -16,6 +16,7 @@ public enum ProviderNetworkUse
 
 public enum ProviderOperatingSystem
 {
+    // Retained for descriptors representing historical or synthetic inputs.
     Windows10 = 1,
     Windows11,
 }
@@ -65,6 +66,14 @@ public sealed class InventoryProviderDescriptor
         }
 
         SupportedOperatingSystems = CopyOperatingSystems(supportedOperatingSystems);
+        if (EvidenceOrigin == ProviderEvidenceOrigin.ActiveMachine &&
+            (SupportedOperatingSystems.Count != 1 || SupportedOperatingSystems[0] != ProviderOperatingSystem.Windows11))
+        {
+            throw new ArgumentException(
+                "An active-machine provider must declare Windows 11 only.",
+                nameof(supportedOperatingSystems));
+        }
+
         EvidenceDefinitions = CopyEvidenceDefinitions(evidenceDefinitions);
         if (EvidenceDefinitions.Any(definition => definition.EvidenceKey == FailureDefinition.EvidenceKey))
         {

@@ -46,7 +46,7 @@ public sealed class SystemInventoryProviderTests
         Assert.Equal(TimeSpan.FromMilliseconds(250), provider.Descriptor.ExpectedDuration);
         Assert.Equal(TimeSpan.FromSeconds(2), provider.Descriptor.Timeout);
         Assert.Equal(
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             provider.Descriptor.SupportedOperatingSystems);
         Assert.Equal("system_inventory.provider_status", provider.Descriptor.FailureDefinition.EvidenceKey.Value);
         Assert.Equal(9, definitions.Count);

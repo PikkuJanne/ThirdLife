@@ -1,16 +1,16 @@
 # ThirdLife Setup Core — Current Handoff Status
 
 **Snapshot date:** 2026-11-25  
-**Bundle baseline:** 0.6.0  
+**Bundle baseline:** 0.7.0  
 **Runtime authority:** active Codex machine only. Remote CI is supplementary.  
 **Current milestone:** M3 — Safe planning and privilege boundary  
 **Current task:** TL-0311 — Blocked
 
 ## Continuity
 
-PR #35 integrated the [versioned broker protocol](artifacts/evidence/TL-0310/report.md)
-into `main` at `8f1441b`. Continue TL-0311 on the pushed
-`codex/tl-0311-authenticated-broker` branch.
+PR #37 integrated the [Windows 11 platform amendment](artifacts/evidence/TL-0315/report.md)
+into `main` at `af51598`. Draft PR #36 retains the broker checkpoint and applies the
+shared Windows 11 client/native-x64 check before client launch and broker startup.
 
 The original workspace still contains the documented untracked Word reference.
 
@@ -18,10 +18,10 @@ The original workspace still contains the documented untracked Word reference.
 
 The draft broker authenticates its local pipe peer and accepts one pinned
 no-op batch. The development apphost cannot establish trusted startup before
-elevation, so the UI reports the broker unavailable. Clean Full passed 289
-governance and 1,926 .NET tests. Real UAC and elevated process proof remain open.
-Windows Sandbox failed to start, leaving the distinct-account test unobserved.
-[TL-0311 evidence](artifacts/evidence/TL-0311/report.md)
+elevation, so the UI reports the broker unavailable. The checkpoint retains
+its original [TL-0311 verification evidence](artifacts/evidence/TL-0311/report.md).
+Real UAC, elevated process recovery and the distinct-account Sandbox case
+remain unobserved.
 
 ## Next action
 

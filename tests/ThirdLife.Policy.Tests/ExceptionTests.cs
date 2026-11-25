@@ -103,7 +103,7 @@ public sealed class ExceptionTests
         var initial = new PolicyExceptionHistory(Job);
         var recorded = initial.Record(
             Evaluate(oldPolicy, oldEvidence, initial, AssessmentTime), StorageRule, Operator, FirstReason, RecordedTime);
-        var newVersion = PolicySchema.Parse(AuthorizedPolicyJson(version: "0.1.0-candidate.2"));
+        var newVersion = PolicySchema.Parse(AuthorizedPolicyJson(version: "0.1.0-candidate.3"));
         var changedBytes = PolicySchema.Parse(bytes.Append((byte)' ').ToArray());
         var newEvidence = LowStorageEvidence("storage-evidence-retest");
 
@@ -177,7 +177,7 @@ public sealed class ExceptionTests
         var evidence = WithFacts(Fact("unsupported-release", "operating_system.release", EvidenceValue.FromEnum("windows_10")));
         var decision = Evaluate(policy, evidence, history, AssessmentTime);
 
-        Assert.Equal(Disposition.AlternativeOperatingSystemCandidate, decision.Disposition);
+        Assert.Equal(Disposition.DoNotDeploy, decision.Disposition);
         Assert.Equal(DispositionRuleStatus.Fail, FindRule(decision, "CORE-OS-RELEASE").Status);
         Assert.Throws<InvalidOperationException>(() =>
             history.Record(decision, new RequirementId("CORE-OS-RELEASE"), Operator, FirstReason, RecordedTime));

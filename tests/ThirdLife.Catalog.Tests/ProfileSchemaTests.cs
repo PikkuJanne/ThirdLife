@@ -28,11 +28,11 @@ public sealed class ProfileSchemaTests
         var profile = ProfileSchema.Parse(fixture, Catalog);
 
         Assert.Equal(fixtureId, profile.ProfileId);
-        Assert.Equal("0.1.0-candidate.1", profile.Version);
+        Assert.Equal("0.1.0-candidate.2", profile.Version);
         Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(fixture)), profile.ContentSha256);
         Assert.True(profile.SyntheticData);
         Assert.Equal("community-laptop-policy", profile.Policy.Id);
-        Assert.Equal("0.1.0-candidate.1", profile.Policy.Version);
+        Assert.Equal("0.1.0-candidate.2", profile.Policy.Version);
         Assert.Equal(Catalog.CatalogId, profile.Catalog.Id);
         Assert.Equal(Catalog.Version, profile.Catalog.Version);
         Assert.Equal(Catalog.ContentSha256, profile.CatalogContentSha256);

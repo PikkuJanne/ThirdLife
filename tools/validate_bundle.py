@@ -7,6 +7,7 @@ Run from any directory:
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import ipaddress
 import json
@@ -36,6 +37,7 @@ MINIMAL_HUMAN_TESTING_AMENDMENT_PATH = (
 TESTING_POLICY_RESET_AMENDMENT_PATH = (
     "docs/amendments/2026-11-24-permanent-testing-policy-reset.md"
 )
+WINDOWS_11_AMENDMENT_PATH = "docs/amendments/2026-11-25-windows-11-only.md"
 M1_WORKSHOP_REPORT_FIXTURE = "fixtures/expected-reports/M1/workshop-audit.txt"
 PILOT_CATALOG_YAML = "fixtures/catalog/catalog.yaml"
 PILOT_CATALOG_JSON = "fixtures/catalog/catalog.json"
@@ -49,6 +51,17 @@ PILOT_JSON_PROJECTIONS = (
     (PILOT_BASIC_PROFILE_YAML, "fixtures/profiles/basic.json"),
     (PILOT_JOB_SEEKER_PROFILE_YAML, "fixtures/profiles/job-seeker.json"),
 )
+PILOT_HISTORICAL_FIXTURE_FILES = {
+    PILOT_POLICY_YAML: "fixtures/policies/historical/community-laptop-policy-v1.yaml",
+    PILOT_POLICY_JSON: "fixtures/policies/historical/community-laptop-policy-v1.json",
+    PILOT_BASIC_PROFILE_YAML: "fixtures/profiles/historical/basic-v1.yaml",
+    "fixtures/profiles/basic.json": "fixtures/profiles/historical/basic-v1.json",
+    PILOT_JOB_SEEKER_PROFILE_YAML: "fixtures/profiles/historical/job-seeker-v1.yaml",
+    "fixtures/profiles/job-seeker.json": "fixtures/profiles/historical/job-seeker-v1.json",
+}
+PRODUCT_PLATFORM = "Windows 11 client on native x64"
+PILOT_ORIGINAL_VERSION = "0.1.0-candidate.1"
+PILOT_CURRENT_VERSION = "0.1.0-candidate.2"
 TL0401_WINGET_ADR_PATH = "docs/adr/0009-winget-backend.md"
 M0_FOUNDATION_GATE_PATH = "artifacts/gates/M0-foundation.md"
 M1_AUDIT_GATE_PATH = "artifacts/gates/M1-audit-only.md"
@@ -133,6 +146,8 @@ REQUIRED_FILES = (
     STABILIZATION_AMENDMENT_PATH,
     MINIMAL_HUMAN_TESTING_AMENDMENT_PATH,
     TESTING_POLICY_RESET_AMENDMENT_PATH,
+    WINDOWS_11_AMENDMENT_PATH,
+    "docs/inventory/windows-lifecycle-data.md",
     "eng/run-m1-audit-journey.ps1",
     "docs/glossary.md",
     "docs/non-goals.md",
@@ -144,6 +159,7 @@ REQUIRED_FILES = (
     "docs/privacy/redaction-test-cases.yaml",
     "fixtures/README.md",
     *(projection for _, projection in PILOT_JSON_PROJECTIONS),
+    *PILOT_HISTORICAL_FIXTURE_FILES.values(),
     PILOT_CATALOG_YAML,
     M1_WORKSHOP_REPORT_FIXTURE,
     "fixtures/jobs/assessment-ready.yaml",
@@ -585,7 +601,7 @@ PILOT_FIXTURE_README = "fixtures/README.md"
 PILOT_FIXTURE_SCHEMA_VERSIONS = {
     "catalog": "thirdlife.catalog.v1",
     "job": "thirdlife.job-fixture.v1",
-    "policy": "thirdlife.policy.v1",
+    "policy": "thirdlife.policy.v2",
     "profile": "thirdlife.profile.v1",
 }
 PILOT_FIXTURE_CLASSIFICATION = "PUBLIC_REFERENCE"
@@ -799,10 +815,10 @@ ALLOWED_KIND = {"build", "code", "data", "docs", "gate", "release", "security", 
 ALLOWED_TEST_TIER = {"quick", "targeted", "full", "extended"}
 MUTABLE_FIELDS = ["status", "evidence", "blocked_reason"]
 
-CURRENT_BUNDLE_VERSION = "0.6.0"
-CURRENT_BUNDLE_GENERATED_ON = "2026-11-24"
+CURRENT_BUNDLE_VERSION = "0.7.0"
+CURRENT_BUNDLE_GENERATED_ON = "2026-11-25"
 CURRENT_DECISION_IDS = tuple(f"D-{index:03d}" for index in range(1, 75))
-CURRENT_TASK_COUNT = 91
+CURRENT_TASK_COUNT = 92
 STABILIZATION_CI_CLARIFICATION = {
     "summary": (
         "Historical GitHub-hosted verification remains valid as a supplementary "
@@ -2826,12 +2842,13 @@ def is_explicitly_synthetic_sensitive_value(
     return True
 
 
-def pilot_fixture_set_digest(root: Path = ROOT) -> str:
-    """Hash the exact, path-sorted TL-0007 YAML fixture set."""
+def pilot_fixture_set_digest(root: Path = ROOT, *, historical: bool = False) -> str:
+    """Hash the fixture set using its original paths, including for archived inputs."""
 
     digest = hashlib.sha256()
     for relative in PILOT_FIXTURE_FILES:
-        data = (root / relative).read_bytes()
+        source = PILOT_HISTORICAL_FIXTURE_FILES.get(relative, relative) if historical else relative
+        data = (root / source).read_bytes()
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
         digest.update(hashlib.sha256(data).hexdigest().encode("ascii"))
@@ -3086,17 +3103,67 @@ def _pilot_scan_fixture(
             validation.error(f"{owner}: contains a prohibited machine-specific path")
 
 
+def validate_historical_pilot_fixtures(
+    root: Path,
+    current: dict[str, dict[str, Any]],
+    actual_paths: set[str],
+    validation: Validation,
+) -> dict[str, dict[str, Any]]:
+    """Check the archived projections and the owner-authorized current fixture delta."""
+
+    historical_documents: dict[str, dict[str, Any]] = {}
+    for source, projection in PILOT_JSON_PROJECTIONS:
+        archived_source = PILOT_HISTORICAL_FIXTURE_FILES.get(source)
+        if archived_source is None or archived_source not in actual_paths:
+            continue
+        archived_projection = PILOT_HISTORICAL_FIXTURE_FILES[projection]
+        historical = load_unique_key_yaml(root / archived_source, validation)
+        if not historical:
+            continue
+        historical_documents[source] = historical
+        if archived_projection in actual_paths:
+            _validate_pilot_json_projection(
+                root, historical, archived_source, archived_projection, validation
+            )
+
+        # Only the platform-policy decision semantics and links to its new
+        # version are authorized to supersede previously approved inputs.
+        expected = copy.deepcopy(historical)
+        expected["version"] = PILOT_CURRENT_VERSION
+        if source == PILOT_POLICY_YAML:
+            if historical.get("schema_version") != "thirdlife.policy.v1":
+                validation.error(f"{archived_source}: original v1 policy is required")
+            expected["schema_version"] = PILOT_FIXTURE_SCHEMA_VERSIONS["policy"]
+            rules = expected.get("rules")
+            if isinstance(rules, list):
+                for rule in rules:
+                    decision = rule.get("decision") if isinstance(rule, dict) else None
+                    if not isinstance(decision, dict):
+                        continue
+                    if decision.get("unmet_disposition") == "alternative_operating_system_candidate":
+                        decision["unmet_disposition"] = "do_not_deploy"
+        elif isinstance(expected.get("policy"), dict):
+            expected["policy"]["version"] = PILOT_CURRENT_VERSION
+        if current.get(source) != expected:
+            validation.error(
+                f"{source}: differs from the authorized Windows 11-only delta to the original fixture"
+            )
+
+    return historical_documents
+
+
 def validate_pilot_fixtures(
     validation: Validation,
     task_by_id: dict[str, dict[str, Any]],
     root: Path = ROOT,
 ) -> str:
-    """Validate the bounded TL-0007 candidate contract, not later final schemas."""
+    """Validate original TL-0007 inputs and the bounded platform amendment."""
 
     fixture_root = root / "fixtures"
     expected_paths = set(PILOT_FIXTURE_FILES) | {
         projection for _, projection in PILOT_JSON_PROJECTIONS
     }
+    expected_paths.update(PILOT_HISTORICAL_FIXTURE_FILES.values())
     allowed_paths = expected_paths | {PILOT_FIXTURE_README, M1_WORKSHOP_REPORT_FIXTURE}
     actual_paths: set[str] = set()
     if fixture_root.is_dir():
@@ -3143,11 +3210,16 @@ def validate_pilot_fixtures(
             _validate_pilot_json_projection(
                 root, documents[source], source, projection, validation
             )
+    historical_documents = validate_historical_pilot_fixtures(
+        root, documents, actual_paths, validation
+    )
     try:
         digest = pilot_fixture_set_digest(root)
+        historical_digest = pilot_fixture_set_digest(root, historical=True)
     except OSError:
         digest = ""
-        validation.error("fixtures: cannot compute the exact fixture-set digest")
+        historical_digest = ""
+        validation.error("fixtures: cannot compute the exact fixture-set digests")
 
     catalog_path = PILOT_CATALOG_YAML
     catalog = _pilot_mapping(documents.get(catalog_path), catalog_path, validation)
@@ -3350,10 +3422,7 @@ def validate_pilot_fixtures(
     policy_evidence: list[str] = []
     policy_capabilities: set[str] = set()
     candidate_rules: list[dict[str, Any]] = []
-    failure_dispositions = {
-        "repair_and_retest", "human_review_required",
-        "alternative_operating_system_candidate", "do_not_deploy",
-    }
+    failure_dispositions = {"repair_and_retest", "human_review_required", "do_not_deploy"}
     for index, raw in enumerate(rules):
         owner = f"{policy_path}: rules[{index}]"
         rule = _pilot_mapping(raw, owner, validation)
@@ -3515,7 +3584,7 @@ def validate_pilot_fixtures(
         )
         if (
             profile.get("schema_version") != PILOT_FIXTURE_SCHEMA_VERSIONS["profile"]
-            or profile_version != "0.1.0-candidate.1"
+            or profile_version != PILOT_CURRENT_VERSION
             or profile.get("status") != "candidate"
             or profile.get("synthetic_data") is not True
             or profile.get("classification") != PILOT_FIXTURE_CLASSIFICATION
@@ -3622,7 +3691,11 @@ def validate_pilot_fixtures(
         profiles.append(
             {
                 "id": profile_id,
-                "version": profile_version,
+                "version": _pilot_token(
+                    historical_documents.get(profile_path, {}).get("version"),
+                    f"{profile_path}: historical version",
+                    validation,
+                ),
                 "capabilities": tuple(profile_capabilities),
                 "essential_capabilities": tuple(
                     capability
@@ -3635,10 +3708,10 @@ def validate_pilot_fixtures(
         validation.error("fixtures/profiles: Basic and Job Seeker profiles are required")
     if not policy_capabilities.issubset(set(PILOT_CATALOG_CAPABILITIES)):
         validation.error(f"{policy_path}: active capability references do not resolve")
-    profiles_by_reference = {
+    historical_profiles_by_reference = {
         (profile["id"], profile["version"]): profile for profile in profiles
     }
-    if len(profiles_by_reference) != len(profiles):
+    if len(historical_profiles_by_reference) != len(profiles):
         validation.error("fixtures/profiles: profile references must be unique")
 
     job_contracts = {
@@ -3657,7 +3730,7 @@ def validate_pilot_fixtures(
             },
             "profile": (
                 "job-seeker",
-                "0.1.0-candidate.1",
+                PILOT_ORIGINAL_VERSION,
                 PILOT_CATALOG_CAPABILITIES,
             ),
         },
@@ -3676,7 +3749,7 @@ def validate_pilot_fixtures(
             },
             "profile": (
                 "basic",
-                "0.1.0-candidate.1",
+                PILOT_ORIGINAL_VERSION,
                 PILOT_CATALOG_CAPABILITIES[:3],
             ),
         },
@@ -3695,7 +3768,7 @@ def validate_pilot_fixtures(
             },
             "profile": (
                 "job-seeker",
-                "0.1.0-candidate.1",
+                PILOT_ORIGINAL_VERSION,
                 PILOT_CATALOG_CAPABILITIES,
             ),
         },
@@ -3786,7 +3859,7 @@ def validate_pilot_fixtures(
         expected_profile_id, expected_profile_version, expected_active = contract[
             "profile"
         ]
-        resolved_profile = profiles_by_reference.get((profile_id, profile_version))
+        resolved_profile = historical_profiles_by_reference.get((profile_id, profile_version))
         if (
             profile_id != expected_profile_id
             or profile_version != expected_profile_version
@@ -3827,7 +3900,7 @@ def validate_pilot_fixtures(
             or provenance
             != {"kind": "synthetic_fixture", "fixture_id": fixture_id}
             or sanitization.get("policy_version")
-            != f"{policy_id}@{policy_version}"
+            != f"{policy_id}@{PILOT_ORIGINAL_VERSION}"
         ):
             validation.error(f"{job_path}.sanitization_evidence: invalid D-007 evidence")
         if any(
@@ -4060,8 +4133,8 @@ def validate_pilot_fixtures(
         approved = isinstance(evidence, list) and any(
             isinstance(item, dict)
             and str(item.get("result", "")).casefold() == "passed"
-            and digest
-            and digest in str(item.get("reference", "")).casefold()
+            and historical_digest
+            and historical_digest in str(item.get("reference", "")).casefold()
             and re.search(
                 r"(?is)pilot owner.{0,100}approv(?:e|ed|al).{0,160}"
                 r"candidate policy.{0,160}capability set|"
@@ -4076,7 +4149,7 @@ def validate_pilot_fixtures(
         if not approved:
             validation.error(
                 "TL-0007 done evidence must bind named pilot-owner approval "
-                "of the candidate policy and capability set to the current fixture digest"
+                "of the candidate policy and capability set to the historical fixture digest"
             )
     return digest
 
@@ -6809,6 +6882,43 @@ def validate_testing_policy_task_contract(
             validation.error(f"{milestone.get('id')}: exit criteria reintroduce a superseded human QA gate")
 
 
+def validate_windows_11_task_contract(
+    validation: Validation,
+    task_by_id: dict[str, dict[str, Any]],
+    dependencies: dict[str, list[str]],
+) -> None:
+    migration = task_by_id.get("TL-0315", {})
+    if (
+        migration.get("milestone") != "M3"
+        or migration.get("executor") != "codex"
+        or migration.get("expected_test_tier") != "full"
+        or "human_evidence_required" in migration
+        or dependencies.get("TL-0315") != ["TL-0310"]
+    ):
+        validation.error(
+            "TL-0315: platform amendment must remain an independent Full "
+            "engineering task from integrated TL-0310"
+        )
+    if "TL-0315" not in dependencies.get("TL-0311", []):
+        validation.error("TL-0311: must incorporate the integrated TL-0315 platform contract")
+
+    history = task_by_id.get("TL-0107", {})
+    notes = history.get("notes")
+    if not isinstance(notes, list) or not any(
+        isinstance(note, str) and "TL-0315" in note and WINDOWS_11_AMENDMENT_PATH in note
+        for note in notes
+    ):
+        validation.error("TL-0107: retain the historical task and link the superseding platform amendment")
+
+    for task_id in ("TL-0609", "TL-0610", "TL-0704", "TL-0706", "TL-0707", "TL-0708", "TL-0710"):
+        criteria = task_by_id.get(task_id, {}).get("acceptance_criteria")
+        if not isinstance(criteria, list) or not any(
+            isinstance(entry, str) and "Windows 11" in entry and "native x64" in entry.replace("native-x64", "native x64")
+            for entry in criteria
+        ):
+            validation.error(f"{task_id}: package or release criteria must qualify Windows 11 on native x64")
+
+
 def validate() -> int:
     validation = Validation()
 
@@ -6855,6 +6965,7 @@ def validate() -> int:
         validation.error("TASKS.yaml: project.name must equal ThirdLife")
     expected_project = {
         "component": "ThirdLife Setup Core",
+        "platform": PRODUCT_PLATFORM,
         "owner_team": "Team B",
         "queue_position": "B1",
         "pilot_gate": "TL-0611",
@@ -7147,6 +7258,7 @@ def validate() -> int:
                     )
 
     validate_testing_policy_task_contract(validation, task_doc, task_by_id, dependency_map)
+    validate_windows_11_task_contract(validation, task_by_id, dependency_map)
     validate_governance_documents(validation)
     validate_architecture_decision_records(validation, task_by_id, decision_set)
     validate_tl0401_adr_reservation(validation, task_by_id)

@@ -8,6 +8,7 @@ namespace ThirdLife.Policy.Decisions;
 
 public static class DispositionEngine
 {
+    /// <summary>Evaluates using the saved policy schema semantics, including v1 for historical audit.</summary>
     public static DispositionDecision Evaluate(
         PolicyDocument policy,
         IEnumerable<Observation> observations,
@@ -41,7 +42,7 @@ public static class DispositionEngine
         ArgumentNullException.ThrowIfNull(policy);
 
         var (evaluation, target) = PolicyEvaluator.EvaluateWithTarget(
-            policy, observations, activeCapabilityIds, TargetRules(policy.Target));
+            policy, observations, activeCapabilityIds, TargetRules(policy));
         var details = target.Select(outcome => new DispositionRuleDetail(DispositionSource.CoreTarget, outcome, null))
             .Concat(evaluation.Outcomes.Select(outcome => new DispositionRuleDetail(
                 DispositionSource.OrganizationPolicy,
@@ -102,20 +103,29 @@ public static class DispositionEngine
         _ => throw new ArgumentOutOfRangeException(nameof(disposition)),
     };
 
-    private static ImmutableArray<PolicyEvaluator.TargetRule> TargetRules(PolicyTarget target) =>
-    [
-        TargetRule("CORE-OS-ARCHITECTURE", "system.architecture", target.Architecture, ["x64", "x86", "arm64", "arm32", "ia64"]),
-        TargetRule("CORE-OS-RELEASE", "operating_system.release", target.OperatingSystem, ["windows_11", "windows_10"]),
-        TargetRule("CORE-OS-SUPPORT", "operating_system.support_state", target.SupportState, ["supported", "unsupported", "audit_only"]),
-    ];
+    private static ImmutableArray<PolicyEvaluator.TargetRule> TargetRules(PolicyDocument policy)
+    {
+        var historical = !policy.IsCurrentSchema;
+        return
+        [
+            TargetRule("CORE-OS-ARCHITECTURE", "system.architecture", policy.Target.Architecture, historical),
+            TargetRule("CORE-OS-RELEASE", "operating_system.release", policy.Target.OperatingSystem, historical),
+            TargetRule("CORE-OS-SUPPORT", "operating_system.support_state", policy.Target.SupportState, historical),
+        ];
+    }
 
-    private static PolicyEvaluator.TargetRule TargetRule(
-        string id, string evidenceKey, string expected, ImmutableArray<string> knownValues) =>
-        new(
+    private static PolicyEvaluator.TargetRule TargetRule(string id, string evidenceKey, string expected, bool historical)
+    {
+        var knownValues = historical && evidenceKey == "operating_system.release"
+            ? ["windows_11", "windows_10"]
+            : PolicyEvaluator.KnownWindowsValues(evidenceKey);
+        var unmet = historical ? Disposition.AlternativeOperatingSystemCandidate : Disposition.DoNotDeploy;
+        return new(
             new PolicyRule(
                 new RequirementReference(new RequirementId(id), new EvidenceKey(evidenceKey), RequirementType.Blocking, RequirementSeverity.Critical),
                 [],
                 new EqualCondition(EvidenceValue.FromEnum(expected)),
-                new PolicyRuleDecision(true, Disposition.AlternativeOperatingSystemCandidate, Disposition.HumanReviewRequired)),
+                new PolicyRuleDecision(true, unmet, Disposition.HumanReviewRequired)),
             knownValues);
+    }
 }

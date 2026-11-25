@@ -21,6 +21,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ThirdLife.UI\ThirdLife.UI.csproj" />
+    <None Include="..\..\fixtures\policies\historical\community-laptop-policy-v1.json"
+          Link="community-laptop-policy-v1.json"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

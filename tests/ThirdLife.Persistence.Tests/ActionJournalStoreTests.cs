@@ -1,12 +1,15 @@
 using System.Globalization;
 using System.Runtime.Versioning;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
 using ThirdLife.Catalog.Profiles;
 using ThirdLife.Catalog.Schema;
+using ThirdLife.Core;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Sanitization;
@@ -27,7 +30,7 @@ public sealed class ActionJournalStoreTests
     private static readonly OperatorId Approver = new("operator-journal-fixture");
     private static readonly PolicyDocument Policy = PolicySchema.Parse("""
         {
-          "schema_version":"thirdlife.policy.v1","policy_id":"community-policy","version":"1.0.0",
+          "schema_version":"thirdlife.policy.v2","policy_id":"community-policy","version":"1.0.0",
           "status":"candidate","synthetic_data":true,"classification":"PUBLIC_REFERENCE","claim_scope":"journal_fixture",
           "effective":{"status":"candidate_not_effective","effective_from_utc":null,"effective_until_utc":null},
           "target":{"operating_system":"windows_11","support_state":"supported","architecture":"x64","device_class":"laptop"},
@@ -127,6 +130,61 @@ public sealed class ActionJournalStoreTests
     }
 
     [Fact]
+    public async Task ReopenedLegacyPlanRetainsApprovalHistoryWithoutNewDispatchAuthority()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        string databasePath;
+        JournalPlanSnapshot legacy;
+        await using (var store = await OpenAsync(workspace))
+        {
+            var (stored, intake) = await CreateJobAsync(store);
+            var current = CreateSnapshot(stored, intake, "0.1.0-candidate.2");
+            databasePath = store.DatabasePath;
+            var plan = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(current.CanonicalPlan.AsSpan())
+                .Replace("thirdlife.plan.v2", "thirdlife.plan.v1", StringComparison.Ordinal));
+            var planSha = Digest(plan);
+            var impact = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(current.CanonicalImpact.AsSpan())
+                .Replace(current.Key.PlanSha256, planSha, StringComparison.Ordinal));
+            legacy = JournalPlanSnapshot.Restore(new JournalPlanKey(current.Key.JobId, planSha, Digest(impact)), plan, impact);
+        }
+
+        // Seed a representative pre-amendment approval and transition in this disposable store.
+        var key = legacy.Key;
+        var approval = new JournalApproval(ApprovalId, key, Approver, CorrelationId, Now.AddMinutes(-1));
+        var approved = Entry(legacy, ApprovedEntryId, JournalState.Planned, JournalState.Approved,
+            JournalActor.Operator, JournalResult.None, Now);
+        var approvalJson = JsonSerializer.SerializeToUtf8Bytes(approval, DomainJson.CreateStrictOptions());
+        var approvedJson = JsonSerializer.SerializeToUtf8Bytes(approved, DomainJson.CreateStrictOptions());
+        await SqliteTestControl.ExecuteAsync(databasePath, string.Create(CultureInfo.InvariantCulture, $"""
+            INSERT INTO action_journal_plans (job_id, plan_sha256, impact_sha256, plan_json, impact_json)
+            VALUES ('{key.JobId.Value}', '{key.PlanSha256}', '{key.ImpactSha256}',
+                X'{Convert.ToHexString(legacy.CanonicalPlan.AsSpan())}', X'{Convert.ToHexString(legacy.CanonicalImpact.AsSpan())}');
+            INSERT INTO action_journal_approvals (job_id, approval_id, plan_sha256, impact_sha256, payload_json, payload_sha256)
+            VALUES ('{key.JobId.Value}', '{approval.ApprovalId:D}', '{key.PlanSha256}', '{key.ImpactSha256}',
+                CAST(X'{Convert.ToHexString(approvalJson)}' AS TEXT), '{Digest(approvalJson)}');
+            INSERT INTO action_journal_entries (job_id, entry_id, plan_sha256, impact_sha256, action_id, state, payload_json, payload_sha256)
+            VALUES ('{key.JobId.Value}', '{approved.EntryId:D}', '{key.PlanSha256}', '{key.ImpactSha256}',
+                '{approved.ActionId:D}', {(int)approved.State}, CAST(X'{Convert.ToHexString(approvedJson)}' AS TEXT), '{Digest(approvedJson)}');
+            """));
+
+        await using var reopened = await OpenAsync(workspace);
+        Assert.Equal(JournalWriteResult.AlreadyRecorded, await reopened.AppendJournalApprovalAsync(approval));
+        var replacement = new JournalApproval(StartedEntryId, key, Approver, CorrelationId, Now.AddMinutes(1));
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => reopened.AppendJournalApprovalAsync(replacement));
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => reopened.AppendJournalEntryAsync(Start(legacy)));
+
+        var history = await reopened.LoadJournalAsync(key);
+        Assert.NotNull(history);
+        Assert.False(history.Plan.IsCurrentPolicyPlan);
+        Assert.False(history.Plan.HasPlanningProvenance);
+        Assert.Equal(legacy.CanonicalPlan.AsEnumerable(), history.Plan.CanonicalPlan.AsEnumerable());
+        Assert.Equal(legacy.CanonicalImpact.AsEnumerable(), history.Plan.CanonicalImpact.AsEnumerable());
+        Assert.Equal(approval, Assert.Single(history.Approvals));
+        Assert.Equal(approved, Assert.Single(history.Entries));
+        Assert.Null(history.ActiveApproval);
+    }
+
+    [Fact]
     public async Task ANewIntakeGateCannotDispatchThePreviouslyApprovedPlan()
     {
         using var workspace = new PersistenceTestWorkspace();
@@ -176,7 +234,7 @@ public sealed class ActionJournalStoreTests
         await Assert.ThrowsAsync<JobStoreCorruptionException>(() => reopened.AppendJournalApprovalAsync(replacementApproval));
     }
 
-    private static async Task<JournalPlanSnapshot> SaveApprovedPlanAsync(SqliteJobStore store)
+    private static async Task<(StoredJob Job, SanitizationEvidence Intake)> CreateJobAsync(SqliteJobStore store)
     {
         var job = PersistenceTestData.CreateJob("action-journal");
         var intake = PersistenceTestData.CreateSanitization("action-journal");
@@ -186,8 +244,14 @@ public sealed class ActionJournalStoreTests
             SanitizationGate.Evaluate(job.JobId, intake, PersistenceTestData.Timestamp.AddMinutes(2)));
         var stored = await store.LoadJobAsync(job.JobId);
         Assert.NotNull(stored);
+        Assert.Equal(gate.DecisionId, SanitizationGate.Inspect(stored).Decision?.DecisionId);
+        return (stored, intake);
+    }
+
+    private static async Task<JournalPlanSnapshot> SaveApprovedPlanAsync(SqliteJobStore store)
+    {
+        var (stored, intake) = await CreateJobAsync(store);
         var plan = CreateSnapshot(stored, intake, "0.1.0-candidate.1");
-        Assert.Equal(gate.DecisionId, plan.GateDecisionId);
         var restoredOnly = JournalPlanSnapshot.Restore(plan.Key, plan.CanonicalPlan.ToArray(), plan.CanonicalImpact.ToArray());
         await Assert.ThrowsAsync<ArgumentException>(() => store.SaveJournalPlanAsync(restoredOnly));
         Assert.Equal(JournalWriteResult.Recorded, await store.SaveJournalPlanAsync(plan));
@@ -249,6 +313,8 @@ public sealed class ActionJournalStoreTests
     private static Task<SqliteJobStore> OpenAsync(PersistenceTestWorkspace workspace, IJobStoreFaultInjector? fault = null) =>
         SqliteJobStore.OpenForTestingAsync(
             workspace.StoreRoot, SqliteJobStore.CurrentSchemaVersion, new FixedTimeProvider(Now.AddMinutes(15)), fault);
+
+    private static string Digest(ReadOnlySpan<byte> bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
 
     private static byte[] ReadFixture(string name) => File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, name + ".json"));
 }

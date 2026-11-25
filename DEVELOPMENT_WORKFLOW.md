@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Development and GitHub Continuity Workflow
 
-**Bundle version:** 0.6.0  
+**Bundle version:** 0.7.0  
 **Continuity source of truth:** GitHub repository  
 **Authoritative runtime hardware:** active Codex machine only  
 **Remote CI classification:** supplementary
@@ -87,7 +87,11 @@ For an explicitly assigned sequence, verify each merge and continue from updated
 without waiting for a conversational handoff. Use one active task and branch at a time.
 The [permanent testing policy reset](docs/amendments/2026-11-24-permanent-testing-policy-reset.md)
 authorizes the synchronized contract changes and M1 repair, verification and routine integration
-in PR #17. The assignment ends at the integrated TL-0116 technical gate.
+in PR #17. That assignment ended at the integrated TL-0116 technical gate.
+
+The [Windows 11–only amendment](docs/amendments/2026-11-25-windows-11-only.md)
+authorizes TL-0315 from integrated TL-0310. Keep the blocked broker checkpoint on its
+own branch. Reconcile it with the integrated platform contract before continuing TL-0311.
 
 ### 3.3 Temporary stacked-work exception
 

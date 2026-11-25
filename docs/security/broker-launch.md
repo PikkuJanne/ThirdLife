@@ -6,6 +6,10 @@ UI build carries the protocol assembly. The development apphost is a separate
 build output, remains `asInvoker`, and rejects an unelevated launch. Running
 that apphost elevated is outside this candidate's verified scope.
 
+The client checks for Windows 11 on native x64 before invoking its launcher.
+The broker applies the same check before opening a peer or pipe. Both checks
+run in managed code. Elevated startup has the separate trust requirement below.
+
 ## Startup must be trusted before managed code
 
 The current apphost is framework-dependent. An elevated managed `Main` is

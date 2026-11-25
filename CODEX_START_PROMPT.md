@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Codex Start and Reusable Prompts
 
-**Bundle version:** 0.6.0  
+**Bundle version:** 0.7.0  
 **Portfolio baseline:** ThirdLife Software Portfolio v2.1
 
 ## 1. Prompt selection
@@ -14,6 +14,8 @@
   matching specialized prompt.
 
 The TL-0008 transition prompt is historical. Do not select it for normal current work.
+For the assigned TL-0315 migration and TL-0311 reconciliation, use the
+[Windows 11–only amendment](docs/amendments/2026-11-25-windows-11-only.md).
 
 ## 2. Normal task execution prompt
 
@@ -36,6 +38,7 @@ If the task is not dependency-ready, stop. Do not implement around it.
 Implement the smallest coherent diff. Preserve:
 - standalone Team B/B1 scope and project vacuum;
 - local-first behavior;
+- Windows 11 client/native-x64 checks before live work and original provenance for legacy records;
 - unelevated UI and ephemeral allowlisted broker;
 - declarative non-executable profiles;
 - one semantic owner or explicit reconciliation per evidence fact;

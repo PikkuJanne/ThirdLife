@@ -1,6 +1,6 @@
-schema_version: thirdlife.policy.v1
+schema_version: thirdlife.policy.v2
 policy_id: community-laptop-policy
-version: 0.1.0-candidate.1
+version: 0.1.0-candidate.2
 status: candidate
 synthetic_data: true
 classification: PUBLIC_REFERENCE
@@ -38,7 +38,7 @@ rules:
       value: windows_11
     decision:
       blocks_ready: true
-      unmet_disposition: alternative_operating_system_candidate
+      unmet_disposition: do_not_deploy
       unavailable_disposition: human_review_required
   - id: POL-OS-002
     requirement_type: blocking
@@ -49,7 +49,7 @@ rules:
       value: supported
     decision:
       blocks_ready: true
-      unmet_disposition: alternative_operating_system_candidate
+      unmet_disposition: do_not_deploy
       unavailable_disposition: human_review_required
   - id: POL-ARCH-001
     requirement_type: blocking
@@ -60,7 +60,7 @@ rules:
       value: x64
     decision:
       blocks_ready: true
-      unmet_disposition: alternative_operating_system_candidate
+      unmet_disposition: do_not_deploy
       unavailable_disposition: human_review_required
   - id: POL-CPU-001
     requirement_type: blocking
@@ -71,7 +71,7 @@ rules:
       value: eligible
     decision:
       blocks_ready: true
-      unmet_disposition: alternative_operating_system_candidate
+      unmet_disposition: do_not_deploy
       unavailable_disposition: human_review_required
   - id: POL-MEM-001
     requirement_type: repairable
@@ -163,7 +163,7 @@ rules:
       value: uefi
     decision:
       blocks_ready: true
-      unmet_disposition: alternative_operating_system_candidate
+      unmet_disposition: do_not_deploy
       unavailable_disposition: human_review_required
   - id: POL-SECUREBOOT-001
     requirement_type: blocking

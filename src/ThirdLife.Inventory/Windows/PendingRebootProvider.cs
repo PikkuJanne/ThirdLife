@@ -68,7 +68,7 @@ public sealed class PendingRebootProvider : IInventoryProvider
             TimeSpan.FromSeconds(2),
             ProviderNetworkUse.None,
             evidenceOrigin,
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             new ProviderFailureDefinition(new EvidenceKey("reboot.provider_status"), "pending_reboot.provider.status"),
             definitions);
     }

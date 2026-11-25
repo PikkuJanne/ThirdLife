@@ -77,7 +77,7 @@ public sealed class BatteryReportProvider : IInventoryProvider
 
         return new(new ProviderId("windows-battery-report"), ProviderPrivilegeRequirement.StandardUser,
             TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(30), ProviderNetworkUse.None, origin,
-            [ProviderOperatingSystem.Windows10, ProviderOperatingSystem.Windows11],
+            [ProviderOperatingSystem.Windows11],
             new(Key("provider_status"), LifecycleSource), definitions);
     }
 

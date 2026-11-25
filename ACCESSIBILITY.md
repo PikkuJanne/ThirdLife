@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Accessibility Requirements
 
 **Status:** Binding release baseline  
-**Bundle version:** 0.6.0  
+**Bundle version:** 0.7.0  
 **Validation scope:** Active Codex machine only; no external hardware or assistive-technology device matrix is implied
 
 ## 1. Scope
