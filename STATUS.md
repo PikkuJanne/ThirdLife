@@ -27,5 +27,12 @@ and cleanup. Ordinary broker-dependent dispatch remains gated by application
 orchestration in TL-0313 and the applicable TL-0314 privilege decision.
 [Guest runner and evidence](artifacts/evidence/TL-0317/report.md)
 
-Clean Full passed on the reconciled runtime source `a5fcef3`. The next independent
-package task is TL-0405, covering progress, cancellation, timeout and network loss.
+TL-0312 completed the focused broker security checks for the reviewed no-op scope.
+Forbidden request fields and failed peer reauthentication were rejected before
+dispatch. The unelevated launch and bounded parser checks passed, and clean Full
+passed on `e734b5f`. Windows consent, distinct-account denial and teardown retain
+their TL-0317 provenance. [Broker security evidence](artifacts/evidence/TL-0312/report.md)
+
+The next broker task is TL-0313, connecting approval, journal, consent, broker result
+and recovery. The next independent package task is TL-0405, covering progress,
+cancellation, timeout and network loss.

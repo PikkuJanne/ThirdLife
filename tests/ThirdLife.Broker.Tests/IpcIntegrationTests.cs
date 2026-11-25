@@ -276,6 +276,25 @@ public sealed class IpcIntegrationTests
     }
 
     [Fact]
+    public async Task SessionRechecksPeerAuthenticationBeforeDispatch()
+    {
+        var request = CreateRequest();
+        var authenticationChecks = 0;
+        using var timeout = new CancellationTokenSource(Deadline);
+        await using var stream = await BufferedSessionStream.CreateAsync(timeout.Token,
+            new BrokerHello(request.Envelope), request);
+
+        var outcome = await BrokerSession.RunAsync(
+            stream, BrokerLaunchTicket.Create(Environment.ProcessId, request),
+            () => ++authenticationChecks == 1, timeout.Token);
+
+        Assert.Equal(BrokerSessionOutcome.Rejected, outcome);
+        Assert.Equal(2, authenticationChecks);
+        var responses = await stream.ReadResponsesAsync(timeout.Token);
+        Assert.True(responses is [BrokerHelloAck], "A rejected batch may only acknowledge the initial hello.");
+    }
+
+    [Fact]
     public async Task ACurrentEnvelopeCannotAuthorizeDifferentRequestContent()
     {
         await using var fixture = await SessionFixture.ConnectAsync(static () => true);
