@@ -3903,7 +3903,8 @@ tasks:
   workstream: broker
   kind: code
   priority: P0
-  status: in_progress
+  status: blocked
+  blocked_reason: The development apphost cannot establish trusted startup before elevation. The UI fails closed. Trusted startup and real UAC and elevated-process evidence are required. Windows Sandbox initialization also blocked the distinct-account test.
   size: XL
   executor: codex
   environment: windows
@@ -3932,7 +3933,37 @@ tasks:
   verification:
   - Test UAC accept/decline, cross-user access, replay, timeout, client crash, and broker crash.
   - Record objective broker token, pipe ACL, nonce enforcement, and process lifetime checks, including cleanup after failure.
-  evidence: []
+  evidence:
+  - summary: Bounded framing, native Windows pipe and peer checks, request pinning, cancellation, replay and recovery passed in local tests.
+    task: TL-0311
+    command_or_review: .\eng\verify.ps1 -Tier Targeted with Broker and UI tests, plus focused IpcIntegrationTests and BrokerBatchClientTests
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, unelevated interactive Windows and disposable local IPC fixtures
+    date: '2026-11-25'
+    duration: 76.187 s Targeted, 1204 .NET tests
+    reference: artifacts/evidence/TL-0311/report.md, source 382e4f4
+    limitation: Consent-path tests use a fixture. The development broker rejects ordinary launch, and the UI elevates no process.
+  - summary: Clean warnings-as-errors Release and applicable full suites passed with elevated launch held closed.
+    task: TL-0311
+    command_or_review: .\eng\verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean same-machine worktree, Windows 11 x64, Python 3.14.7 and SDK 10.0.400
+    date: '2026-11-25'
+    duration: 343.515 s, 289 governance and 1926 .NET tests
+    reference: artifacts/evidence/TL-0311/report.md, source tree fa3fe60
+    limitation: Full excludes the separate distinct-account guest scenario and provides no real UAC or elevated startup proof.
+  - summary: The isolated distinct-account profile could not start its Windows Sandbox guest.
+    task: TL-0311
+    command_or_review: .\eng\run-tl0102-sandbox.ps1 -Phase Targeted -EvidenceTaskId TL-0311 -PersistEvidence and minimal offline startup probe
+    tier: targeted
+    result: unavailable
+    environment: Same active machine, network-disabled Windows Sandbox, pinned offline closure
+    date: '2026-11-25'
+    duration: 342.323 s for the governed profile
+    reference: artifacts/evidence/TL-0311/report.md, source tree fa3fe60
+    limitation: Startup returned 0x80070780 with and without mapped folders. The distinct-account scenario did not execute.
   notes:
   - UAC remains explicit. The attributable privilege-boundary authorization is recorded once at TL-0314.
   expected_test_tier: targeted
