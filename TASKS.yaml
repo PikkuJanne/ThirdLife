@@ -3333,7 +3333,7 @@ tasks:
   workstream: catalog
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: L
   executor: codex
   environment: any
@@ -3365,7 +3365,27 @@ tasks:
     discovery.
   verification:
   - Validate normal, stale, oversized, malicious, duplicate, and downgrade fixtures.
-  evidence: []
+  evidence:
+  - summary: Catalog v1 validated the governed synthetic projection and rejected stale, oversized, malformed, duplicate and downgraded input.
+    task: TL-0301
+    command_or_review: .\eng\verify.ps1 -Tier Targeted -TestProject tests\ThirdLife.Catalog.Tests\ThirdLife.Catalog.Tests.csproj
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, .NET SDK 10.0.400 and synthetic fixtures
+    date: '2026-11-25'
+    duration: 69.838 s, 1112 Quick tests plus 65 Catalog tests
+    reference: artifacts/evidence/TL-0301/report.md, runtime checkpoint 86625a5
+    limitation: Catalog shape and review claims only. Package admission and execution have separate trust checks.
+  - summary: Governance passed after preserving exact YAML licensing and source-revision inventory.
+    task: TL-0301
+    command_or_review: python -m unittest discover -s tools/tests -p 'test_*.py' -v
+    tier: targeted governance
+    result: passed
+    environment: Clean same-machine worktree, Python 3.14.7
+    date: '2026-11-25'
+    duration: 216.866 s, 287 tests
+    reference: artifacts/evidence/TL-0301/report.md, governance checkpoint 2f8c494
+    limitation: Full and Extended triggers did not apply.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

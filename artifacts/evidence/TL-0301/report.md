@@ -60,6 +60,22 @@ license decision, new dependency, or release-interface entry.
 ## Governed runtime verification
 
 `.\eng\verify.ps1 -Tier Targeted -TestProject tests\ThirdLife.Catalog.Tests\ThirdLife.Catalog.Tests.csproj`
-passed in 69.838 s on the active machine. The Quick steps passed static
-validation, formatting, the Release build with zero warnings, and 1,112 tests
-across Core, Inventory and UI. The Targeted selection added 65 Catalog tests.
+passed in 69.838 s on the active machine at the Catalog implementation
+checkpoint. The Quick steps passed static validation, formatting, the Release
+build with zero warnings, and 1,112 tests across Core, Inventory and UI. The
+Targeted selection added 65 Catalog tests. Quick passed again in 64.575 s
+after the Git source-revision correction. That correction changed only Python
+governance.
+
+In the clean worktree, CycloneDX generation in memory bound to correction
+commit `2f8c494cd813238fc4d5fc5b615957ead306ef1f`. The sorted JSON document
+SHA-256 was `7cede10117a63ade6f366da6dbd156bb28ad6b2de06b171cb34b724dc60b35d5`.
+
+`python -m unittest discover -s tools/tests -p 'test_*.py' -v` passed 287 tests
+in 216.866 s in the clean worktree at that commit. The test run used the
+pinned Python environment on the active machine. The worktree was clean
+before and after verification.
+
+The change introduces a metadata contract and test fixtures. The normal
+task integration is unprotected, with no database migration, major refactor,
+dependency change, product execution path, or named Full or Extended trigger.
