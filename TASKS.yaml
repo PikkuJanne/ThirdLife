@@ -3505,7 +3505,7 @@ tasks:
   workstream: planning
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: L
   executor: codex
   environment: any
@@ -3538,7 +3538,27 @@ tasks:
   verification:
   - Golden-test synthetic plans.
   - Property-test order stability and duplicate elimination.
-  evidence: []
+  evidence:
+  - summary: Three synthetic golden plans and typed prerequisite blocks passed. The final Actions project passed all 61 tests, including three reviewed metadata cases.
+    task: TL-0304
+    command_or_review: .\eng\verify.ps1 -Tier Targeted -TestProject tests\ThirdLife.Actions.Tests\ThirdLife.Actions.Tests.csproj and focused Actions rerun
+    tier: targeted
+    result: passed
+    environment: REF-CODEX-001 rev 2026-08-29.1, Windows 11 x64, SDK 10.0.400 and synthetic inputs
+    date: '2026-11-25'
+    duration: 62.941 s Targeted; 4.219 s focused rerun
+    reference: artifacts/evidence/TL-0304/report.md, source 365c015
+    limitation: Planning only. Actual package execution, approval, and broker paths remain separate.
+  - summary: Clean Full verified the new first-party dependency closure, with 287 governance and 1733 .NET tests.
+    task: TL-0304
+    command_or_review: .\eng\verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean same-machine worktree, Python 3.14.7 and SDK 10.0.400
+    date: '2026-11-25'
+    duration: 323.51 s
+    reference: artifacts/evidence/TL-0304/report.md, production source snapshot tree 0da6a19
+    limitation: Three extra reviewed metadata test cases were added after the Full snapshot and passed in the focused rerun. Extended was not triggered.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []

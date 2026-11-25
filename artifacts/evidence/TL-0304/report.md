@@ -28,6 +28,29 @@ the authoritative assessment, approval, journal, and broker boundaries.
   the other 24 lock files matched the earlier values.
 - The repository lock verifier accepted all 26 projects, and supply-chain
   validation retained 28 components and the approved licence matrix.
+- The first Targeted run passed 1,170 tests in 62.941 s, including 58 Actions
+  tests and all 22 original planner cases. The three additional fictional
+  reviewed-package cases passed separately. The complete Actions project
+  passed 61 tests with those cases included.
 - The new first-party reference graph triggers Full. This task changes no
   runtime dependency outside the repository, storage migration, UI control,
   privilege boundary, package execution, or release interface.
+- `.\eng\verify.ps1 -Tier Full -Restore` passed 287 governance tests and
+  1,733 .NET tests in 323.51 s in a clean same-machine worktree. Its exact
+  source tree `0da6a19aa6ed1f0e0f4986f52c6d2419291d5b5f` matched pushed
+  checkpoint `365c015e2f836b3c6a0888f7dcf6629bcf8898b9`. The three additional
+  fictional reviewed metadata cases affect only the test source and passed in
+  the separate targeted run. No Extended trigger applied.
+
+## Synthetic plan digests
+
+The golden cases use the governed profile and catalog projections and a
+minimal synthetic policy and observation set. They preserve the plan digest
+under reordering and equal duplicated input. These checks exercise planning
+logic on the active machine.
+
+| Scenario | v1 plan SHA-256 |
+| --- | --- |
+| Basic, essential capabilities | `c53f588c6406222f9b249055c72246d7ce8f6f38ab2f61b37ba57e73a60146a3` |
+| Basic, video calling selected | `0e912b4aa3d5c1480299a9a4749c633fe1c8376151bcae6820033db0790b3e1b` |
+| Job Seeker | `7a37bda000ca4f86ad8102050914540010f839249d2e195b78872e013b6cfe58` |

@@ -15,17 +15,7 @@ public sealed class PlanResolverTests
 {
     private const string PolicyReference = "community-laptop-policy@0.1.0-candidate.1";
     private const string VideoCalling = "video_calling";
-    private static readonly DateTimeOffset IntakeAt = new(2030, 5, 1, 8, 0, 0, TimeSpan.Zero);
-    private static readonly DateTimeOffset AsOfUtc = IntakeAt.AddHours(1);
-    private static readonly JobId TestJobId = new("job-synthetic-plan");
-    private static readonly DeviceId Device = new("device-synthetic-plan");
-    private static readonly SanitizationGateDecisionId GateId = new("gate-synthetic-plan");
-    private static readonly SanitizationEvidence Intake = CreateIntake("current");
-    private static readonly SanitizationGateDecision Gate = EvaluateGate(Intake);
-    private static readonly byte[] CatalogBytes = ReadFixture("catalog");
-    private static readonly CatalogDocument Catalog = CatalogSchema.Parse(CatalogBytes, AsOfUtc);
-    private static readonly ProfileDocument Basic = ProfileSchema.Parse(ReadFixture("basic"), Catalog);
-    private static readonly PolicyDocument Policy = PolicySchema.Parse(Encoding.UTF8.GetBytes("""
+    private const string PolicyJson = """
         {
           "schema_version": "thirdlife.policy.v1",
           "policy_id": "community-laptop-policy",
@@ -60,7 +50,18 @@ public sealed class PlanResolverTests
             }
           ]
         }
-        """.ReplaceLineEndings("\n")));
+        """;
+    private static readonly DateTimeOffset IntakeAt = new(2030, 5, 1, 8, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset AsOfUtc = IntakeAt.AddHours(1);
+    private static readonly JobId TestJobId = new("job-synthetic-plan");
+    private static readonly DeviceId Device = new("device-synthetic-plan");
+    private static readonly SanitizationGateDecisionId GateId = new("gate-synthetic-plan");
+    private static readonly SanitizationEvidence Intake = CreateIntake("current");
+    private static readonly SanitizationGateDecision Gate = EvaluateGate(Intake);
+    private static readonly byte[] CatalogBytes = ReadFixture("catalog");
+    private static readonly CatalogDocument Catalog = CatalogSchema.Parse(CatalogBytes, AsOfUtc);
+    private static readonly ProfileDocument Basic = ProfileSchema.Parse(ReadFixture("basic"), Catalog);
+    private static readonly PolicyDocument Policy = PolicySchema.Parse(Encoding.UTF8.GetBytes(PolicyJson.ReplaceLineEndings("\n")));
 
     [Theory]
     [InlineData("basic", false, "c53f588c6406222f9b249055c72246d7ce8f6f38ab2f61b37ba57e73a60146a3")]
@@ -293,6 +294,103 @@ public sealed class PlanResolverTests
         Assert.Equal(Disposition.ReadyToPrepare, plan.PolicyDecision?.Disposition);
     }
 
+    [Theory]
+    [InlineData("2030-05-01T09:00:01Z", "2030-05-01T09:00:01Z", null)]
+    [InlineData("2030-05-01T09:00:01Z", "2030-05-01T09:00:00Z", PlanBlockReason.PackageNotApplicable)]
+    [InlineData("2030-05-01T09:00:00Z", "2030-05-01T09:00:01Z", PlanBlockReason.PolicyNotApplicable)]
+    public void ProposesOnlyAnExactMachinePackageWhileItsReviewAndPolicyApply(
+        string policyExpiry, string reviewExpiry, PlanBlockReason? blockedReason)
+    {
+        var reviewedPolicy = MakeEffectivePolicy(policyExpiry);
+        var catalog = MakeReviewedCatalog(reviewExpiry);
+        var profileJson = JsonNode.Parse(ReadFixture("basic"))!;
+        profileJson["status"] = "reviewed";
+        profileJson["synthetic_data"] = false;
+        profileJson["policy"]!["version"] = reviewedPolicy.Version;
+        profileJson["catalog"]!["id"] = catalog.CatalogId;
+        profileJson["catalog"]!["version"] = catalog.Version;
+        var workshop = profileJson["workshop"]!;
+        workshop["capabilities"] = new JsonArray(workshop["capabilities"]![0]!.DeepClone());
+        var profile = ProfileSchema.Parse(Encoding.UTF8.GetBytes(profileJson.ToJsonString()), catalog);
+        var intake = CreateIntake("reviewed", "community-laptop-policy@1.0.0", ProvenanceKind.ProviderObservation);
+        var observations = ReadyObservations(intake);
+        var job = Store(observations, intakes: [intake], decisions: [EvaluateGate(intake)]);
+
+        var plan = PlanResolver.Resolve(job, reviewedPolicy, profile, catalog, observations, [], AsOfUtc);
+
+        Assert.False(plan.SyntheticData);
+        Assert.Equal(blockedReason, plan.BlockedReason);
+        if (blockedReason is not null)
+        {
+            Assert.Empty(plan.Actions);
+            return;
+        }
+
+        var action = Assert.Single(plan.Actions);
+        var package = Assert.IsType<InstallPackageActionRequest>(action.Request);
+        Assert.Equal("web_browsing", action.CapabilityId);
+        Assert.Equal(CapabilityIntent.Essential, action.Intent);
+        Assert.Equal("test-repository", package.SourceId);
+        Assert.Equal("Fictional.Tests.WebBrowser", package.PackageId);
+        Assert.Equal("2.15.236.8", package.ExactVersion);
+        Assert.Equal("Fictional Publisher", package.Publisher);
+        Assert.Equal(ActionScope.Machine, package.Scope);
+        Assert.Equal(ActionArchitecture.X64, package.Architecture);
+        Assert.Equal(ActionVerification.ExactPackageIdentity, action.Definition.Verification);
+        Assert.Equal(ActionAvailability.PackageBackendRequired, action.Definition.Availability);
+    }
+
+    private static PolicyDocument MakeEffectivePolicy(string expiresUtc)
+    {
+        var json = JsonNode.Parse(PolicyJson)!;
+        json["status"] = "effective";
+        json["synthetic_data"] = false;
+        json["version"] = "1.0.0";
+        var window = json["effective"]!;
+        window["status"] = "effective";
+        window["effective_from_utc"] = "2030-04-01T00:00:00Z";
+        window["effective_until_utc"] = expiresUtc;
+        return PolicySchema.Parse(Encoding.UTF8.GetBytes(json.ToJsonString()));
+    }
+
+    private static CatalogDocument MakeReviewedCatalog(string expiresUtc)
+    {
+        const string source = "test-repository";
+        const string packageId = "Fictional.Tests.WebBrowser";
+        const string exactVersion = "2.15.236.8";
+        var json = JsonNode.Parse(CatalogBytes)!;
+        json["catalog_id"] = "reviewed-plan-fixture";
+        json["status"] = "reviewed";
+        json["synthetic_data"] = false;
+        json["version"] = "1.0.0";
+        var entry = json["applications"]![0]!.DeepClone();
+        entry["id"] = "fictional.web-browser";
+        entry["entry_status"] = "reviewed";
+        entry["production_eligible"] = true;
+        var package = entry["package"]!;
+        package["source_id"] = source;
+        package["package_id"] = packageId;
+        package["exact_version"] = exactVersion;
+        package["external_artifact"] = true;
+        var review = entry["review"]!;
+        review["publisher"] = "Fictional Publisher";
+        review["declared_license"] = "MIT";
+        review["license_review_status"] = "approved";
+        review["privacy_review_status"] = "approved";
+        review["license_reviewed_at_utc"] = "2030-04-01T00:00:00Z";
+        review["privacy_reviewed_at_utc"] = "2030-04-02T00:00:00Z";
+        review["installation_status"] = "allowed";
+        review["valid_until_utc"] = expiresUtc;
+        entry["behavior"]!["network_use"] = "required";
+        var verification = entry["verification"]!;
+        verification["status"] = "reviewed";
+        verification["expected_source_id"] = source;
+        verification["expected_package_id"] = packageId;
+        verification["expected_version"] = exactVersion;
+        json["applications"] = new JsonArray(entry);
+        return CatalogSchema.Parse(Encoding.UTF8.GetBytes(json.ToJsonString()), AsOfUtc.AddMinutes(-1));
+    }
+
     private static ProposedPlan Resolve(
         StoredJob job,
         IEnumerable<Observation> observations,
@@ -324,26 +422,39 @@ public sealed class PlanResolverTests
     private static SanitizationGateDecision EvaluateGate(SanitizationEvidence intake) =>
         SanitizationGate.Evaluate(TestJobId, intake, IntakeAt.AddMinutes(2), GateId);
 
-    private static SanitizationEvidence CreateIntake(string suffix, string policyReference = PolicyReference) =>
-        new(Metadata("evidence-intake-" + suffix), SanitizationState.Verified, "external_sanitization",
+    private static SanitizationEvidence CreateIntake(
+        string suffix,
+        string policyReference = PolicyReference,
+        ProvenanceKind provenance = ProvenanceKind.SyntheticFixture) =>
+        new(Metadata("evidence-intake-" + suffix, provenance: provenance), SanitizationState.Verified, "external_sanitization",
             new OperatorId("operator-synthetic-plan"), IntakeAt, new MediaIdentifier("SYNTHETIC-MEDIA-PLAN"),
             SanitizationVerificationState.Verified, policyReference);
 
-    private static Observation[] ReadyObservations() =>
-    [
-        new(Intake.Metadata, new EvidenceKey("sanitization.state"), EvidenceValue.FromEnum("verified"), null, null),
-        Observe("system.architecture", "x64", "evidence-architecture"),
-        Observe("operating_system.support_state", "supported", "evidence-os-support"),
-        Observe("operating_system.release", "windows_11", "evidence-os-release"),
-    ];
+    private static Observation[] ReadyObservations(SanitizationEvidence? intake = null)
+    {
+        intake ??= Intake;
+        var provenance = intake.Metadata.Provenance.Kind;
+        return
+        [
+            new(intake.Metadata, new EvidenceKey("sanitization.state"), EvidenceValue.FromEnum("verified"), null, null),
+            Observe("system.architecture", "x64", "evidence-architecture", provenance: provenance),
+            Observe("operating_system.support_state", "supported", "evidence-os-support", provenance: provenance),
+            Observe("operating_system.release", "windows_11", "evidence-os-release", provenance: provenance),
+        ];
+    }
 
-    private static Observation Observe(string key, string value, string evidenceId, DateTimeOffset? collectedAt = null) =>
-        new(Metadata(evidenceId, collectedAt), new EvidenceKey(key), EvidenceValue.FromEnum(value), null, null);
+    private static Observation Observe(
+        string key, string value, string evidenceId, DateTimeOffset? collectedAt = null,
+        ProvenanceKind provenance = ProvenanceKind.SyntheticFixture) =>
+        new(Metadata(evidenceId, collectedAt, provenance), new EvidenceKey(key), EvidenceValue.FromEnum(value), null, null);
 
-    private static EvidenceMetadata Metadata(string evidenceId, DateTimeOffset? collectedAt = null) =>
-        new(new EvidenceId(evidenceId), PrivacyClassification.PublicReference, EvidenceClassification.Observed,
+    private static EvidenceMetadata Metadata(
+        string evidenceId, DateTimeOffset? collectedAt = null, ProvenanceKind provenance = ProvenanceKind.SyntheticFixture) =>
+        new(new EvidenceId(evidenceId),
+            provenance == ProvenanceKind.SyntheticFixture ? PrivacyClassification.PublicReference : PrivacyClassification.WorkshopRestricted,
+            EvidenceClassification.Observed,
             new ProviderId("provider-synthetic-plan"), collectedAt ?? IntakeAt.AddMinutes(1),
-            new EvidenceProvenance(ProvenanceKind.SyntheticFixture, "synthetic_plan"), ValueAvailability.Available);
+            new EvidenceProvenance(provenance, "synthetic_plan"), ValueAvailability.Available);
 
     private static byte[] ReadFixture(string name) => File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, name + ".json"));
 }
