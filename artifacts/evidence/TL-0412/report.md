@@ -46,6 +46,46 @@ An SBOM regression rejected the new runtime catalog until it was included in the
 source revision set. The focused fix and clean Full passed. No Extended trigger applies to
 the verified engineering slice.
 
+## Active-machine preflight after toolchain installation
+
+At integrated reset source `0492cb74253f7978787cf8ed2adafdb9c92dfabe`, the
+read-only production package probe passed in 1 s. It observed the exact package
+absent before and after resolving the reviewed signed MSI. It ran via `dotnet test`
+on `tests/ThirdLife.Packages.Tests/ThirdLife.Packages.Tests.csproj` in Release
+with filter `Category=ActiveMachine`. The complementary 18 deterministic tests
+passed in 172 ms. Windows 11 Pro 26H2 build 26300.9974, native x64,
+the unelevated process and Windows Installer 5.0.26100.9711 matched the prepared
+environment.
+
+A read-only native Windows Installer database check took 5.027 s, including
+acquisition and Authenticode. The exact 7,933,952-byte vendor MSI matched the
+recorded SHA-256 and valid signer certificate
+`1E8E0D13B608BA908572C1A129FAEC5D228DF8A2`. Its template was `x64;1033`,
+`ALLUSERS` was `1`, and its ProductVersion was `8.9.9.1`. The ProductCode was
+`{A23B657D-838B-4C9B-8F9D-386E50C1A76B}` and the PackageCode was
+`{18CD7780-F2FF-4F13-9070-BBE80D108501}`. The temporary review file was removed.
+An initial COM query produced a parameter type mismatch. The native query
+opened the database read-only and returned the expected metadata.
+
+An independent `MsiGetProductInfoExW` query in machine context also returned
+`ERROR_UNKNOWN_PRODUCT` (1605) for the reviewed ProductCode's state, version,
+publisher, package code and assignment type. The query passes a literal null
+SID as required for machine context. [Microsoft API contract](https://learn.microsoft.com/en-us/windows/win32/api/msi/nf-msi-msigetproductinfoexw)
+
+A separate read-only UI Automation launch of the production app at its verified
+candidate source `100aeb82eb352e781eee7c92808a7c4f53b4efce` passed in 3.137 s.
+It opened the audit workspace, confirmed assessment and preparation were
+disabled without intake, and closed normally. No job was opened or created.
+Six focused package UI tests passed in 4 s and the WPF control accessibility
+test passed in 3 s. The split isolated a transient CLR testhost shutdown assert
+seen after six passing tests in the initial combined selection.
+
+Quick with locked restore passed on the preflight checkpoint in 128.738 s,
+with seven governance cases and 1,165 .NET tests. The run exceeded the 120 s
+target while other session worktrees were active. The Quick WPF test slice
+reported 40 s, and the Release build reported 13.52 s. No runtime source or
+dependency changed. Reuse the earlier clean Full for the unchanged candidate.
+
 ## Launched transaction
 
 Pending action-specific authorization for one machine-wide installation on the active

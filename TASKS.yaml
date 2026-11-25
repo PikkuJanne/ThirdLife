@@ -4799,8 +4799,8 @@ tasks:
   kind: test
   priority: P0
   status: blocked
-  blocked_reason: The exact Notepad++ 8.9.9.1 x64 vendor MSI machine-wide installation on the active Windows 11 host
-    requires scope-bound machine-change authorization and any ordinary Windows consent before the launched transaction.
+  blocked_reason: The exact Notepad++ 8.9.9.1 x64 vendor MSI machine-wide installation requires scope-bound authority,
+    verified intake facts for the target, and any ordinary Windows consent.
   size: L
   executor: codex
   environment: windows
@@ -4842,6 +4842,16 @@ tasks:
     duration: Initial-state probe and deterministic app checks
     reference: artifacts/evidence/TL-0412/report.md
     limitation: Machine-wide installation and real report continuity await action-specific authorization.
+  - task: TL-0412
+    summary: Read-only preflight confirmed package absence and the signed x64 vendor MSI identity, version and scope.
+    command_or_review: Production package probe Category=ActiveMachine and native read-only MSI database inspection
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974, native x64, unelevated
+    date: '2026-11-25'
+    duration: 1 s package test and 5.027 s MSI inspection
+    reference: artifacts/evidence/TL-0412/report.md, source 0492cb7
+    limitation: Scope-bound authority, actual intake facts and any applicable Windows consent remain required.
   expected_test_tier: full
   full_test_triggers:
   - Run clean Full after governance, dependency contract, and package execution route changes.
