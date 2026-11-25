@@ -1,0 +1,439 @@
+Representative synthetic workshop reports
+Renderer source bf7076ccee9e5c4c438f4706a68a1021e98316b7 (integrated TL-0207).
+The active Codex machine rendered all six reports from the bounded PolicyReportTests fixtures.
+The examples use synthetic evidence and a synthetic candidate policy.
+
+--- Synthetic case: Ready to prepare ---
+ThirdLife Setup Core - Workshop disposition record
+Classification: WORKSHOP_RESTRICTED
+Schema: workshop-disposition-v2
+Job: job-policy-fixture
+Device: device-policy-fixture
+Job created: 2030-01-01T08:00:00.0000000Z
+Job status: Active
+Scope: Contains synthetic fixture evidence. It does not describe actual device collection or physical function.
+
+Assessment summary
+Collection completed. Review the findings.
+Started: 2030-01-01T08:00:00.0000000Z
+Finished: 2030-01-01T08:00:00.0000000Z
+
+External sanitization
+Gate: Read-only assessment allowed after verified storage replacement.
+Gate evaluated: 2030-01-01T08:00:00.0000000Z
+- Replacement storage verified. Method: replacement_storage. Verification: Verified.
+  Observed. Synthetic fixture. Provider: workshop-intake. Operator code: operator-fixture. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-sanitization.
+  External event: 2030-01-01T08:00:00.0000000Z. Policy: m1-intake-v1.
+  Workshop media reference: medium-fixture.
+
+Saved observations
+- system.architecture: x64
+  Observed. Synthetic fixture. Provider: windows-system-inventory. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-architecture.
+- os.family: windows_11
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-release.
+- os.support_target: supported
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-support.
+- storage.system_volume.caller_free_bytes: 250 bytes
+  Observed. Synthetic fixture. Provider: windows-storage. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-storage.
+- battery.present: Unknown
+  Not available. Synthetic fixture. Provider: windows-battery-report. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-battery-unknown.
+  Limitation: provider_unavailable.
+Records outside the workshop allowlist: 2. Review the saved job for details.
+
+Manual check records
+- Legacy manual check: Pass
+  Human confirmed. Human confirmation. Provider: manual-test-capture. Operator code: operator-fixture. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-keyboard.
+  Record: manual-keyboard.
+Free-form notes remain in the protected job and are omitted from this record.
+
+Policy
+Policy ID workshop-policy.
+Version 1.0.0-candidate.1.
+SHA-256 b8753c33a2da9ae56b1d72d84d142174b73e97e06a0226de5fcfd8b83e2abf6e.
+Candidate policy evaluation for workshop review.
+Evaluated 2030-01-01T08:00:00.0000000Z.
+
+Policy rule details
+- Core rule CORE-OS-ARCHITECTURE. Pass. Evidence ID evidence-architecture.
+- Core rule CORE-OS-RELEASE. Pass. Evidence ID evidence-release.
+- Core rule CORE-OS-SUPPORT. Pass. Evidence ID evidence-support.
+- Policy rule POL-KBD-001. Pass. Evidence ID evidence-keyboard.
+- Policy rule POL-OWN-001. Pass. Evidence ID evidence-ownership.
+- Policy rule POL-STORAGE-001. Pass. Evidence ID evidence-storage.
+
+Exceptions
+No authorized exceptions were applied.
+
+Captured disposition
+Ready to prepare
+The required checks passed for this assessment.
+Core rule CORE-OS-ARCHITECTURE passed. Evidence ID evidence-architecture.
+Core rule CORE-OS-RELEASE passed. Evidence ID evidence-release.
+Core rule CORE-OS-SUPPORT passed. Evidence ID evidence-support.
+Policy rule POL-KBD-001 passed. Evidence ID evidence-keyboard.
+2 more controlling rules are listed in the details.
+
+--- Synthetic case: Repair and retest ---
+ThirdLife Setup Core - Workshop disposition record
+Classification: WORKSHOP_RESTRICTED
+Schema: workshop-disposition-v2
+Job: job-policy-fixture
+Device: device-policy-fixture
+Job created: 2030-01-01T08:00:00.0000000Z
+Job status: Active
+Scope: Contains synthetic fixture evidence. It does not describe actual device collection or physical function.
+
+Assessment summary
+Collection completed. Review the findings.
+Started: 2030-01-01T08:00:00.0000000Z
+Finished: 2030-01-01T08:00:00.0000000Z
+
+External sanitization
+Gate: Read-only assessment allowed after verified storage replacement.
+Gate evaluated: 2030-01-01T08:00:00.0000000Z
+- Replacement storage verified. Method: replacement_storage. Verification: Verified.
+  Observed. Synthetic fixture. Provider: workshop-intake. Operator code: operator-fixture. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-sanitization.
+  External event: 2030-01-01T08:00:00.0000000Z. Policy: m1-intake-v1.
+  Workshop media reference: medium-fixture.
+
+Saved observations
+- system.architecture: x64
+  Observed. Synthetic fixture. Provider: windows-system-inventory. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-architecture.
+- os.family: windows_11
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-release.
+- os.support_target: supported
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-support.
+- storage.system_volume.caller_free_bytes: 25 bytes
+  Observed. Synthetic fixture. Provider: windows-storage. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-storage.
+- battery.present: Unknown
+  Not available. Synthetic fixture. Provider: windows-battery-report. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-battery-unknown.
+  Limitation: provider_unavailable.
+Records outside the workshop allowlist: 2. Review the saved job for details.
+
+Manual check records
+- Legacy manual check: Pass
+  Human confirmed. Human confirmation. Provider: manual-test-capture. Operator code: operator-fixture. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-keyboard.
+  Record: manual-keyboard.
+Free-form notes remain in the protected job and are omitted from this record.
+
+Policy
+Policy ID workshop-policy.
+Version 1.0.0-candidate.1.
+SHA-256 b8753c33a2da9ae56b1d72d84d142174b73e97e06a0226de5fcfd8b83e2abf6e.
+Candidate policy evaluation for workshop review.
+Evaluated 2030-01-01T08:00:00.0000000Z.
+
+Policy rule details
+- Core rule CORE-OS-ARCHITECTURE. Pass. Evidence ID evidence-architecture.
+- Core rule CORE-OS-RELEASE. Pass. Evidence ID evidence-release.
+- Core rule CORE-OS-SUPPORT. Pass. Evidence ID evidence-support.
+- Policy rule POL-KBD-001. Pass. Evidence ID evidence-keyboard.
+- Policy rule POL-OWN-001. Pass. Evidence ID evidence-ownership.
+- Policy rule POL-STORAGE-001. Fail. Evidence ID evidence-storage.
+
+Exceptions
+No authorized exceptions were applied.
+
+Captured disposition
+Repair and retest
+A required check failed. Record the repair and retest the affected checks.
+Policy rule POL-STORAGE-001 failed. Evidence ID evidence-storage.
+
+--- Synthetic case: Human review required ---
+ThirdLife Setup Core - Workshop disposition record
+Classification: WORKSHOP_RESTRICTED
+Schema: workshop-disposition-v2
+Job: job-policy-fixture
+Device: device-policy-fixture
+Job created: 2030-01-01T08:00:00.0000000Z
+Job status: Active
+Scope: Contains synthetic fixture evidence. It does not describe actual device collection or physical function.
+
+Assessment summary
+Collection completed. Review the findings.
+Started: 2030-01-01T08:00:00.0000000Z
+Finished: 2030-01-01T08:00:00.0000000Z
+
+External sanitization
+Gate: Read-only assessment allowed after verified storage replacement.
+Gate evaluated: 2030-01-01T08:00:00.0000000Z
+- Replacement storage verified. Method: replacement_storage. Verification: Verified.
+  Observed. Synthetic fixture. Provider: workshop-intake. Operator code: operator-fixture. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-sanitization.
+  External event: 2030-01-01T08:00:00.0000000Z. Policy: m1-intake-v1.
+  Workshop media reference: medium-fixture.
+
+Saved observations
+- system.architecture: x64
+  Observed. Synthetic fixture. Provider: windows-system-inventory. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-architecture.
+- os.family: windows_11
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-release.
+- os.support_target: supported
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-support.
+- storage.system_volume.caller_free_bytes: 250 bytes
+  Observed. Synthetic fixture. Provider: windows-storage. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-storage.
+- battery.present: Unknown
+  Not available. Synthetic fixture. Provider: windows-battery-report. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-battery-unknown.
+  Limitation: provider_unavailable.
+Records outside the workshop allowlist: 2. Review the saved job for details.
+
+Manual check records
+No manual results are saved.
+
+Policy
+Policy ID workshop-policy.
+Version 1.0.0-candidate.1.
+SHA-256 b8753c33a2da9ae56b1d72d84d142174b73e97e06a0226de5fcfd8b83e2abf6e.
+Candidate policy evaluation for workshop review.
+Evaluated 2030-01-01T08:00:00.0000000Z.
+
+Policy rule details
+- Core rule CORE-OS-ARCHITECTURE. Pass. Evidence ID evidence-architecture.
+- Core rule CORE-OS-RELEASE. Pass. Evidence ID evidence-release.
+- Core rule CORE-OS-SUPPORT. Pass. Evidence ID evidence-support.
+- Policy rule POL-KBD-001. Pending confirmation. No saved evidence is linked to this check.
+- Policy rule POL-OWN-001. Pass. Evidence ID evidence-ownership.
+- Policy rule POL-STORAGE-001. Pass. Evidence ID evidence-storage.
+
+Exceptions
+No authorized exceptions were applied.
+
+Captured disposition
+Human review required
+Review the cited findings before proceeding.
+Policy rule POL-KBD-001 requires human confirmation. No saved evidence is linked to this check.
+
+--- Synthetic case: Alternative operating system candidate ---
+ThirdLife Setup Core - Workshop disposition record
+Classification: WORKSHOP_RESTRICTED
+Schema: workshop-disposition-v2
+Job: job-policy-fixture
+Device: device-policy-fixture
+Job created: 2030-01-01T08:00:00.0000000Z
+Job status: Active
+Scope: Contains synthetic fixture evidence. It does not describe actual device collection or physical function.
+
+Assessment summary
+Collection completed. Review the findings.
+Started: 2030-01-01T08:00:00.0000000Z
+Finished: 2030-01-01T08:00:00.0000000Z
+
+External sanitization
+Gate: Read-only assessment allowed after verified storage replacement.
+Gate evaluated: 2030-01-01T08:00:00.0000000Z
+- Replacement storage verified. Method: replacement_storage. Verification: Verified.
+  Observed. Synthetic fixture. Provider: workshop-intake. Operator code: operator-fixture. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-sanitization.
+  External event: 2030-01-01T08:00:00.0000000Z. Policy: m1-intake-v1.
+  Workshop media reference: medium-fixture.
+
+Saved observations
+- system.architecture: x64
+  Observed. Synthetic fixture. Provider: windows-system-inventory. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-architecture.
+- os.family: windows_10
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-release.
+- os.support_target: audit_only
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-support.
+- storage.system_volume.caller_free_bytes: 250 bytes
+  Observed. Synthetic fixture. Provider: windows-storage. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-storage.
+- battery.present: Unknown
+  Not available. Synthetic fixture. Provider: windows-battery-report. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-battery-unknown.
+  Limitation: provider_unavailable.
+Records outside the workshop allowlist: 2. Review the saved job for details.
+
+Manual check records
+- Legacy manual check: Pass
+  Human confirmed. Human confirmation. Provider: manual-test-capture. Operator code: operator-fixture. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-keyboard.
+  Record: manual-keyboard.
+Free-form notes remain in the protected job and are omitted from this record.
+
+Policy
+Policy ID workshop-policy.
+Version 1.0.0-candidate.1.
+SHA-256 b8753c33a2da9ae56b1d72d84d142174b73e97e06a0226de5fcfd8b83e2abf6e.
+Candidate policy evaluation for workshop review.
+Evaluated 2030-01-01T08:00:00.0000000Z.
+
+Policy rule details
+- Core rule CORE-OS-ARCHITECTURE. Pass. Evidence ID evidence-architecture.
+- Core rule CORE-OS-RELEASE. Fail. Evidence ID evidence-release.
+- Core rule CORE-OS-SUPPORT. Fail. Evidence ID evidence-support.
+- Policy rule POL-KBD-001. Pass. Evidence ID evidence-keyboard.
+- Policy rule POL-OWN-001. Pass. Evidence ID evidence-ownership.
+- Policy rule POL-STORAGE-001. Pass. Evidence ID evidence-storage.
+
+Exceptions
+No authorized exceptions were applied.
+
+Captured disposition
+Alternative operating system candidate
+A Windows preparation requirement failed. Consider a supported alternative operating system.
+Core rule CORE-OS-RELEASE failed. Evidence ID evidence-release.
+Core rule CORE-OS-SUPPORT failed. Evidence ID evidence-support.
+
+--- Synthetic case: Do not deploy ---
+ThirdLife Setup Core - Workshop disposition record
+Classification: WORKSHOP_RESTRICTED
+Schema: workshop-disposition-v2
+Job: job-policy-fixture
+Device: device-policy-fixture
+Job created: 2030-01-01T08:00:00.0000000Z
+Job status: Active
+Scope: Contains synthetic fixture evidence. It does not describe actual device collection or physical function.
+
+Assessment summary
+Collection completed. Review the findings.
+Started: 2030-01-01T08:00:00.0000000Z
+Finished: 2030-01-01T08:00:00.0000000Z
+
+External sanitization
+Gate: Read-only assessment allowed after verified storage replacement.
+Gate evaluated: 2030-01-01T08:00:00.0000000Z
+- Replacement storage verified. Method: replacement_storage. Verification: Verified.
+  Observed. Synthetic fixture. Provider: workshop-intake. Operator code: operator-fixture. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-sanitization.
+  External event: 2030-01-01T08:00:00.0000000Z. Policy: m1-intake-v1.
+  Workshop media reference: medium-fixture.
+
+Saved observations
+- system.architecture: x64
+  Observed. Synthetic fixture. Provider: windows-system-inventory. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-architecture.
+- os.family: windows_11
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-release.
+- os.support_target: supported
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-support.
+- storage.system_volume.caller_free_bytes: 250 bytes
+  Observed. Synthetic fixture. Provider: windows-storage. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-storage.
+- battery.present: Unknown
+  Not available. Synthetic fixture. Provider: windows-battery-report. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-battery-unknown.
+  Limitation: provider_unavailable.
+Records outside the workshop allowlist: 2. Review the saved job for details.
+
+Manual check records
+- Legacy manual check: Pass
+  Human confirmed. Human confirmation. Provider: manual-test-capture. Operator code: operator-fixture. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-keyboard.
+  Record: manual-keyboard.
+Free-form notes remain in the protected job and are omitted from this record.
+
+Policy
+Policy ID workshop-policy.
+Version 1.0.0-candidate.1.
+SHA-256 b8753c33a2da9ae56b1d72d84d142174b73e97e06a0226de5fcfd8b83e2abf6e.
+Candidate policy evaluation for workshop review.
+Evaluated 2030-01-01T08:00:00.0000000Z.
+
+Policy rule details
+- Core rule CORE-OS-ARCHITECTURE. Pass. Evidence ID evidence-architecture.
+- Core rule CORE-OS-RELEASE. Pass. Evidence ID evidence-release.
+- Core rule CORE-OS-SUPPORT. Pass. Evidence ID evidence-support.
+- Policy rule POL-KBD-001. Pass. Evidence ID evidence-keyboard.
+- Policy rule POL-OWN-001. Fail. Evidence ID evidence-ownership.
+- Policy rule POL-STORAGE-001. Pass. Evidence ID evidence-storage.
+
+Exceptions
+No authorized exceptions were applied.
+
+Captured disposition
+Do not deploy
+A blocking requirement failed. Stop deployment and review the cited findings.
+Policy rule POL-OWN-001 failed. Evidence ID evidence-ownership.
+
+--- Synthetic case: Governed exception with pending confirmation ---
+ThirdLife Setup Core - Workshop disposition record
+Classification: WORKSHOP_RESTRICTED
+Schema: workshop-disposition-v2
+Job: job-policy-fixture
+Device: device-policy-fixture
+Job created: 2030-01-01T08:00:00.0000000Z
+Job status: Active
+Scope: Contains synthetic fixture evidence. It does not describe actual device collection or physical function.
+
+Assessment summary
+Collection completed. Review the findings.
+Started: 2030-01-01T08:00:00.0000000Z
+Finished: 2030-01-01T08:00:00.0000000Z
+
+External sanitization
+Gate: Read-only assessment allowed after verified storage replacement.
+Gate evaluated: 2030-01-01T08:00:00.0000000Z
+- Replacement storage verified. Method: replacement_storage. Verification: Verified.
+  Observed. Synthetic fixture. Provider: workshop-intake. Operator code: operator-fixture. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-sanitization.
+  External event: 2030-01-01T08:00:00.0000000Z. Policy: m1-intake-v1.
+  Workshop media reference: medium-fixture.
+
+Saved observations
+- system.architecture: x64
+  Observed. Synthetic fixture. Provider: windows-system-inventory. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-architecture.
+- os.family: windows_11
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-release.
+- os.support_target: supported
+  Observed. Synthetic fixture. Provider: windows-operating-system. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-support.
+- storage.system_volume.caller_free_bytes: 25 bytes
+  Observed. Synthetic fixture. Provider: windows-storage. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-storage.
+- battery.present: Unknown
+  Not available. Synthetic fixture. Provider: windows-battery-report. Recorded: 2030-01-01T08:00:00.0000000Z.
+  Evidence ID evidence-battery-unknown.
+  Limitation: provider_unavailable.
+Records outside the workshop allowlist: 2. Review the saved job for details.
+
+Manual check records
+No manual results are saved.
+
+Policy
+Policy ID workshop-policy.
+Version 1.0.0-candidate.1.
+SHA-256 b8753c33a2da9ae56b1d72d84d142174b73e97e06a0226de5fcfd8b83e2abf6e.
+Candidate policy evaluation for workshop review.
+Evaluated 2030-01-01T08:00:00.0000000Z.
+
+Policy rule details
+- Core rule CORE-OS-ARCHITECTURE. Pass. Evidence ID evidence-architecture.
+- Core rule CORE-OS-RELEASE. Pass. Evidence ID evidence-release.
+- Core rule CORE-OS-SUPPORT. Pass. Evidence ID evidence-support.
+- Policy rule POL-KBD-001. Pending confirmation. No saved evidence is linked to this check.
+- Policy rule POL-OWN-001. Pass. Evidence ID evidence-ownership.
+- Policy rule POL-STORAGE-001. Exception. Evidence ID evidence-storage.
+
+Exceptions
+- Policy rule POL-STORAGE-001. Evidence ID evidence-storage. Exception record exception-20a1d23a816c4467b013660862cbe5ee. Authorization workshop-storage-review. Operator code Withheld by the workshop schema. Recorded 2030-01-01T08:00:00.0000000Z.
+
+Captured disposition
+Human review required
+Review the cited findings before proceeding.
+Policy rule POL-KBD-001 requires human confirmation. No saved evidence is linked to this check.
