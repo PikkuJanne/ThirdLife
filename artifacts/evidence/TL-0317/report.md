@@ -1,7 +1,8 @@
 # TL-0317 Hyper-V qualification
 
 **Date** 2026-11-25  
-**Active-machine live source base** `61df5c2eae27d4e1d128965f169b90fe15dfe218`
+**Active-machine live source base** `61df5c2eae27d4e1d128965f169b90fe15dfe218`  
+**Qualification** All eight live cases passed for the reviewed Native AOT no-op candidate
 
 ## Historical host admission checkpoint
 
@@ -47,8 +48,7 @@ Reuse the archive from a previously prepared committed checkout when its
 source tree and reviewed artifact digests match the verified integration
 source. Run from that archive's exact payload-source checkout. Prepare a
 fresh archive from a clean commit when the staged guest driver or fixtures
-change. The
-[host runner](../../../eng/run-thirdlife-hyperv.ps1) checks the reviewed executable
+change. The [host runner](../../../eng/run-thirdlife-hyperv.ps1) checks the reviewed executable
 and provisioner digests, builds the test assemblies and fixtures with locked
 inputs, and returns `TestSource` and `PayloadSha256`. Its default cache and run
 results are under the host user's local application data, outside the checkout.
@@ -166,13 +166,39 @@ execution and cleanup. User Account Control displayed
 | `DistinctAccount`, initial run | Failed, 83.392 s | Protected deployment and run cleanup passed. The original runner discarded the assertion detail. A scoped post-run account query found the fixture account absent. |
 | `DistinctAccount`, diagnostic run at `b5ec550` | Failed, 81.522 s | `ProbeStartRejected`, test and scheduled-task exit `1`. The process-based fixture produced no verified pipe-denial result. Protected deployment and cleanup passed. The run admitted the VM through the default DPAPI credential path. |
 | `DistinctAccount`, native-error diagnostic at `8ecfe22` | Failed, 84.126 s | Same failure classification and exit `1`. No native startup code was reported, so the exact failing Windows call remains undetermined. Run cleanup passed. |
+| `DistinctAccount`, corrected token probe at `d74ca7f` | Passed, 92.176 s | Windows authenticated the generated local standard account. The effective token was verified as that distinct nonadministrator. The same production pipe client open returned `UnauthorizedAccessException` under that token, the listener remained unconnected, and the initiating account then connected with the expected process and session. The fixture sent no payload under the distinct token and removed the account. This tests a distinct local Windows logon token in the fixture. The earlier separate process attempt remains unclassified. |
 | `Accept` | Passed, 159.661 s | After visually confirming the live prompt, Codex delivered one virtual mouse Yes click at 17:38:48 UTC. The unelevated client returned `Completed` with one matching `Applied` no-op and the broker exited. |
 | `Decline` | Passed, 133.534 s | After visually confirming the live prompt, Codex delivered one virtual Escape at 17:41:02 UTC. The unelevated client returned `Declined` with zero terminal results and the runner found no surviving broker. |
-| `Interrupt` | Passed, 111.558 s | Codex observed the prompt and clicked Yes at 17:42:55 UTC. The authenticated, owned broker reached the pre-dispatch rendezvous. Scoped termination returned exit `-1`, followed by `Unavailable` and zero terminal results in the unelevated client. |
+| `Interrupt` | Passed, 111.558 s | Codex observed the prompt and clicked Yes at 17:42:55 UTC. The owned broker’s elevated same-user and session identity was verified at the pre-connection rendezvous. Scoped termination returned exit `-1`, followed by `Unavailable` and zero terminal results in the unelevated client. |
 | `Timeout` | Passed, 124.995 s | Codex observed the prompt and clicked Yes at 17:44:30 UTC. The broker authenticated, closed the empty session at the ticket deadline and exited `3`. The unelevated harness recorded `BrokerDeadlineElapsed` with zero terminal results. |
 | `Disconnect` | Passed, 102.782 s | Codex observed the prompt and clicked Yes at 17:46:42 UTC. After authenticated hello, closing the client pipe caused broker exit `3`. The unelevated harness recorded `ClientDisconnected` and zero terminal results. |
 | `RetainObservation`, initial run | Failed, 114.340 s | Codex observed the prompt and clicked Yes at 17:48:37 UTC. The harness recorded only the consent request, and cleanup passed. Source review showed the independent process wrapper could request broader rights when reopening the elevated process. |
-| `RetainObservation`, corrected run at `8ecfe22` | Passed, 112.211 s | Codex observed the prompt and clicked Yes at 17:55:42 UTC. The unelevated client returned `RequiresReview` and retained one exact `Applied` result from before the injected receive interruption. The test observed exit `0` using query and synchronize rights retained from the verified launch handle. This exercises client-side result retention. |
+| `RetainObservation`, corrected run at `8ecfe22` | Passed, 112.211 s | Codex observed the prompt and clicked Yes at 17:55:42 UTC. The receive fixture interrupted the second typed no-op’s accepted progress, after the first exact `Applied` result at sequence 2. The unelevated client returned `RequiresReview` with that result. The test observed exit `0` using query and synchronize rights retained from the verified launch handle. This exercises client-side result retention. |
 
-Ordinary broker-dependent application dispatch remains unavailable while
-TL-0317 is open.
+The corrected RetainObservation archive at `8ecfe22` was
+`854cf184913e3a0eb407e98fccfd69fc1987fa08ee560b3b3b09d750f34eadba`.
+The corrected DistinctAccount archive at `d74ca7f` was
+`a52c33f17a0aa471493e0652dafbdef684e9ce98dc9b4a24be1eaf0d4d20a81c`.
+The Hyper-V distinct-account fixture uses Windows local logon and scoped
+impersonation with the existing production pipe access mask. The independent
+child process remains the Windows Sandbox route. [Windows local logon](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-logonuserw)
+
+A separate PowerShell Direct inspection took 4.149 s. It found zero
+qualification run directories, fixture accounts, qualification scheduled
+tasks, broker processes, or consent processes. The reviewed protected broker
+and reusable protected staging root were retained. Hyper-V reported the VM
+running and verified the clean checkpoint. The expected guest account
+remained interactive, and Codex closed the Basic console viewer.
+
+TL-0317 qualifies the reviewed no-op scope. TL-0313 owns durable application
+integration and TL-0314 owns the applicable privilege-boundary decision for
+ordinary broker-dependent dispatch.
+
+## Integration verification
+
+`eng/verify.ps1 -Tier Full -Restore` passed in 405.952 s on the clean,
+active-machine worktree at `d74ca7f` after the fixture changes. It passed 303
+Python governance tests, 2,025 .NET tests, locked restore, formatting and a
+zero-warning Release build. The named live guest cases above cover the
+separate ActiveMachine selections. The supplementary Windows clean-checkout
+check passed on the same code candidate. [GitHub check](https://github.com/PikkuJanne/ThirdLife/actions/runs/45670248248/job/139403257397)

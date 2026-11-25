@@ -3838,8 +3838,7 @@ tasks:
   workstream: broker
   kind: code
   priority: P0
-  status: blocked
-  blocked_reason: Native publication, host protected deployment and the elevated no-op passed. TL-0317 tracks guest access and the outstanding actual decline, elevated interruption recovery and distinct-account denial.
+  status: done
   size: XL
   executor: codex
   environment: windows
@@ -3931,10 +3930,20 @@ tasks:
     duration: Full 342.790 s, 304 governance and 2001 .NET tests, SBOM 7.035 s
     reference: artifacts/evidence/TL-0311/report.md, checkpoint 63eec10
     limitation: Managed build and fixtures only. Actual installed Native AOT image, real UAC and isolated distinct-account evidence remain outstanding.
+  - summary: TL-0317 completed protected Native AOT no-op qualification, including actual Windows consent and decline, distinct standard-account denial, broker interruption, deadline, disconnect and client result retention.
+    task: TL-0311
+    command_or_review: TL-0317 named Hyper-V cases and retained WindowsPipeHasAProtectedLogonAclAndKernelIdentifiesBothPeers verification
+    tier: targeted
+    result: passed
+    environment: Active native x64 host, dedicated Windows 11 Hyper-V guest build 26300
+    date: '2026-11-25'
+    duration: 92.176 to 159.661 s per passing guest case
+    reference: artifacts/evidence/TL-0317/report.md
+    limitation: Verified no-op broker scope. TL-0313 owns durable job integration and TL-0314 owns the applicable privilege decision.
   notes:
   - UAC remains explicit. The attributable privilege-boundary authorization is recorded once at TL-0314.
   - PR 36 merged through TL-0316. Its historical report retains the earlier implementation and native linker evidence.
-  - TL-0317 tracks protected native qualification. Broker-dependent dispatch remains unavailable.
+  - TL-0317 records the verified protected no-op scope. Ordinary broker-dependent dispatch remains gated by TL-0313 and TL-0314.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
@@ -4217,8 +4226,7 @@ tasks:
   workstream: broker
   kind: test
   priority: P0
-  status: blocked
-  blocked_reason: The owner reported the dedicated Hyper-V guest running and authorized the guest work. The current Codex token was denied at host Get-VM. Resume in an approved local Administrator shell with secure PowerShell Direct guest authentication. Guest deployment, actual decline, elevated recovery and distinct-account denial remain unobserved.
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -4294,6 +4302,26 @@ tasks:
     duration: 351.353 s
     reference: artifacts/evidence/TL-0317/report.md
     limitation: 303 governance and 2025 .NET tests passed. The default suite excludes ActiveMachine guest cases.
+  - task: TL-0317
+    summary: All eight separately selected live guest cases passed with the reviewed installed Native AOT broker.
+    command_or_review: eng/run-thirdlife-hyperv.ps1 named profiles plus visually verified Basic console input through the Hyper-V virtual devices
+    tier: targeted
+    result: passed
+    environment: Active native x64 host, Hyper-V Administrators token, DPAPI-backed PowerShell Direct, Windows 11 guest build 26300
+    date: '2026-11-25'
+    duration: 92.176 to 159.661 s per passing case, final cleanup inspection 4.149 s
+    reference: artifacts/evidence/TL-0317/report.md, test sources 5534e55, 8ecfe22 and d74ca7f
+    limitation: Scope is the reviewed unsigned no-op broker. The distinct-account check exercised Windows pipe access using a verified standard local logon token in the fixture and admitted the intended initiating account. The prior independent Hyper-V child-process failure remains unclassified.
+  - task: TL-0317
+    summary: Full verification passed after the live runner and qualification-fixture changes.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean active Windows 11 native x64 worktree at d74ca7f
+    date: '2026-11-25'
+    duration: 405.952 s
+    reference: artifacts/evidence/TL-0317/report.md
+    limitation: 303 governance and 2025 .NET tests passed. The named live guest cases ran separately.
   expected_test_tier: full
   full_test_triggers:
   - Run the full tier for qualification of the protected privilege boundary.
@@ -4303,13 +4331,17 @@ tasks:
   execution_prerequisites:
   - kind: capability
     scope: Verified Microsoft x64 linker and Windows SDK that can link the pinned Native AOT target
+    evidence: artifacts/evidence/TL-0311/report.md, reconciled Native AOT publish and exact broker digest
   - kind: capability
     scope: Authorized local Hyper-V host access and PowerShell Direct authentication to the dedicated guest
+    evidence: artifacts/evidence/TL-0317/report.md, enabled Hyper-V Administrators token and successful DPAPI-backed guest admission
   - kind: capability
     scope: Authorized protected-deployment environment and distinct-account isolation observation on the active machine
+    evidence: artifacts/evidence/TL-0317/report.md, protected guest installation and live Verify and DistinctAccount results
   - kind: authorization
     scope: Windows consent for the exact protected broker launch and its allowlisted rehearsal action
     authority: operator
+    evidence: artifacts/evidence/TL-0317/report.md, observed Windows consent and decline inputs under the owner's authorization for the named no-op rehearsals
 - id: TL-0401
   title: Select a supported structured package installation route
   milestone: M4

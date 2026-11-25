@@ -64,9 +64,10 @@ before the same-user, session and IPC checks. Missing or unsuitable installs sta
 unavailable. Decline and cancellation preserve the unelevated workflow, and ambiguous
 dispatch retains the existing recovery result.
 
-Broker-dependent actions remain unavailable in the ordinary application while
-TL-0317 qualification is open. The launcher is exercised by the opt-in
-rehearsal. Package setup uses its reviewed Windows Installer route.
+TL-0317 qualified the reviewed no-op candidate through the opt-in rehearsal.
+Ordinary broker-dependent actions remain gated by application orchestration
+in TL-0313 and the applicable TL-0314 privilege decision. Package setup uses
+its reviewed Windows Installer route.
 
 The host publication, provisioning and consent observations are preserved in
 [TL-0311 evidence](../../artifacts/evidence/TL-0311/report.md). TL-0314 retains the
@@ -77,5 +78,5 @@ the VM identity and Basic console session, provisions or verifies the reviewed
 candidate, and starts the consent rehearsals from the unelevated interactive
 WPF client. Each rehearsal uses compiled no-op actions. The distinct-account
 case reuses the production pipe ACL check under the Hyper-V profile. Follow the
-[TL-0317 runner procedure](../../artifacts/evidence/TL-0317/report.md) for the
-current access prerequisite and guest evidence.
+[TL-0317 runner procedure](../../artifacts/evidence/TL-0317/report.md) for DPAPI
+credential reuse and the verified guest outcomes.
