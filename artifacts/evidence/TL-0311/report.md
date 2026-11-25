@@ -235,8 +235,8 @@ No physical accessibility or cross-hardware observation was added.
 
 ## Protected provisioning and live consent
 
-The operator approved the specific Windows PowerShell provisioning prompt.
-The signed System32 shell ran the previously pinned script and returned exit 0.
+After the specific Windows PowerShell provisioning request, the signed System32
+shell ran the previously pinned script and returned exit 0.
 An independent read-only `-VerifyOnly` run returned `Verified` for the exact
 digest at `Program Files\ThirdLife\Broker`. From the unelevated client,
 `InstalledCandidateMatchesTheReviewedDigestAndRejectsDirectWriteAccess` passed.
@@ -244,11 +244,19 @@ It compared the executable and digest record, denied direct writes to both, and
 opened the production launch guard. Verification and the test took 3.616 s.
 
 `InstalledBrokerCompletesOneNoOpThroughExplicitConsent` passed in 6 s after
-the operator approved the exact installed executable's Windows prompt.
+Windows granted elevation to the exact installed executable.
 The production client checked the returned process image, elevated peer token
 and same-user/session identity. The authenticated batch returned one matching
 applied no-op, the pipe closed cleanly, the broker exited with code 0, and the
 WPF client token remained unelevated. No package or other device action used the
-broker. Live decline, elevated interruption recovery and distinct-account denial
-remain separate qualification items. Keep ordinary broker dispatch unavailable
-while TL-0317 remains open.
+broker.
+
+The live decline case returned `Completed` instead of `Declined` in 3 s.
+The second attempt gave 15 s advance notice before opening the request and
+returned the same result in 4 s. Both attempts completed one no-op. Windows'
+prompt choice could not be independently attributed. The host reported
+`EnableLUA=1` and `ConsentPromptBehaviorAdmin=5` on read-only inspection.
+No policy settings were changed. The directed Windows cancellation mapping
+passed in deterministic tests. Actual decline, elevated interruption recovery
+and distinct-account denial remain open. Keep ordinary broker dispatch
+unavailable while TL-0317 remains open.

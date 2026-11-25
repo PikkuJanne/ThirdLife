@@ -3839,7 +3839,7 @@ tasks:
   kind: code
   priority: P0
   status: blocked
-  blocked_reason: Native publication, protected deployment and the consented no-op passed. TL-0317 retains live decline, elevated interruption recovery and the owner-deferred distinct-account test.
+  blocked_reason: Native publication, protected deployment and the elevated no-op passed. TL-0317 retains the unobserved decline, elevated interruption recovery and owner-deferred distinct-account test.
   size: XL
   executor: codex
   environment: windows
@@ -4219,7 +4219,7 @@ tasks:
   kind: test
   priority: P0
   status: blocked
-  blocked_reason: Live decline and elevated interruption recovery remain unobserved. The owner-deferred distinct-account Hyper-V test remains open.
+  blocked_reason: Two decline rehearsals returned Completed instead of Declined. Actual Windows decline and elevated interruption recovery remain unobserved. The owner-deferred distinct-account Hyper-V test remains open.
   size: L
   executor: codex
   environment: windows
@@ -4254,7 +4254,7 @@ tasks:
     reference: artifacts/evidence/TL-0311/report.md, broker SHA-256 ea3d534d885b46b396e5aa8c31b81666c4fc8d5195a27e86cca464fc90bb3861
     limitation: Local unsigned qualification candidate. Distinct-account denial requires separate evidence.
   - task: TL-0317
-    summary: Reviewed protected provisioning and actual explicit consent for one authenticated no-op succeeded.
+    summary: Reviewed protected provisioning and one authenticated no-op through Windows-granted elevation succeeded.
     command_or_review: Pinned provisioning script, read-only VerifyOnly and opt-in ProtectedBrokerRehearsalTests digest, ACL and consent checks
     tier: targeted
     result: passed
@@ -4262,7 +4262,17 @@ tasks:
     date: '2026-11-25'
     duration: Protected verification and ACL test 3.616 s, live no-op test 6 s
     reference: artifacts/evidence/TL-0311/report.md, broker SHA-256 ea3d534d885b46b396e5aa8c31b81666c4fc8d5195a27e86cca464fc90bb3861
-    limitation: One consented no-op. Live decline, elevated interruption and the deferred distinct-account guest remain open.
+    limitation: Allow-case only. Live decline, elevated interruption and the deferred distinct-account guest remain open.
+  - task: TL-0317
+    summary: The live decline rehearsal did not produce the expected Windows decline result.
+    command_or_review: DecliningTheInstalledBrokerLeavesNoTerminalAction, then 15 s advance notice and repeat
+    tier: targeted
+    result: failed
+    environment: Active Windows 11 native x64, exact protected local broker and unelevated interactive client
+    date: '2026-11-25'
+    duration: Rehearsals reported 3 s and 4 s
+    reference: artifacts/evidence/TL-0311/report.md
+    limitation: Both attempts completed a no-op. The Windows prompt choice was not independently observed. Deterministic Windows cancellation mapping passed separately.
   expected_test_tier: full
   full_test_triggers:
   - Run the full tier for qualification of the protected privilege boundary.
@@ -4830,8 +4840,8 @@ tasks:
   kind: test
   priority: P0
   status: blocked
-  blocked_reason: The exact Notepad++ 8.9.9.1 x64 vendor MSI machine-wide installation on the active Windows 11 host
-    requires scope-bound machine-change authorization and any ordinary Windows consent before the launched transaction.
+  blocked_reason: The exact Notepad++ 8.9.9.1 x64 vendor MSI machine-wide installation requires scope-bound authority,
+    verified intake facts for the target, and any ordinary Windows consent.
   size: L
   executor: codex
   environment: windows
@@ -4873,6 +4883,16 @@ tasks:
     duration: Initial-state probe and deterministic app checks
     reference: artifacts/evidence/TL-0412/report.md
     limitation: Machine-wide installation and real report continuity await action-specific authorization.
+  - task: TL-0412
+    summary: Read-only preflight confirmed package absence and the signed x64 vendor MSI identity, version and scope.
+    command_or_review: Production package probe Category=ActiveMachine and native read-only MSI database inspection
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974, native x64, unelevated
+    date: '2026-11-25'
+    duration: 1 s package test and 5.027 s MSI inspection
+    reference: artifacts/evidence/TL-0412/report.md, source 0492cb7
+    limitation: Scope-bound authority, actual intake facts and any applicable Windows consent remain required.
   expected_test_tier: full
   full_test_triggers:
   - Run clean Full after governance, dependency contract, and package execution route changes.
