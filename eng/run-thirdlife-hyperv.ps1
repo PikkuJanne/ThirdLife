@@ -10,7 +10,7 @@ param(
     [string] $Scenario,
     [Parameter(ParameterSetName = 'Run')][pscredential] $Credential,
     [Parameter(ParameterSetName = 'Run')][switch] $PromptForCredential,
-    [Parameter(ParameterSetName = 'Run')][guid] $ExpectedVMId,
+    [Parameter(ParameterSetName = 'Run')][guid] $ExpectedVMId = [guid]::Empty,
     [Parameter(ParameterSetName = 'Run')][ValidatePattern('\A[0-9a-fA-F]{64}\z')][string] $PayloadSha256,
     [string] $WorkDirectory = (Join-Path $env:LOCALAPPDATA 'ThirdLife\HyperV')
 )
@@ -122,8 +122,15 @@ if ($Credential -and $PromptForCredential) { throw 'Choose the supplied credenti
 if ($PromptForCredential) {
     $Credential = Get-Credential -UserName "$($profile.computer)\$($profile.account)" -Message 'PowerShell Direct credential for the dedicated ThirdLife guest'
 }
-if (-not $Credential -or $Credential.UserName -ine "$($profile.computer)\$($profile.account)") {
-    throw 'Supply the expected local guest credential in a PSCredential, or use the attended -PromptForCredential option.'
+elseif (-not $Credential) {
+    $credentialPath = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'ThirdLife\Credentials\guest.credential.xml'
+    if (Test-Path -LiteralPath $credentialPath -PathType Leaf) {
+        try { $Credential = Import-Clixml -LiteralPath $credentialPath }
+        catch { throw 'The stored guest credential is unavailable to this Windows user in the local DPAPI context.' }
+    }
+}
+if ($Credential -isnot [pscredential] -or $Credential.UserName -ine "$($profile.computer)\$($profile.account)") {
+    throw 'The expected local guest PSCredential is required. Use the stored DPAPI credential, -Credential, or an attended -PromptForCredential session.'
 }
 
 $driverBytes = [IO.File]::ReadAllBytes($driverPath)
@@ -268,6 +275,12 @@ finally {
                 elseif ($observed -and $observed.HasExit) { 'failed' } else { 'unobserved' }
             $consoleObservation = if ($Scenario -in @('Verify', 'DistinctAccount')) { 'not_required' } else { 'collect_separately' }
             $observations = if ($observed) { @($observed.Observations) } else { @() }
+            $testFailure = $testExitCode = $taskLastResult = $null
+            if ($observed) {
+                $testFailure = $observed.TestFailure
+                $testExitCode = $observed.TestExitCode
+                $taskLastResult = $observed.TaskLastResult
+            }
             $record = [ordered]@{
                 task = $profile.task; scenario = $Scenario; brokerSource = $profile.brokerSource; testSource = $testSource
                 brokerSha256 = $profile.brokerSha256; payloadSha256 = $PayloadSha256; sdkSha512 = $profile.sdkSha512
@@ -277,6 +290,7 @@ finally {
                 protectedBrokerVerified = [bool]($provisioned -and $provisioned.ProtectedBrokerVerified)
                 guestBuild = $guestBuild; uacPolicy = $uacPolicy
                 testResult = $testResult; consoleObservation = $consoleObservation; observations = @($observations)
+                testFailure = $testFailure; testExitCode = $testExitCode; taskLastResult = $taskLastResult
             }
             $outcome = Join-Path $work "$id.$Scenario.json"
             [IO.File]::WriteAllText($outcome, ($record | ConvertTo-Json -Depth 5))

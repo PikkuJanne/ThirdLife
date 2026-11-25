@@ -330,8 +330,18 @@ exit `$LASTEXITCODE
         }
         $exitFile = Get-ResultFile 'exit.txt'
         $trx = Get-ResultFile 'result.trx'
+        $testExit = $null
+        if ($exitFile) {
+            $code = 0
+            if ([int]::TryParse([IO.File]::ReadAllText($exitFile), [ref]$code)) { $testExit = $code }
+        }
+        $taskLastResult = $null
+        if ($state -notin @('Running', 'Queued')) {
+            $taskLastResult = [uint32](Get-ScheduledTaskInfo -TaskName $taskName).LastTaskResult
+        }
         $passed = $false
-        if ($trx -and $exitFile -and [IO.File]::ReadAllText($exitFile) -eq '0') {
+        $testFailure = $null
+        if ($trx -and $null -ne $testExit) {
             $xmlSettings = [Xml.XmlReaderSettings]::new()
             $xmlSettings.DtdProcessing = [Xml.DtdProcessing]::Prohibit
             $xmlSettings.XmlResolver = $null
@@ -341,15 +351,45 @@ exit `$LASTEXITCODE
                 $document = [Xml.XmlDocument]::new()
                 $document.Load($reader)
                 $case = $document.SelectNodes("//*[local-name()='UnitTestResult']")
-                $passed = $case.Count -eq 1 -and $case[0].GetAttribute('outcome') -ceq 'Passed' -and
-                    $case[0].GetAttribute('testName') -ceq $TestName
+                if ($case.Count -eq 1 -and $case[0].GetAttribute('testName') -ceq $TestName) {
+                    $passed = $testExit -eq 0 -and $case[0].GetAttribute('outcome') -ceq 'Passed'
+                    if (-not $passed -and $Scenario -ceq 'DistinctAccount') {
+                        # Only fixed classification tokens leave the guest. TRX can contain local paths and identities.
+                        $messageNode = $case[0].SelectSingleNode(".//*[local-name()='ErrorInfo']/*[local-name()='Message']")
+                        $message = if ($messageNode) { $messageNode.InnerText } else { '' }
+                        $testFailure = switch -Regex ($message) {
+                            'administrative ThirdLife Hyper-V guest token is required' { 'GuestTokenRejected'; break }
+                            'Expected:\s*Supported' { 'GuestPlatformRejected'; break }
+                            'Hyper-V guest firmware identity is required' { 'GuestFirmwareRejected'; break }
+                            'scenario inputs must be owned by Administrators or SYSTEM' { 'RequestOwnerRejected'; break }
+                            'scenario input ACL grants write access' { 'RequestAclRejected'; break }
+                            'protected Hyper-V request must admit' { 'RequestMetadataRejected'; break }
+                            'Expected:\s*typeof\(System\.UnauthorizedAccessException\)' { 'RequestWriteDenialMissing'; break }
+                            'disposable guest could not create its standard test account' { 'AccountCreationRejected'; break }
+                            'owned guest test account was not fully removed' { 'AccountCleanupFailed'; break }
+                            'owned guest probe did not start|System\.ComponentModel\.Win32Exception' { 'ProbeStartRejected'; break }
+                            'Actual:\s*21\b' { 'ProbeTokenRejected'; break }
+                            'Actual:\s*22\b|restricted pipe accepted a connection' { 'UnexpectedProbeConnection'; break }
+                            'Actual:\s*23\b' { 'ProbeDidNotReportAccessDenied'; break }
+                            'Actual:\s*24\b' { 'ProbeSetupFailed'; break }
+                            'restricted pipe listener should still be awaiting' { 'ListenerStateUnexpected'; break }
+                            'OperationCanceledException|TaskCanceledException' { 'CaseDeadlineElapsed'; break }
+                            default { 'FixtureAssertionFailed' }
+                        }
+                    }
+                }
+                elseif ($Scenario -ceq 'DistinctAccount') { $testFailure = 'TestResultSelectionUnexpected' }
             }
             finally { $reader.Dispose() }
         }
+        elseif ($exitFile -and $Scenario -ceq 'DistinctAccount') { $testFailure = 'TestResultMissing' }
         [pscustomobject]@{
             State = [string]$state
             HasExit = [bool]$exitFile
             Passed = $passed
+            TestFailure = $testFailure
+            TestExitCode = $testExit
+            TaskLastResult = $taskLastResult
             BrokerRemaining = [bool](Get-Process -Name 'ThirdLife.Broker' -ErrorAction SilentlyContinue)
             ConsentProcess = [bool](Get-Process -Name 'consent' -ErrorAction SilentlyContinue | Where-Object SessionId -eq $ConsoleSession)
             Observations = @($lines | Select-Object stage, scenario, timestampUtc, status, terminalCount, clientUnelevated, exitCode)

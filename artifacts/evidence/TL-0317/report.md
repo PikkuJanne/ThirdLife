@@ -55,20 +55,35 @@ needed by the staged assemblies. The guest uses a private SDK extraction.
 .\eng\run-thirdlife-hyperv.ps1 -Prepare
 ```
 
-From the authorized host shell, supply an existing secure in-memory guest
-credential, or enter it once using the local `Get-Credential` prompt as shown.
-`Inspect` checks the configured running Generation 2 VM and clean checkpoint,
-connects through PowerShell Direct by VM ID, and checks the guest Windows
-identity, admin token, native x64 architecture and expected account's existing
-Basic console session. It reads the UAC policy values as diagnostic context
-for prompt observations. The runner's `-PromptForCredential` is also available
-for one attended invocation. Keep the returned VM ID local.
+Use the authorized Hyper-V shell on the Windows host under the Windows account
+that exported the guest credential. The runner loads the approved local
+CLIXML file under `%LOCALAPPDATA%\ThirdLife\Credentials` when called without
+a credential. Windows DPAPI binds recovery to the exporting account and
+computer. For a sequence in one shell, import the `PSCredential` once and pass
+the same object to each case. Keep the credential file, password and VM ID out
+of evidence. [Microsoft CLIXML credential guidance](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/import-clixml#example-2-import-a-secure-credential-object)
+
+Discover the configured VM by its profile name and pass the discovered GUID
+to `Inspect`. The runner verifies that identity and the clean checkpoint,
+connects through PowerShell Direct, and checks the guest Windows identity,
+admin token, native x64 architecture and expected account's existing Basic
+console session. It reads the UAC policy values as context for prompt observations.
 
 ```powershell
 $profile = Get-Content -Raw -LiteralPath .\eng\thirdlife-hyperv-profile.json | ConvertFrom-Json
-$guest = Get-Credential -UserName "$($profile.computer)\$($profile.account)"
-$admission = .\eng\run-thirdlife-hyperv.ps1 -Scenario Inspect -Credential $guest
+$vm = Get-VM -Name $profile.vm -ErrorAction Stop
+$credentialPath = Join-Path $env:LOCALAPPDATA 'ThirdLife\Credentials\guest.credential.xml'
+$guest = Import-Clixml -LiteralPath $credentialPath -ErrorAction Stop
+if ($guest -isnot [PSCredential] -or $guest.UserName -ine "$($profile.computer)\$($profile.account)") {
+    throw 'The credential must be a PSCredential for the configured guest account.'
+}
+$admission = .\eng\run-thirdlife-hyperv.ps1 -Scenario Inspect -Credential $guest -ExpectedVMId $vm.Id
 ```
+
+If the secure credential needs replacement, obtain it through one attended
+local `Get-Credential` prompt for the configured guest account and keep the
+result in memory. The runner also provides `-PromptForCredential` for a single
+attended invocation.
 
 Run each selected scenario with `$payloadSha256` set to the exact value printed
 by the trusted preparation. The runner keeps the authenticated connection for
