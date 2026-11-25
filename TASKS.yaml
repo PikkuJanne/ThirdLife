@@ -4798,9 +4798,7 @@ tasks:
   workstream: integration
   kind: test
   priority: P0
-  status: blocked
-  blocked_reason: The exact Notepad++ 8.9.9.1 x64 vendor MSI machine-wide installation requires scope-bound authority,
-    verified intake facts for the target, and any ordinary Windows consent.
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -4852,6 +4850,26 @@ tasks:
     duration: 1 s package test and 5.027 s MSI inspection
     reference: artifacts/evidence/TL-0412/report.md, source 0492cb7
     limitation: Scope-bound authority, actual intake facts and any applicable Windows consent remain required.
+  - task: TL-0412
+    summary: The authorized launched app installed Notepad++ 8.9.9.1 x64 machine-wide and preserved the verified transaction.
+    command_or_review: WPF UI Automation, independent Windows Installer registration query and saved SQLite/report comparison
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974, native x64, unelevated app, verified replacement intake
+    date: '2026-11-25'
+    duration: 14.404 s resumed flow, 0.712 s registration query and 0.678 s SQLite review
+    reference: artifacts/evidence/TL-0412/report.md, production source 100aeb82
+    limitation: Windows consent prompt and physical accessibility behavior unobserved. Separate exposure and recovery gates remain.
+  - task: TL-0412
+    summary: Reused the clean Full verification of the exact live package application candidate.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Separate clean worktree on the active Windows 11 x64 machine
+    date: '2026-11-25'
+    duration: 331.593 s
+    reference: artifacts/evidence/TL-0412/report.md, production source 100aeb82
+    limitation: Clean Full covers engineering verification. The live transaction is recorded separately.
   expected_test_tier: full
   full_test_triggers:
   - Run clean Full after governance, dependency contract, and package execution route changes.
@@ -4860,10 +4878,12 @@ tasks:
   execution_prerequisites:
   - kind: capability
     scope: Qualified supported machine-wide package backend and independent installed-state query
+    evidence: artifacts/evidence/TL-0412/report.md, authorized live Windows Installer execution and exact machine registration
   - kind: authorization
     scope: Action-specific consent for the exact approved package, version, machine scope, target, and any applicable installer
       terms or Windows consent
     authority: operator
+    evidence: artifacts/evidence/TL-0412/report.md, attributable project-owner authorization and saved exact plan approval
   outcome: package-installation
 - id: TL-0501
   title: Execute dependency-aware multi-action plans
