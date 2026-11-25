@@ -3988,6 +3988,16 @@ tasks:
     duration: Targeted 74.896 s and 1267 .NET tests, publish attempt 4.646 s
     reference: artifacts/evidence/TL-0311/report.md
     limitation: No native artifact, protected deployment or real UAC observed. Owner deferred the Hyper-V guest.
+  - summary: Clean source Full and deterministic SBOM generation passed while native publication stayed blocked.
+    task: TL-0311
+    command_or_review: ./eng/verify.ps1 -Tier Full -Restore and source-bound eng/generate-sbom.ps1
+    tier: full
+    result: passed
+    environment: Clean same-machine worktree, Windows 11 Pro 26H2 build 26300.9974, SDK 10.0.400, unelevated
+    date: '2026-11-25'
+    duration: Full 342.790 s, 304 governance and 2001 .NET tests, SBOM 7.035 s
+    reference: artifacts/evidence/TL-0311/report.md, checkpoint 63eec10
+    limitation: Managed build and fixtures only. Actual installed Native AOT image, real UAC and isolated distinct-account evidence remain outstanding.
   notes:
   - UAC remains explicit. The attributable privilege-boundary authorization is recorded once at TL-0314.
   - Reconcile retained draft PR #36 with the integrated TL-0315 contract. Preserve the trusted elevated startup and real privilege and recovery evidence gaps.

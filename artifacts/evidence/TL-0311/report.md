@@ -144,6 +144,16 @@ also match an independent report. [Microsoft Q&A report](https://learn.microsoft
 - `./eng/verify.ps1 -Tier Targeted -Restore` with the Broker and Broker.SecurityTests
   projects passed 1,267 tests in 74.896 s, including Quick and a warnings-as-errors
   Release build.
+- A clean same-machine worktree at `63eec10f80d10c25fe8567ea03e4007e4102e694`,
+  tree `69d99f8ea67476e6ef672144a3561479fa6cbf50`, passed
+  `./eng/verify.ps1 -Tier Full -Restore` with 304 governance and 2,001 .NET tests
+  in 342.790 s. The Full default test filter excludes actual consent rehearsals.
+  Supplementary Windows CI also passed on this source.
+- `./eng/generate-sbom.ps1 -ProductVersion 0.7.0-dev -SourceRevision <source commit>`
+  completed in 7.035 s on the clean checkpoint. The 32-component CycloneDX
+  SHA-256 was `222b8e67b04892c28c09d368e67167cc633426be461c14a57902820c36bfba37`.
+  The new matrix is pending release review. The provisioning script SHA-256
+  in a Windows checkout is `cd8c8d67d943872b9206fc14379df428406785d10a4b7b1122e9cf248c6a90da`.
 
 An intact vendor-catalogue installation or a separately verified licensed
 Microsoft x64 C++ toolchain and Windows 11 SDK is the next build input. Consent

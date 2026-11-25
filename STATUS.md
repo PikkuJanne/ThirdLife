@@ -22,6 +22,9 @@ publish stopped at the missing Microsoft linker. Two Microsoft installation
 catalogs failed their advertised size and SHA-256 checks. There is no published
 or installed native candidate on the active machine.
 
+Targeted passed 1,267 tests. Clean Full on checkpoint `63eec10` passed 304
+governance and 2,001 .NET tests. The 32-component SBOM was generated.
+
 The owner deferred the Hyper-V guest. Real consent, elevated recovery and the
 distinct-account denial remain outstanding. [TL-0311 evidence](artifacts/evidence/TL-0311/report.md)
 
