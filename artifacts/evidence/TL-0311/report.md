@@ -260,3 +260,14 @@ No policy settings were changed. The directed Windows cancellation mapping
 passed in deterministic tests. Actual decline, elevated interruption recovery
 and distinct-account denial remain open. Keep ordinary broker dispatch
 unavailable while TL-0317 remains open.
+
+The enabled Windows UAC operational channel held no events to attribute either
+decline attempt. The affected live check was left open after the two attempts.
+
+## Cumulative integration check
+
+Quick with locked restore passed on the cumulative commit `4f6cd73` with seven
+governance and 1,193 .NET tests. Its 135.609 s duration exceeded the 120 s target.
+The clean Release build reported 24.44 s compared with 8.08 s in the earlier
+populated worktree. The WPF test selection reported 33 s in each run.
+The runtime and verification source matched the earlier Full checkpoint.
