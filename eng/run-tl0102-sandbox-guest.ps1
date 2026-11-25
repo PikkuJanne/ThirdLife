@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepositoryStabilizationTaskId = "AMD-2026-09-12-REPOSITORY-STABILIZATION"
-$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "TL-0111", "TL-0112", "TL-0113", $RepositoryStabilizationTaskId)
+$AllowedTaskIds = @("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "TL-0111", "TL-0112", "TL-0113", "TL-0311", $RepositoryStabilizationTaskId)
 $TaskId = "Unavailable"
 $ResultSchemaVersion = 2
 $SandboxMemoryMb = 4096
@@ -911,6 +911,9 @@ function Assert-RunRequest {
     if ($RunRequest.task_id -eq "TL-0113" -and $RunRequest.phase -notin @("Quick", "Targeted")) {
         throw "The TL-0113 run request requires the shared Quick or Targeted profile."
     }
+    if ($RunRequest.task_id -eq "TL-0311" -and $RunRequest.phase -ne "Targeted") {
+        throw "The TL-0311 run request requires the offline Targeted broker ACL scenario."
+    }
     if ($RunRequest.run_id -isnot [string] -or $RunRequest.run_id -notmatch "^[0-9a-f]{32}$" -or
         $RunRequest.expected_head_commit -isnot [string] -or $RunRequest.expected_head_commit -notmatch "^[0-9a-f]{40}$") { throw "The run request contains an invalid source identity." }
     foreach ($digestName in @("expected_source_digest", "history_bundle_sha256", "repository_status_sha256", "launcher_sha256", "runner_sha256", "sandbox_config_sha256", "nuget_closure_sha256", "python_packages_sha256")) {
@@ -924,6 +927,9 @@ function Assert-RunRequest {
         $RunRequest.nuget_package_count -lt 0 -or $RunRequest.nuget_package_count -gt $MaxNuGetPackages) { throw "The run request contains an unsafe history or package-count value." }
     $sharedProfile = ($RunRequest.task_id -eq "TL-0107" -and $RunRequest.phase -eq "Quick") -or $RunRequest.task_id -eq "TL-0109" -or $RunRequest.task_id -eq "TL-0111" -or $RunRequest.task_id -eq "TL-0112" -or $RunRequest.task_id -eq "TL-0113"
     if ($sharedProfile -and $RunRequest.nuget_package_count -eq 0) { throw "The shared verifier profile requires the complete locked package closure." }
+    if ($RunRequest.task_id -eq "TL-0311" -and $RunRequest.nuget_package_count -eq 0) {
+        throw "The broker ACL scenario requires the locked broker test package closure."
+    }
     $auditRequired = $RunRequest.phase -eq "Full" -or $sharedProfile
     if ($RunRequest.networking_enabled -ne $auditRequired -or $RunRequest.nuget_audit_enabled -ne $auditRequired -or
         $RunRequest.network_reason -ne $(if ($auditRequired) { "governed_nuget_audit" } else { "disabled_offline_phase" })) { throw "The run request violates the phase network contract." }
@@ -1123,6 +1129,32 @@ function Invoke-SharedVerifierProfile {
             "Passed ThirdLife.Inventory.Tests.BatteryReportWorkspaceTests.ActiveMachineProductionSourceHasBoundedSanitizedMetricsAndVerifiedCleanup [",
             "Passed ThirdLife.Inventory.Tests.BatteryReportProviderTests.SandboxBatteryCollectionRecordsOnlyAvailabilityAndBoundedMetrics ["
         )
+    }
+}
+
+function Invoke-BrokerAclProfile {
+    param(
+        [Parameter(Mandatory = $true)][string] $DotnetExecutable,
+        [Parameter(Mandatory = $true)][string] $NuGetConfigPath,
+        [Parameter(Mandatory = $true)][string] $RunId
+    )
+    $testProject = "tests\ThirdLife.Broker.Tests\ThirdLife.Broker.Tests.csproj"
+    $testName = "ThirdLife.Broker.Tests.SandboxPipeAclTests.WindowsSandboxDistinctStandardAccountIsDeniedByProductionPipeAcl"
+    Invoke-RequiredCommand -Label "locked-offline-broker-restore" -FilePath $DotnetExecutable -Arguments @(
+        "restore", $testProject, "--locked-mode", "--configfile", $NuGetConfigPath, "--nologo", "-p:NuGetAudit=false"
+    ) -Failure "restore_failed"
+
+    $markerName = "THIRDLIFE_SANDBOX_BROKER_ACL_TEST"
+    $previousMarker = [Environment]::GetEnvironmentVariable($markerName, [EnvironmentVariableTarget]::Process)
+    try {
+        [Environment]::SetEnvironmentVariable($markerName, $RunId, [EnvironmentVariableTarget]::Process)
+        Invoke-RequiredCommand -Label "broker-cross-account-acl" -FilePath $DotnetExecutable -Arguments @(
+            "test", $testProject, "--configuration", "Release", "--no-restore", "--nologo",
+            "--filter", "Category=SandboxOnly&FullyQualifiedName=$testName", "--logger", "console;verbosity=normal"
+        ) -Failure "test_failed" -SuccessMarker "Test Run Successful." -RequiredSuccessMarkers @("Passed $testName [")
+    }
+    finally {
+        [Environment]::SetEnvironmentVariable($markerName, $previousMarker, [EnvironmentVariableTarget]::Process)
     }
 }
 
@@ -1334,6 +1366,9 @@ try {
 
         if ($TaskId -in @($RepositoryStabilizationTaskId, "TL-0107", "TL-0109", "TL-0111", "TL-0112", "TL-0113")) {
             Invoke-SharedVerifierProfile -DotnetExecutable $dotnetExecutable -NuGetConfigPath $nugetConfig -EvidenceTaskId $TaskId -SelectedPhase $phase
+        }
+        elseif ($TaskId -eq "TL-0311") {
+            Invoke-BrokerAclProfile -DotnetExecutable $dotnetExecutable -NuGetConfigPath $nugetConfig -RunId $request.run_id
         }
         elseif ($phase -eq "Targeted" -and $TaskId -eq "TL-0104") {
             $diagnosticsProject = "tests\ThirdLife.Diagnostics.Tests\ThirdLife.Diagnostics.Tests.csproj"

@@ -12,4 +12,15 @@
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
   </PropertyGroup>
+
+  <!-- Pin the same Windows RID restore graph in ordinary builds and broker publishing.
+       These libraries still compile to managed IL for their original target frameworks. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'ThirdLife.Actions' or
+                            '$(MSBuildProjectName)' == 'ThirdLife.Broker.Protocol' or
+                            '$(MSBuildProjectName)' == 'ThirdLife.Catalog' or
+                            '$(MSBuildProjectName)' == 'ThirdLife.Core' or
+                            '$(MSBuildProjectName)' == 'ThirdLife.Inventory' or
+                            '$(MSBuildProjectName)' == 'ThirdLife.Policy'">
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+  </PropertyGroup>
 </Project>

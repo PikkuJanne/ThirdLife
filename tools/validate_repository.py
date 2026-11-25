@@ -9,6 +9,7 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -284,6 +285,26 @@ EXPECTED_TEST_MANIFEST = {
             "memory_mb": 4096,
             "network_reason": "governed_nuget_audit",
         },
+        "tl0311_cross_account": {
+            "task_id": "TL-0311",
+            "tier": "Targeted",
+            "test_projects": ["tests/ThirdLife.Broker.Tests/ThirdLife.Broker.Tests.csproj"],
+            "filter": (
+                "Category=SandboxOnly&FullyQualifiedName="
+                "ThirdLife.Broker.Tests.SandboxPipeAclTests.WindowsSandboxDistinctStandardAccountIsDeniedByProductionPipeAcl"
+            ),
+            "success_marker": "Test Run Successful.",
+            "required_success_marker": (
+                "Passed ThirdLife.Broker.Tests.SandboxPipeAclTests.WindowsSandboxDistinctStandardAccountIsDeniedByProductionPipeAcl ["
+            ),
+            "hosted_environment": "active_machine_windows_sandbox",
+            "risk_trigger": "distinct_guest_account_broker_pipe_acl",
+            "target_seconds": 120,
+            "command_timeout_seconds": 300,
+            "host_timeout_minutes": 30,
+            "memory_mb": 4096,
+            "network_reason": "disabled_offline_phase",
+        },
     },
 }
 MACHINE_PATH_RE = re.compile(
@@ -498,6 +519,64 @@ def property_text(root: ET.Element, name: str) -> str | None:
     return None if element is None or element.text is None else element.text.strip()
 
 
+def effective_lock_dependencies(
+    frameworks: dict[str, Any], lock_path: Path, validation: Validation
+) -> Iterator[tuple[str, dict[str, dict[str, Any]]]]:
+    """Read complete TFM maps and the SDK's sparse Windows x64 RID maps."""
+    label = relative(lock_path)
+    sections: dict[str, dict[str, dict[str, Any]]] = {}
+    for target, dependencies in frameworks.items():
+        if not isinstance(dependencies, dict):
+            validation.error(f"{label}: {target} project lock entries must be an object")
+            continue
+        if len(dependencies) > supply_chain.MAX_COMPONENTS:
+            validation.error(f"{label}: {target} has too many lock entries")
+            continue
+        entries: dict[str, dict[str, Any]] = {}
+        seen: set[str] = set()
+        for name, entry in dependencies.items():
+            identity = name.casefold()
+            if identity in seen:
+                validation.error(f"{label}: {target} duplicate lock identity {identity}")
+                continue
+            seen.add(identity)
+            if not isinstance(entry, dict):
+                validation.error(f"{label}: {target} invalid entry for {name}")
+                continue
+            entries[identity] = entry
+        sections[target] = entries
+
+    for target, entries in sections.items():
+        framework, separator, rid = target.partition("/")
+        if not separator:
+            yield target, entries
+            continue
+        if rid != "win-x64" or re.fullmatch(r"[a-z0-9][a-z0-9.-]*", framework) is None:
+            validation.error(f"{label}: {target} is not a supported TFM/win-x64 lock target")
+            continue
+        base = sections.get(framework)
+        if base is None:
+            validation.error(f"{label}: {target} RID overlay lacks its base TFM")
+            continue
+        if len(base.keys() | entries.keys()) > supply_chain.MAX_COMPONENTS:
+            validation.error(f"{label}: {target} has too many effective lock entries")
+            continue
+
+        # The base owns the unconditional ProjectReference graph. A RID may
+        # extend package dependencies, with the recorded package pin intact.
+        for identity, overlay in entries.items():
+            inherited = base.get(identity)
+            if overlay.get("type") == "Project" or (inherited and inherited.get("type") == "Project"):
+                if inherited != overlay:
+                    validation.error(f"{label}: {target} RID overlay changes Project entry {identity}")
+            elif inherited is not None and any(
+                overlay.get(field) != inherited.get(field)
+                for field in ("type", "requested", "resolved", "contentHash")
+            ):
+                validation.error(f"{label}: {target} RID overlay changes package pin {identity}")
+        yield target, {**base, **entries}
+
+
 def validate_project_reference_locks(
     project_paths: list[Path], validation: Validation
 ) -> None:
@@ -562,13 +641,9 @@ def validate_project_reference_locks(
         if not isinstance(frameworks, dict) or not frameworks:
             validation.error(f"{relative(lock_path)}: project lock dependencies must contain a target framework")
             continue
-        for framework, dependencies in frameworks.items():
-            if not isinstance(dependencies, dict):
-                validation.error(f"{relative(lock_path)}: {framework} project lock entries must be an object")
-                continue
+        for framework, dependencies in effective_lock_dependencies(frameworks, lock_path, validation):
             project_entries = {
-                key.casefold(): value for key, value in dependencies.items()
-                if isinstance(value, dict) and value.get("type") == "Project"
+                key: value for key, value in dependencies.items() if value.get("type") == "Project"
             }
             if set(project_entries) != expected_projects:
                 validation.error(
@@ -729,15 +804,9 @@ def validate_central_packages(
                 f"{relative(lock_path)}: dependencies must contain a target framework"
             )
             continue
-        for framework_name, dependencies in frameworks.items():
-            if not isinstance(dependencies, dict):
-                validation.error(
-                    f"{relative(lock_path)}: {framework_name} dependencies must be an object"
-                )
-                continue
-            lowered = {key.casefold(): value for key, value in dependencies.items()}
+        for _, dependencies in effective_lock_dependencies(frameworks, lock_path, validation):
             for package_id in references:
-                entry = lowered.get(package_id.casefold())
+                entry = dependencies.get(package_id.casefold())
                 central = versions.get(package_id.casefold())
                 if not isinstance(entry, dict) or entry.get("type") != "Direct":
                     validation.error(
@@ -748,11 +817,7 @@ def validate_central_packages(
                         f"{relative(lock_path)}: {package_id} resolved version differs from central pin"
                     )
             for package_id, entry in dependencies.items():
-                if not isinstance(entry, dict):
-                    validation.error(
-                        f"{relative(lock_path)}: invalid entry for {package_id}"
-                    )
-                elif entry.get("type") != "Project" and not entry.get("contentHash"):
+                if entry.get("type") != "Project" and not entry.get("contentHash"):
                     validation.error(
                         f"{relative(lock_path)}: {package_id} lacks a content hash"
                     )

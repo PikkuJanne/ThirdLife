@@ -9,12 +9,12 @@ The checked-in matrix has exactly these current counts:
 | Scope | Count | Distribution |
 |---|---:|---|
 | Runtime NuGet dependencies | 4 | Two direct and two transitive managed packages; all remain `not-shipped`, with packaging, notice, native-SQLite redistribution, and release admission withheld |
-| Build-only dependencies and toolchains | 6 | Three GitHub actions are `remote-ci-only`; PyYAML and both toolchains are `not-shipped` |
+| Build-only dependencies and toolchains | 10 | Three GitHub actions are `remote-ci-only`. PyYAML, the SDK and Python toolchains, and four Native AOT inputs are `not-shipped`. |
 | Test-only NuGet dependencies | 14 | `not-shipped` |
 | Catalogue application identities | 5 | Four non-installable synthetic placeholders and the [direct-source Notepad++ setup route](../adr/0009-winget-backend.md) |
-| **Total governed supply-chain components** | **29** | 24 external runtime/build/test components, four synthetic catalogue placeholders and one direct-vendor package |
+| **Total governed supply-chain components** | **33** | 28 external runtime, build and test components, four synthetic catalogue placeholders, and one direct-vendor package |
 
-The 18 NuGet rows are the complete non-project package closure discovered across production and test `packages.lock.json` files. `ThirdLife.Persistence` directly references `Microsoft.Data.Sqlite.Core` 10.0.11 and `SQLitePCLRaw.bundle_winsqlite3` 2.1.11. Their runtime closure adds `SQLitePCLRaw.core` 2.1.12 and `SQLitePCLRaw.provider.winsqlite3` 2.1.11. The bundle/provider deliberately use `winsqlite3.dll` supplied by supported Windows; no native SQLite binary is included by these packages or admitted for project redistribution. The 2.1.11 bundle/provider plus 2.1.12 core combination is intentional: Microsoft.Data.Sqlite.Core requires core 2.1.12, while the provider's 2.1.11 minimum is resolved to that higher compatible core.
+The 22 NuGet rows cover production and test lock files and the separately downloaded Native AOT runtime pack pinned in the broker project. `ThirdLife.Persistence` directly references `Microsoft.Data.Sqlite.Core` 10.0.11 and `SQLitePCLRaw.bundle_winsqlite3` 2.1.11. Their runtime closure adds `SQLitePCLRaw.core` 2.1.12 and `SQLitePCLRaw.provider.winsqlite3` 2.1.11. The bundle and provider use `winsqlite3.dll` supplied by supported Windows. Microsoft.Data.Sqlite.Core requires core 2.1.12, while the provider's 2.1.11 minimum is resolved to that higher compatible core.
 
 Project-to-project references are part of this repository and are excluded from the matrix. A direct runtime package can appear as `CentralTransitive` in a consuming test lock under NuGet central package management. Inventory normalization treats that occurrence as transitive and preserves the direct/runtime relationship in the owning production lock. The four fixture rows correspond to the project-created identities in `fixtures/catalog/catalog.yaml`. Each is marked `production_eligible: false`, carries `NOASSERTION`, and withholds installation and redistribution rights separately.
 
@@ -30,6 +30,7 @@ The accountable ThirdLife role in every current row is `Principal Software Archi
 | `Directory.Build.props` | Locked restore and NuGet audit policy |
 | `.gitattributes` | Cross-platform byte normalization for the matrix and other governed text inputs |
 | `src/**/packages.lock.json`, `tests/**/packages.lock.json` | Exact resolved NuGet closure and NuGet `contentHash` values |
+| `src/ThirdLife.Broker/ThirdLife.Broker.csproj` | Exact Win-x64 Native AOT runtime pack version and archive SHA-256, checked before native compilation |
 | `tools/requirements.txt` | Exact PyYAML release and the admitted CPython 3.14 Windows x64 wheel SHA-256 |
 | `tools/supply_chain.py`, `eng/generate-sbom.ps1` | Validator/generator implementation and pinned-toolchain wrapper |
 | `eng/verify.ps1` | Governed repository verification entry point that invokes the validator regressions |
@@ -72,6 +73,7 @@ Rows are sorted case-insensitively by `(component_type, component_id)`. Every fi
 ### Integrity and provenance interpretation
 
 - A NuGet lock-file `contentHash` is restore-integrity metadata recorded by NuGet. It is **not** an independently computed hash of the downloaded `.nupkg`, a signature result, or proof of publisher identity. The matrix therefore labels it `nuget-content-sha512` and preserves the exact base64 value without calling it an artifact hash.
+- The Native AOT runtime pack is an SDK download outside the ordinary lock inventory. Its project pin records the exact `.nupkg` SHA-256. The matched compiler, linker tasks and runtime pack use 10.0.14 because the SDK's 10.0.11 AOT compiler fails audited restore. Native code incorporated into a release broker still needs applicable notices and redistribution review. [Microsoft security advisory](https://github.com/dotnet/runtime/security/advisories/GHSA-p3jp-9v83-76w9)
 - The PyYAML SHA-256 covers only `pyyaml-6.0.3-cp314-cp314-win_amd64.whl` from the exact `files.pythonhosted.org` URL in the matrix. It does not admit an sdist or a wheel for another Python version, architecture, or operating system.
 - A GitHub action's integrity value is the full 40-character Git commit SHA used by the workflow. Its human-readable release tag is descriptive; the SHA is the execution pin.
 - `.NET SDK` and `CPython` use the governed `version-pin` mechanism, referencing `global.json#sdk.version` and `.github/workflows/verify.yml#python-version` respectively. A version pin is not a binary digest: no exact Windows x64 installer hash is currently governed. They are not release payloads; any proposal to redistribute either toolchain must stop until exact binary provenance, hash/signature evidence, applicable licences, and complete third-party notices are recorded and reviewed.
@@ -226,7 +228,7 @@ This task does not produce a release artifact hash, signature, installer, third-
 
 ## Boundary, data, accessibility, and resource impact
 
-- **Project vacuum:** all inventory is project-local or public generic tooling. The four catalogue identities are generic project-created synthetic placeholders; there is no sibling repository, sibling package/profile/catalogue entry, sibling adapter or data access, cross-project release edge, or shared service.
+- **Project vacuum:** the inventory covers project-local fixtures, public generic tooling and a reviewed generic package from its publisher. B1 remains independent of sibling repositories, catalogue entries, adapters, data and releases.
 - **Data and migration:** TL-0102 adds a versioned local SQLite store under the registered per-user ThirdLife root and opaque per-job directories. It persists bounded Core-owned job snapshots, typed observations/evidence, sanitization evidence, and checkpoints; it adds no telemetry, raw-output store, personal-content scan, sibling data access, retention enforcement, deletion lifecycle, or release migration claim. Generated SBOM/audit files remain local development/release evidence under `artifacts/`, not application runtime data.
 - **Network and privilege:** offline SBOM generation is local, foreground, and unelevated. The explicit vulnerability procedures are developer/release operations that require network access; the Core application does not gain background network activity or privilege.
 - **Accessibility:** no UI, interaction, focus, keyboard, screen-reader, scaling, high-contrast, or user-visible error path is added.
@@ -234,7 +236,7 @@ This task does not produce a release artifact hash, signature, installer, third-
 
 ## Human licence and rights review
 
-The current matrix adds one local direct-vendor setup candidate. [The package record](../adr/0009-winget-backend.md) limits use to the reviewed installation flow and leaves release exposure and redistribution pending.
+The current matrix covers four Native AOT inputs for local engineering and one local direct-vendor setup candidate. Aggregate release review is pending. [The package record](../adr/0009-winget-backend.md) scopes use to the reviewed installation flow and leaves release exposure and redistribution pending.
 
 | Field | Value |
 |---|---|

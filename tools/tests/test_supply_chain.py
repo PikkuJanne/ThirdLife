@@ -372,8 +372,12 @@ class CurrentInventoryTests(SupplyChainTestCase):
                 component.integrity_algorithm == "nuget-content-sha512"
                 for component in result.inventory
                 if component.component_type == "nuget"
+                and component.component_id != supply_chain.BROKER_NATIVE_RUNTIME_PACK
             )
         )
+        runtime_pack = by_identity[("nuget", supply_chain.BROKER_NATIVE_RUNTIME_PACK)]
+        self.assertEqual(runtime_pack.integrity_algorithm, "sha256")
+        self.assertEqual(runtime_pack.scope, "build-only")
 
     def test_cyclonedx_is_deterministic_and_ignores_local_state(self) -> None:
         with repository_copy() as root:
@@ -511,7 +515,27 @@ class CurrentInventoryTests(SupplyChainTestCase):
         }
         for name in nuget_names:
             with self.subTest(component=name):
-                self.assertNotIn("hashes", components[name])
+                if name == supply_chain.BROKER_NATIVE_RUNTIME_PACK.casefold():
+                    runtime_pack = next(component for component in result.inventory if component.component_id.casefold() == name)
+                    self.assertEqual(
+                        components[name]["hashes"],
+                        [{"alg": "SHA-256", "content": runtime_pack.integrity_value}],
+                    )
+                else:
+                    self.assertNotIn("hashes", components[name])
+
+    def test_broker_runtime_pack_digest_is_required(self) -> None:
+        with repository_copy() as root:
+            project = root / supply_chain.BROKER_PROJECT_PATH
+            text = project.read_text(encoding="utf-8")
+            changed, count = re.subn(
+                r"(?<=<BrokerAotRuntimePackSha256>)[0-9a-f]{64}(?=</BrokerAotRuntimePackSha256>)",
+                "unverified",
+                text,
+            )
+            self.assertEqual(count, 1)
+            project.write_text(changed, encoding="utf-8")
+            self.assert_invalid(root, "BrokerAotRuntimePackSha256", "exact runtime pack SHA-256")
 
 
 class MatrixValidationTests(SupplyChainTestCase):

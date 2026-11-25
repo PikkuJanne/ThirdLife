@@ -110,6 +110,8 @@
       "thirdlife.broker": {
         "type": "Project",
         "dependencies": {
+          "ThirdLife.Actions": "[1.0.0, )",
+          "ThirdLife.Broker.Protocol": "[1.0.0, )",
           "ThirdLife.Inventory": "[1.0.0, )"
         }
       },

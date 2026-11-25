@@ -101,7 +101,7 @@ Tests must cover cross-user connection, replay, stale request, oversized input, 
 
 B1 uses generic essentials and synthetic packages. Sibling products enter only through a future B4 compatibility cut against frozen artifacts.
 
-The subordinate [`docs/supply-chain/dependencies.md`](docs/supply-chain/dependencies.md) and [`docs/supply-chain/license-matrix.csv`](docs/supply-chain/license-matrix.csv) define the current dependency classes, exact provenance/integrity records, deterministic SBOM procedure, vulnerability-review limitations, and installation/redistribution proposals. Janne Vuorela's prior approval remains bound only to its historical 24-component commit and digest. Janne Vuorela, acting as Dependency and Licence Owner, approved the 28-component matrix for exact candidate commit `d6807937f5eff712821c7927ce1953daaa5dfeb8` and matrix SHA-256 `e85f3002175dfadc860f0d2c92de0787f52364f491e50a030c936a5421395418`. The approval accepts the proposals exactly as written: all recorded limitations and withheld rights remain binding, and no blanket redistribution permission, native SQLite redistribution, release authorization, or legal conclusion is claimed.
+The [dependency inventory](docs/supply-chain/dependencies.md) and [licence matrix](docs/supply-chain/license-matrix.csv) record provenance, integrity, deterministic SBOM generation, audit limits and proposed rights. The current matrix includes reviewed Native AOT build inputs for local engineering and a scoped direct-vendor package route. Release use awaits exact candidate review. Janne Vuorela's prior approvals retain their original 24- and 28-component matrix scope, exact commit and digest, documented limits and withheld rights.
 
 ## 9. Data, secrets, and logging
 

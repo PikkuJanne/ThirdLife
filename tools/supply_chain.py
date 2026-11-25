@@ -24,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.parse
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -31,6 +32,8 @@ from typing import Any, Iterable, Mapping, Sequence
 
 MATRIX_PATH = Path("docs/supply-chain/license-matrix.csv")
 DEPENDENCIES_PATH = Path("docs/supply-chain/dependencies.md")
+BROKER_PROJECT_PATH = Path("src/ThirdLife.Broker/ThirdLife.Broker.csproj")
+BROKER_NATIVE_RUNTIME_PACK = "Microsoft.NETCore.App.Runtime.NativeAOT.win-x64"
 CATALOG_JSON_PROJECTION = "fixtures/catalog/catalog.json"
 RUNTIME_CATALOG_PATH = Path("src/ThirdLife.UI/Features/PlanReview/PackageSetup/catalog.json")
 MATRIX_HEADERS = (
@@ -66,12 +69,19 @@ ALLOWED_RELATIONSHIPS: Mapping[str, frozenset[str]] = {
     "catalog-application": frozenset({"direct", "transitive"}),
 }
 EXPECTED_SCOPE_BY_TYPE: Mapping[str, frozenset[str]] = {
-    "nuget": frozenset({"runtime", "test-only"}),
+    "nuget": frozenset({"runtime", "build-only", "test-only"}),
     "pypi": frozenset({"runtime", "build-only", "test-only"}),
     "github-action": frozenset({"build-only"}),
     "toolchain": frozenset({"build-only"}),
     "catalog-application": frozenset({"catalog-application"}),
 }
+BROKER_AOT_BUILD_PACKAGES = frozenset(
+    {
+        "microsoft.dotnet.ilcompiler",
+        "microsoft.net.illink.tasks",
+        "runtime.win-x64.microsoft.dotnet.ilcompiler",
+    }
+)
 
 REVIEW_FIELDS = (
     "Review status",
@@ -556,7 +566,12 @@ def _discover_nuget(validation: _Validation) -> list[_DiscoveredComponent]:
                     component_id=package_id,
                     version=version,
                     relationship=relationship,
-                    scope=scope,
+                    scope=(
+                        "build-only"
+                        if label == "src/ThirdLife.Broker/packages.lock.json"
+                        and normalized_id in BROKER_AOT_BUILD_PACKAGES
+                        else scope
+                    ),
                     integrity_algorithm="nuget-content-sha512",
                     integrity_value=content_hash,
                     dependencies=tuple(sorted(set(dependency_specs))),
@@ -584,9 +599,8 @@ def _discover_nuget(validation: _Validation) -> list[_DiscoveredComponent]:
             validation.error(
                 f"NuGet lock files disagree on contentHash for {first.component_id}@{first.version}"
             )
-        # One SBOM component represents one package/version.  Runtime and direct
-        # use take precedence when the same package also appears in test locks or
-        # transitively; evidence paths and child edges remain the sorted union.
+        # One SBOM component represents one package/version. Runtime and direct
+        # use take precedence; evidence paths and child edges retain the sorted union.
         components.append(
             replace(
                 first,
@@ -598,6 +612,8 @@ def _discover_nuget(validation: _Validation) -> list[_DiscoveredComponent]:
                 scope=(
                     "runtime"
                     if any(item.scope == "runtime" for item in matches)
+                    else "build-only"
+                    if any(item.scope == "build-only" for item in matches)
                     else "test-only"
                 ),
                 dependencies=tuple(
@@ -845,6 +861,54 @@ def _discover_dotnet_sdk(validation: _Validation) -> list[_DiscoveredComponent]:
             integrity_value="global.json#sdk.version",
             dependencies=(),
             evidence_paths=("global.json",),
+        )
+    ]
+
+
+def _discover_broker_native_runtime(validation: _Validation) -> list[_DiscoveredComponent]:
+    text = validation.read_text(validation.root / BROKER_PROJECT_PATH, maximum=MAX_DOCUMENT_BYTES)
+    label = BROKER_PROJECT_PATH.as_posix()
+    if text is None:
+        return []
+    if "<!DOCTYPE" in text.upper():
+        validation.error(f"{label}: XML document types are prohibited")
+        return []
+    try:
+        project = ET.fromstring(text)
+    except ET.ParseError:
+        validation.error(f"{label}: invalid project XML")
+        return []
+
+    def property_value(name: str) -> str:
+        matches = [
+            (group, item)
+            for group in project.findall("./PropertyGroup")
+            for item in group.findall(name)
+        ]
+        if len(matches) == 1:
+            group, item = matches[0]
+            if not group.attrib and not item.attrib and len(item) == 0:
+                return item.text or ""
+        return ""
+
+    version = property_value("BrokerAotPackVersion")
+    digest = property_value("BrokerAotRuntimePackSha256")
+    if not _validate_version(version, f"{label}:BrokerAotPackVersion", validation):
+        return []
+    if not SHA256_RE.fullmatch(digest):
+        validation.error(f"{label}:BrokerAotRuntimePackSha256 must pin the exact runtime pack SHA-256")
+        return []
+    return [
+        _DiscoveredComponent(
+            component_type="nuget",
+            component_id=BROKER_NATIVE_RUNTIME_PACK,
+            version=version,
+            relationship="direct",
+            scope="build-only",
+            integrity_algorithm="sha256",
+            integrity_value=digest,
+            dependencies=(),
+            evidence_paths=(label,),
         )
     ]
 
@@ -1887,6 +1951,7 @@ def validate_supply_chain(root: Path) -> SupplyChainResult:
     discovered.extend(actions)
     discovered.extend(python_toolchains)
     discovered.extend(_discover_dotnet_sdk(validation))
+    discovered.extend(_discover_broker_native_runtime(validation))
     catalog_inputs = _catalog_inputs(validation)
 
     if len(discovered) > MAX_COMPONENTS:
@@ -2013,7 +2078,9 @@ def _cyclonedx_component(component: SupplyChainComponent) -> dict[str, Any]:
         value["purl"] = purl
     # Only an actual artifact SHA-256 is a CycloneDX hash.  NuGet contentHash
     # and Git commit identities remain namespaced ThirdLife properties.
-    if component.component_type == "pypi" and component.integrity_algorithm == "sha256":
+    if (
+        component.component_type == "pypi" or component.component_id == BROKER_NATIVE_RUNTIME_PACK
+    ) and component.integrity_algorithm == "sha256":
         value["hashes"] = [{"alg": "SHA-256", "content": component.integrity_value}]
     return value
 

@@ -1,15 +1,53 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <PublishAot>true</PublishAot>
+    <BrokerAotPackVersion>10.0.14</BrokerAotPackVersion>
+    <BrokerAotRuntimePackSha256>76c0f133981113273a0e50dba97a6107eead821f707565443e787f0aa9f9fc69</BrokerAotRuntimePackSha256>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <EventSourceSupport>false</EventSourceSupport>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ThirdLife.Inventory\ThirdLife.Inventory.csproj" />
+    <LinkerArg Include="/DEPENDENTLOADFLAG:0x800" />
   </ItemGroup>
+
+  <!-- The repository SDK's default AOT pack is affected by GHSA-p3jp-9v83-76w9.
+       Keep the SDK pin and select the patched compiler, runtime and trim tools together. -->
+  <ItemGroup>
+    <KnownILCompilerPack Update="Microsoft.DotNet.ILCompiler">
+      <ILCompilerPackVersion Condition="'%(TargetFramework)' == 'net10.0'">$(BrokerAotPackVersion)</ILCompilerPackVersion>
+    </KnownILCompilerPack>
+    <KnownRuntimePack Update="Microsoft.NETCore.App">
+      <LatestRuntimeFrameworkVersion Condition="'%(TargetFramework)' == 'net10.0' and '%(RuntimePackLabels)' == 'NativeAOT'">$(BrokerAotPackVersion)</LatestRuntimeFrameworkVersion>
+    </KnownRuntimePack>
+    <KnownILLinkPack Update="Microsoft.NET.ILLink.Tasks">
+      <ILLinkPackVersion Condition="'%(TargetFramework)' == 'net10.0'">$(BrokerAotPackVersion)</ILLinkPackVersion>
+    </KnownILLinkPack>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ThirdLife.Actions\ThirdLife.Actions.csproj" />
+    <ProjectReference Include="..\ThirdLife.Broker.Protocol\ThirdLife.Broker.Protocol.csproj" />
+    <ProjectReference Include="..\ThirdLife.Inventory\ThirdLife.Inventory.csproj" />
+    <InternalsVisibleTo Include="ThirdLife.Broker.Tests" />
+  </ItemGroup>
+
+  <Target Name="VerifyBrokerAotRuntimePack" BeforeTargets="PrepareForBuild"
+          Condition="'$(RuntimeIdentifier)' == 'win-x64' and '$(PublishAot)' == 'true'">
+    <GetFileHash Files="$(NuGetPackageRoot)microsoft.netcore.app.runtime.nativeaot.win-x64\$(BrokerAotPackVersion)\microsoft.netcore.app.runtime.nativeaot.win-x64.$(BrokerAotPackVersion).nupkg"
+                 Algorithm="SHA256">
+      <Output TaskParameter="Hash" PropertyName="_BrokerAotRuntimePackHash" />
+    </GetFileHash>
+    <Error Condition="'$(_BrokerAotRuntimePackHash)' != '$(BrokerAotRuntimePackSha256)'"
+           Text="The Native AOT runtime pack does not match the broker's SHA-256 pin." />
+  </Target>
 
 </Project>

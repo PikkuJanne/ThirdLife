@@ -86,17 +86,63 @@ target while other session worktrees were active. The Quick WPF test slice
 reported 40 s, and the Release build reported 13.52 s. No runtime source or
 dependency changed. Reuse the earlier clean Full for the unchanged candidate.
 
-## Launched transaction
+## Authorized launched transaction
 
-Pending action-specific authorization for one machine-wide installation on the active
-Windows 11 host and its applicable intake fact. The expected postcondition is Windows
-Installer machine context, product code `{A23B657D-838B-4C9B-8F9D-386E50C1A76B}`,
-installed state and the exact reviewed version. Use the normal unelevated application,
-check any Windows consent, and confirm the saved journal and report agree after reopening.
-No installer was launched for the read-only observations.
+On 2026-11-25 the project owner authorized one machine-wide installation of
+the reviewed Notepad++ 8.9.9.1 x64 vendor MSI on the active Windows 11 host,
+affirmed lawful control and confirmed verified replacement storage. The app
+recorded the replacement method using an opaque media code and the owner
+attestation date. The underlying physical replacement date was not inferred.
+Codex operated the unelevated application and recorded that scoped approval
+with the authorized operator attribution.
 
-The narrow package admission policy checks intake and supported native-x64 Windows 11.
-The backend checks disk headroom. The existing whole-device disposition and finalization
-rules govern device readiness. Unobserved behavior includes the live installer, standard
-Windows consent, a physical accessibility observation and broker qualification. Pilot and
-release authorization remain separate.
+The tested production app was built from `100aeb82eb352e781eee7c92808a7c4f53b4efce`
+and matched the apphost and UI assembly digests above. The first UI Automation
+run took 14.078 s and saved intake and the live assessment. It stopped before
+approval because Windows exposed the named profile's SelectionItem provider on
+the enclosing ListItem. The driver selected that provider on reopening the same
+job. No production code or approved action changed between runs.
+
+The resumed launched flow completed in 14.404 s. The app confirmed absence,
+resolved the signed installer and showed the exact package plan for all users.
+It saved approval, launched Windows Installer for the pinned x64 MSI with the
+updater disabled and registered the operation as applied and independently
+verified. The plan SHA-256 was
+`29fae5c61d8c9bf0b39065af9a1e5395df222ba33ac90adaae2517c56836ea16`.
+No package Windows consent prompt was observed or operated by the driver.
+
+After the operation, a separate unelevated `MsiGetProductInfoExW` query took
+0.712 s including interop setup. The reviewed ProductCode
+`{A23B657D-838B-4C9B-8F9D-386E50C1A76B}` returned success for each property in
+machine context with a null SID. Windows reported installed state `5`, exact
+version `8.9.9.1`, publisher `Notepad++ team (MSI installer)`, exact PackageCode
+`{18CD7780-F2FF-4F13-9070-BBE80D108501}` and machine assignment `1`. The same
+properties returned `ERROR_UNKNOWN_PRODUCT` before dispatch.
+
+The app closed and reopened the job, displayed the saved verified transaction
+and generated and opened the workshop report. In a separate 0.678 s read-only
+SQLite check, one saved plan and one approval preceded four ordered entries.
+
+| Actor role | Saved state | Evidence |
+| --- | --- | --- |
+| Operator | Approved | Exact package plan approval |
+| Coordinator | Started | Durable package dispatch intent |
+| Package backend | Applied | Windows Installer application result |
+| Verifier | Verified | Independent exact package identity |
+
+All four payload digests matched. One action and approval were bound to the
+journal, and the dispatch, application and verification shared a correlation.
+The generated report and reopened journal agreed on the exact version, machine
+scope and verified outcome. The saved report matched its preview and had SHA-256
+`08e56ecde3a5db0c6c1ab0bdb6649c051e9495a6e6e027f5069e0ce898e02abb`.
+The report was recorded at `2026-11-25T16:08:09.5535551Z`. The protected job and
+report remain in the local application store. The repository records their
+bounded evidence and digests.
+
+The application exited normally. No ThirdLife.UI process or package attempt
+staging directory remained. Notepad++ remains installed as authorized. The
+opt-in absent-state preflight above describes the state before the transaction.
+The selected package workflow underwent technical keyboard and accessibility
+checks. Physical or perceptual accessibility behavior remains unobserved for
+this transaction. Whole-device readiness, recovery scenarios and first
+write-capable exposure remain governed by their separate criteria.

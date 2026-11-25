@@ -222,6 +222,21 @@
       "host_timeout_minutes": 30,
       "memory_mb": 4096,
       "network_reason": "governed_nuget_audit"
+    },
+    "tl0311_cross_account": {
+      "task_id": "TL-0311",
+      "tier": "Targeted",
+      "test_projects": ["tests/ThirdLife.Broker.Tests/ThirdLife.Broker.Tests.csproj"],
+      "filter": "Category=SandboxOnly&FullyQualifiedName=ThirdLife.Broker.Tests.SandboxPipeAclTests.WindowsSandboxDistinctStandardAccountIsDeniedByProductionPipeAcl",
+      "success_marker": "Test Run Successful.",
+      "required_success_marker": "Passed ThirdLife.Broker.Tests.SandboxPipeAclTests.WindowsSandboxDistinctStandardAccountIsDeniedByProductionPipeAcl [",
+      "hosted_environment": "active_machine_windows_sandbox",
+      "risk_trigger": "distinct_guest_account_broker_pipe_acl",
+      "target_seconds": 120,
+      "command_timeout_seconds": 300,
+      "host_timeout_minutes": 30,
+      "memory_mb": 4096,
+      "network_reason": "disabled_offline_phase"
     }
   }
 }

@@ -43,7 +43,7 @@ class SandboxHarnessContractTests(unittest.TestCase):
     def test_tl0104_stages_only_its_diagnostics_working_inputs(self):
         self.assertIn(
             '[ValidateSet("TL-0102", "TL-0103", "TL-0104", "TL-0107", "TL-0109", "TL-0111", "TL-0112", "TL-0113", '
-            '"AMD-2026-09-12-REPOSITORY-STABILIZATION")]', self.host
+            '"TL-0311", "AMD-2026-09-12-REPOSITORY-STABILIZATION")]', self.host
         )
         selection = re.search(
             r'if \(\$TaskId -eq "TL-0104"\) \{\s*\$taskWorkingPaths \+= @\((.*?)\)\s*\}',
@@ -902,6 +902,74 @@ class RepositorySandboxProfileTests(unittest.TestCase):
                 result = self.dispatch(task_id=task, phase=phase)
                 self.assertTrue(result["failed"])
                 self.assertEqual(result["calls"], [])
+
+    def test_broker_acl_dispatch_binds_exact_test_to_verified_run(self) -> None:
+        manifest = json.loads((REPOSITORY_ROOT / "eng/test-manifest.json").read_text(encoding="utf-8"))
+        profile = manifest["sandbox_profiles"]["tl0311_cross_account"]
+        run_id = "b" * 32
+        result = self.invoke_functions(
+            "$calls = [Collections.Generic.List[object]]::new()\n"
+            "$env:THIRDLIFE_SANDBOX_BROKER_ACL_TEST = 'previous'\n"
+            "function Invoke-RequiredCommand {\n"
+            " param($Label, $FilePath, $Arguments, $Failure, $SuccessMarker, $RequiredSuccessMarkers)\n"
+            " $calls.Add(@{label=$Label; arguments=@($Arguments); marker=$SuccessMarker; "
+            "required=@($RequiredSuccessMarkers); binding=$env:THIRDLIFE_SANDBOX_BROKER_ACL_TEST})\n"
+            " if ($Label -eq 'broker-cross-account-acl') { throw 'Synthetic test failure' }\n"
+            "}\n"
+            "$failed = $false\n"
+            f"try {{ Invoke-BrokerAclProfile -DotnetExecutable 'dotnet.exe' -NuGetConfigPath 'staged.config' -RunId '{run_id}' }}\n"
+            "catch { $failed = $true }\n"
+            "@{failed=$failed; calls=@($calls); binding=$env:THIRDLIFE_SANDBOX_BROKER_ACL_TEST} | ConvertTo-Json -Depth 6 -Compress\n",
+            function_names=("Invoke-BrokerAclProfile",),
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        value = json.loads(result.stdout)
+        restore, test = value["calls"]
+        project = profile["test_projects"][0].replace("/", "\\")
+        self.assertEqual(restore["arguments"], [
+            "restore", project, "--locked-mode", "--configfile", "staged.config", "--nologo",
+            "-p:NuGetAudit=false",
+        ])
+        self.assertEqual(restore["binding"], "previous")
+        self.assertEqual(test["arguments"], [
+            "test", project, "--configuration", "Release", "--no-restore", "--nologo",
+            "--filter", profile["filter"], "--logger", "console;verbosity=normal",
+        ])
+        self.assertEqual(test["marker"], profile["success_marker"])
+        self.assertEqual(test["required"], [profile["required_success_marker"]])
+        self.assertEqual(test["binding"], run_id)
+        self.assertTrue(value["failed"])
+        self.assertEqual(value["binding"], "previous")
+
+    def test_broker_acl_request_keeps_network_disabled_and_closure_bounded(self) -> None:
+        request = {
+            "schema_version": 2, "task_id": "TL-0311", "phase": "Targeted",
+            "expected_head_commit": "a" * 40, "run_id": "b" * 32,
+            "expected_tracked_clean": True, "source_history_included": False,
+            "networking_enabled": False, "nuget_audit_enabled": False,
+            "network_reason": "disabled_offline_phase", "nuget_package_count": 10,
+            "sandbox_executable_version": "1.2.3.4",
+        }
+        for name in (
+            "expected_source_digest", "history_bundle_sha256", "repository_status_sha256", "launcher_sha256",
+            "runner_sha256", "sandbox_config_sha256", "nuget_closure_sha256", "python_packages_sha256",
+        ):
+            request[name] = "c" * 64
+        altered = [dict(request, **change) for change in (
+            {"phase": "Quick"}, {"phase": "Full"}, {"networking_enabled": True}, {"nuget_audit_enabled": True},
+            {"network_reason": "governed_nuget_audit"}, {"source_history_included": True},
+            {"nuget_package_count": 0}, {"nuget_package_count": 65}, {"filter": "Category=ActiveMachine"},
+        )]
+        result = self.invoke_functions(
+            "$TaskId = 'TL-0311'\n"
+            f"Assert-RunRequest -RunRequest ('{json.dumps(request)}' | ConvertFrom-Json)\n"
+            f"foreach ($request in ('{json.dumps(altered)}' | ConvertFrom-Json)) {{\n"
+            " $rejected = $false\n"
+            " try { Assert-RunRequest -RunRequest $request } catch { $rejected = $true }\n"
+            " if (-not $rejected) { throw 'Unsafe broker request accepted' }\n"
+            "}\n",
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_new_quick_stages_the_complete_solution_lock_closure(self) -> None:
         source_literal = "'" + str(REPOSITORY_ROOT).replace("'", "''") + "'"

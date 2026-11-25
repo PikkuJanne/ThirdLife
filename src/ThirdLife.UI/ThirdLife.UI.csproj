@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ThirdLife.Actions\ThirdLife.Actions.csproj" />
+    <ProjectReference Include="..\ThirdLife.Broker.Protocol\ThirdLife.Broker.Protocol.csproj" />
     <ProjectReference Include="..\ThirdLife.Catalog\ThirdLife.Catalog.csproj" />
     <ProjectReference Include="..\ThirdLife.Core\ThirdLife.Core.csproj" />
     <ProjectReference Include="..\ThirdLife.Inventory\ThirdLife.Inventory.csproj" />
