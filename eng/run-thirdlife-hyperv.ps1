@@ -275,11 +275,12 @@ finally {
                 elseif ($observed -and $observed.HasExit) { 'failed' } else { 'unobserved' }
             $consoleObservation = if ($Scenario -in @('Verify', 'DistinctAccount')) { 'not_required' } else { 'collect_separately' }
             $observations = if ($observed) { @($observed.Observations) } else { @() }
-            $testFailure = $testExitCode = $taskLastResult = $null
+            $testFailure = $testExitCode = $taskLastResult = $testNativeErrorCode = $null
             if ($observed) {
                 $testFailure = $observed.TestFailure
                 $testExitCode = $observed.TestExitCode
                 $taskLastResult = $observed.TaskLastResult
+                $testNativeErrorCode = $observed.TestNativeErrorCode
             }
             $record = [ordered]@{
                 task = $profile.task; scenario = $Scenario; brokerSource = $profile.brokerSource; testSource = $testSource
@@ -291,6 +292,7 @@ finally {
                 guestBuild = $guestBuild; uacPolicy = $uacPolicy
                 testResult = $testResult; consoleObservation = $consoleObservation; observations = @($observations)
                 testFailure = $testFailure; testExitCode = $testExitCode; taskLastResult = $taskLastResult
+                testNativeErrorCode = $testNativeErrorCode
             }
             $outcome = Join-Path $work "$id.$Scenario.json"
             [IO.File]::WriteAllText($outcome, ($record | ConvertTo-Json -Depth 5))

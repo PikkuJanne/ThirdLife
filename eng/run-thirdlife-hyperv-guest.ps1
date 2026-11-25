@@ -341,6 +341,8 @@ exit `$LASTEXITCODE
         }
         $passed = $false
         $testFailure = $null
+        $testNativeErrorCode = $null
+        $classifyFailure = $Scenario -cin @('DistinctAccount', 'RetainObservation')
         if ($trx -and $null -ne $testExit) {
             $xmlSettings = [Xml.XmlReaderSettings]::new()
             $xmlSettings.DtdProcessing = [Xml.DtdProcessing]::Prohibit
@@ -353,41 +355,64 @@ exit `$LASTEXITCODE
                 $case = $document.SelectNodes("//*[local-name()='UnitTestResult']")
                 if ($case.Count -eq 1 -and $case[0].GetAttribute('testName') -ceq $TestName) {
                     $passed = $testExit -eq 0 -and $case[0].GetAttribute('outcome') -ceq 'Passed'
-                    if (-not $passed -and $Scenario -ceq 'DistinctAccount') {
+                    if (-not $passed -and $classifyFailure) {
                         # Only fixed classification tokens leave the guest. TRX can contain local paths and identities.
                         $messageNode = $case[0].SelectSingleNode(".//*[local-name()='ErrorInfo']/*[local-name()='Message']")
                         $message = if ($messageNode) { $messageNode.InnerText } else { '' }
-                        $testFailure = switch -Regex ($message) {
-                            'administrative ThirdLife Hyper-V guest token is required' { 'GuestTokenRejected'; break }
-                            'Expected:\s*Supported' { 'GuestPlatformRejected'; break }
-                            'Hyper-V guest firmware identity is required' { 'GuestFirmwareRejected'; break }
-                            'scenario inputs must be owned by Administrators or SYSTEM' { 'RequestOwnerRejected'; break }
-                            'scenario input ACL grants write access' { 'RequestAclRejected'; break }
-                            'protected Hyper-V request must admit' { 'RequestMetadataRejected'; break }
-                            'Expected:\s*typeof\(System\.UnauthorizedAccessException\)' { 'RequestWriteDenialMissing'; break }
-                            'disposable guest could not create its standard test account' { 'AccountCreationRejected'; break }
-                            'owned guest test account was not fully removed' { 'AccountCleanupFailed'; break }
-                            'owned guest probe did not start|System\.ComponentModel\.Win32Exception' { 'ProbeStartRejected'; break }
-                            'Actual:\s*21\b' { 'ProbeTokenRejected'; break }
-                            'Actual:\s*22\b|restricted pipe accepted a connection' { 'UnexpectedProbeConnection'; break }
-                            'Actual:\s*23\b' { 'ProbeDidNotReportAccessDenied'; break }
-                            'Actual:\s*24\b' { 'ProbeSetupFailed'; break }
-                            'restricted pipe listener should still be awaiting' { 'ListenerStateUnexpected'; break }
-                            'OperationCanceledException|TaskCanceledException' { 'CaseDeadlineElapsed'; break }
-                            default { 'FixtureAssertionFailed' }
+                        if ($Scenario -ceq 'RetainObservation') {
+                            $testFailure = switch -Regex ($message) {
+                                'Expected:\s*typeof\(System\.Diagnostics\.Process\)' { 'BrokerProcessUnavailable'; break }
+                                'could not be authenticated|Elevated process changed the initiating user' { 'BrokerPeerRejected'; break }
+                                'No process is associated with this object|Process has exited|Process with an Id of .+ is not running' { 'BrokerExitObservationUnavailable'; break }
+                                'System\.ComponentModel\.Win32Exception' { 'BrokerProcessObservationRejected'; break }
+                                'System\.TimeoutException' { 'BrokerExitDeadlineElapsed'; break }
+                                'OperationCanceledException|TaskCanceledException' { 'CaseDeadlineElapsed'; break }
+                                'Expected:\s*RequiresReview' { 'RecoveryStateUnexpected'; break }
+                                'Assert\.Single\(\) Failure' { 'RetainedObservationCountUnexpected'; break }
+                                'Expected:\s*Applied' { 'RetainedObservationStateUnexpected'; break }
+                                default { 'FixtureAssertionFailed' }
+                            }
+                        }
+                        else {
+                            $testFailure = switch -Regex ($message) {
+                                'administrative ThirdLife Hyper-V guest token is required' { 'GuestTokenRejected'; break }
+                                'Expected:\s*Supported' { 'GuestPlatformRejected'; break }
+                                'Hyper-V guest firmware identity is required' { 'GuestFirmwareRejected'; break }
+                                'scenario inputs must be owned by Administrators or SYSTEM' { 'RequestOwnerRejected'; break }
+                                'scenario input ACL grants write access' { 'RequestAclRejected'; break }
+                                'protected Hyper-V request must admit' { 'RequestMetadataRejected'; break }
+                                'Expected:\s*typeof\(System\.UnauthorizedAccessException\)' { 'RequestWriteDenialMissing'; break }
+                                'disposable guest could not create its standard test account' { 'AccountCreationRejected'; break }
+                                'owned guest test account was not fully removed' { 'AccountCleanupFailed'; break }
+                                'The owned guest probe did not start\. NativeErrorCode=([0-9]{1,10})\.' {
+                                    $nativeCode = 0
+                                    if ([int]::TryParse($Matches[1], [ref]$nativeCode)) { $testNativeErrorCode = $nativeCode }
+                                    'ProbeStartRejected'
+                                    break
+                                }
+                                'owned guest probe did not start|System\.ComponentModel\.Win32Exception' { 'ProbeStartRejected'; break }
+                                'Actual:\s*21\b' { 'ProbeTokenRejected'; break }
+                                'Actual:\s*22\b|restricted pipe accepted a connection' { 'UnexpectedProbeConnection'; break }
+                                'Actual:\s*23\b' { 'ProbeDidNotReportAccessDenied'; break }
+                                'Actual:\s*24\b' { 'ProbeSetupFailed'; break }
+                                'restricted pipe listener should still be awaiting' { 'ListenerStateUnexpected'; break }
+                                'OperationCanceledException|TaskCanceledException' { 'CaseDeadlineElapsed'; break }
+                                default { 'FixtureAssertionFailed' }
+                            }
                         }
                     }
                 }
-                elseif ($Scenario -ceq 'DistinctAccount') { $testFailure = 'TestResultSelectionUnexpected' }
+                elseif ($classifyFailure) { $testFailure = 'TestResultSelectionUnexpected' }
             }
             finally { $reader.Dispose() }
         }
-        elseif ($exitFile -and $Scenario -ceq 'DistinctAccount') { $testFailure = 'TestResultMissing' }
+        elseif ($exitFile -and $classifyFailure) { $testFailure = 'TestResultMissing' }
         [pscustomobject]@{
             State = [string]$state
             HasExit = [bool]$exitFile
             Passed = $passed
             TestFailure = $testFailure
+            TestNativeErrorCode = $testNativeErrorCode
             TestExitCode = $testExit
             TaskLastResult = $taskLastResult
             BrokerRemaining = [bool](Get-Process -Name 'ThirdLife.Broker' -ErrorAction SilentlyContinue)

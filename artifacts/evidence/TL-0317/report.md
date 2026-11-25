@@ -1,24 +1,26 @@
 # TL-0317 Hyper-V qualification
 
 **Date** 2026-11-25  
-**Active-machine source base** `634b49cb29a49aca19dd1d060ce5d85e3ec27411`  
-**Task state** Blocked at Hyper-V host admission
+**Active-machine live source base** `61df5c2eae27d4e1d128965f169b90fe15dfe218`
+
+## Historical host admission checkpoint
 
 The owner reported the dedicated Windows 11 VM running on the active Codex
 machine, with the expected local account signed in and the clean checkpoint
 available. That report supersedes the earlier deferral. Codex's medium-integrity
 host token received permission denied from `Get-VM` in the initial 2.731 s host
-diagnostic. Its token has neither the Administrator nor the Hyper-V
+diagnostic at `634b49c`. Its token had neither the Administrator nor the Hyper-V
 Administrators role enabled. This prevented binding the VM ID, reading the
 checkpoint or attempting guest authentication. The access check ran on the host
-only. Guest state and all guest scenario results remain unobserved.
+only. It recorded no guest observations.
 
-Continue from one authorized local Administrator PowerShell session. Open the
-PowerShell Direct session with the expected guest account credential entered
-through the attended local prompt if it is unavailable in that shell. Keep the
-credential in memory for the selected cases. This opening condition preserves
-the host authorization controls and Windows UAC. Routine VM preparation and
-testing are already authorized. [PowerShell Direct requirements](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/powershell-direct)
+In the live continuation, the authorized host token had Hyper-V Administrators
+enabled and successfully read the running Generation 2 VM and its configured
+clean checkpoint. PowerShell Direct authenticated with the existing DPAPI
+credential and admitted the signed-in Basic console account on Windows 11
+build 26300. Guest policy reported `EnableLUA=1`,
+`ConsentPromptBehaviorAdmin=5` and `PromptOnSecureDesktop=1`.
+[PowerShell Direct requirements](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/powershell-direct)
 
 ## Reusable inputs
 
@@ -41,7 +43,11 @@ the selected action, returned state and owned broker process state.
 
 ## Runner procedure
 
-Prepare a committed clean checkout using the current repository SDK. The
+Reuse the archive from a previously prepared committed checkout when its
+source tree and reviewed artifact digests match the verified integration
+source. Run from that archive's exact payload-source checkout. Prepare a
+fresh archive from a clean commit when the staged guest driver or fixtures
+change. The
 [host runner](../../../eng/run-thirdlife-hyperv.ps1) checks the reviewed executable
 and provisioner digests, builds the test assemblies and fixtures with locked
 inputs, and returns `TestSource` and `PayloadSha256`. Its default cache and run
@@ -109,14 +115,18 @@ for the reviewed broker visually before acting, then correlate the choice with
 the client result. Microsoft describes Enhanced VMConnect as Remote Desktop.
 Use the Basic console already bound by admission. [VMConnect session modes](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/enhanced-session-mode)
 
-For `Decline`, the [console helper](../../../eng/thirdlife-hyperv-console.ps1)
-can capture the named VM's live display using the same admitted ID. Once Codex
-has visually confirmed the current broker Yes/No prompt, call `-Decline
--ObservedBrokerConsentPrompt -ObservedFrameSha256` with the returned digest.
-The helper rechecks the live frame and sends only Escape if it still matches.
-Record this as automated input delivery and check the client result and broker
-process separately. Delete the temporary PNG after use and retain sanitized
-prompt observations in the evidence. [Hyper-V display capture](https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/getvirtualsystemthumbnailimage-msvm-virtualsystemmanagementservice) · [Virtual keyboard](https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/typekey-msvm-keyboard)
+Open Basic VMConnect before the consent cases. Dismiss the Enhanced Session
+display configuration dialog if it appears so the existing Basic session can
+attach. On the live host the WMI thumbnail was black before Basic attached.
+The [console helper](../../../eng/thirdlife-hyperv-console.ps1) captures the
+named VM by its admitted ID and validates both raw and length-prefixed RGB565.
+Visually confirm the current secure-desktop `ThirdLife.Broker.exe` Yes/No
+prompt. Pass `-ObservedBrokerConsentPrompt -ObservedFrameSha256` with its
+digest and either `-Decline` for Escape or `-Accept -ObservedYesX <x>
+-ObservedYesY <y>` for one click on the visible Yes button. If positioning
+changes the frame, capture and verify it again before retrying. Record the
+automated input separately from the client outcome and broker process state.
+Delete the temporary PNG after use. [Hyper-V display capture](https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/getvirtualsystemthumbnailimage-msvm-virtualsystemmanagementservice) · [Virtual keyboard](https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/typekey-msvm-keyboard) · [Synthetic mouse](https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/msvm-syntheticmouse)
 
 The host runner emits scenario-level local JSON with source and artifact
 digests, bounded observations and the cleanup result. Inspect each result,
@@ -139,16 +149,28 @@ evidence before any justified rollback.
 | Hyper-V distinct-account admission, physical-host negative case | Refused at the guest identity check. The count of owned test account names was unchanged. | Exercises the negative guard before any account action. |
 | Console helper parser and synthetic CIM fixture | Passed in PowerShell 7 and Windows PowerShell 5.1. The fixture decoded a known RGB565 pixel and verified rejection of a changed frame, missing observation and the wrong VM. The matching frame issued one simulated Escape. | Hyper-V and secure-desktop calls were mocked. The Windows PowerShell run used the exact script text in a ScriptBlock under existing execution policy. |
 
-| Guest case | Current result | Required observation |
+## Live guest observations
+
+The initial live cases used the prepared PR #41 archive at `5534e55`.
+Its source tree matched the integrated base exactly. Payload SHA-256 was
+`e5cc0382d1e7742136e9d5ff226873bcbc6d33f110090ae3299a56f63f9c82d3`.
+The pinned SDK and the reviewed Native AOT broker hashes matched before
+transfer and the protected broker was verified by the guest provisioning
+procedure in each reported case. Durations include transfer, staging,
+execution and cleanup. User Account Control displayed
+`ThirdLife.Broker.exe` as a local executable from an unknown publisher.
+
+| Guest case | Targeted result and duration | Observation and limit |
 | --- | --- | --- |
-| `Verify` | Unobserved | Reviewed candidate and metadata verified in protected Program Files. Unelevated writes denied and the production launch guard opened. |
-| `DistinctAccount` | Unobserved | Temporary standard account denied, initiating account admitted, owned account and test resources removed. |
-| `Accept` | Unobserved | Guest Windows consent attributed to the reviewed prompt, then one matching applied no-op and clean broker exit. |
-| `Decline` | Unobserved | Actual Windows decline attributed to the reviewed prompt, then `Declined`, no terminal action and no remaining broker. |
-| `Interrupt` | Unobserved | Owned elevated broker stopped at the pre-dispatch rendezvous, with `Unavailable`, no terminal action and verified exit. |
-| `Timeout` | Unobserved | Protected broker authenticates then exits at its deadline while awaiting a scoped no-op batch. |
-| `Disconnect` | Unobserved | Scope-bound authenticated client closes the connection and the broker exits without dispatch. |
-| `RetainObservation` | Unobserved | The production client preserves the first accepted terminal observation and returns `RequiresReview` when its receive loop is interrupted. |
+| `Verify` | Passed, 99.174 s | Reviewed candidate and metadata verified in protected Program Files. The unelevated harness could read but could not write either protected file and opened the production launch guard. |
+| `DistinctAccount`, initial run | Failed, 83.392 s | Protected deployment and run cleanup passed. The original runner discarded the assertion detail. A scoped post-run account query found the fixture account absent. |
+| `DistinctAccount`, diagnostic run at `b5ec550` | Failed, 81.522 s | `ProbeStartRejected`, test and scheduled-task exit `1`. The standard-account process failed to start before any pipe-access observation. Protected deployment and cleanup passed. The run admitted the VM through the default DPAPI credential path. |
+| `Accept` | Passed, 159.661 s | After visually confirming the live prompt, Codex delivered one virtual mouse Yes click at 17:38:48 UTC. The unelevated client returned `Completed` with one matching `Applied` no-op and the broker exited. |
+| `Decline` | Passed, 133.534 s | After visually confirming the live prompt, Codex delivered one virtual Escape at 17:41:02 UTC. The unelevated client returned `Declined` with zero terminal results and the runner found no surviving broker. |
+| `Interrupt` | Passed, 111.558 s | Codex observed the prompt and clicked Yes at 17:42:55 UTC. The authenticated, owned broker reached the pre-dispatch rendezvous. Scoped termination returned exit `-1`, followed by `Unavailable` and zero terminal results in the unelevated client. |
+| `Timeout` | Passed, 124.995 s | Codex observed the prompt and clicked Yes at 17:44:30 UTC. The broker authenticated, closed the empty session at the ticket deadline and exited `3`. The unelevated harness recorded `BrokerDeadlineElapsed` with zero terminal results. |
+| `Disconnect` | Passed, 102.782 s | Codex observed the prompt and clicked Yes at 17:46:42 UTC. After authenticated hello, closing the client pipe caused broker exit `3`. The unelevated harness recorded `ClientDisconnected` and zero terminal results. |
+| `RetainObservation`, initial run | Failed, 114.340 s | Codex observed the prompt and clicked Yes at 17:48:37 UTC. The harness recorded only the consent request, and cleanup passed. The test's independent process wrapper attempted to reopen the elevated broker instead of retaining observation rights on the launch handle. |
 
 Ordinary broker-dependent application dispatch remains unavailable while
 TL-0317 is open.

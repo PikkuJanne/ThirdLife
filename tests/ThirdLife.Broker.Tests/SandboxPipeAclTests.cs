@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -249,7 +250,18 @@ public sealed class SandboxPipeAclTests
         start.ArgumentList.Add("-NonInteractive");
         start.ArgumentList.Add("-EncodedCommand");
         start.ArgumentList.Add(Convert.ToBase64String(Encoding.Unicode.GetBytes(fixture)));
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("The owned guest probe did not start.");
+        Process? started;
+        try
+        {
+            started = Process.Start(start);
+        }
+        catch (Win32Exception exception)
+        {
+            throw new Win32Exception(exception.NativeErrorCode, FormattableString.Invariant(
+                $"The owned guest probe did not start. NativeErrorCode={exception.NativeErrorCode}."));
+        }
+
+        using var process = started ?? throw new InvalidOperationException("The owned guest probe did not start.");
         try
         {
             await process.WaitForExitAsync(cancellationToken);
