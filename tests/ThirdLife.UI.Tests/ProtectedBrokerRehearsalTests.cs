@@ -37,7 +37,7 @@ public sealed class ProtectedBrokerRehearsalTests
         Trace(new("InstalledCandidateVerified", "verify", ClientUnelevated: true));
     }
 
-    private static void VerifyInstalledCandidate()
+    internal static void VerifyInstalledCandidate()
     {
         Assert.False(WindowsBrokerPeer.CurrentIdentity().IsElevated);
         Assert.Equal(WindowsPlatformEligibility.Supported, WindowsPlatform.CheckCurrent());

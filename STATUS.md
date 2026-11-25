@@ -33,11 +33,11 @@ dispatch. The unelevated launch and bounded parser checks passed, and clean Full
 passed on `e734b5f`. Windows consent, distinct-account denial and teardown retain
 their TL-0317 provenance. [Broker security evidence](artifacts/evidence/TL-0312/report.md)
 
-TL-0313 integrated the no-op approval, journal, cancellation and reopen checkpoint.
-The WPF and SQLite fixture recorded decline without dispatch, fresh approval and
-recovery of an expired attempt. Ordinary dispatch remains unavailable. The guest
-and pinned payload are ready. Bind a controlled application-flow case for exact
-operator approval, Windows consent and TL-0314 review.
+TL-0313's guest preview reopened the exact three-action no-op plan in WPF and
+SQLite with zero approvals or journal entries. The independent WPF process-kill
+case reopened its job and recorded one recovery outcome per action. The guest
+dispatch cases require an operator to approve each exact plan in WPF and make
+the Windows consent choice. Ordinary dispatch also requires TL-0314 approval.
 [Orchestration evidence](artifacts/evidence/TL-0313/report.md)
 
 The next independent package task is TL-0405, covering progress, cancellation,

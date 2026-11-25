@@ -4121,9 +4121,51 @@ tasks:
     duration: 2.108 s command, 3 tests
     reference: artifacts/evidence/TL-0313/report.md, source a6149608be1c97daa4954853bc7d76d11aeb0001
     limitation: Synthetic launcher observations. Actual UAC and teardown retain TL-0317 provenance.
-  blocked_reason: Live integrated dispatch awaits attributable operator approval and actual Windows consent for its exact saved
-    no-op batch. The guest and pinned payload are prepared. The dedicated case binding the protected adapter to the durable
-    application plan is outstanding. Ordinary dispatch also requires the TL-0314 privilege decision.
+  - task: TL-0313
+    summary: Follow-on guest qualification source passed the deterministic Full suite from a clean same-machine worktree.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Active Windows 11 Pro build 26300.9974, native x64, unelevated, .NET SDK 10.0.400
+    date: '2026-11-25'
+    duration: 453.300 s, 303 governance and 2051 .NET tests
+    reference: artifacts/evidence/TL-0313/report.md, source da3b01bbc4a51dddfc521683d2ae827fcec059d3
+    limitation: Default deterministic filters. Named guest and Extended outcomes have their own evidence.
+  - task: TL-0313
+    summary: The controlled guest application preview reopened the same three-action plan and impact from SQLite with zero
+      approvals and journal entries. The pinned installed broker and owned guest cleanup verified.
+    command_or_review: eng/run-thirdlife-hyperv.ps1 -Scenario ApplicationPreview with the admitted VM and pinned payload
+    tier: targeted
+    result: passed
+    environment: Dedicated Windows 11 Hyper-V guest build 26300 on the active native x64 machine, limited console token
+    date: '2026-11-25'
+    duration: 113.876 s including staging and cleanup
+    reference: artifacts/evidence/TL-0313/report.md, source da3b01bbc4a51dddfc521683d2ae827fcec059d3
+    limitation: The synthetic preview job exercised durable plan identity and reopen without asking for consent or dispatching.
+  - task: TL-0313
+    summary: The guest displayed the saved acceptance plan and reached the attended operator gate. The run expired without
+      a confirmed approval, Windows consent process, or dispatch outcome. Owned guest cleanup passed.
+    command_or_review: eng/run-thirdlife-hyperv.ps1 -Scenario ApplicationAccept with the admitted VM and pinned payload
+    tier: targeted
+    result: blocked
+    environment: Dedicated Windows 11 Hyper-V guest build 26300 on the active native x64 machine, limited console token
+    date: '2026-11-25'
+    duration: 260 s including staging and cleanup
+    reference: artifacts/evidence/TL-0313/report.md, source da3b01bbc4a51dddfc521683d2ae827fcec059d3
+    limitation: CandidateReady was the only recorded stage. Live qualification requires a fresh attended run with exact approval.
+  - task: TL-0313
+    summary: An owned unelevated WPF process terminated after the durable dispatch intent. Reopening the same SQLite job produced
+      one correlated RequiresReview result per action after expiry and a second reopen added no entries.
+    command_or_review: ThirdLife.UI.Tests KilledNoOpApplicationReopensTheSameJobAndReconcilesWithoutDispatch
+    tier: extended
+    result: passed
+    environment: Active Windows 11 Pro build 26300.9974, native x64, unelevated WPF child and isolated SQLite
+    date: '2026-11-25'
+    duration: 13.558 s command from the isolated source worktree
+    reference: artifacts/evidence/TL-0313/report.md
+    limitation: Fixture pre-dispatch hold and controlled expiry. Actual native broker termination retains TL-0317 provenance.
+  blocked_reason: The prepared guest application cases need attributable operator approval in WPF and actual Windows consent
+    for each exact saved no-op batch. Ordinary dispatch also requires the TL-0314 privilege decision.
   notes:
   - The verified application checkpoint keeps ordinary dispatch unavailable and can supply TL-0314 candidate preparation.
   - Confirmed pre-dispatch decline, cancellation and unavailability permit fresh approval. Applied and unresolved results require
