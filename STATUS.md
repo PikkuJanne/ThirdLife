@@ -68,8 +68,8 @@ limit. Expired approvals or changed resolutions require fresh review.
 [Package retry evidence](artifacts/evidence/TL-0409/report.md)
 
 TL-0410 installed and independently verified the reviewed Notepad++ package
-in the supervised guest. Exact registration, the journal and the saved report
-survived an orderly restart under standing operator authority. Basic-console
-sign-in enables the post-boot app check. Native decline and interruption and
-authorized checkpoint restoration remain open.
+in the supervised guest. After an orderly restart the app reopened the same
+verified job and generated a matching workshop report. The journal retained
+one dispatch and a fresh MSI query confirmed exact machine-wide registration.
+Native decline, installer-client interruption and checkpoint restoration remain open.
 [M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)

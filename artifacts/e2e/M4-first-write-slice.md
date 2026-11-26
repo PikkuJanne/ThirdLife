@@ -378,14 +378,46 @@ registration. The 6.476 s journal read found the same fingerprint and one
 correlated approval, dispatch, applied result and verification. There were no
 console installer, consent or app processes and no runner stage. A 3.092 s
 comparison found the saved pre-restart workshop report byte-identical to its
-protected copy. The successful job's post-boot WPF check awaits the existing
-account's Basic-console sign-in. This is an orderly warm restart following an
-already verified install.
+protected copy. The existing guest account was signed out at this point. This
+was an orderly warm restart following an already verified install.
 
 Host Quick passed at `90fde78` with 1,233 .NET tests and eight governance
 regressions. The first run took 137.786 s including a 26.94 s rebuild while
 guest verification was running. The warm run passed in 109.400 s, and the
 bundle and repository validators passed on the updated evidence and runbook.
+
+## 26 November 2026 post-restart verified job
+
+Once the operator opened the Basic console desktop, the standard unelevated
+app reopened the same job with
+`eng/run-m4-package-desktop.ps1 -Reopen -ExpectedRecovery Verified` on the
+observed changed boot. The run took 63.507 s, including 32.125 s in the desktop
+case. The app displayed the saved verification, generated and opened a new
+workshop report matching the exact plan, version, machine-wide scope and
+verified outcome, and kept handover disabled. The app closed normally and
+the wrapper removed its stage.
+
+A separate 4.663 s Windows Installer query confirmed exact machine-wide
+registration on that boot. A 3.733 s read-only SQLite comparison matched the
+earlier journal fingerprint and counted one approval and one correlated
+dispatch through verification. No app, console installer client, consent
+process or runner stage remained. A 3.622 s bounded copy retained the new
+restricted workshop report in protected local evidence. Its bytes matched
+the retained pre-restart report.
+
+The run used the reviewed Release artifacts from `20247fb`. The guest driver
+SHA-256 was `a37ef874724c3e4e499aab84db3a27bf4873ad385607b5564e2ef5a07a89424a`
+and the staged bundle SHA-256 was
+`c81c8ef5196988f0a9d8b5b32e2ba46ffb6b5b379bcc24b2b615c546747cc708`.
+The WPF report used saved verification and the independent MSI query observed
+fresh registration. The installer completed without requesting a restart.
+Native UAC decline and attributable installer-client interruption remain open.
+The clean checkpoint must be restored and re-admitted under scoped authority
+before those package-absent cases can run.
+
+Host Quick passed at base `817fa76` in 135.154 s with 1,233 .NET tests and
+eight governance regressions. A 25.64 s rebuild contributed to exceeding the
+120 s target. Bundle and repository validation passed on the evidence changes.
 
 ## Native procedure
 
