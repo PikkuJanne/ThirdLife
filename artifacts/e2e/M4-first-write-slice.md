@@ -171,6 +171,54 @@ final Quick run reused locked dependencies and passed in 110.096 s with 1,233
 .NET tests, eight governance regressions and a warnings-as-errors build. The
 native guest checks above establish the separate UI Automation observations.
 
+## 26 November 2026 scoped guest dispatch
+
+The operator approved one installation against the exact displayed plan and
+authorized an orderly restart of the same guest after an installer result.
+The authorization and target binding are in the protected local record.
+The preflight re-observed package absence and the expected source length. An
+independent journal read found zero approvals and action entries before launch.
+
+The `-Install` runner reopened the saved job using the reviewed Release
+artifacts from `20247fb`, compared the displayed digest, saved approval through
+the ordinary unelevated application and invoked installation once. A read-only
+SQLite query verified exactly one approval and one dispatch intent for the same
+plan, impact, action and approval. A PowerShell Direct query matched the owned
+Windows Installer client, its approved machine-scope arguments and the exact
+staged MSI hash. It also found a Windows consent process in the application
+session. The host thumbnail was black, so this evidence establishes the
+consent-process observation. The operator was asked to inspect the Basic
+console and make the Windows choice there.
+
+The first process monitor looked for `/i`. The corrected query used the
+production `/package` switch and checked the MSI path, digest, executable and
+all expected installer arguments.
+
+The desktop wrapper returned after 639.265 s without a verified installer
+result and retained the guest stage. App observation elapsed 613.852 s. A
+separate read-only journal check confirmed `RequiresReview` with `TimedOut`
+for the single correlated dispatch. It found no applied or verified result
+and no restart checkpoint. Independent MSI observation still reported package
+absence and unchanged boot time. One console installer client, one consent
+process, the unelevated app, runner task and stage remained. The runner guard
+also preserves the app when it sees a review-required status before its own
+observation deadline. Resolve the existing Windows consent and observe the
+client exit before same-job reconciliation or a restart. The native installer
+interruption and checkpoint restoration retain their own authorization
+requirements.
+
+The guest driver SHA-256 was
+`0aaf83a02585128982c24ad33fdbe608fe9398ab4cbcdddfec9180580bc7dd9a` and bundle
+SHA-256 was `7ba7c9e8d305fff8542679aee2b64cf952d61132874d0476c0c80d7e0f3498cb`.
+Quick with locked restore passed on the active host in 145.491 s with 1,233
+.NET tests, eight governance regressions and a zero-warning Release build. The
+build took 28.39 s and the UI test selection took 57 s during the concurrent
+guest run. PowerShell parsing and native scheduler settings checks passed.
+Targeted verification passed in 144.452 s with Quick and 46 focused
+deterministic package and recovery cases. A malformed Install plan digest was
+refused by parameter binding before guest admission.
+Quick passed again in 102.991 s after tightening the app-retention guard.
+
 ## Native procedure
 
 Use the exact VM and clean checkpoint IDs from the reviewed profile. Retain the
@@ -192,7 +240,9 @@ public artifact digests, durations and limitations.
    original attestation parameters to complete interrupted intake or assessment.
 3. Obtain operator authority for the displayed plan digest and the exact
    target and action, then approve and dispatch in the ordinary application.
-   Compare the displayed digest again if reopening the job for approval.
+   `-Install` reopens the exact job, compares the digest before and after saving
+   approval and invokes the ordinary install control once. Supervise Windows
+   consent in the bound Basic console and retain uncertain run state for review.
    The pinned route is Notepad++ 8.9.9.1, source
    `notepad-plus-plus-releases`, x64 vendor MSI, machine scope, SHA-256
    `e3b0607a092ce2604fbdac027db2c94915995e8e568ebd226f8c5493c2f61a80`.

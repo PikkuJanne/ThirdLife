@@ -5323,8 +5323,31 @@ tasks:
     duration: 49.015 s reopen wrapper and 4.251 s independent inspection
     reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and final driver digest
     limitation: Continuity of a preview only. Actual post-dispatch recovery and guest restoration remain unobserved.
-  blocked_reason: The exact live guest plan is displayed and requires attributable operator approval for dispatch. Record the
-    authority for each planned interruption, restart and checkpoint restoration and the actual Windows choice if prompted.
+  - task: TL-0410
+    summary: The guest saved one authorized approval and one durable dispatch intent. The active application-owned Windows Installer
+      client was tied to the exact reviewed MSI, and a Windows consent process was present in the application's console session.
+    command_or_review: eng/run-m4-package-desktop.ps1 -Install, bound SQLite journal query and PowerShell Direct process and MSI review
+    tier: targeted
+    result: blocked
+    environment: Unelevated Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 3.284 s independent journal inspection and 3.850 s installer-client binding check
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and recorded guest dispatch artifact digests
+    limitation: The Windows consent process is observed. No Windows choice or installer result has been verified at this checkpoint.
+  - task: TL-0410
+    summary: The single guest attempt timed out in RequiresReview while the consent process and installer client remained active.
+      The exact package was absent, boot evidence was unchanged, and the runner retained its stage.
+    command_or_review: eng/run-m4-package-desktop.ps1 -Install timeout and read-only package and SQLite re-observation
+    tier: targeted
+    result: blocked
+    environment: Unelevated Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 639.265 s install wrapper, 4.882 s package and boot check, and 3.430 s journal check
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and recorded guest dispatch artifact digests
+    limitation: One live console installer client and consent process remain. No applied result, independent verification or restart was observed.
+  blocked_reason: The single authorized guest attempt timed out and remains in review with the installer and Windows consent active.
+    Resolve the existing Windows choice in the Basic console, observe client exit and re-observe the exact saved job and package
+    before any retry or separately authorized orderly restart. Native interruption and checkpoint restoration need their own scoped authority.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.
