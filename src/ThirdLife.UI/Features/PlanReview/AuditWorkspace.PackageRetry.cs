@@ -67,7 +67,6 @@ internal sealed partial class AuditWorkspace
             return Task.CompletedTask;
         }
 
-        var declined = IsPackageProfile && PlanReviewDecision?.Outcome == PlanReviewOutcome.Declined;
         SelectedPlanProfile = profile;
         return RunAsync(async () =>
         {
@@ -90,6 +89,8 @@ internal sealed partial class AuditWorkspace
 
             var displayed = PlanReviewPresentation.Describe(current);
             var key = JournalPlanSnapshot.Create(current, displayed.Impact).Key;
+            var declined = _planReviewHistory.LastOrDefault(decision => decision.PlanSha256 == key.PlanSha256)?.Outcome ==
+                PlanReviewOutcome.Declined;
             var saved = histories.SingleOrDefault(history => history.Plan.Key == key);
             var approval = saved?.ActiveApproval;
             var previous = saved?.Entries.LastOrDefault();

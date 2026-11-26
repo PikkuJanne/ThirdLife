@@ -70,8 +70,8 @@ public sealed class PilotPackageService
         {
             return new(observation.Status switch
             {
-                PackageObservationStatus.Installed => PackageResolutionStatus.AlreadyInstalled,
-                PackageObservationStatus.Conflict => PackageResolutionStatus.Conflict,
+                PackageObservationStatus.Installed when observation.ExactVersion == Identity.ExactVersion => PackageResolutionStatus.AlreadyInstalled,
+                PackageObservationStatus.Installed or PackageObservationStatus.Conflict => PackageResolutionStatus.Conflict,
                 _ => PackageResolutionStatus.Unavailable,
             }, observation);
         }
@@ -211,11 +211,12 @@ public sealed class PilotPackageService
         }
     }
 
-    private PackageInstallResult? GetInstallObservationResult() => Inspect().Status switch
+    private PackageInstallResult? GetInstallObservationResult() => Inspect() switch
     {
-        PackageObservationStatus.Absent => null,
-        PackageObservationStatus.Installed => new(PackageInstallStatus.AlreadyInstalled),
-        PackageObservationStatus.Conflict => new(PackageInstallStatus.Conflict),
+        { Status: PackageObservationStatus.Absent } => null,
+        { Status: PackageObservationStatus.Installed, ExactVersion: var version } when version == Identity.ExactVersion =>
+            new(PackageInstallStatus.AlreadyInstalled),
+        { Status: PackageObservationStatus.Installed or PackageObservationStatus.Conflict } => new(PackageInstallStatus.Conflict),
         _ => new(PackageInstallStatus.Unavailable),
     };
 
@@ -249,7 +250,8 @@ public sealed class PilotPackageService
                     // Cancelling observation never sends a termination request to Windows Installer.
                     var result = await runtime.ApplyAsync(artifact, CancellationToken.None).ConfigureAwait(false);
                     // These statuses certify that the service never entered the apply boundary.
-                    return result.Status is PackageInstallStatus.Unavailable or PackageInstallStatus.PreconditionChanged
+                    return result.Status is PackageInstallStatus.Unavailable or PackageInstallStatus.PreconditionChanged or
+                        PackageInstallStatus.AlreadyInstalled or PackageInstallStatus.NetworkUnavailable or PackageInstallStatus.CancelledBeforeDispatch
                         ? new PackageInstallResult(PackageInstallStatus.ReviewRequired) : result;
                 }, dispatchToken)
                     .ConfigureAwait(false);

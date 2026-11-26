@@ -252,6 +252,37 @@ public sealed class JournalTests
         Assert.False(JournalStateMachine.CanAppend(plan, approval, failed, sharedCorrelation));
     }
 
+    [Theory]
+    [InlineData(JournalCheckpoint.PackageDispatchIntent, true)]
+    [InlineData(JournalCheckpoint.PackageRetryDispatchIntent, true)]
+    [InlineData(JournalCheckpoint.DispatchIntent, false)]
+    public void ExistingTargetVerificationRequiresTheMatchingPackageIntent(JournalCheckpoint intent, bool allowed)
+    {
+        var proposal = PlanResolverTests.CreateReviewedPlan();
+        var plan = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+        var actionId = Assert.Single(plan.Actions).ActionId;
+        var approval = Approval(plan);
+        var started = new JournalEntry(PreviousEntryId, plan.Key, actionId, approval.ApprovalId,
+            JournalState.Approved, JournalState.Started, JournalActor.Coordinator, Approver, CorrelationId,
+            ApprovalTime.AddMinutes(1), JournalResult.None, intent,
+            priorAttemptEntryId: intent == JournalCheckpoint.PackageRetryDispatchIntent ? Guid.NewGuid() : null);
+        var verified = Entry(plan, actionId, CandidateEntryId, JournalState.Started, JournalState.Verified,
+            JournalActor.Verifier, JournalResult.PackageLaunchVerified, JournalCheckpoint.PackageExistingTargetVerification,
+            verification: ActionVerification.ExactPackageIdentity);
+        var probeFailed = Entry(plan, actionId, CandidateEntryId, JournalState.Started, JournalState.RequiresReview,
+            JournalActor.Verifier, JournalResult.PackageProbeLaunchFailed, JournalCheckpoint.PackageExistingTargetVerification);
+        var genericFailure = Entry(plan, actionId, CandidateEntryId, JournalState.Started, JournalState.RequiresReview,
+            JournalActor.Verifier, JournalResult.OperationFailed, JournalCheckpoint.PackageExistingTargetVerification);
+        var unrelated = Entry(plan, actionId, CandidateEntryId, JournalState.Started, JournalState.Verified,
+            JournalActor.Verifier, JournalResult.PackageLaunchVerified, JournalCheckpoint.PackageExistingTargetVerification,
+            verification: ActionVerification.ExactPackageIdentity, correlationId: Guid.NewGuid());
+
+        Assert.Equal(allowed, JournalStateMachine.CanAppend(plan, approval, started, verified));
+        Assert.Equal(allowed, JournalStateMachine.CanAppend(plan, approval, started, probeFailed));
+        Assert.False(JournalStateMachine.CanAppend(plan, approval, started, genericFailure));
+        Assert.False(JournalStateMachine.CanAppend(plan, approval, started, unrelated));
+    }
+
     [Fact]
     public void LegacyPackageJournalPayloadStillRoundTripsWithoutARetryLink()
     {

@@ -381,13 +381,16 @@ public sealed partial class PackageSetupTests
         private int _acquisitions;
         private int _inspections;
         private int _installCalls;
+        private int _probeCalls;
         private PackageObservation? _nextObservation;
         private Func<CancellationToken, Task<IPackageArtifact>>? _nextAcquisition;
 
         public int Acquisitions => Volatile.Read(ref _acquisitions);
         public int Inspections => Volatile.Read(ref _inspections);
         public int InstallCalls => Volatile.Read(ref _installCalls);
+        public int ProbeCalls => Volatile.Read(ref _probeCalls);
         public TrackedRecoveryArtifact? LastArtifact { get; private set; }
+        public bool Installed { set => _installed = value; }
         public PackageObservation? NextObservation { set => _nextObservation = value; }
         public Func<CancellationToken, Task<IPackageArtifact>>? NextAcquisition { set => _nextAcquisition = value; }
         public Func<CancellationToken, Task<PackageInstallResult>>? Install { get; init; }
@@ -415,8 +418,11 @@ public sealed partial class PackageSetupTests
             return result;
         }
 
-        public Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(PackageVerificationStatus.Passed);
+        public Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _probeCalls);
+            return Task.FromResult(PackageVerificationStatus.Passed);
+        }
     }
 
     private sealed class TrackedRecoveryArtifact : IPackageArtifact

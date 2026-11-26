@@ -46,6 +46,16 @@ public static class JournalStateMachine
             return false;
         }
 
+        if (candidate.Checkpoint == JournalCheckpoint.PackageExistingTargetVerification)
+        {
+            return IsSingleLivePackage(plan, action) && previous is
+            { State: JournalState.Started, Actor: JournalActor.Coordinator, Result: JournalResult.None } &&
+                IsPackageDispatchIntent(previous) && candidate.Actor == JournalActor.Verifier &&
+                ((candidate.State == JournalState.Verified && candidate.Result == JournalResult.PackageLaunchVerified &&
+                    candidate.Verification == action.Definition.Verification) ||
+                    (candidate.State == JournalState.RequiresReview && IsPackageVerificationFailure(candidate.Result)));
+        }
+
         if (candidate.Checkpoint is JournalCheckpoint.PackageRecoveryVerification or JournalCheckpoint.PackageRebootVerification)
         {
             var expected = candidate.Checkpoint == JournalCheckpoint.PackageRebootVerification
@@ -140,13 +150,16 @@ public static class JournalStateMachine
 
     private static bool CanStartPackageRetry(JournalPlanSnapshot plan, JournalAction action, JournalEntry? previous,
         JournalEntry candidate) =>
-        plan is { SyntheticData: false, Actions.Length: 1 } &&
-        action.Request is InstallPackageActionRequest { Scope: ActionScope.Machine, Architecture: ActionArchitecture.X64 } &&
+        IsSingleLivePackage(plan, action) &&
         candidate is { State: JournalState.Started, Actor: JournalActor.Coordinator, Result: JournalResult.None, Verification: null } &&
         previous is not null && candidate.CorrelationId != previous.CorrelationId && candidate.ApprovalId == previous.ApprovalId &&
         ((previous is { State: JournalState.Approved, Checkpoint: JournalCheckpoint.PackagePlanApproval }) ||
             (PackageRetryPolicy.IsRetryableFailure(previous) && previous.Result != JournalResult.PackageDispatchAuthorizationChanged &&
                 candidate.PriorAttemptEntryId == previous.EntryId));
+
+    private static bool IsSingleLivePackage(JournalPlanSnapshot plan, JournalAction action) =>
+        plan is { SyntheticData: false, Actions.Length: 1 } &&
+        action.Request is InstallPackageActionRequest { Scope: ActionScope.Machine, Architecture: ActionArchitecture.X64 };
 
     private static bool IsPackageDispatchIntent(JournalEntry? entry) =>
         entry is not null && PackageRetryPolicy.IsDispatchIntent(entry.Checkpoint);

@@ -107,6 +107,7 @@ public enum JournalCheckpoint
     PackageRecoveryVerification,
     PackageRebootVerification,
     PackageRetryDispatchIntent,
+    PackageExistingTargetVerification,
 }
 
 public sealed record JournalApproval

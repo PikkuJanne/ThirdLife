@@ -58,6 +58,95 @@ public sealed partial class PackageSetupTests
     }
 
     [Fact]
+    public async Task MissingPreviouslyVerifiedPackageShowsFreshGuidanceWithoutReinstalling()
+    {
+        using var disk = new AuditTestStore();
+        var runtime = new InterruptedPackageRuntime();
+        var service = new PilotPackageService(runtime);
+        var reports = new WorkshopReportStore(Path.Combine(disk.Root, "reports"));
+        JobId jobId;
+        await using (var workspace = OpenWorkspace(disk, reports, service))
+        {
+            jobId = await ApproveInitialPackagePlanAsync(workspace);
+            await workspace.InstallPackageAsync();
+        }
+
+        var saved = await ReadRecoveryHistoryAsync(disk, jobId);
+        Assert.Equal(JournalState.Verified, saved.Entries[^1].State);
+        runtime.Installed = false;
+        var acquisitions = runtime.Acquisitions;
+        await using var reopened = OpenWorkspace(disk, reports, service);
+        await reopened.OpenJobAsync(jobId.Value);
+        var inspections = runtime.Inspections;
+        reopened.SelectedPlanProfile = Assert.Single(reopened.PlanProfiles, option => !option.Profile.SyntheticData);
+        InPackageRecoveryWindow(reopened, (window, panel) =>
+        {
+            Invoke(window, Named<Button>(panel, "BuildPlanReviewButton"));
+            PumpUntil(window, () => !reopened.IsBusy && reopened.HasPlanReview);
+            var planStatus = Named<TextBlock>(panel, "PlanStatusMessage");
+            var sourceStatus = Named<TextBlock>(panel, "PackageSourceMessage");
+            Assert.Contains("previously verified package is no longer installed",
+                $"{planStatus.Text} {sourceStatus.Text}", StringComparison.OrdinalIgnoreCase);
+            Assert.False(Named<Button>(panel, "ApprovePlanReviewButton").IsEnabled);
+            Assert.False(Named<Button>(panel, "InstallPackageButton").IsEnabled);
+            Assert.False(reopened.CanRetryPackage);
+        });
+
+        Assert.True(runtime.Inspections > inspections);
+        Assert.Equal(acquisitions, runtime.Acquisitions);
+        Assert.Equal(1, runtime.InstallCalls);
+        Assert.Equal(1, runtime.ProbeCalls);
+        var unchanged = await ReadRecoveryHistoryAsync(disk, jobId);
+        Assert.Equal(saved.Entries.AsEnumerable(), unchanged.Entries.AsEnumerable());
+        Assert.Equal(saved.Approvals.AsEnumerable(), unchanged.Approvals.AsEnumerable());
+    }
+
+    [Fact]
+    public async Task ApprovedInstallVerifiesAnExactPackageThatAppearedBeforeDispatch()
+    {
+        using var disk = new AuditTestStore();
+        var runtime = new InterruptedPackageRuntime();
+        var service = new PilotPackageService(runtime);
+        var reports = new WorkshopReportStore(Path.Combine(disk.Root, "reports"));
+        JobId jobId;
+        JournalHistory approved;
+        await using (var workspace = OpenWorkspace(disk, reports, service))
+        {
+            jobId = await ApproveInitialPackagePlanAsync(workspace);
+            approved = await ReadRecoveryHistoryAsync(disk, jobId);
+            var acquisitions = runtime.Acquisitions;
+            runtime.Installed = true;
+            InPackageRecoveryWindow(workspace, (window, panel) =>
+            {
+                Invoke(window, Named<Button>(panel, "InstallPackageButton"));
+                PumpUntil(window, () => !workspace.IsBusy && runtime.ProbeCalls == 1,
+                    () => workspace.PlanReviewStatus);
+                Assert.False(workspace.CanInstallPackage);
+            });
+            Assert.Equal(acquisitions, runtime.Acquisitions);
+            Assert.Equal(0, runtime.InstallCalls);
+        }
+
+        var verified = await ReadRecoveryHistoryAsync(disk, jobId);
+        Assert.Equal(approved.Entries.AsEnumerable(), verified.Entries.Take(approved.Entries.Length));
+        Assert.Equal(approved.Approvals.AsEnumerable(), verified.Approvals.AsEnumerable());
+        Assert.DoesNotContain(verified.Entries, entry => entry.State == JournalState.Applied);
+        var result = verified.Entries[^1];
+        Assert.Equal(JournalState.Verified, result.State);
+        Assert.Equal(JournalCheckpoint.PackageExistingTargetVerification, result.Checkpoint);
+        Assert.Equal(JournalActor.Verifier, result.Actor);
+        Assert.Equal(Assert.Single(approved.Approvals).ApprovalId, result.ApprovalId);
+
+        await using var reopened = OpenWorkspace(disk, reports, service);
+        await reopened.OpenJobAsync(jobId.Value);
+        await reopened.GenerateReportAsync();
+        await reopened.OpenReportAsync();
+        Assert.Contains("ThirdLife skipped Windows Installer for this attempt", reopened.ReportPreview, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("launch check", reopened.ReportPreview, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, runtime.ProbeCalls);
+    }
+
+    [Fact]
     public async Task PackageRetryBackoffAndAttemptLimitSurviveJobReopen()
     {
         using var disk = new AuditTestStore();

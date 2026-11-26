@@ -41,6 +41,7 @@ public enum WorkshopPackageOutcome
     ProbeExecutableUntrusted,
     ProbeLaunchFailed,
     BackendUnavailableBeforeDispatch,
+    ExistingTargetVerified,
 }
 
 public sealed record WorkshopPackageRecord(
@@ -98,6 +99,7 @@ public static partial class WorkshopReportRenderer
         WorkshopPackageOutcome.RestartRequired => "The installer reported that a restart is required. Save open work before restarting through Windows. Independent verification remains pending.",
         WorkshopPackageOutcome.Verified => "Independent verification confirmed the requested version is installed machine-wide.",
         WorkshopPackageOutcome.LaunchVerified => "Independent verification confirmed the requested version is installed machine-wide and passed the launch check.",
+        WorkshopPackageOutcome.ExistingTargetVerified => "Independent verification confirmed the requested version is already installed machine-wide and passed the launch check. ThirdLife skipped Windows Installer for this attempt.",
         WorkshopPackageOutcome.Failed => "The installer reported failure. Review actual installed state before taking further action.",
         WorkshopPackageOutcome.Cancelled => "Cancellation was recorded. Review actual installed state before taking further action.",
         WorkshopPackageOutcome.CancelledBeforeDispatch => "The attempt was cancelled before Windows Installer started.",
