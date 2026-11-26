@@ -476,6 +476,87 @@ eight governance regressions. The WPF selection took 73 s while native guest
 work was in progress. The run exceeded the 120 s target. Bundle and repository
 validation passed on the evidence and runbook changes.
 
+## Standing guest installer authorization
+
+On 26 November 2026 the operator granted standing authority to dispatch the
+reviewed pinned Notepad++ 8.9.9.1 native x64 vendor MSI machine-wide on the
+bound `ThirdLife-W11` guest. The scope includes that exact package identity,
+version, digest, route and guest until changed or revoked. For each run,
+review the resolved plan and save its approval through the ordinary app.
+Windows secure-desktop choices and installer-client interruption retain
+their own authority.
+
+The protected local grant is recorded at
+`%LOCALAPPDATA%\ThirdLife\HyperV\Authority\ThirdLife-W11-NotepadPlusPlus-installer.json`.
+The current case's protected record binds the one allowed app dispatch,
+exact job and plan, operator receipt and planned supervised Windows choice.
+
+## 26 November 2026 supervised native UAC decline
+
+The earlier preview driver rejected the Install parameters before entering the
+runner. A 4.450 s read-only check found the exact saved job with zero approvals
+and journal entries. The Install-capable runner used the same reviewed Release
+artifacts and saved authority for the existing plan before invoking it once.
+
+During the dispatch, the observer matched the exact job and plan, app-owned
+Windows Installer client, expected command and pinned MSI digest. It observed
+the matching Windows consent process in the same console session and cued
+the operator to choose No. The operator reported choosing No on that prompt.
+The independently observed journal outcome was `RequiresReview / Cancelled`
+under the exact approval and one
+dispatch correlation. The independent MSI query found the package absent.
+
+The 49.822 s Install invocation reached the driver's terminal-outcome guard
+and retained the app and stage. A scoped normal close took 7.552 s. Cleanup
+observed the registered session-zero Windows Installer service and found no
+client or consent process.
+
+The same job reopened through `-Reopen -ExpectedRecovery RequiresReview`
+in 42.528 s, including 17.373 s in the desktop case. It observed absent
+registration, kept handover disabled, and generated and displayed the matching
+cancellation workshop report. The app closed normally and its reopen stage
+was removed. The 1.163 s independent journal comparison matched the earlier
+fingerprint and counted one approval and one dispatch. The exact restricted
+report was held locally in a protected copy after a 2.188 s transfer.
+
+The Install bundle SHA-256 was
+`aa7091c4ce6f9f6bfedcc99801c53651303e9d4d756d517917cda338e19a0c7b`.
+The reopen bundle SHA-256 was
+`d4233f2e948c0333996626d6b79a0de09e9b3107d1fb85482c86c6d1e568b2f0`.
+Both used the Release artifacts from `20247fb` and the Install-capable driver
+SHA-256 `702107c26f9679280ec79572e016281f74ddf4ea263c3dfe7392291f38a2d755`.
+
+With the case report and journal evidence held on the host, the standing
+restore grant was used to apply the exact clean checkpoint and start the same
+quiescent guest in 6.575 s. The checked 25.071 s re-admission confirmed the
+package was absent and Windows Installer was idle. A 10.206 s read-only
+inspection found no previous job store, report, app, installer, consent,
+runner task or staging residue. The approved checkpoint restore cleared the
+retained negative-run stage.
+
+Host Quick passed at base `bbe5325` in 148.581 s with 1,233 .NET tests and
+eight governance regressions. The WPF selection took 70 s during guest work.
+The run exceeded the 120 s target. Bundle and repository validation passed
+on the evidence and runbook updates.
+
+## 26 November 2026 native installer-client interruption plan
+
+The ordinary unelevated app displayed a distinct interruption plan after the
+second clean restore. The preview took 144.830 s, including 106.321 s in the
+desktop case. It reused the bound intake attestation, kept installation and
+handover disabled, and exited normally with runner cleanup.
+
+A 3.714 s read-only check found one exact saved job, zero approvals and zero
+action journal entries. No app, installer client, consent process or runner
+stage remained. The host retains the job and plan binding privately. The next
+test requires separate authority to stop one exact installer client and
+supervised Windows consent. Act only if the matching transaction is
+independently observed in the bounded live window.
+
+The preview used the reviewed Release artifacts from `20247fb` and the
+Install-capable driver. The bundle SHA-256 was
+`87b8e4d1e2fe70dc5b03d8825ab354f87c23917071055dd6b1f23f43848e9116`.
+
 ## Native procedure
 
 Use the exact VM and clean checkpoint IDs from the reviewed profile. Retain the
@@ -495,8 +576,9 @@ public artifact digests, durations and limitations.
    live assessment and reads the fully resolved package plan without approving
    it. Use `-ResumePreview -Job` to continue the existing job. Supply both
    original attestation parameters to complete interrupted intake or assessment.
-3. Obtain operator authority for the displayed plan digest and the exact
-   target and action, then approve and dispatch in the ordinary application.
+3. Verify operator authority covers the displayed plan, exact target and
+   action, then approve and dispatch in the ordinary application. Use the
+   standing installer grant for the bound guest and reviewed pinned route.
    `-Install` reopens the exact job, compares the digest before and after saving
    approval and invokes the ordinary install control once. Supervise Windows
    consent in the bound Basic console and retain uncertain run state for review.
