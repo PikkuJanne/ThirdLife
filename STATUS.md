@@ -67,8 +67,8 @@ installation. Eligible failures retain linked attempts and a durable three-start
 limit. Expired approvals or changed resolutions require fresh review.
 [Package retry evidence](artifacts/evidence/TL-0409/report.md)
 
-TL-0410 reopened the original job after an orderly guest restart and confirmed
-the timed-out review result, workshop report and unchanged dispatch history.
-The package remained absent. A separate guest job displayed a fresh exact
-plan awaiting operator approval for a supervised installation.
+TL-0410 installed and independently verified the reviewed Notepad++ package
+in the supervised guest. The same job reopened with its verified report and
+one dispatch. The successful-job restart, native decline and interruption,
+and authorized checkpoint restoration remain open.
 [M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)
