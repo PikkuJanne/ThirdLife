@@ -2,7 +2,8 @@
 
 **Date** 2026-11-26  
 **Base** `b37e10782d6d72cc36e97441c63a713b69f47f33` (`origin/main`, PR #48)  
-**Tested source** `efe204cd364365b6d8f4d59e7935afde36e8d421`  
+**Targeted checkpoint** `efe204cd364365b6d8f4d59e7935afde36e8d421`  
+**Clean Full and active probe source** `31dc389f5b2c7ddf86d3126d17f9394037015e24`  
 **Environment** Active Codex machine, Windows 11 Pro 26H2 build 26300.9974, native x64,
 unelevated, pinned .NET SDK 10.0.400 and Python 3.14.7.
 
@@ -70,6 +71,13 @@ desktop, and no change in editor process or private staging-directory count.
 | Check | Result |
 | --- | --- |
 | `eng/verify.ps1 -Tier Targeted`, with Actions, Packages, UI, Persistence and Reports test projects | Passed in 141.728 s. Quick and the selected deterministic projects passed 1,586 .NET tests plus eight governance tests. |
+| `eng/verify.ps1 -Tier Quick`, after the ADR correction | Passed in 97.084 s. |
+| `eng/verify.ps1 -Tier Full -Restore`, separate clean worktree | Passed in 340.072 s. 304 governance tests, 2,093 .NET tests, locked restore and zero build warnings. |
+| Active-machine package verification | Passed 1/1 in 2.923 s. The exact registration remained present and the probe left no process or staging directory. |
+| FI-008 WPF false success | Passed 2/2 in 3.075 s. Missing or wrong registration remained in review and the probe was never called. |
+| FI-009 launch outcomes | Passed 6/6 WPF cases in 5.015 s and 8/8 package adapter cases in 1.713 s. The fixtures covered success, launch failures, cancellation and cleanup review. |
+| WPF incomplete apply | Passed 2/2 in 2.998 s. Declined consent and restart-pending cases recorded their own outcomes without launching. |
+| Existing Extended WPF process interruption | Passed 1/1 in 5.888 s. Killing the fixture during a held installer operation reopened the same job for review without repeating dispatch. |
 | `JournalTests` standalone | 45 passed. Covers the legacy registration result and the new verifier-only transition after the package launch checkpoint. |
 | WPF `PackageSetupTests` without Extended | 18 passed, including accessible plan disclosure, durable applied state before launch, review after failed verification, and saved report continuity. |
 
@@ -77,6 +85,11 @@ The standalone active probe is `VerifyPreviouslyInstalledReviewedPackageWithIsol
 in `tests/ThirdLife.Packages.Tests/PilotPackageServiceTests.cs`. The
 [failure-injection register](../../../docs/testing/failure-injection.md#tl-0406-package-verification-fixtures)
 lists the independent FI-008 and FI-009 invocations.
+
+Clean Release artifact digests
+
+- `ThirdLife.Packages.dll` SHA-256 `3a5ce324ee710b184e00fd1ef5dbb00abf839d31072d80f00ce412cd214328a3`
+- `ThirdLife.UI.dll` SHA-256 `ef57f559e5401b39681099e550a2bf8d6045975f05b7ba9e9ece19dc53db199b`
 
 The live case uses the previously authorized TL-0412 installation. It exercises the shipped
 verification adapter and the reviewed installed bytes with isolated settings. The composed

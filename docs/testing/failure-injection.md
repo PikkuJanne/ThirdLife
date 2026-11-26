@@ -155,7 +155,7 @@ checks use an isolated job store and fixture backend.
 
 ```powershell
 dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.BackendSuccessCannotVerifyMissingOrWrongPackage' -- 'RunConfiguration.TreatNoTestsAsError=true'
-dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.PackageVerificationWaitsForCompletedApply' -- 'RunConfiguration.TreatNoTestsAsError=true'
+dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.PackagePlanUsesDurableApprovalAndReportsTheReopenedJournal' -- 'RunConfiguration.TreatNoTestsAsError=true'
 dotnet test tests/ThirdLife.Packages.Tests/ThirdLife.Packages.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.Packages.Tests.PilotPackageServiceTests.MatchingRegistrationRequiresTheProbeResult' -- 'RunConfiguration.TreatNoTestsAsError=true'
 ```
 

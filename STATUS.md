@@ -43,6 +43,12 @@ TL-0405 verified journal-correlated package progress and the saved-job recovery
 paths. Download cancellation or connection loss permits a fresh reviewed
 approval. Installer timeout, reported cancellation and process termination
 leave uncertain attempts in review with a read-only registration check. A
-streamed connection fault also verified partial installer cleanup. TL-0406 can
-verify independent package identity and application launch.
+streamed connection fault also verified partial installer cleanup.
 [Package interruption evidence](artifacts/evidence/TL-0405/report.md)
+
+TL-0406 independently confirmed exact machine-wide Notepad++ registration and
+launched the reviewed installed executable in isolation on the active machine.
+The probe cleaned up its process and temporary files. WPF fixtures retained
+distinct applied and verified results through job reopen and report generation.
+TL-0407 can classify the backend and verification failures for operator guidance.
+[Package verification evidence](artifacts/evidence/TL-0406/report.md)

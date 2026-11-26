@@ -4856,7 +4856,7 @@ tasks:
   workstream: verification
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: windows
@@ -4881,7 +4881,47 @@ tasks:
   verification:
   - Test success, backend-success/package-absent, wrong-version, immediate-crash, and probe-timeout cases.
   - Confirm exit code zero alone never yields verified state.
-  evidence: []
+  evidence:
+  - task: TL-0406
+    summary: Applied, independent verification and review persisted through the WPF journal and report workflow.
+    command_or_review: eng/verify.ps1 -Tier Targeted with Actions, Packages, UI, Persistence and Reports projects
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 native x64, fixture installer backend and isolated WPF/SQLite store
+    date: '2026-11-26'
+    duration: 141.728 s including Quick
+    reference: artifacts/evidence/TL-0406/report.md, source efe204c
+    limitation: WPF apply and false-success, crash, timeout and cleanup failures used modeled inputs.
+  - task: TL-0406
+    summary: The exact machine-wide Notepad++ registration and the isolated launch of the reviewed installed executable passed.
+    command_or_review: Packages.Tests VerifyPreviouslyInstalledReviewedPackageWithIsolatedLaunch
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 native x64, unelevated, previously authorized TL-0412 installation
+    date: '2026-11-26'
+    duration: 2.923 s invocation
+    reference: artifacts/evidence/TL-0406/report.md, clean source 31dc389
+    limitation: The production adapter exercised the approved installed bytes in a private workspace and inactive desktop. A new MSI transaction and regular editor configuration were outside this run.
+  - task: TL-0406
+    summary: Clean full package and journal boundary gate passed with locked restore and warnings-as-errors build.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean active Windows 11 Pro 26H2 native x64 worktree, .NET SDK 10.0.400 and Python 3.14.7
+    date: '2026-11-26'
+    duration: 340.072 s, 304 governance checks and 2093 .NET tests
+    reference: artifacts/evidence/TL-0406/report.md, clean source 31dc389
+    limitation: ActiveMachine and Extended selections ran separately. No pilot or release gate was exercised.
+  - task: TL-0406
+    summary: Existing WPF interruption path reopened the same package job for review without repeating dispatch.
+    command_or_review: UI.Tests KilledPackageApplicationReopensTheSameJobForReviewWithoutDispatch
+    tier: extended
+    result: passed
+    environment: Active Windows 11 Pro 26H2 native x64, owned WPF fixture process and isolated SQLite
+    date: '2026-11-26'
+    duration: 5.888 s invocation
+    reference: artifacts/evidence/TL-0406/report.md, clean source 31dc389
+    limitation: The fixture was terminated during held installer apply. Native termination during the launch check itself was unobserved.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
