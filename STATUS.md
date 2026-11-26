@@ -71,5 +71,9 @@ TL-0410 completed the first live package write slice. The verified installation
 and its report survived an orderly restart. Native UAC decline and exact
 installer-client interruption preserved one dispatch per job and withheld
 handover. Independent MSI checks and the final clean checkpoint restore passed.
-TL-0411 retains the M4 gate.
 [M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)
+
+TL-0411 passed clean Full, the M4 failure matrix, and the package trust and
+diagnostic privacy checks. The internal first write-capable gate awaits the
+accountable product and security disposition on the exact verified candidate.
+[M4 gate and decision packet](artifacts/gates/M4-package-vertical-slice.md)

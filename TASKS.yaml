@@ -5554,7 +5554,7 @@ tasks:
   workstream: release
   kind: gate
   priority: P0
-  status: backlog
+  status: blocked
   size: M
   executor: codex
   environment: windows
@@ -5577,7 +5577,8 @@ tasks:
     write-capable scope decision.
   deliverables:
   - artifacts/gates/M4-package-vertical-slice.md
-  - Prepared first write-capable product/security decision packet and actual disposition
+  - artifacts/evidence/TL-0411/first-write-decision.md
+  - Actual attributable first write-capable product/security disposition
   acceptance_criteria:
   - No localized package table output is parsed.
   - Exact approved identity/source data is revalidated at the supported execution boundary before dispatch.
@@ -5590,7 +5591,49 @@ tasks:
   verification:
   - Run the M4 failure matrix, security checks, clean-checkout verification, and bundle validator.
   - Present the exact verified slice and proposed scope for one first write-capable product/security decision.
-  evidence: []
+  evidence:
+  - task: TL-0411
+    summary: The clean integrated candidate passed the complete supported suite, locked restore, formatting and Release build.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore and direct tools/validate_bundle.py
+    tier: full
+    result: passed with 304 governance regressions and 2168 .NET tests, zero failures or skips, and zero build warnings
+    environment: Unelevated active Windows 11 Pro 26H2 build 26300.9974, native x64, separate clean worktree
+    date: '2026-11-26'
+    duration: 492.755 s Full and 10.852 s direct bundle validation
+    reference: artifacts/gates/M4-package-vertical-slice.md, product source a637198615ca674a8ca8a2fcde0e62edd4ca3d7f
+    limitation: Full filters out ActiveMachine, Extended and SandboxOnly. The bundle validator used custom structural validation.
+  - task: TL-0411
+    summary: All ten named failure and continuity selections passed, as did the oversized package diagnostic projection case.
+    command_or_review: eng/run-m4-package-fixtures.ps1 and the PackageDiagnosticsDiscardOversizedMalformedBackendDetails selector
+    tier: targeted and independently invokable extended
+    result: passed
+    environment: Same unelevated active Windows 11 native x64 clean candidate with isolated SQLite and bounded fixture adapters
+    date: '2026-11-26'
+    duration: 60.189 s matrix and 3.250 s Extended diagnostic test
+    reference: artifacts/evidence/TL-0411/failure-matrix.json and artifacts/gates/M4-package-vertical-slice.md
+    limitation: The matrix models consent and restart. Native consent, client loss and warm-restart evidence retain TL-0410 provenance.
+  - task: TL-0411
+    summary: The supported adapter tests and source review verified the closed package tuple, staged trust and durable dispatch checks.
+    command_or_review: Focused package adapter and native exit-code tests plus dispatch, trust and diagnostics source review
+    tier: targeted security review
+    result: passed with 44 deterministic tests, zero failures or skips
+    environment: Same unelevated active Windows 11 native x64 clean candidate
+    date: '2026-11-26'
+    duration: 6.628 s test command, source review not separately timed
+    reference: artifacts/gates/M4-package-vertical-slice.md, acceptance review and exact selector
+    limitation: Trust-negative adapter tests use fixtures. The pinned successful native runs exercise the Windows trust path.
+  - task: TL-0411
+    summary: The prior native installation, independent verification, report continuity, decline, interruption and guest restoration qualify the scoped route.
+    command_or_review: TL-0410 native case and artifact-provenance review against the integrated candidate
+    tier: extended evidence reuse
+    result: passed within observed scope
+    environment: Admitted Windows 11 Pro 26H2 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: Per-case timings in the retained TL-0410 evidence
+    reference: artifacts/e2e/M4-first-write-slice.md, reviewed guest binaries from 20247fbd3c785bf6b85e7e7c8f98ac6aa22a46e7
+    limitation: Actual warm restart observed. Native MSI restart-required and perceptual accessibility remain unobserved for this slice.
+  blocked_reason: The technical gate and exact decision packet are ready. Reopen when the accountable product and security owners
+    record a disposition on this candidate and packet. Internal write-capable approval requires an affirmative disposition.
   notes:
   - TL-0410 supplies installation, independent verification, failure and cleanup proof for the scoped release decision.
   expected_test_tier: full
