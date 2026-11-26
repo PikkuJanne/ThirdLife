@@ -5897,16 +5897,12 @@ tasks:
   expected_test_tier: full
   full_test_triggers:
   - The shared canonical plan and approval contract gained a scheduled version, with prior snapshot compatibility required.
+  - Package approval, dispatch, recovery and retry now use the saved action schedule.
   extended_test_triggers:
   - Terminate the owned WPF fixture at its committed dispatch intent and reopen the same journal for the legacy and scheduled paths.
-  completion_phase: execution
-  execution_prerequisites:
-  - kind: capability
-    scope: A live sequence of at least two distinct actions with qualified supported backends and per-action independent verification,
-      restart and reconciliation under the exact approved schedule.
-  - kind: authorization
-    scope: Attributable approval for the exact live schedule and target, with applicable Windows consent at each dispatch.
-    authority: operator
+  notes:
+  - The live sequence and its consent prerequisite recorded at the first execution checkpoint are carried by the M5 technical
+    gate TL-0511. TL-0501 covers the package and no-op scheduling implementation and its verification.
 - id: TL-0502
   title: Implement essential and optional action semantics
   milestone: M5
@@ -6396,6 +6392,7 @@ tasks:
   - Version-bound matrix evidence, unresolved findings, and physical/perceptual claim limits
   acceptance_criteria:
   - The job-seeker machine profile succeeds in the approved same-machine clean-environment and constraint scenarios.
+  - An exact approved live schedule with at least two distinct supported actions retains per-action verification and recovery across reopen.
   - Essential/optional semantics and free-space protection behave as specified.
   - Windows Update and package work survive required restart cycles.
   - The security baseline is evidence-based and ownership blockers fail closed.
@@ -6416,6 +6413,14 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  completion_phase: execution
+  execution_prerequisites:
+  - kind: capability
+    scope: A live sequence of at least two distinct actions with qualified supported backends and per-action independent verification,
+      restart and reconciliation under the exact approved schedule.
+  - kind: authorization
+    scope: Attributable approval for the exact live schedule and target, with applicable Windows consent at each dispatch.
+    authority: operator
 - id: TL-0601
   title: Implement finalization rules and checklist state
   milestone: M6

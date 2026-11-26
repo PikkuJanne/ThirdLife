@@ -269,13 +269,14 @@ public sealed partial class PackageSetupTests
         AuditTestStore disk, WorkshopReportStore reports, JournalCheckpoint checkpoint)
     {
         JobId jobId;
+        var clock = new FixedClock();
         await using (var original = OpenWorkspace(disk, reports,
-            new PilotPackageService(new FixtureInstaller(PackageInstallStatus.Applied, true))))
+            new PilotPackageService(new FixtureInstaller(PackageInstallStatus.Applied, true)), clock))
         {
             jobId = await ApproveInitialPackagePlanAsync(original);
         }
 
-        await using var store = await disk.OpenSqliteAsync();
+        await using var store = await OpenPackageStoreAsync(disk, clock);
         var approved = Assert.Single(await store.LoadJobJournalsAsync(jobId));
         var approval = Assert.Single(approved.Approvals);
         var action = Assert.Single(approved.Plan.Actions);

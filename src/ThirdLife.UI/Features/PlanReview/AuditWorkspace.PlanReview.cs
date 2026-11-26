@@ -235,7 +235,8 @@ internal sealed partial class AuditWorkspace
 
             var evidence = AuditPolicyEvidence.Create(job, assessment, now);
             var plan = PlanResolver.Resolve(job, policy.Document, chosen.Profile, chosen.Catalog, evidence, optional, now);
-            return _brokerExecution?.HasScheduledVerification == true && plan is { SyntheticData: true, Actions.Length: > 1 }
+            return PackageRequest(plan) is not null ||
+                (_brokerExecution?.HasScheduledVerification == true && plan is { SyntheticData: true, Actions.Length: > 1 })
                 ? plan.WithSchedule(plan.Actions.Select(action => new ScheduledAction(action.Request.ActionId, 1, [])))
                 : plan;
         }, cancellationToken);

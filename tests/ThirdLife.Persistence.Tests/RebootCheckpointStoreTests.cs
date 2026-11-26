@@ -306,18 +306,7 @@ public sealed partial class RebootCheckpointStoreTests
 
     private static async Task<JournalEntry> SaveStartedAsync(SqliteJobStore store, string suffix, bool packageBackend)
     {
-        var job = PersistenceTestData.CreateJob("reboot-" + suffix);
-        var intake = new SanitizationEvidence(
-            PersistenceTestData.CreateMetadata("evidence-reboot-intake-" + suffix, EvidenceClassification.Observed,
-                ProvenanceKind.ProviderObservation, ValueAvailability.Available),
-            SanitizationState.Verified, "external_sanitization", Approver, PersistenceTestData.Timestamp,
-            new MediaIdentifier("FIXTURE-REBOOT-MEDIA"), SanitizationVerificationState.Verified, "community-policy@1.0.0");
-        await store.CreateJobAsync(job);
-        await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [intake]));
-        await store.RecordSanitizationGateDecisionAsync(
-            SanitizationGate.Evaluate(job.JobId, intake, PersistenceTestData.Timestamp.AddMinutes(2)));
-        var stored = await store.LoadJobAsync(job.JobId);
-        Assert.NotNull(stored);
+        var (stored, intake) = await CreateReviewedJobAsync(store, suffix);
         var plan = BuildReviewedPlan(stored, intake, CreateReviewedCatalog());
         var action = Assert.Single(plan.Actions);
         Assert.Equal(JournalWriteResult.Recorded, await store.SaveJournalPlanAsync(plan));
@@ -334,6 +323,23 @@ public sealed partial class RebootCheckpointStoreTests
         return started;
     }
 
+    private static async Task<(StoredJob Job, SanitizationEvidence Intake)> CreateReviewedJobAsync(SqliteJobStore store, string suffix)
+    {
+        var job = PersistenceTestData.CreateJob("reboot-" + suffix);
+        var intake = new SanitizationEvidence(
+            PersistenceTestData.CreateMetadata("evidence-reboot-intake-" + suffix, EvidenceClassification.Observed,
+                ProvenanceKind.ProviderObservation, ValueAvailability.Available),
+            SanitizationState.Verified, "external_sanitization", Approver, PersistenceTestData.Timestamp,
+            new MediaIdentifier("FIXTURE-REBOOT-MEDIA"), SanitizationVerificationState.Verified, "community-policy@1.0.0");
+        await store.CreateJobAsync(job);
+        await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, sanitizationEvidence: [intake]));
+        await store.RecordSanitizationGateDecisionAsync(
+            SanitizationGate.Evaluate(job.JobId, intake, PersistenceTestData.Timestamp.AddMinutes(2)));
+        var stored = await store.LoadJobAsync(job.JobId);
+        Assert.NotNull(stored);
+        return (stored, intake);
+    }
+
     private static JournalEntry Entry(
         JournalPlanKey plan, Guid action, Guid id, JournalState prior, JournalState next, JournalActor actor,
         JournalResult result, DateTimeOffset time, JournalCheckpoint checkpoint = JournalCheckpoint.None,
@@ -342,7 +348,8 @@ public sealed partial class RebootCheckpointStoreTests
             actor == JournalActor.Operator ? Approver : new OperatorId("actor-" + actor.ToString().ToLowerInvariant()),
             CorrelationId, time, result, checkpoint, verification);
 
-    private static JournalPlanSnapshot BuildReviewedPlan(StoredJob stored, SanitizationEvidence intake, CatalogDocument catalog)
+    private static JournalPlanSnapshot BuildReviewedPlan(StoredJob stored, SanitizationEvidence intake, CatalogDocument catalog,
+        Func<ProposedPlan, ProposedPlan>? bindSchedule = null)
     {
         var profile = CreateReviewedProfile(catalog);
         Observation[] facts =
@@ -354,10 +361,11 @@ public sealed partial class RebootCheckpointStoreTests
         ];
         var proposal = PlanResolver.Resolve(stored, Policy, profile, catalog, facts, [], IssueTime);
         Assert.Null(proposal.BlockedReason);
+        proposal = bindSchedule?.Invoke(proposal) ?? proposal;
         return JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
     }
 
-    private static CatalogDocument CreateReviewedCatalog(string version = "1.0.0")
+    private static CatalogDocument CreateReviewedCatalog(string version = "1.0.0", int actionCount = 1)
     {
         var json = JsonNode.Parse(ReadFixture("catalog"))!;
         json["catalog_id"] = "reviewed-reboot-fixture";
@@ -388,8 +396,31 @@ public sealed partial class RebootCheckpointStoreTests
               }
             }
             """)!;
-        json["applications"] = new JsonArray(entry);
+        var applications = new JsonArray(entry);
+        if (actionCount > 1)
+        {
+            entry["package"]!["installer_sha256"] = new string('a', 64);
+            applications.Add(ClonePackage("document_editing", "fictional.document-editor", "Fictional.Tests.DocumentEditor", 'b'));
+        }
+
+        if (actionCount > 2)
+        {
+            applications.Add(ClonePackage("pdf_reading", "fictional.pdf-reader", "Fictional.Tests.PdfReader", 'c'));
+        }
+
+        json["applications"] = applications;
         return CatalogSchema.Parse(Encoding.UTF8.GetBytes(json.ToJsonString()), IssueTime);
+
+        JsonNode ClonePackage(string capability, string id, string packageId, char digestCharacter)
+        {
+            var package = entry.DeepClone();
+            package["id"] = id;
+            package["capability_id"] = capability;
+            package["package"]!["package_id"] = packageId;
+            package["package"]!["installer_sha256"] = new string(digestCharacter, 64);
+            package["verification"]!["expected_package_id"] = packageId;
+            return package;
+        }
     }
 
     private static ProfileDocument CreateReviewedProfile(CatalogDocument catalog)
@@ -402,7 +433,8 @@ public sealed partial class RebootCheckpointStoreTests
         json["catalog"]!["id"] = catalog.CatalogId;
         json["catalog"]!["version"] = catalog.Version;
         var workshop = json["workshop"]!;
-        workshop["capabilities"] = new JsonArray(workshop["capabilities"]![0]!.DeepClone());
+        workshop["capabilities"] = new JsonArray(workshop["capabilities"]!.AsArray()
+            .Take(catalog.Applications.Length).Select(capability => capability!.DeepClone()).ToArray());
         return ProfileSchema.Parse(Encoding.UTF8.GetBytes(json.ToJsonString()), catalog);
     }
 

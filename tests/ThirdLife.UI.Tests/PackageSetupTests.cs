@@ -147,8 +147,13 @@ public sealed partial class PackageSetupTests
         Assert.DoesNotContain("fixture-operator", reopened.ReportPreview.Split("Machine-wide setup journal")[1]);
         Assert.Equal(1, runtime.InstallCalls);
         Assert.Equal(probeCalls, runtime.ProbeCalls);
-        await using var check = await disk.OpenSqliteAsync();
+        await using var check = await OpenPackageStoreAsync(disk, new FixedClock());
         var history = Assert.Single(await check.LoadJobJournalsAsync(reopened.Job!.Job.JobId));
+        var step = Assert.Single(history.Plan.Schedule!.Steps);
+        Assert.Equal(history.Plan.Actions[0].ActionId, step.ActionId);
+        Assert.Equal(1, step.Phase);
+        Assert.Empty(step.Dependencies);
+        Assert.Equal(Assert.Single(history.Approvals).Plan, history.Plan.Key);
         Assert.Equal(expectedState, history.StateOf(history.Plan.Actions[0].ActionId));
         Assert.Equal(JournalCheckpoint.PackageDispatchIntent, history.Entries[1].Checkpoint);
         Assert.Equal(JournalActor.PackageBackend, history.Entries[2].Actor);
@@ -277,10 +282,13 @@ public sealed partial class PackageSetupTests
 
     private static AuditWorkspace OpenWorkspace(
         AuditTestStore disk, WorkshopReportStore reports, PilotPackageService service, TimeProvider? clock = null,
-        Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null) =>
-        new(async token => await (clock is null ? disk.OpenSqliteAsync(token) : OpenPackageStoreAsync(disk, clock, token)),
-            [OsSample(), SystemSample()], clock ?? new FixedClock(), reports,
+        Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null)
+    {
+        var time = clock ?? new FixedClock();
+        return new(async token => await OpenPackageStoreAsync(disk, time, token),
+            [OsSample(), SystemSample()], time, reports,
             packageService: service, appendPackageDiagnostic: appendPackageDiagnostic);
+    }
 
     private static Task<SqliteJobStore> OpenPackageStoreAsync(
         AuditTestStore disk, TimeProvider clock, CancellationToken cancellationToken = default) =>

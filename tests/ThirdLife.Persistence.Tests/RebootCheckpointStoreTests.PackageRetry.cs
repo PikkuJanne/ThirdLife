@@ -28,8 +28,8 @@ public sealed partial class RebootCheckpointStoreTests
         await using var contender = await OpenAsync(workspace, clock);
         var first = PackageRetry(approval, failed, failed.ActionId, JournalState.Failed, clock.GetUtcNow());
         var second = PackageRetry(approval, failed, failed.ActionId, JournalState.Failed, clock.GetUtcNow());
-        var winners = await Task.WhenAll(Task.Run(() => TryClaimPackageRetryAsync(reopened, first)),
-            Task.Run(() => TryClaimPackageRetryAsync(contender, second)));
+        var winners = await Task.WhenAll(Task.Run(() => TryClaimPackageStartAsync(reopened, first)),
+            Task.Run(() => TryClaimPackageStartAsync(contender, second)));
         var winner = Assert.Single(winners.OfType<JournalEntry>());
         Assert.Equal(failed.EntryId, winner.PriorAttemptEntryId);
         Assert.NotEqual(failed.CorrelationId, winner.CorrelationId);
@@ -127,7 +127,7 @@ public sealed partial class RebootCheckpointStoreTests
             JournalActor.PackageBackend, new OperatorId("package-backend"), started.CorrelationId, now,
             result, JournalCheckpoint.PackagePreDispatchFailure);
 
-    private static async Task<JournalEntry?> TryClaimPackageRetryAsync(SqliteJobStore store, JournalEntry entry)
+    private static async Task<JournalEntry?> TryClaimPackageStartAsync(SqliteJobStore store, JournalEntry entry)
     {
         try
         {
