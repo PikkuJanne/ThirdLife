@@ -4767,7 +4767,7 @@ tasks:
   workstream: execution
   kind: code
   priority: P0
-  status: backlog
+  status: in_progress
   size: M
   executor: codex
   environment: windows
@@ -4796,7 +4796,8 @@ tasks:
   evidence: []
   expected_test_tier: targeted
   full_test_triggers: []
-  extended_test_triggers: []
+  extended_test_triggers:
+  - Run the owned WPF process interruption scenario during a held package apply.
   outcome: package-installation
 - id: TL-0406
   title: Verify package installation and application launch

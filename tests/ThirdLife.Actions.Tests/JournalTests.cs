@@ -152,6 +152,35 @@ public sealed class JournalTests
         Assert.False(JournalStateMachine.CanAppend(plan, Approval(plan), interrupted, reconciled));
     }
 
+    [Theory]
+    [InlineData(JournalResult.NetworkUnavailable, JournalCheckpoint.PackagePreDispatchFailure, true)]
+    [InlineData(JournalResult.Cancelled, JournalCheckpoint.PackagePreDispatchFailure, true)]
+    [InlineData(JournalResult.OperationFailed, JournalCheckpoint.None, false)]
+    [InlineData(JournalResult.OperationFailed, JournalCheckpoint.PackagePreDispatchFailure, false)]
+    public void PackageRetryRequiresFreshApprovalAndARecordedFailureBeforeDispatch(
+        JournalResult result, JournalCheckpoint checkpoint, bool canRetry)
+    {
+        var proposal = PlanResolverTests.CreateReviewedPlan();
+        var plan = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+        var actionId = Assert.Single(plan.Actions).ActionId;
+        var approval = Approval(plan);
+        var started = Entry(plan, actionId, PreviousEntryId, JournalState.Approved, JournalState.Started,
+            JournalActor.Coordinator, JournalResult.None, JournalCheckpoint.PackageDispatchIntent);
+        var failed = Entry(plan, actionId, CandidateEntryId, JournalState.Started, JournalState.Failed,
+            JournalActor.PackageBackend, result, checkpoint);
+        var renewed = new JournalApproval(Guid.NewGuid(), plan.Key, Approver, Guid.NewGuid(), ApprovalTime.AddMinutes(3));
+        var retry = new JournalEntry(Guid.NewGuid(), plan.Key, actionId, renewed.ApprovalId,
+            JournalState.Failed, JournalState.Approved, JournalActor.Operator, Approver, renewed.CorrelationId,
+            renewed.OccurredAtUtc, JournalResult.None, JournalCheckpoint.PackagePlanApproval);
+        var replay = Entry(plan, actionId, Guid.NewGuid(), JournalState.Failed, JournalState.Approved,
+            JournalActor.Operator, JournalResult.None, JournalCheckpoint.PackagePlanApproval);
+
+        Assert.Equal(canRetry || checkpoint == JournalCheckpoint.None,
+            JournalStateMachine.CanAppend(plan, approval, started, failed));
+        Assert.Equal(canRetry, JournalStateMachine.CanAppend(plan, renewed, failed, retry));
+        Assert.False(JournalStateMachine.CanAppend(plan, approval, failed, replay));
+    }
+
     [Fact]
     public void RecordsAnOperatorDeclineBeforeApprovalWithoutInventingConsent()
     {

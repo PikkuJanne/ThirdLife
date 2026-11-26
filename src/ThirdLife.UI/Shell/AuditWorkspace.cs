@@ -195,6 +195,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         await ApplyJobAsync(stored);
         if (alreadyOpen)
         {
+            PackageRecoveryStatus = string.Empty;
+            await LoadPackageHistoryAsync(id);
             await LoadBrokerHistoryAsync(id, reconcile: true);
         }
 
@@ -209,7 +211,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ManualProgress = null;
         ApplyAssessment(null);
         ClearPlanReview(clearSelection: true);
-        PackageHistoryText = string.Empty;
+        ClearPackageHistory();
         ClearBrokerHistory();
         ClearRebootRecovery();
         ClearRepairs();
@@ -322,7 +324,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _closing = true;
         CancelAssessment();
         CancelReport();
-        CancelPackageOperation();
+        StopWaitingForPackageOnClose();
         CancelBrokerExecution();
         await _active;
         if (_store is { } store)
@@ -467,6 +469,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             _reportCancellation = null;
             _packageCancellation?.Dispose();
             _packageCancellation = null;
+            _packageAttemptProgress = null;
             _packageActivity = null;
             _brokerCancellation?.Dispose();
             _brokerCancellation = null;
@@ -573,6 +576,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         if (jobChanged)
         {
             ClearBrokerHistory();
+            ClearPackageHistory();
             ClearReport();
             ClearRepairs();
             ClearRebootRecovery();

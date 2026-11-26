@@ -16,7 +16,7 @@ using static ThirdLife.UI.Tests.AuditWorkflowTests;
 namespace ThirdLife.UI.Tests;
 
 [Collection(ShellWindowChecks.Name)]
-public sealed class PackageSetupTests
+public sealed partial class PackageSetupTests
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 25, 10, 0, 0, TimeSpan.Zero);
     private const string LifecycleSource = "os.lifecycle.catalog";

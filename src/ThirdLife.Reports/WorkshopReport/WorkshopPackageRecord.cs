@@ -20,6 +20,10 @@ public enum WorkshopPackageOutcome
     PreconditionChanged,
     VerificationUnconfirmed,
     RolledBack,
+    CancelledBeforeDispatch,
+    NetworkUnavailable,
+    TimedOut,
+    NoFinalResult,
 }
 
 public sealed record WorkshopPackageRecord(
@@ -75,7 +79,11 @@ public static partial class WorkshopReportRenderer
         WorkshopPackageOutcome.RestartRequired => "The installer reported that a restart is required. Independent verification remains pending.",
         WorkshopPackageOutcome.Verified => "Independent verification confirmed the requested version is installed machine-wide.",
         WorkshopPackageOutcome.Failed => "The installer reported failure. Review actual installed state before taking further action.",
-        WorkshopPackageOutcome.Cancelled => "Installation was cancelled. Review actual installed state before taking further action.",
+        WorkshopPackageOutcome.Cancelled => "Cancellation was recorded. Review actual installed state before taking further action.",
+        WorkshopPackageOutcome.CancelledBeforeDispatch => "The attempt was cancelled before Windows Installer started. To retry, build and approve a new plan.",
+        WorkshopPackageOutcome.NetworkUnavailable => "The installer download lost its connection before Windows Installer started. When the source is reachable, build and approve a new plan.",
+        WorkshopPackageOutcome.TimedOut => "The package operation reached its time limit. Windows Installer may still be running. Review actual installed state before taking further action.",
+        WorkshopPackageOutcome.NoFinalResult => "No final result was saved. Windows Installer may still be running. Review actual installed state before taking further action.",
         WorkshopPackageOutcome.AuthorizationDeclined => "Windows installation consent was declined.",
         WorkshopPackageOutcome.BackendUnavailable => "The installation backend was unavailable.",
         WorkshopPackageOutcome.TrustChanged => "The installer failed its package trust check.",

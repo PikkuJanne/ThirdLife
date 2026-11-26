@@ -55,8 +55,14 @@ public static class JournalStateMachine
                     (candidate.Checkpoint == JournalCheckpoint.BrokerApproval && IsBrokerNoOp(action))),
             (JournalState.Failed, JournalState.Approved) =>
                 IsApproval(candidate, approval) && candidate.ApprovalId != previous?.ApprovalId &&
-                candidate.Checkpoint == JournalCheckpoint.BrokerApproval &&
-                previous?.Checkpoint == JournalCheckpoint.BrokerPreDispatchFailure && IsBrokerNoOp(action),
+                ((candidate.Checkpoint == JournalCheckpoint.BrokerApproval &&
+                    previous?.Checkpoint == JournalCheckpoint.BrokerPreDispatchFailure && IsBrokerNoOp(action)) ||
+                    (candidate.Checkpoint == JournalCheckpoint.PackagePlanApproval &&
+                        previous is
+                        {
+                            Checkpoint: JournalCheckpoint.PackagePreDispatchFailure, Actor: JournalActor.PackageBackend,
+                            Result: JournalResult.NetworkUnavailable or JournalResult.Cancelled
+                        } && IsMachinePackage(action))),
             (JournalState.Approved, JournalState.Started) =>
                 candidate.Actor == JournalActor.Coordinator && candidate.Result == JournalResult.None &&
                 ((candidate.Checkpoint == JournalCheckpoint.DispatchIntent && previous?.Checkpoint is not
@@ -77,13 +83,16 @@ public static class JournalStateMachine
                     (candidate.Result == JournalResult.OperationFailed ||
                         (candidate.Actor == JournalActor.PackageBackend && candidate.Result is JournalResult.BackendUnavailable or
                             JournalResult.AuthorizationDeclined or JournalResult.TrustMismatch or JournalResult.PreconditionChanged))) ||
+                (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent && IsMachinePackage(action) &&
+                    candidate.Actor == JournalActor.PackageBackend && candidate.Checkpoint == JournalCheckpoint.PackagePreDispatchFailure &&
+                    candidate.Result is JournalResult.NetworkUnavailable or JournalResult.Cancelled) ||
                 (previous?.Checkpoint == JournalCheckpoint.BrokerDispatchIntent && IsBrokerNoOp(action) &&
                     candidate.Actor == JournalActor.Coordinator && candidate.Checkpoint == JournalCheckpoint.BrokerPreDispatchFailure &&
                     candidate.Result is JournalResult.AuthorizationDeclined or JournalResult.BackendUnavailable or JournalResult.Cancelled),
             (JournalState.Started, JournalState.RequiresReview) =>
                 ((candidate.Actor is JournalActor.Coordinator or JournalActor.Broker && IsInterruption(candidate)) ||
                     (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent && candidate.Actor == JournalActor.PackageBackend &&
-                        candidate.Result is JournalResult.Interrupted or JournalResult.Cancelled &&
+                        candidate.Result is JournalResult.Interrupted or JournalResult.Cancelled or JournalResult.TimedOut &&
                         candidate.Checkpoint == JournalCheckpoint.Reconcile) ||
                     (previous?.Checkpoint == JournalCheckpoint.BrokerDispatchIntent && IsBrokerNoOp(action) &&
                         candidate.Actor == JournalActor.Coordinator && candidate.Result == JournalResult.Cancelled &&
