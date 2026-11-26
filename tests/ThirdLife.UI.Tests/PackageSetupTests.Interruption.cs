@@ -45,13 +45,15 @@ public sealed partial class PackageSetupTests
             Assert.Equal(1, runtime.InspectionCalls);
             Assert.Contains("Windows Installer may still be running", reopened.PackageRecoveryStatus, StringComparison.Ordinal);
 
-            ShellTestHost.Run(() => InPackageInterruptionWindow(reopened, (window, panel) =>
+            InPackageVerificationWindow(reopened, (window, panel) =>
             {
+                Named<Expander>(panel, "PackageHistoryExpander").IsExpanded = true;
+                ShellTestHost.Drain(window);
                 var history = Named<TextBox>(panel, "SavedPackageHistory");
                 Assert.True(history.IsVisible && history.IsReadOnly);
                 Assert.Contains("No final result was saved", history.Text, StringComparison.OrdinalIgnoreCase);
                 Assert.Contains("installed state", history.Text, StringComparison.OrdinalIgnoreCase);
-                Assert.False(Named<Button>(panel, "InstallPackageButton").IsEnabled);
+                Assert.False(reopened.CanInstallPackage);
 
                 var checkRecovery = Named<Button>(panel, "CheckPackageRecoveryButton");
                 Assert.True(checkRecovery.IsVisible && checkRecovery.IsEnabled);
@@ -62,8 +64,8 @@ public sealed partial class PackageSetupTests
                 Assert.Equal(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(recovery));
                 Assert.Contains("Keep this job in review", new TextBlockAutomationPeer(recovery).GetName(),
                     StringComparison.Ordinal);
-                Assert.False(Named<Button>(panel, "InstallPackageButton").IsEnabled);
-            }));
+                Assert.False(reopened.CanInstallPackage);
+            });
 
             var afterReview = await LoadPackageInterruptionJournalAsync(root.FullName, job);
             Assert.Equal(pending.Plan.Key, afterReview.Plan.Key);
@@ -342,11 +344,11 @@ public sealed partial class PackageSetupTests
 
     private static void InPackageInterruptionWindow(AuditWorkspace workspace, Action<MainWindow, PlanReviewView> check)
     {
-        var window = new MainWindow(new ShellViewModel(), workspace);
+        var window = new MainWindow(workspace);
         try
         {
             ShellTestHost.Show(window);
-            ShellTestHost.Invoke(window, "PrepareButton");
+            window.ShowStage(ShellStage.Prepare);
             var panel = Named<PlanReviewView>(Named<FrameworkElement>(window, "AuditView"), "PlanReviewPanel");
             Assert.True(panel.IsVisible);
             check(window, panel);

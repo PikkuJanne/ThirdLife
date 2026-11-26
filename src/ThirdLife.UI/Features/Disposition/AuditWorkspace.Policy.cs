@@ -1,3 +1,4 @@
+using System.Globalization;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Inventory;
@@ -12,11 +13,13 @@ namespace ThirdLife.UI.Shell;
 
 internal sealed partial class AuditWorkspace
 {
-    private const string NoCandidateDecision = "A saved assessment can be evaluated with the bundled laptop candidate.";
+    private const string NoCandidateDecision = "No candidate policy decision is available for this assessment.";
     private StoredPolicyDecision? _savedPolicy;
     private bool _policyHistoryUnavailable;
 
     public bool HasPolicyDecision => _savedPolicy is not null;
+
+    public bool IsPolicyEvaluationPending => !HasPolicyDecision;
 
     public bool CanEvaluatePolicy => CanCapturePolicy && !HasPolicyDecision;
 
@@ -28,12 +31,32 @@ internal sealed partial class AuditWorkspace
 
     public string PolicyDispositionSummary { get; private set; } = string.Empty;
 
+    public string PolicyControllingReasons { get; private set; } = string.Empty;
+
+    public bool HasPolicyControllingReasons => PolicyControllingReasons.Length > 0;
+
     public string PolicyExpertDetails { get; private set; } = string.Empty;
 
-    private bool CanCapturePolicy => CanEditJob && !_policyHistoryUnavailable &&
-        _store is IPolicyHistoryStore && Assessment is { Outcome: AssessmentOutcome.Completed or AssessmentOutcome.RequiresReview } assessment &&
-        Gate is { AllowsAssessment: true, Decision: { } gate } && gate.DecisionId == assessment.GateDecisionId &&
-        CandidateForSelectedClass() is not null;
+    public string? PolicyEvaluationRestriction => JobEditRestriction ??
+        (_policyHistoryUnavailable || _store is not IPolicyHistoryStore
+            ? "Policy history is unavailable for this job."
+            : CurrentAssessmentRestriction ?? (CandidateForSelectedClass() is null
+                ? "A candidate policy is unavailable for the selected device class."
+                : null));
+
+    private string? CurrentAssessmentRestriction
+    {
+        get
+        {
+            if (Gate is not { AllowsAssessment: true, Decision: { } gate }) { return GateStatus; }
+            return Assessment is not { Outcome: AssessmentOutcome.Completed or AssessmentOutcome.RequiresReview } assessment ||
+                gate.DecisionId != assessment.GateDecisionId
+            ? "Save an assessment for the current intake record in Inspect before evaluating policy."
+            : null;
+        }
+    }
+
+    private bool CanCapturePolicy => PolicyEvaluationRestriction is null;
 
     public Task EvaluatePolicyAsync() => CanEvaluatePolicy ? CapturePolicyAsync() : Task.CompletedTask;
 
@@ -132,22 +155,33 @@ internal sealed partial class AuditWorkspace
             PolicyStatus = NoCandidateDecision;
             PolicyDispositionTitle = string.Empty;
             PolicyDispositionSummary = string.Empty;
+            PolicyControllingReasons = string.Empty;
             PolicyExpertDetails = string.Empty;
             return;
         }
 
         var decision = saved.Decision;
         var historical = !saved.Snapshot.Document.IsCurrentSchema;
+        var historicalAlternative = historical && decision.Disposition == Disposition.AlternativeOperatingSystemCandidate;
+        var earlierIntake = Assessment is { } assessment && assessment.GateDecisionId != Gate?.Decision?.DecisionId;
         var label = saved.Snapshot.Document.Status == ThirdLife.Policy.Schema.PolicyStatus.Candidate ? "Candidate" : "Saved";
-        PolicyStatus = historical
-            ? "Historical policy decision. Use the current policy for a new preparation decision."
-            : $"{label} decision saved for workshop review.";
+        PolicyStatus = (historical, earlierIntake) switch
+        {
+            (true, _) => "Historical policy decision. Use the current policy for a new preparation decision.",
+            (_, true) => "Historical policy decision. Its assessment used an earlier intake record.",
+            _ => $"{label} decision saved for workshop review.",
+        };
         PolicyDispositionTitle = WorkshopReportRenderer.SafePolicyPresentation(decision.Title);
-        PolicyDispositionSummary = historical && decision.Disposition == Disposition.AlternativeOperatingSystemCandidate
+        PolicyDispositionSummary = historicalAlternative
             ? "This outcome was recorded under an earlier policy."
             : WorkshopReportRenderer.SafePolicyPresentation(decision.Summary);
+        var reasonsStart = decision.Explanation.IndexOf('\n', StringComparison.Ordinal);
+        PolicyControllingReasons = reasonsStart < 0 || historicalAlternative
+            ? string.Empty
+            : WorkshopReportRenderer.SafePolicyPresentation(decision.Explanation[(reasonsStart + 1)..]);
         PolicyExpertDetails = WorkshopReportRenderer.SafePolicyPresentation(
-            $"Policy {decision.PolicyId} version {decision.PolicyVersion}\nSHA-256 {decision.PolicySha256}\n\n" +
+            $"Policy {decision.PolicyId} version {decision.PolicyVersion}\nSHA-256 {decision.PolicySha256}\n" +
+            $"Assessment {decision.AssessmentId}\nEvaluated {decision.EvaluatedAtUtc.ToString("u", CultureInfo.InvariantCulture)}\n\n" +
             (historical ? "Original recorded explanation\n" : string.Empty) +
             $"{decision.Explanation}\n\n{decision.RuleReport}\n\nExceptions\n" +
             (decision.ExceptionReport ?? "See the exception details captured with this saved policy."));

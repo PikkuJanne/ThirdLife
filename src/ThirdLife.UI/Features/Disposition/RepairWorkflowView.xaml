@@ -1,14 +1,22 @@
 <UserControl x:Class="ThirdLife.UI.Features.Disposition.RepairWorkflowView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Tag="{Binding JobId, NotifyOnTargetUpdated=True}" TargetUpdated="ResetForJob">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="RepairVisibility" />
+  </UserControl.Resources>
   <Expander Header="Repair and retest" AutomationProperties.Name="Repair and retest">
-    <StackPanel>
+    <StackPanel Margin="0,8,0,0">
+      <TextBlock Text="Record completed work, then link a read-only assessment to the saved repair."
+                 TextWrapping="Wrap" Margin="0,0,0,8" />
       <Label Content="Device class" Target="{Binding ElementName=DeviceClassInput}" />
       <ComboBox x:Name="DeviceClassInput" DisplayMemberPath="Caption" SelectedValuePath="Value"
                 SelectedValue="{Binding RepairDeviceClass, Mode=TwoWay}"
                 IsEnabled="{Binding CanEditJob}" AutomationProperties.Name="Device class" />
-      <TextBlock Text="{Binding RepairPolicyStatus}" TextWrapping="Wrap" />
+      <TextBlock Text="{Binding RepairPolicyStatus}" TextWrapping="Wrap" Margin="0,4,0,12" />
 
+      <TextBlock Text="Completed work" Style="{DynamicResource Trace.SectionText}"
+                 AutomationProperties.HeadingLevel="Level3" />
       <Label Content="Saved finding for completed work" Target="{Binding ElementName=RepairFindingInput}" />
       <ComboBox x:Name="RepairFindingInput" ItemsSource="{Binding RepairCandidates}"
                 DisplayMemberPath="Caption" MaxDropDownHeight="240" IsEnabled="{Binding CanRecordRepair}"
@@ -19,17 +27,39 @@
       <Label Content="Repair operator code" Target="{Binding ElementName=RepairOperatorInput}" />
       <TextBox x:Name="RepairOperatorInput" MaxLength="128" IsEnabled="{Binding CanRecordRepair}"
                AutomationProperties.Name="Repair operator code" />
-      <Button Content="Record completed repair" IsEnabled="{Binding CanRecordRepair}" Click="RecordRepair" />
+      <TextBlock Text="{Binding RepairRecordRestriction}" TextWrapping="Wrap"
+                 Style="{DynamicResource Trace.AttentionText}" Margin="0,4,0,0" />
+      <Button x:Name="RecordRepairButton" Content="Record completed repair"
+              IsEnabled="{Binding CanRecordRepair}" Click="RecordRepair"
+              HorizontalAlignment="Left" Margin="0,8,0,16" />
 
+      <TextBlock Text="Linked retest" Style="{DynamicResource Trace.SectionText}"
+                 AutomationProperties.HeadingLevel="Level3" />
       <Label Content="Saved repair to retest" Target="{Binding ElementName=SavedRepairInput}" />
       <ComboBox x:Name="SavedRepairInput" ItemsSource="{Binding SavedRepairs}" DisplayMemberPath="Caption"
                 MaxDropDownHeight="240" IsEnabled="{Binding CanEditJob}"
                 AutomationProperties.Name="Saved repair to retest" />
-      <Button Content="Start linked read-only retest" IsEnabled="{Binding CanStartRetest}" Click="StartRetest" />
-      <TextBlock x:Name="RepairInputMessage" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+      <TextBlock Text="{Binding RepairRetestRestriction}" TextWrapping="Wrap"
+                 Style="{DynamicResource Trace.AttentionText}" Margin="0,4,0,0" />
+      <Button x:Name="StartRetestButton" Content="Start linked read-only retest"
+              IsEnabled="{Binding CanStartRetest}" Click="StartRetest"
+              HorizontalAlignment="Left" Margin="0,8,0,0" />
+      <StackPanel Margin="0,8,0,0"
+                  Visibility="{Binding IsAssessmentRunning, Converter={StaticResource RepairVisibility}}">
+        <TextBlock x:Name="RetestProgressMessage"
+                   Text="{Binding AssessmentStatus, NotifyOnTargetUpdated=True}" TextWrapping="Wrap" Focusable="True"
+                   KeyboardNavigation.IsTabStop="False" AutomationProperties.LiveSetting="Polite"
+                   TargetUpdated="RetestProgressUpdated" IsVisibleChanged="RetestProgressVisibilityChanged" />
+        <Button Content="Cancel assessment" IsEnabled="{Binding CanCancel}" Click="CancelRetest"
+                HorizontalAlignment="Left" Margin="0,8,0,0" />
+      </StackPanel>
+      <TextBlock x:Name="RepairInputMessage" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
+                 Style="{DynamicResource Trace.ErrorText}" />
+      <TextBlock x:Name="RepairResultMessage" TextWrapping="Wrap" Focusable="True"
+                 KeyboardNavigation.IsTabStop="False" AutomationProperties.LiveSetting="Polite" />
 
-      <Expander Header="Saved repairs and retests" AutomationProperties.Name="Saved repairs and retests">
+      <Expander Header="Saved repairs and retests" AutomationProperties.Name="Saved repairs and retests"
+                Margin="0,12,0,0">
         <ListBox ItemsSource="{Binding RepairHistory}" MaxHeight="180"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  AutomationProperties.Name="Repair and retest history">

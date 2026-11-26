@@ -3,42 +3,64 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:disposition="clr-namespace:ThirdLife.UI.Features.Disposition"
              xmlns:plan="clr-namespace:ThirdLife.UI.Features.PlanReview"
-             xmlns:recovery="clr-namespace:ThirdLife.UI.Features.Recovery"
+             xmlns:execution="clr-namespace:ThirdLife.UI.Features.Execution"
              xmlns:evidence="clr-namespace:ThirdLife.Core.Evidence;assembly=ThirdLife.Core"
              xmlns:manual="clr-namespace:ThirdLife.Core.ManualTests;assembly=ThirdLife.Core"
-             xmlns:sanitization="clr-namespace:ThirdLife.Core.Sanitization;assembly=ThirdLife.Core">
-  <StackPanel>
-    <GroupBox x:Name="JobRegion" Header="Audit job" Focusable="True"
-              KeyboardNavigation.IsTabStop="True"
-              AutomationProperties.Name="Audit job">
+             xmlns:sanitization="clr-namespace:ThirdLife.Core.Sanitization;assembly=ThirdLife.Core">  <StackPanel>
+    <Border x:Name="JobHeader" Visibility="Collapsed" Padding="24,12"
+            BorderBrush="{DynamicResource Trace.BorderPassiveBrush}" BorderThickness="0,0,0,1">
       <StackPanel>
-        <TextBlock Text="A job saves workshop evidence locally. Use a job identifier to reopen it. Recipient identity is unnecessary." />
-        <TextBlock x:Name="FixtureNotice" Visibility="Collapsed"
-                   Text="Isolated fixture scenario. Synthetic assessment evidence describes this scenario only." />
-        <Button x:Name="CreateJobButton" Content="Create job" Click="CreateJob" />
-        <Label Target="{Binding ElementName=JobIdInput}" Content="Job identifier to open" />
-        <TextBox x:Name="JobIdInput" MaxLength="80"
-                 AutomationProperties.Name="Job identifier to open" />
-        <Button x:Name="OpenJobButton" Content="Open job" Click="OpenJob" />
-        <Label Target="{Binding ElementName=CurrentJobId}" Content="Current job identifier" />
-        <TextBox x:Name="CurrentJobId" Text="{Binding JobId, Mode=OneWay}" IsReadOnly="True"
+        <DockPanel LastChildFill="True">
+          <Button x:Name="CloseJobButton" DockPanel.Dock="Right" Content="Close job" Click="CloseJob"
+                  IsEnabled="{Binding CanCloseJob}" Margin="12,0,0,0" VerticalAlignment="Center" />
+          <Label x:Name="JobIdentity" Content="Workshop job" Target="{Binding ElementName=CurrentJobId}" FontWeight="SemiBold" Padding="0,0,0,4" />
+        </DockPanel>
+        <TextBox x:Name="CurrentJobId" Text="{Binding JobId, Mode=OneWay}" IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                 BorderThickness="0" Padding="0" Background="Transparent" MinHeight="20"
                  AutomationProperties.Name="Current job identifier" />
-        <Button x:Name="CloseJobButton" Content="Close job" Click="CloseJob" IsEnabled="{Binding CanCloseJob}" />
-        <TextBlock x:Name="AuditStatus" Text="{Binding Status}"
-                   AutomationProperties.Name="{Binding Status}" AutomationProperties.LiveSetting="Polite" />
-        <Button Content="Go to workshop report" Click="GoToWorkshopReport"
-                IsEnabled="{Binding CanGenerateReport}" />
+        <TextBlock x:Name="JobState" Style="{DynamicResource Trace.MetaText}" />
       </StackPanel>
-    </GroupBox>
+    </Border>
 
+    <Border x:Name="OperationErrorRegion" Visibility="Collapsed" Margin="24,12,24,0"
+            Style="{DynamicResource Trace.ActionArea}">
+      <TextBlock x:Name="OperationErrorMessage" Text="{Binding OperationError}" Style="{DynamicResource Trace.ErrorText}"
+                 AutomationProperties.Name="{Binding OperationError}" AutomationProperties.LiveSetting="Polite" />
+    </Border>
+
+    <Grid x:Name="StageContent" Margin="{DynamicResource Trace.Inset24}">
+      <StackPanel x:Name="JobRegion" Focusable="True" KeyboardNavigation.IsTabStop="False">
+        <TextBlock Text="Open a workshop job" Style="{DynamicResource Trace.TitleText}" AutomationProperties.HeadingLevel="Level1" />
+        <TextBlock Text="Create a job or open one by its workshop job code." Margin="0,8,0,16" />
+        <TextBlock x:Name="FixtureNotice" Visibility="Collapsed" Style="{DynamicResource Trace.AttentionText}" Margin="0,0,0,8"
+                   Text="Isolated fixture scenario. Synthetic assessment evidence describes this scenario only." />
+        <Button x:Name="CreateJobButton" Content="Create job" Click="CreateJob" Style="{DynamicResource Trace.PrimaryButton}"
+                HorizontalAlignment="Left" />
+        <GroupBox Header="Open by job code" MaxWidth="620" HorizontalAlignment="Left" MinWidth="220" Margin="0,16,0,0">
+          <StackPanel>
+            <Label Target="{Binding ElementName=JobIdInput}" Content="Workshop job code" />
+            <TextBox x:Name="JobIdInput" MaxLength="80" AutomationProperties.Name="Job identifier to open" />
+            <Button x:Name="OpenJobButton" Content="Open job" Click="OpenJob" HorizontalAlignment="Left" />
+          </StackPanel>
+        </GroupBox>
+        <TextBlock x:Name="AuditStatus" Text="{Binding JobEntryStatus}" Margin="0,12,0,0" Focusable="True"
+                   AutomationProperties.Name="{Binding JobEntryStatus}" AutomationProperties.LiveSetting="Polite" />
+      </StackPanel>
+
+      <StackPanel x:Name="IntakeSurface" Visibility="Collapsed">
+        <TextBlock Text="Record the external result" Style="{DynamicResource Trace.TitleText}" AutomationProperties.HeadingLevel="Level1" />
     <GroupBox x:Name="SanitizationRegion" Header="External sanitization" Focusable="True"
               KeyboardNavigation.IsTabStop="False" AutomationProperties.Name="External sanitization">
       <StackPanel>
         <TextBlock x:Name="SanitizationInstructions"
                    Text="Confirm lawful ownership and record the result from the work done outside ThirdLife. If ownership or sanitization is uncertain, leave assessment blocked." />
-        <TextBlock Text="{Binding GateStatus}" />
-        <TextBlock x:Name="SavedSanitization" />
-        <StackPanel IsEnabled="{Binding CanEditJob}">
+        <Border Style="{DynamicResource Trace.ActionArea}" Margin="0,12,0,12">
+          <StackPanel>
+            <TextBlock x:Name="SavedSanitization" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding GateStatus}" Style="{DynamicResource Trace.MetaText}" Margin="0,4,0,0" />
+          </StackPanel>
+        </Border>
+        <StackPanel x:Name="SanitizationFields" IsEnabled="{Binding CanEditJob}">
           <Label Target="{Binding ElementName=OperatorIdInput}" Content="Workshop operator code" />
           <TextBlock Text="Use a short local code. Leave out names, email addresses and other personal details." />
           <TextBox x:Name="OperatorIdInput" MaxLength="64"
@@ -79,76 +101,102 @@
                          Text="I confirmed lawful ownership and checked the external record for this device." />
             </CheckBox>
           </StackPanel>
-          <TextBlock x:Name="SanitizationInputError" AutomationProperties.LiveSetting="Polite" />
-          <Button x:Name="RecordSanitizationButton" Content="Save external result" Click="RecordSanitization" />
+          <TextBlock x:Name="SanitizationInputError" Style="{DynamicResource Trace.ErrorText}" AutomationProperties.LiveSetting="Polite" />
+          <Button x:Name="RecordSanitizationButton" Content="Save external result" Style="{DynamicResource Trace.PrimaryButton}" HorizontalAlignment="Left" Click="RecordSanitization" />
         </StackPanel>
         <Button x:Name="CompleteSavedSanitizationButton" Content="Check saved sanitization record"
-                Click="CompleteSavedSanitization" IsEnabled="{Binding CanCompleteSavedSanitization}"
+                Style="{DynamicResource Trace.PrimaryButton}" HorizontalAlignment="Left" Click="CompleteSavedSanitization" IsEnabled="{Binding CanCompleteSavedSanitization}"
                 Visibility="Collapsed" />
       </StackPanel>
     </GroupBox>
-
-    <GroupBox Header="Read-only assessment" AutomationProperties.Name="Read-only assessment">
-      <StackPanel>
-        <TextBlock x:Name="AssessmentInstructions"
-                   Text="Assessment reads device facts and records findings in this job. It leaves system settings unchanged and gives no readiness approval." />
-        <TextBlock Text="{Binding GateStatus}" />
-        <Button x:Name="GoToSanitizationButton" Content="Go to external sanitization"
-                Click="GoToSanitization" Visibility="Collapsed" />
-        <Button x:Name="StartAssessmentButton" Content="Start assessment" Click="StartAssessment"
-                IsEnabled="{Binding CanAssess}" />
-        <Button x:Name="CancelAssessmentButton" Content="Cancel assessment" Click="CancelAssessment"
-                IsEnabled="{Binding CanCancel}" />
-        <TextBlock x:Name="AssessmentMessage" Text="{Binding AssessmentStatus}"
-                   Focusable="True" KeyboardNavigation.IsTabStop="True"
-                   AutomationProperties.Name="{Binding AssessmentStatus}" AutomationProperties.LiveSetting="Polite" />
-        <ProgressBar x:Name="AuditAssessmentProgress" IsIndeterminate="True" Height="12" Margin="0,6"
-                     Visibility="Collapsed" AutomationProperties.Name="Assessment running" />
-        <Expander Header="Assessment evidence">
-          <ListBox x:Name="AssessmentObservations" ItemsSource="{Binding Findings}" MaxHeight="240"
-                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                   VirtualizingPanel.ScrollUnit="Pixel"
-                   AutomationProperties.Name="Read-only assessment evidence">
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <StackPanel>
-                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding Value}" />
-                  <TextBlock Text="{Binding Evidence}" />
-                  <TextBlock Text="{Binding Provider}" />
-                </StackPanel>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-        </Expander>
       </StackPanel>
-    </GroupBox>
 
-    <GroupBox Header="Manual hardware checks" AutomationProperties.Name="Manual hardware checks">
-      <StackPanel>
+      <StackPanel x:Name="InspectSurface" Visibility="Collapsed">
+        <TextBlock Text="Review device findings" Style="{DynamicResource Trace.TitleText}" AutomationProperties.HeadingLevel="Level1" />
+        <TextBlock x:Name="AssessmentInstructions" Margin="0,8,0,12" Style="{DynamicResource Trace.MetaText}"
+                   Text="Read device facts and save findings in this job. System settings stay unchanged." />
+        <TabControl x:Name="InspectionTabs" AutomationProperties.Name="Inspection views">
+          <TabItem x:Name="DeviceFindingsTab" Header="Device findings">
+            <StackPanel Margin="0,12,0,0">
+              <TextBlock x:Name="FindingsSummary" Style="{DynamicResource Trace.MetaText}" Margin="0,0,0,8" />
+              <Grid x:Name="FindingsLayout" SizeChanged="ResizeFindings">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition x:Name="EvidenceColumn" Width="0" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <StackPanel>
+                  <TextBlock Text="Read-only assessment" Style="{DynamicResource Trace.SectionText}" AutomationProperties.HeadingLevel="Level2" />
+                  <ListBox x:Name="AssessmentObservations" ItemsSource="{Binding Findings}" MaxHeight="400" Margin="0,8,0,0"
+                           SelectionChanged="FindingSelected" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                           ItemContainerStyle="{DynamicResource Trace.FindingRow}"
+                           VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                           VirtualizingPanel.ScrollUnit="Pixel" AutomationProperties.Name="Read-only assessment evidence">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel>
+                          <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Value}" Style="{DynamicResource Trace.MetaText}" />
+                          <TextBlock Text="{Binding Evidence}" Style="{DynamicResource Trace.MetaText}" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <Button x:Name="ShowEvidenceButton" Content="Open selected evidence" Click="ShowSelectedEvidence"
+                          HorizontalAlignment="Left" IsEnabled="False" />
+                </StackPanel>
+                <Border x:Name="EvidenceInspector" Grid.Row="1" Visibility="Collapsed" Style="{DynamicResource Trace.EvidencePanel}"
+                        DataContext="{Binding SelectedItem, ElementName=AssessmentObservations}">
+                  <StackPanel>
+                    <TextBlock Text="Selected evidence" Style="{DynamicResource Trace.MetaText}" />
+                    <TextBlock Text="{Binding DisplayName}" Style="{DynamicResource Trace.SectionText}" Margin="0,8,0,0"
+                               AutomationProperties.HeadingLevel="Level2" />
+                    <TextBlock Text="{Binding Evidence}" Style="{DynamicResource Trace.MetaText}" Margin="0,4,0,0" />
+                    <TextBox Text="{Binding Value, Mode=OneWay}" IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                             BorderThickness="0" Background="Transparent" Padding="0" TextWrapping="Wrap"
+                             AutomationProperties.Name="Selected observation value" Margin="0,8,0,0" />
+                    <TextBlock Text="Source" FontWeight="SemiBold" Margin="0,8,0,0" />
+                    <TextBlock Text="{Binding Provider}" />
+                    <TextBlock Text="{Binding CollectedAt}" Style="{DynamicResource Trace.MetaText}" />
+                    <Expander Header="Technical evidence" Margin="0,8,0,0">
+                      <TextBox Text="{Binding TechnicalDetails, Mode=OneWay}" IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                               TextWrapping="Wrap" AutomationProperties.Name="Technical evidence for selected finding" />
+                    </Expander>
+                    <TextBlock x:Name="BatterySafety" Visibility="Collapsed"
+                               Text="Battery reports cannot detect swelling. Swelling requires human inspection."
+                               Style="{DynamicResource Trace.AttentionText}" Margin="0,8,0,0" />
+                    <Button x:Name="BackToFindings" Content="Back to findings" Click="CloseEvidence" HorizontalAlignment="Left" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </StackPanel>
+          </TabItem>
+          <TabItem x:Name="HardwareChecksTab" Header="Hardware checks">
+      <StackPanel Margin="0,12,0,0">
         <TextBlock Text="Follow a safe applicable check, then record what you observed. Detected hardware alone cannot pass a check." />
         <TextBlock x:Name="FixtureManualNotice" Visibility="Collapsed"
                    Text="A fixture job supports Not run or Not available. Simulated hardware cannot provide a real manual result." />
-        <TextBlock Text="Use the workshop operator code from External sanitization. Keep notes free of names, serial numbers, network details and personal content." />
+        <TextBlock Text="Use the workshop operator code from Intake. Keep notes free of names, serial numbers, network details and personal content." Style="{DynamicResource Trace.MetaText}" Margin="0,8,0,0" />
+        <TextBlock x:Name="ManualBatterySafety" Text="Battery reports cannot detect swelling. Swelling requires human inspection."
+                   Style="{DynamicResource Trace.AttentionText}" Margin="0,8,0,0" />
         <TextBlock x:Name="ManualResumeStatus" />
         <StackPanel>
           <Button x:Name="NextManualCheckButton" Content="Go to next unfinished check" Click="SelectNextManualCheck" />
           <Label Target="{Binding ElementName=ManualCheck}" Content="Manual check" />
-          <ComboBox x:Name="ManualCheck" DisplayMemberPath="Title" SelectionChanged="ManualCheckChanged"
+          <ComboBox x:Name="ManualCheck" DisplayMemberPath="Label" SelectedValuePath="Case.Id" SelectionChanged="ManualCheckChanged"
                     AutomationProperties.Name="Manual hardware check" />
-          <StackPanel x:Name="ManualInstructions" DataContext="{Binding SelectedItem, ElementName=ManualCheck}"
+          <StackPanel x:Name="ManualInstructions" DataContext="{Binding SelectedItem.Case, ElementName=ManualCheck}"
                       Visibility="Collapsed">
-            <TextBlock Text="Procedure" FontWeight="SemiBold" />
+            <TextBlock Text="Procedure" Style="{DynamicResource Trace.SectionText}" Margin="0,12,0,4" />
             <TextBlock Text="{Binding Instructions}" />
-            <TextBlock Text="Pass criteria" FontWeight="SemiBold" />
+            <TextBlock Text="Pass criteria" FontWeight="SemiBold" Margin="0,8,0,0" />
             <TextBlock Text="{Binding PassCriteria}" />
-            <TextBlock Text="Fail criteria" FontWeight="SemiBold" />
+            <TextBlock Text="Fail criteria" FontWeight="SemiBold" Margin="0,8,0,0" />
             <TextBlock Text="{Binding FailCriteria}" />
-            <TextBlock Text="Cleanup" FontWeight="SemiBold" />
+            <TextBlock Text="Cleanup" FontWeight="SemiBold" Margin="0,8,0,0" />
             <TextBlock Text="{Binding Cleanup}" />
           </StackPanel>
-          <TextBlock x:Name="ManualCurrentResult" />
+          <TextBlock x:Name="ManualCurrentResult" AutomationProperties.LiveSetting="Polite" />
           <Expander Header="Last 10 saved results">
             <ListBox x:Name="ManualHistory" MaxHeight="200" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      VirtualizingPanel.ScrollUnit="Pixel"
@@ -161,6 +209,9 @@
             </ListBox>
           </Expander>
           <StackPanel IsEnabled="{Binding CanEditJob}">
+            <Label Target="{Binding ElementName=ManualOperatorCode}" Content="Workshop operator code" />
+            <TextBox x:Name="ManualOperatorCode" Text="{Binding Text, ElementName=OperatorIdInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     MaxLength="64" AutomationProperties.Name="Workshop operator code for manual result" />
             <Label Target="{Binding ElementName=ManualOutcome}" Content="Check result" />
             <ComboBox x:Name="ManualOutcome" SelectedValuePath="Tag" SelectionChanged="ManualOutcomeChanged"
                       AutomationProperties.Name="Manual check result">
@@ -177,24 +228,68 @@
             <Label Target="{Binding ElementName=ManualNotes}" Content="Brief observation" />
             <TextBox x:Name="ManualNotes" MaxLength="{x:Static manual:ManualTestService.MaximumNotesLength}"
                      TextWrapping="Wrap" AutomationProperties.Name="Brief manual observation" />
-            <TextBlock x:Name="ManualInputError" AutomationProperties.LiveSetting="Polite" />
-            <Button x:Name="SaveManualResultButton" Content="Save manual result" Click="SaveManualResult" />
+            <TextBlock x:Name="ManualInputError" Style="{DynamicResource Trace.ErrorText}" AutomationProperties.LiveSetting="Polite" />
+            <Button x:Name="SaveManualResultButton" Content="Save manual result" Style="{DynamicResource Trace.PrimaryButton}" HorizontalAlignment="Left" Click="SaveManualResult" />
           </StackPanel>
         </StackPanel>
       </StackPanel>
-    </GroupBox>
-    <recovery:RebootRecoveryView />
-    <disposition:PolicyDispositionView x:Name="PolicyDispositionPanel" />
-    <plan:PlanReviewView x:Name="PlanReviewPanel" />
+          </TabItem>
+        </TabControl>
+        <Border Style="{DynamicResource Trace.ActionArea}" Margin="0,16,0,0">
+          <StackPanel>
+            <TextBlock x:Name="AssessmentMessage" Text="{Binding AssessmentStatus}"
+                       Focusable="True" KeyboardNavigation.IsTabStop="True"
+                       AutomationProperties.Name="{Binding AssessmentStatus}" AutomationProperties.LiveSetting="Polite" />
+            <TextBlock x:Name="AssessmentGateMessage" Text="{Binding GateStatus}" Style="{DynamicResource Trace.AttentionText}" />
+            <ProgressBar x:Name="AuditAssessmentProgress" IsIndeterminate="True" Height="8" Margin="0,8"
+                         Visibility="Collapsed" AutomationProperties.Name="Assessment running" />
+            <WrapPanel Margin="0,8,0,0">
+              <Button x:Name="GoToSanitizationButton" Content="Go to external sanitization" Margin="0,0,8,4"
+                      Click="GoToSanitization" Visibility="Collapsed" />
+              <Button x:Name="StartAssessmentButton" Content="Start assessment" Click="StartAssessment" Margin="0,0,8,4"
+                      Style="{DynamicResource Trace.PrimaryButton}" IsEnabled="{Binding CanAssess}" />
+              <Button x:Name="CancelAssessmentButton" Content="Cancel assessment" Click="CancelAssessment" Margin="0,0,8,4"
+                      IsEnabled="{Binding CanCancel}" Visibility="Collapsed" />
+              <Button x:Name="ReviewDispositionButton" Content="Review disposition" Click="GoToDisposition" Margin="0,0,8,4"
+                      Visibility="Collapsed" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <StackPanel x:Name="DecideSurface" Visibility="Collapsed">
+        <disposition:PolicyDispositionView x:Name="PolicyDispositionPanel" />
+      </StackPanel>
+
+      <StackPanel x:Name="PrepareSurface" Visibility="Collapsed">
+        <plan:PlanReviewView x:Name="PlanReviewPanel" />
+        <execution:BrokerExecutionView x:Name="BrokerExecutionPanel" Visibility="Collapsed" />
+      </StackPanel>
+
+      <StackPanel x:Name="VerifySurface" Visibility="Collapsed">
+        <plan:PackageVerificationView x:Name="PackageVerificationPanel" />
+      </StackPanel>
+
+      <StackPanel x:Name="HandoverSurface" Visibility="Collapsed">
+        <TextBlock Text="Review handover requirements" Style="{DynamicResource Trace.TitleText}" AutomationProperties.HeadingLevel="Level1" />
+        <Border Style="{DynamicResource Trace.ActionArea}" Margin="0,12,0,12">
+          <StackPanel>
+            <TextBlock x:Name="HandoverStatus" Text="Device handover is still open" Style="{DynamicResource Trace.AttentionText}" FontWeight="SemiBold" />
+            <TextBlock Text="Finalization and whole-device cold-boot verification are required. Recipient-guide generation is unavailable in this build." Margin="0,4,0,0" />
+          </StackPanel>
+        </Border>
     <GroupBox x:Name="WorkshopReportRegion" Header="Workshop report" AutomationProperties.Name="Workshop report">
       <StackPanel>
         <TextBlock Text="Generate a restricted report from this saved job. Keep it with workshop records." />
-        <Button x:Name="GenerateReportButton" Content="Generate workshop report" Click="GenerateWorkshopReport"
+        <TextBlock x:Name="ReportArtifactDetails" Style="{DynamicResource Trace.MetaText}" Margin="0,8,0,0" />
+        <WrapPanel Margin="0,8,0,0">
+          <Button x:Name="GenerateReportButton" Style="{DynamicResource Trace.PrimaryButton}" Margin="0,0,8,4" Content="Generate workshop report" Click="GenerateWorkshopReport"
                 IsEnabled="{Binding CanGenerateReport}" />
-        <Button x:Name="OpenReportButton" Content="Open workshop report" Click="OpenWorkshopReport"
+          <Button x:Name="OpenReportButton" Margin="0,0,8,4" Content="Open workshop report" Click="OpenWorkshopReport"
                 IsEnabled="{Binding CanOpenReport}" />
-        <Button x:Name="CancelReportButton" Content="Cancel report operation" Click="CancelReport"
+          <Button x:Name="CancelReportButton" Margin="0,0,8,4" Content="Cancel report operation" Click="CancelReport"
                 Visibility="Collapsed" />
+        </WrapPanel>
         <TextBlock x:Name="ReportMessage" Text="{Binding ReportStatus}" Focusable="True"
                    KeyboardNavigation.IsTabStop="True" AutomationProperties.Name="{Binding ReportStatus}"
                    AutomationProperties.LiveSetting="Polite" />
@@ -205,7 +300,7 @@
                  AutomationProperties.Name="Restricted workshop report preview" />
       </StackPanel>
     </GroupBox>
-    <disposition:RepairWorkflowView />
-    <Button x:Name="ReturnFromAuditButton" Content="Return to workflow stages" Click="RequestStageReturn" />
+      </StackPanel>
+    </Grid>
   </StackPanel>
 </UserControl>

@@ -133,6 +133,11 @@ public sealed partial class PackageSetupTests
         await using var reopened = OpenWorkspace(disk, reports, service);
         await reopened.OpenJobAsync(jobId);
         Assert.Contains(expectedReport, reopened.PackageHistoryText);
+        Assert.Contains(expectedReport, reopened.LatestPackageOutcome, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(reopened.PackageJournal, entry => entry.Title == "Exact plan approval saved");
+        Assert.Contains(reopened.PackageJournal, entry => entry.Title == "Dispatch intent saved");
+        Assert.Equal(expectedState == JournalState.Verified,
+            reopened.PackageJournal.Any(entry => entry.Title == "Independent verification saved"));
         Assert.False(reopened.CanInstallPackage);
         await reopened.GenerateReportAsync();
         await reopened.OpenReportAsync();
@@ -170,7 +175,8 @@ public sealed partial class PackageSetupTests
     {
         using var disk = new AuditTestStore();
         var reports = new WorkshopReportStore(Path.Combine(disk.Root, "reports"));
-        await using var workspace = OpenWorkspace(disk, reports, new PilotPackageService(new FixtureInstaller(PackageInstallStatus.Applied, true)));
+        var runtime = new FixtureInstaller(PackageInstallStatus.Applied, true);
+        await using var workspace = OpenWorkspace(disk, reports, new PilotPackageService(runtime));
         await workspace.CreateJobAsync();
         await workspace.RecordSanitizationAsync(new SanitizationInput(SanitizationState.NoDonorStorage,
             "fixture-operator", DateOnly.FromDateTime(Now.UtcDateTime), "", ConfirmedExternalRecord: true));
@@ -179,15 +185,18 @@ public sealed partial class PackageSetupTests
         await workspace.BuildPlanReviewAsync();
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow(new ShellViewModel(), workspace);
+            var window = new MainWindow(workspace);
             try
             {
                 ShellTestHost.Show(window);
-                ShellTestHost.Invoke(window, "PrepareButton");
+                window.ShowStage(ShellStage.Prepare);
+                ShellTestHost.Drain(window);
                 var panel = Named<PlanReviewView>(Named<FrameworkElement>(window, "AuditView"), "PlanReviewPanel");
+                Assert.Equal(8, Named<ItemsControl>(panel, "MaterialImpactItems").Items.Count);
+                Assert.Single(workspace.VisiblePlanProfiles);
                 var verification = Named<TextBlock>(panel, "PackageVerificationNotice");
                 Assert.True(verification.IsVisible && verification.Focusable);
-                Assert.Contains("briefly starts Notepad++ with no documents", new TextBlockAutomationPeer(verification).GetName(),
+                Assert.Contains("with no documents and closes the instance it started", new TextBlockAutomationPeer(verification).GetName(),
                     StringComparison.Ordinal);
                 var code = Named<TextBox>(panel, "PackageOperator");
                 Assert.True(code.Focusable && code.IsTabStop);
@@ -197,6 +206,15 @@ public sealed partial class PackageSetupTests
                 var cancel = Named<Button>(panel, "CancelPackageButton");
                 Assert.True(cancel.Focusable && cancel.IsTabStop);
                 Assert.False(cancel.IsEnabled);
+                var plan = workspace.PlanReview;
+                window.ShowStage(ShellStage.Verify);
+                ShellTestHost.Drain(window);
+                Assert.False(panel.IsVisible);
+                Assert.True(workspace.ShowsVerifyEmptyState);
+                window.ShowStage(ShellStage.Prepare);
+                ShellTestHost.Drain(window);
+                Assert.Same(plan, workspace.PlanReview);
+                Assert.Equal(0, runtime.InstallCalls);
             }
             finally
             {

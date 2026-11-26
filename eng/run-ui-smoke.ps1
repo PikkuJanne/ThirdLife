@@ -44,16 +44,16 @@ try {
     $window = [System.Windows.Automation.AutomationElement]::FromHandle($ownedShell.MainWindowHandle)
     $inspectCondition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, "StageInspect")
     $inspect = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $inspectCondition)
-    if ($null -eq $inspect -or -not $inspect.Current.IsEnabled) { throw "Inspection review unavailable." }
-    $inspect.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
-    $statusCondition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, "Inspect selected. No job is open. Device readiness is unknown.")
+    if ($null -eq $inspect -or -not $inspect.Current.IsEnabled) { throw "Inspection stage unavailable." }
+    $inspect.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    $statusCondition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, "Inspect opened.")
     $status = $null
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
         $status = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $statusCondition)
         if ($null -ne $status) { break }
         [Threading.Thread]::Sleep(100)
     }
-    if ($null -eq $status) { throw "Changed review status unavailable." }
+    if ($null -eq $status) { throw "Changed stage status unavailable." }
     $ownedShell.Refresh()
     $result.result = "passed"
     $result.elapsed_to_observation_ms = $timer.ElapsedMilliseconds

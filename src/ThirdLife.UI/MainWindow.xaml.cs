@@ -7,72 +7,191 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using ThirdLife.Persistence;
 using ThirdLife.UI.Shell;
+using ThirdLife.UI.Themes;
 
 namespace ThirdLife.UI;
 
 public partial class MainWindow : Window
 {
-    private readonly ShellViewModel _model;
-    private readonly AuditWorkspace? _workspace;
+    private readonly AuditWorkspace _workspace;
+    private readonly TraceAppearance _appearance;
     private readonly WheelScrolling _wheelScrolling = new();
     private DispatcherOperation? _announcement;
-    private bool _statusChanged;
-    private bool _activityChanged;
     private bool _closingWorkspace;
     private bool _workspaceClosed;
+    private bool? _wide;
 
-    public MainWindow() : this(new ShellViewModel()) { }
-
-    public MainWindow(ShellViewModel model) : this(model, null) { }
-
-    internal MainWindow(ShellViewModel model, AuditWorkspace? workspace)
+    internal MainWindow(AuditWorkspace workspace, bool persistAppearance = false)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
-        _workspace = workspace;
+        _workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
         InitializeComponent();
-        DataContext = model;
-        model.PropertyChanged += ModelChanged;
-        if (workspace is not null)
+        Width = Math.Max(MinWidth, Math.Min(Width, SystemParameters.WorkArea.Width));
+        Height = Math.Max(MinHeight, Math.Min(Height, SystemParameters.WorkArea.Height));
+        _appearance = new TraceAppearance(this, persistPreference: persistAppearance);
+        AppearanceChoice.SelectedIndex = _appearance.Preference == TraceTheme.Dark ? 0 : 1;
+        AuditView.Bind(workspace);
+        AuditView.StageRequested += StageRequested;
+        _workspace.PropertyChanged += WorkspaceChanged;
+        Loaded += FocusOnEntry;
+        UpdateNavigation();
+    }
+
+    // Isolated component callers use the same production window and navigation.
+    internal void ShowStage(ShellStage stage)
+    {
+        var item = stage switch
         {
-            AuditView.Bind(workspace);
-            AuditView.ReturnToStagesRequested += ReturnFromAudit;
-            AuditView.Visibility = Visibility.Visible;
-            OpenAuditWorkspaceButton.Visibility = Visibility.Visible;
-            workspace.PropertyChanged += WorkspaceChanged;
-            UpdateAuditPresentation();
+            ShellStage.Intake => IntakeStage,
+            ShellStage.Inspect => InspectStage,
+            ShellStage.Decide => DecideStage,
+            ShellStage.Prepare => PrepareStage,
+            ShellStage.Verify => VerifyStage,
+            ShellStage.Handover => HandoverStage,
+            _ => throw new ArgumentOutOfRangeException(nameof(stage)),
+        };
+        StageList.SelectedItem = item;
+        AuditView.ShowStage(stage);
+    }
+
+    private void FocusOnEntry(object sender, RoutedEventArgs e)
+    {
+        Loaded -= FocusOnEntry;
+        if (_workspace.Job is null)
+        {
+            AuditView.FocusJobs();
+        }
+        else
+        {
+            ShowStage(ShellStage.Intake);
+        }
+    }
+
+    private void SelectStage(object sender, SelectionChangedEventArgs e)
+    {
+        if (!ReferenceEquals(e.Source, StageList) ||
+            StageList.SelectedItem is not ListBoxItem { Tag: string tag } ||
+            !Enum.TryParse<ShellStage>(tag, out var stage))
+        {
+            return;
         }
 
+        AuditView.ShowStage(stage);
+        ShellScroll.ScrollToTop();
+        AnnounceNavigation($"{stage} opened.");
+    }
+
+    private void StageRequested(object? sender, ShellStage? stage)
+    {
+        if (stage is { } destination)
+        {
+            ShowStage(destination);
+            return;
+        }
+
+        ShowJobs();
+    }
+
+    private void GoToJobs(object sender, RoutedEventArgs e)
+    {
+        ShowJobs();
+        AuditView.FocusJobs();
+    }
+
+    private void ShowJobs()
+    {
+        StageList.SelectedItem = null;
+        AuditView.ShowStage(null);
+        ShellScroll.ScrollToTop();
+        AnnounceNavigation("Jobs opened.");
+    }
+
+    private void ChangeAppearance(object sender, SelectionChangedEventArgs e)
+    {
+        if (_appearance is not null && AppearanceChoice.SelectedIndex >= 0)
+        {
+            _appearance.SetPreference(AppearanceChoice.SelectedIndex == 0 ? TraceTheme.Dark : TraceTheme.Light);
+        }
+    }
+
+    private void ScrollFromWheel(object sender, MouseWheelEventArgs e) => _wheelScrolling.Scroll(ShellScroll, e);
+
+    private void ResizeProductBar(object sender, SizeChangedEventArgs e) =>
+        DockPanel.SetDock(ProductIdentity, e.NewSize.Width >= 520 ? Dock.Left : Dock.Top);
+
+    private void ResizeWorkflow(object sender, SizeChangedEventArgs e)
+    {
+        var wide = e.NewSize.Width >= 750;
+        if (wide == _wide) { return; }
+        _wide = wide;
+        NavigationColumn.Width = wide ? new GridLength(176) : new GridLength(1, GridUnitType.Star);
+        WorkColumn.Width = wide ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        Grid.SetRowSpan(WorkflowRail, wide ? 2 : 1);
+        Grid.SetRowSpan(WorkspaceColumn, wide ? 2 : 1);
+        Grid.SetColumn(WorkspaceColumn, wide ? 1 : 0);
+        Grid.SetRow(WorkspaceColumn, wide ? 0 : 1);
+        WorkflowRail.BorderThickness = wide ? new Thickness(0, 0, 1, 0) : new Thickness(0, 0, 0, 1);
+        StageList.ItemsPanel = (ItemsPanelTemplate)FindResource(wide ? "WideWorkflow" : "CompactWorkflow");
+        LocalRecords.Visibility = wide ? Visibility.Visible : Visibility.Collapsed;
         UpdateNavigation();
+    }
+
+    private void WorkspaceChanged(object? sender, PropertyChangedEventArgs e) => UpdateNavigation();
+
+    private void UpdateNavigation()
+    {
+        bool hasJob = _workspace.Job is not null;
+        bool wide = _wide != false;
+        SetNote(IntakeStage, IntakeNote, hasJob && _workspace.Job!.SanitizationEvidence.Count != 0 ? "Record saved" : "External record needed");
+        SetNote(InspectStage, InspectNote, _workspace.IsAssessmentRunning ? "Assessment running"
+            : _workspace.Assessment is not null ? "Assessment saved" : "No assessment");
+        SetNote(DecideStage, DecideNote, _workspace.HasPolicyDecision ? "Decision saved" : "Candidate policy");
+        SetNote(PrepareStage, PrepareNote, _workspace.PlanReviewDecision is not null ? "Decision recorded"
+            : _workspace.HasPlanReview ? "Plan built" : "Plan review");
+        SetNote(VerifyStage, VerifyNote, _workspace.HasPackageHistory ? "Package journal saved" : "Checks and recovery");
+        SetNote(HandoverStage, HandoverNote, _workspace.ReportArtifact is not null ? "Report saved" : "Clearance pending");
+
+        void SetNote(ListBoxItem item, TextBlock note, string text)
+        {
+            note.Text = hasJob ? text : "";
+            note.Visibility = wide && hasJob ? Visibility.Visible : Visibility.Collapsed;
+            AutomationProperties.SetItemStatus(item, note.Text);
+        }
+    }
+
+    private void AnnounceNavigation(string text)
+    {
+        NavigationStatus.Text = text;
+        _announcement?.Abort();
+        _announcement = Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
+        {
+            var peer = UIElementAutomationPeer.FromElement(NavigationStatus)
+                ?? UIElementAutomationPeer.CreatePeerForElement(NavigationStatus);
+            peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        }));
     }
 
     protected override void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
-        if (e.Cancel || _workspace is null || _workspaceClosed)
-        {
-            return;
-        }
-
+        if (e.Cancel || _workspaceClosed) { return; }
         e.Cancel = true;
-        if (!_closingWorkspace)
-        {
-            _closingWorkspace = true;
-            _ = CloseWorkspaceAsync(_workspace);
-        }
+        if (_closingWorkspace) { return; }
+        _closingWorkspace = true;
+        _ = CloseWorkspaceAsync();
     }
 
-    private async Task CloseWorkspaceAsync(AuditWorkspace workspace)
+    private async Task CloseWorkspaceAsync()
     {
         await Dispatcher.Yield(DispatcherPriority.Background);
         try
         {
-            await workspace.CloseAsync();
+            await _workspace.CloseAsync();
         }
         catch (Exception ex) when (ex is JobStoreException or InvalidOperationException)
         {
-            MessageBox.Show(this,
+            TraceNotice.ShowMessage("Job recovery",
                 "ThirdLife could not finish releasing the local job store. Reopen the job and check its saved records before continuing.",
-                "Audit job recovery", MessageBoxButton.OK, MessageBoxImage.Warning);
+                this);
         }
         finally
         {
@@ -83,108 +202,10 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        _model.PropertyChanged -= ModelChanged;
-        if (_workspace is not null)
-        {
-            _workspace.PropertyChanged -= WorkspaceChanged;
-            AuditView.ReturnToStagesRequested -= ReturnFromAudit;
-            AuditView.Unbind();
-        }
-
+        _workspace.PropertyChanged -= WorkspaceChanged;
+        AuditView.StageRequested -= StageRequested;
+        AuditView.Unbind();
         _announcement?.Abort();
         base.OnClosed(e);
-    }
-
-    private void ShowIntake(object sender, RoutedEventArgs e) => _model.Navigate(ShellStage.Intake);
-    private void ShowInspect(object sender, RoutedEventArgs e) => _model.Navigate(ShellStage.Inspect);
-
-    private void OpenAuditWorkspace(object sender, RoutedEventArgs e) => AuditView.FocusWorkspace();
-
-    private void OpenPlanReview(object sender, RoutedEventArgs e) => AuditView.FocusPlanReview();
-
-    private void ScrollFromWheel(object sender, MouseWheelEventArgs e) => _wheelScrolling.Scroll(ShellScroll, e);
-
-    private void ResizeWorkflow(object sender, SizeChangedEventArgs e)
-    {
-        var wide = e.NewSize.Width >= 720;
-        NavigationColumn.Width = wide ? new GridLength(280) : new GridLength(1, GridUnitType.Star);
-        ReviewColumn.Width = wide ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
-        Grid.SetColumn(ReviewContent, wide ? 1 : 0);
-        Grid.SetRow(ReviewContent, wide ? 0 : 1);
-        ReviewContent.Margin = wide ? new Thickness(16, 0, 0, 0) : new Thickness(0);
-    }
-
-    private void SkipToReview(object sender, RoutedEventArgs e)
-    {
-        StageReview.Focus();
-        StageReview.BringIntoView();
-    }
-
-    private void ReturnToStages(object sender, RoutedEventArgs e)
-        => FocusStage();
-
-    private void ReturnFromAudit(object? sender, EventArgs e)
-        => FocusStage();
-
-    private void FocusStage()
-    {
-        var target = _model.SelectedStage == ShellStage.Intake ? IntakeButton : InspectButton;
-        target.Focus();
-        target.BringIntoView();
-    }
-
-    private void ModelChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName is not (nameof(ShellViewModel.StatusText) or nameof(ShellViewModel.ActivityText)))
-        { return; }
-        _statusChanged |= e.PropertyName == nameof(ShellViewModel.StatusText);
-        _activityChanged |= _workspace is null && e.PropertyName == nameof(ShellViewModel.ActivityText);
-        // Coalesce updates and let bindings settle before notifying assistive technology.
-        _announcement?.Abort();
-        _announcement = Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
-        {
-            UpdateNavigation();
-            if (_statusChanged) { Announce(StatusAnnouncement); }
-            if (_activityChanged) { Announce(ActivityAnnouncement); }
-            _statusChanged = false;
-            _activityChanged = false;
-        }));
-    }
-
-    private void WorkspaceChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        UpdateAuditPresentation();
-    }
-
-    private void UpdateAuditPresentation()
-    {
-        if (_workspace is { } workspace)
-        {
-            _model.SetAuditContext(workspace.Job is not null, workspace.GateStatus, workspace.AssessmentStatus);
-            OpenAuditWorkspaceButton.Content = workspace.IsAssessmentRunning
-                ? "Go to assessment controls"
-                : "Go to audit controls";
-            PrepareButton.IsEnabled = workspace.CanReviewPlan;
-            PrepareStageLabel.Text = workspace.CanReviewPlan ? "4. Prepare — review plan" : "4. Prepare — review unavailable";
-            AutomationProperties.SetName(PrepareButton, workspace.CanReviewPlan
-                ? "4. Prepare, review plan"
-                : "4. Prepare, review unavailable");
-            AutomationProperties.SetHelpText(WorkflowStages,
-                "Use Page Down and Page Up to read stage requirements. A current assessment enables preparation plan review.");
-            PrepareCriteria.Text = "A current assessment and approved intake gate enable plan review. Review the choices, exact package details and declared impact.";
-            VerifyCriteria.Text = "Review package checks in the saved setup journal and workshop report. Full-device verification requires additional checks.";
-        }
-    }
-
-    private void UpdateNavigation()
-    {
-        AutomationProperties.SetItemStatus(IntakeButton, _model.SelectedStage == ShellStage.Intake ? "Current review stage" : "Available for review");
-        AutomationProperties.SetItemStatus(InspectButton, _model.SelectedStage == ShellStage.Intake ? "Available for review" : "Current review stage");
-    }
-
-    private static void Announce(TextBlock text)
-    {
-        var peer = UIElementAutomationPeer.FromElement(text) ?? UIElementAutomationPeer.CreatePeerForElement(text);
-        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 }

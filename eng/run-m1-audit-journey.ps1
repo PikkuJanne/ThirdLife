@@ -29,6 +29,7 @@ public sealed class AuditAccessibilityProbe : IDisposable
 
     [DllImport("user32.dll")] private static extern uint SendInput(uint count, Input[] inputs, int size);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr handle);
     [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr handle, uint flags);
     [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(Point point);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
@@ -73,6 +74,8 @@ public sealed class AuditAccessibilityProbe : IDisposable
                 entry.StartsWith(id + "|" + message, StringComparison.Ordinal));
         }
     }
+
+    public uint WindowDpi => GetDpiForWindow(new IntPtr(window.Current.NativeWindowHandle));
 
     public void Wheel(int delta)
     {
@@ -123,7 +126,7 @@ function Find-FixtureElement([string] $Id) {
 
 function Read-Value([string] $Id) {
     $element = Find-FixtureElement $Id
-    $element.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).Current.Value
+    if ($element) { $element.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern).Current.Value }
 }
 
 function Read-FixtureFocus {
@@ -148,6 +151,12 @@ function Move-TabTo([string] $Id, [switch] $Backward) {
         [Windows.Forms.SendKeys]::SendWait($keys)
     }
     throw "The keyboard did not reach $Id within the bounded tab sequence."
+}
+
+function Open-HardwareChecks {
+    Move-TabTo 'DeviceFindingsTab' -Backward
+    Send-At 'DeviceFindingsTab' '{RIGHT}'
+    $null = Wait-For { Find-FixtureElement 'ManualCheck' } 'the Hardware checks tab'
 }
 
 function Assert-Announcement([string] $Id, [string] $Message) {
@@ -209,42 +218,40 @@ try {
         [Windows.Automation.AutomationElement]::RootElement.FindFirst([Windows.Automation.TreeScope]::Children, $windowQuery)
     } 'the owned fixture window' 15
 
-    if ((Read-Value 'CurrentJobId') -or (Find-FixtureElement 'StartAssessmentButton').Current.IsEnabled) {
-        throw 'Fresh fixture must start with no job and a disabled assessment.'
+    if ((Find-FixtureElement 'CurrentJobId') -or -not (Find-FixtureElement 'CreateJobButton')) {
+        throw 'Fresh fixture must start on Jobs with no open job.'
     }
-    $result.steps += 'empty_fixture_and_disabled_assessment'
+    $result.steps += 'empty_jobs_surface'
 
     $controller = New-Object -ComObject WScript.Shell
     if (-not $controller.AppActivate([int]$window.Current.ProcessId)) { throw 'Could not activate the owned fixture window.' }
     if ($VerifyAccessibility) {
         $probe = [AuditAccessibilityProbe]::new($window)
         $result.live_region_events = @()
+        $result.window_dpi = $probe.WindowDpi
         Measure-FractionalWheel
     }
-    Move-TabTo 'OpenAuditWorkspaceButton' -Backward
-    Send-At 'OpenAuditWorkspaceButton' '{ENTER}'
     Move-TabTo 'CreateJobButton'
     Send-At 'CreateJobButton' '{ENTER}'
     $jobId = Wait-For { Read-Value 'CurrentJobId' } 'a created job identifier'
-    Assert-Announcement 'AuditStatus' 'Job created.'
     $confirmation = Wait-For { Find-FixtureElement 'ExternalRecordConfirmed' } 'fixture confirmation'
     $toggle = $confirmation.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
-    if ($toggle.Current.ToggleState -ne 'Off' -or (Find-FixtureElement 'StartAssessmentButton').Current.IsEnabled) {
+    if ($toggle.Current.ToggleState -ne 'Off' -or (Find-FixtureElement 'StartAssessmentButton')) {
         throw 'The new job must still require explicit external confirmation.'
     }
     $result.steps += 'created_job_requires_explicit_confirmation'
 
-    # The handed instructions offered Enter on the confirmation check box, followed by Tab to Save.
+    Move-TabTo 'ExternalRecordConfirmed'
     Send-At 'ExternalRecordConfirmed' '{ENTER}'
     $null = Wait-For { $toggle.Current.ToggleState -eq 'On' } 'Enter to confirm the external record'
     Send-At 'ExternalRecordConfirmed' '{TAB}'
     Send-At 'RecordSanitizationButton' '{ENTER}'
-    $null = Wait-For { (Find-FixtureElement 'StartAssessmentButton').Current.IsEnabled } 'assessment enabled by the saved intake and gate'
-    if ((Find-FixtureElement 'SavedSanitization').Current.Name -notmatch 'clear, verified\. Synthetic fixture') {
-        throw 'Saved intake did not identify the verified synthetic record.'
-    }
+    $null = Wait-For {
+        $start = Find-FixtureElement 'StartAssessmentButton'
+        $start -and $start.Current.IsEnabled
+    } 'assessment enabled by the saved intake and gate'
     $result.steps += 'enter_confirmation_and_save_enable_assessment'
-    Assert-Announcement 'AuditStatus' 'Sanitization permits read-only assessment.'
+    Assert-Announcement 'NavigationStatus' 'Inspect opened.'
 
     Send-At 'StartAssessmentButton' '{ENTER}'
     $null = Wait-For {
@@ -254,6 +261,7 @@ try {
     $result.steps += 'read_only_assessment_requires_review'
     Assert-Announcement 'AssessmentMessage' 'Assessment needs review.'
 
+    Open-HardwareChecks
     Move-TabTo 'ManualOutcome'
     Send-At 'ManualOutcome' '{END}'
     Move-TabTo 'ManualUnavailableReason'
@@ -266,20 +274,25 @@ try {
     Move-TabTo 'CloseJobButton' -Backward
     Send-At 'CloseJobButton' '{ENTER}'
     $null = Wait-For {
-        -not (Read-Value 'CurrentJobId') -and -not (Find-FixtureElement 'StartAssessmentButton').Current.IsEnabled
+        -not (Find-FixtureElement 'CurrentJobId') -and (Find-FixtureElement 'CreateJobButton')
     } 'closing to clear the open job and disable assessment'
     Send-At 'JobIdInput' '{TAB}'
     Send-At 'OpenJobButton' '{ENTER}'
     $null = Wait-For {
         (Read-Value 'CurrentJobId') -eq $jobId -and
-            (Find-FixtureElement 'AuditStatus').Current.Name -match 'Job opened' -and
             (Find-FixtureElement 'AssessmentMessage').Current.Name -match 'needs review'
     } 'the same saved job and assessment after reopening'
+    Open-HardwareChecks
     Move-TabTo 'ManualCheck'
     Send-At 'ManualCheck' '{HOME}{DOWN}'
     $null = Wait-For { (Find-FixtureElement 'ManualCurrentResult').Current.Name -match 'Latest saved result: Not available.*equipment missing' } 'the saved Keyboard result after reopening'
     $result.steps += 'closed_and_reopened_same_job_assessment_and_manual_result'
 
+    Move-TabTo 'StageInspect' -Backward
+    foreach ($stage in @('StageInspect', 'StageDecide', 'StagePrepare', 'StageVerify')) {
+        Send-At $stage '{DOWN}'
+    }
+    $null = Wait-For { Find-FixtureElement 'HandoverStatus' } 'the Handover surface'
     Move-TabTo 'GenerateReportButton'
     Send-At 'GenerateReportButton' '{ENTER}'
     Assert-Announcement 'ReportMessage' 'Workshop report saved.'
@@ -290,7 +303,10 @@ try {
     } 'the same job identifier in the visible report preview'
     $result.steps += 'generated_and_opened_matching_report'
 }
-catch { $result.error = $_.Exception.Message }
+catch {
+    $result.error = $_.Exception.Message
+    $result.driver_line = $_.InvocationInfo.ScriptLineNumber
+}
 finally {
     if ($probe) {
         try { $probe.Dispose() }

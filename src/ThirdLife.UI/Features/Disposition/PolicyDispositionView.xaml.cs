@@ -12,6 +12,7 @@ public partial class PolicyDispositionView : UserControl
 {
     private IInputElement? _detailsHeaderFocus;
     private string? _announcedStatus;
+    private string? _operationJobId;
 
     public PolicyDispositionView() => InitializeComponent();
 
@@ -20,8 +21,10 @@ public partial class PolicyDispositionView : UserControl
         if (DataContext is AuditWorkspace workspace && workspace.CanEvaluatePolicy)
         {
             var hadKeyboardFocus = EvaluatePolicyButton.IsKeyboardFocused;
+            BeginEvaluation(workspace);
             await workspace.EvaluatePolicyAsync();
-            FocusNewResult(workspace, hadKeyboardFocus);
+            CompleteEvaluation(workspace);
+            FocusAfterEvaluation(workspace, hadKeyboardFocus);
         }
     }
 
@@ -30,17 +33,26 @@ public partial class PolicyDispositionView : UserControl
         if (DataContext is AuditWorkspace workspace && workspace.CanReevaluatePolicy)
         {
             var hadKeyboardFocus = ReevaluatePolicyButton.IsKeyboardFocused;
+            BeginEvaluation(workspace);
             await workspace.ReevaluatePolicyAsync();
-            FocusNewResult(workspace, hadKeyboardFocus);
+            CompleteEvaluation(workspace);
+            FocusAfterEvaluation(workspace, hadKeyboardFocus);
         }
     }
 
-    private void FocusNewResult(AuditWorkspace workspace, bool hadKeyboardFocus)
+    private void FocusAfterEvaluation(AuditWorkspace workspace, bool hadKeyboardFocus)
     {
-        if (hadKeyboardFocus && workspace.HasPolicyDecision &&
-            (IsKeyboardFocusWithin || Keyboard.FocusedElement is null))
+        if (!hadKeyboardFocus || !IsVisible || (!IsKeyboardFocusWithin && Keyboard.FocusedElement is not null))
         {
-            PolicyResultTitle.Focus();
+            return;
+        }
+
+        var destination = PolicyActionMessage.Text.Length > 0 ? PolicyActionMessage
+            : workspace.HasPolicyDecision ? PolicyResultTitle : null;
+        if (destination is not null)
+        {
+            destination.Focus();
+            destination.BringIntoView();
         }
     }
 
@@ -91,12 +103,45 @@ public partial class PolicyDispositionView : UserControl
         }
     }
 
-    private void AnnounceStatus(object sender, DataTransferEventArgs args)
+    private void BeginEvaluation(AuditWorkspace workspace)
     {
+        _operationJobId = workspace.JobId;
+        SetActionMessage("Evaluating candidate policy from saved evidence.");
+    }
+
+    private void CompleteEvaluation(AuditWorkspace workspace) =>
+        SetActionMessage(workspace.Status == workspace.PolicyStatus ? string.Empty : workspace.Status);
+
+    private void SetActionMessage(string message)
+    {
+        if (PolicyActionMessage.Text == message) { return; }
+        PolicyActionMessage.Text = message;
+        if (message.Length > 0)
+        {
+            Announce(PolicyActionMessage);
+        }
+    }
+
+    private void AnnouncePolicyStatus(object sender, DataTransferEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && _operationJobId != workspace.JobId)
+        {
+            _operationJobId = workspace.JobId;
+            SetActionMessage(string.Empty);
+        }
+
         if (PolicyStatusMessage is { IsLoaded: true, IsVisible: true, Text.Length: > 0 } message &&
             !string.Equals(_announcedStatus, message.Text, StringComparison.Ordinal))
         {
             _announcedStatus = message.Text;
+            Announce(message);
+        }
+    }
+
+    private static void Announce(UIElement message)
+    {
+        if (message.IsVisible)
+        {
             var peer = UIElementAutomationPeer.FromElement(message) ?? UIElementAutomationPeer.CreatePeerForElement(message);
             peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
         }

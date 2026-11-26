@@ -30,7 +30,14 @@ internal sealed record SanitizationInput(
     bool ConfirmedExternalRecord,
     string MethodCode = "");
 
-internal sealed record AssessmentFinding(string Name, string Value, string Evidence, string Provider);
+internal sealed record AssessmentFinding(
+    string Name,
+    string Value,
+    string Evidence,
+    string Provider,
+    string DisplayName,
+    string CollectedAt,
+    string TechnicalDetails);
 
 /// <summary>Owns one window's open job and serializes commands while the shell stays navigable.</summary>
 internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDisposable
@@ -104,13 +111,18 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         PlanProfiles = packageService is not null && WorkshopPackageProfile.Load(timeProvider.GetUtcNow()) is { } package
             ? [.. WorkshopPlanCandidate.Options, package]
             : WorkshopPlanCandidate.Options;
+        VisiblePlanProfiles = IsFixtureScenario || IncludeBrokerQualification
+            ? PlanProfiles
+            : PlanProfiles.Where(option => option.PackagePolicy is not null).ToArray();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public StoredJob? Job { get; private set; }
     public string JobId => Job?.Job.JobId.Value ?? string.Empty;
-    public string Status { get; private set; } = "Create a job or open one by its workshop job ID.";
+    public string Status { get; private set; } = string.Empty;
+    public string OperationError { get; private set; } = string.Empty;
+    public string JobEntryStatus => IsBusy ? "A job operation is in progress." : Status;
     public string AssessmentStatus { get; private set; } = NoAssessment;
     public AssessmentSnapshot? Assessment { get; private set; }
     public IReadOnlyList<AssessmentFinding> Findings { get; private set; } = [];
@@ -121,6 +133,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     public bool CanCloseJob => Job is not null && !IsBusy && !_closing;
     public bool CanEditJob => CanCloseJob && Job is { IsArchived: false } && !_hasSeparateEvidenceOrigin;
     public bool IsFixtureScenario { get; }
+    public bool IncludeBrokerQualification => _fixtureBrokerCoordinator is not null;
     public WorkshopReportArtifact? ReportArtifact { get; private set; }
     public string ReportPreview { get; private set; } = string.Empty;
     public string ReportStatus { get; private set; } =
@@ -143,7 +156,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             null => "Open a job to record external sanitization evidence.",
             SanitizationGateReason.SanitizationEvidenceMissing => "Save the external sanitization result before starting assessment.",
             SanitizationGateReason.GateDecisionMissing or SanitizationGateReason.GateDecisionStale =>
-                "The latest sanitization record is saved. Complete its gate to check assessment access.",
+                "The external record is saved. Check the saved record to complete its gate decision.",
             SanitizationGateReason.SanitizationUnknown => "Sanitization is unknown. Review the external record before assessment.",
             SanitizationGateReason.SanitizationFailed => "Sanitization failed. Assessment is blocked pending verified external evidence.",
             SanitizationGateReason.JobArchived => "This job is archived. Its saved records are read-only.",
@@ -191,7 +204,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         var stored = await Task.Run(() => _jobs!.ReopenAsync(id));
         if (stored is null)
         {
-            Status = "No job matches that workshop job ID. Check the ID and try again.";
+            Status = "No job was found for this code. Check the code and try again.";
             return;
         }
 
@@ -217,6 +230,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     {
         if (IsBusy || _closing) { return; }
         Job = null;
+        OperationError = string.Empty;
         _hasSeparateEvidenceOrigin = false;
         ManualProgress = null;
         ApplyAssessment(null);
@@ -444,6 +458,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     {
         if (IsBusy || _closing) { return Task.CompletedTask; }
         IsBusy = true;
+        OperationError = string.Empty;
         Publish();
         _active = ExecuteAsync(command);
         return _active;
@@ -457,23 +472,23 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         }
         catch (ArgumentException)
         {
-            Status = "Check the required fields. Use a workshop identifier and an allowed outcome, date or reason.";
+            Status = OperationError = "Check the required fields. Use a workshop identifier and an allowed outcome, date or reason.";
         }
         catch (JobLifecycleException)
         {
-            Status = "The job state changed. Reopen it to review the saved records before retrying.";
+            Status = OperationError = "The job state changed. Reopen it to review the saved records before retrying.";
         }
         catch (AssessmentException)
         {
-            Status = "The saved assessment could not be read safely. Review the job before retrying.";
+            Status = OperationError = "The saved assessment could not be read safely. Review the job before retrying.";
         }
         catch (JobStoreException)
         {
-            Status = "The local job store could not complete this operation. Reopen the job to check what was saved.";
+            Status = OperationError = "The local job store could not complete this operation. Reopen the job to check what was saved.";
         }
         catch (InvalidOperationException)
         {
-            Status = "The operation is unavailable for this job. Check its current state and try again.";
+            Status = OperationError = "The operation is unavailable for this job. Check its current state and try again.";
         }
         finally
         {
@@ -656,7 +671,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         var summary = snapshot?.Outcome switch
         {
             null => NoAssessment,
-            AssessmentOutcome.Completed => "Collection finished. Review the evidence. Device readiness is unknown.",
+            AssessmentOutcome.Completed => "Assessment complete. Review the saved findings and any unavailable checks. Device readiness is unknown.",
             AssessmentOutcome.Cancelled => "Assessment cancelled. Committed partial results are shown.",
             AssessmentOutcome.Incomplete => "An assessment was interrupted. Committed partial results are shown.",
             _ => "Assessment needs review. Check failed, unavailable and unfinished findings.",
@@ -664,10 +679,11 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         AssessmentStatus = snapshot is not null && Gate?.Decision?.DecisionId != snapshot.GateDecisionId
             ? $"Historical assessment under an earlier sanitization decision. {summary}"
             : summary;
-        Findings = snapshot?.Providers.SelectMany(ProjectFindings).ToArray() ?? [];
+        Findings = snapshot?.Providers.SelectMany(provider => ProjectFindings(snapshot, provider)).ToArray() ?? [];
     }
 
-    private static IEnumerable<AssessmentFinding> ProjectFindings(AssessmentProviderSnapshot provider)
+    private static IEnumerable<AssessmentFinding> ProjectFindings(
+        AssessmentSnapshot snapshot, AssessmentProviderSnapshot provider)
     {
         var providerName = provider.ProviderId.Value;
         yield return new AssessmentFinding("Provider collection", provider.Outcome switch
@@ -681,7 +697,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             ProviderRunOutcome.Unavailable => "Not available",
             ProviderRunOutcome.Cancelled => "Cancelled",
             _ => "Failed",
-        }, string.Empty, providerName);
+        }, "Provider collection", providerName, $"Collection · {providerName.Replace('-', ' ')}", "",
+            $"Assessment {snapshot.AssessmentId.Value}");
 
         foreach (var observation in provider.Observations)
         {
@@ -695,14 +712,32 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
                 _ => observation.Metadata.ValueAvailability == ValueAvailability.NotApplicable
                     ? "Not applicable" : "Not available",
             };
-            var detail = observation.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture
-                ? "Synthetic fixture" : observation.Metadata.EvidenceClassification.ToString();
+            var metadata = observation.Metadata;
+            var detail = metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture
+                ? "Synthetic fixture" : metadata.EvidenceClassification switch
+                {
+                    EvidenceClassification.NotAvailable => "Not available",
+                    EvidenceClassification.HumanConfirmed => "Human confirmed",
+                    _ => metadata.EvidenceClassification.ToString(),
+                };
             if (observation.LimitationCode is { } limitation)
             {
                 detail = $"{detail} ({limitation.Replace('_', ' ')})";
             }
 
-            yield return new AssessmentFinding(observation.EvidenceKey.Value, displayValue, detail, providerName);
+            string key = observation.EvidenceKey.Value;
+            string displayName = key switch
+            {
+                "memory.installed_bytes" => "Installed memory (bytes)",
+                "device.model" => "Device model",
+                "device.manufacturer" => "Device manufacturer",
+                "os.family" => "Windows family",
+                "system.architecture" => "System architecture",
+                _ => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(key.Replace('.', ' ').Replace('_', ' ')),
+            };
+            string technicalDetails = $"Assessment {snapshot.AssessmentId.Value}\nEvidence {metadata.EvidenceId.Value}\nField {key}\nProvenance {metadata.Provenance.SourceReference}";
+            yield return new AssessmentFinding(key, displayValue, detail, providerName, displayName,
+                metadata.CollectedAtUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture), technicalDetails);
         }
     }
 

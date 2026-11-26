@@ -27,6 +27,8 @@ public sealed class M1FixtureWindowTests
         {
             var workspace = fixture.CreateWorkspace();
             var window = fixture.CreateWindow(workspace, prefillInputs: true);
+            window.Width = 920;
+            window.Height = 550;
             AutomationProperties.SetAutomationId(window, scenarioId!);
             var expired = false;
             var timer = new DispatcherTimer(DispatcherPriority.Send, window.Dispatcher) { Interval = WindowLimit };

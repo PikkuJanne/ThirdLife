@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
+using System.Windows;
 using System.Windows.Controls;
 using ThirdLife.Actions.Execution;
 using ThirdLife.Actions.Journal;
@@ -38,9 +39,9 @@ public sealed partial class PlanReviewTests
                 var workspace = OpenInterruptionWorkspace(root.FullName, clock, backend);
                 workspace.OpenJobAsync(job.Value).GetAwaiter().GetResult();
                 Assert.Equal(job.Value, workspace.JobId);
-                InQualificationWindow(workspace, (window, panel) =>
+                InQualificationWindow(workspace, (window, _) =>
                 {
-                    var execution = Named<BrokerExecutionView>(panel, "BrokerExecutionPanel");
+                    var execution = Named<BrokerExecutionView>(Named<FrameworkElement>(window, "AuditView"), "BrokerExecutionPanel");
                     var history = Named<TextBox>(execution, "SavedBrokerHistory");
                     var recover = Named<Button>(execution, "CheckRecoveryButton");
                     Assert.True(history.IsVisible && history.IsReadOnly);
@@ -135,7 +136,7 @@ public sealed partial class PlanReviewTests
                 Named<TextBox>(panel, "BrokerOperator").Text = "fixture-interruption-operator";
                 ShellTestHost.Drain(window);
                 Approve(window, panel, workspace);
-                var execution = Named<BrokerExecutionView>(panel, "BrokerExecutionPanel");
+                var execution = Named<BrokerExecutionView>(Named<FrameworkElement>(window, "AuditView"), "BrokerExecutionPanel");
                 Invoke(window, Named<Button>(execution, "RunBrokerButton"));
                 WaitForQualificationOperator(window, static () => false, TimeSpan.FromSeconds(60));
             });

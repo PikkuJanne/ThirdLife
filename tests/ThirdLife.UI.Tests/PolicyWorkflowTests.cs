@@ -45,17 +45,18 @@ public sealed class PolicyWorkflowTests
 
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow(new ShellViewModel(), workspace) { Width = 640, Height = 500 };
+            var window = new MainWindow(workspace) { Width = 640, Height = 500 };
             try
             {
                 ShellTestHost.Show(window);
-                ShellTestHost.Invoke(window, "OpenAuditWorkspaceButton");
+                window.ShowStage(ShellStage.Inspect);
                 var audit = Named<FrameworkElement>(window, "AuditView");
                 var start = Named<Button>(audit, "StartAssessmentButton");
                 Assert.True(start.Focus());
                 Invoke(window, start);
                 PumpUntil(window, () => workspace.Assessment is not null && !workspace.IsBusy, () => workspace.AssessmentStatus);
 
+                window.ShowStage(ShellStage.Decide);
                 var panel = Named<PolicyDispositionView>(audit, "PolicyDispositionPanel");
                 panel.LayoutTransform = new ScaleTransform(2, 2);
                 ShellTestHost.Drain(window);
@@ -77,6 +78,7 @@ public sealed class PolicyWorkflowTests
                 Assert.Equal(assessmentId, workspace.Assessment!.AssessmentId);
                 Assert.Equal("Human review required", workspace.PolicyDispositionTitle);
 
+                window.ShowStage(ShellStage.Handover);
                 result = M1AuditJourneyTests.GenerateAndOpenReport(window, audit, workspace, jobId, assessmentId);
             }
             finally { CloseWindow(window); }
@@ -171,6 +173,14 @@ public sealed class PolicyWorkflowTests
         var historic = Assert.IsType<StoredPolicyDecision>(await history.LoadPolicyDecisionAsync(jobId, first.DecisionId)).Decision;
         Assert.Equal(first.RuleReport, historic.RuleReport);
         Assert.Equal(first.Explanation, historic.Explanation);
+
+        await reopened.RecordSanitizationAsync(VerifiedSample() with { MediaIdentifier = "fixture-new-media" });
+        Assert.True(reopened.CanAssess, reopened.GateStatus);
+        Assert.True(reopened.HasPolicyDecision);
+        Assert.False(reopened.CanReevaluatePolicy);
+        Assert.Equal(assessmentId, reopened.Assessment!.AssessmentId.Value);
+        Assert.Contains("earlier intake record", reopened.PolicyStatus, StringComparison.Ordinal);
+        Assert.Contains("current intake record", reopened.PolicyEvaluationRestriction, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -182,11 +192,12 @@ public sealed class PolicyWorkflowTests
 
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow(new ShellViewModel(), workspace) { Width = 640, Height = 500 };
+            var window = new MainWindow(workspace) { Width = 640, Height = 500 };
             try
             {
                 ShellTestHost.Show(window);
-                ShellTestHost.Invoke(window, "OpenAuditWorkspaceButton");
+                window.ShowStage(ShellStage.Decide);
+                ShellTestHost.Drain(window);
                 var audit = Named<FrameworkElement>(window, "AuditView");
                 var panel = Named<PolicyDispositionView>(audit, "PolicyDispositionPanel");
                 var evaluate = Named<Button>(panel, "EvaluatePolicyButton");
@@ -203,6 +214,8 @@ public sealed class PolicyWorkflowTests
                 Assert.Equal(AutomationLiveSetting.Polite, new TextBlockAutomationPeer(status).GetLiveSetting());
                 Assert.True(evaluate.IsEnabled);
                 Assert.False(reevaluate.IsEnabled);
+                Assert.True(evaluate.IsVisible);
+                Assert.False(reevaluate.IsVisible);
                 Assert.False(expert.IsVisible);
 
                 Assert.True(evaluate.Focus());
@@ -211,6 +224,8 @@ public sealed class PolicyWorkflowTests
                 Assert.Equal("Human review required", title.Text);
                 Assert.False(evaluate.IsEnabled);
                 Assert.True(reevaluate.IsEnabled);
+                Assert.False(evaluate.IsVisible);
+                Assert.True(reevaluate.IsVisible);
                 Assert.Equal("Policy and evidence details", disclosure.GetName());
                 Assert.False(expert.IsExpanded);
                 Assert.False(detailText.IsVisible);

@@ -48,6 +48,21 @@ internal sealed partial class AuditWorkspace
 
     public bool CanStartRetest => CanAssess && SavedRepairs.Count > 0;
 
+    public string? RepairRecordRestriction => JobEditRestriction ??
+        (RepairCandidates.Count == 0 ? "No saved finding is eligible for a repair record." : null);
+
+    public string? RepairRetestRestriction => JobEditRestriction ??
+        (SavedRepairs.Count == 0 ? "Record completed work before starting a linked retest."
+            : !CanAssess ? GateStatus : null);
+
+    private string? JobEditRestriction => CanEditJob ? null : Job switch
+    {
+        null => "Open a workshop job to continue.",
+        { IsArchived: true } => "This job is archived. Its saved records are read-only.",
+        _ when _hasSeparateEvidenceOrigin => GateStatus,
+        _ => "Wait for the active job operation to finish.",
+    };
+
     public Task RecordRepairAsync(RepairSuggestion suggestion, RepairAction action, string operatorCode) => RunAsync(async () =>
     {
         var job = RequireWritableJob();

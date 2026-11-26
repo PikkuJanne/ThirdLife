@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ThirdLife TRACE 1.0 design tokens.
+     Light palette: exact TRACE JSON color values; consume with DynamicResource. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="Trace.BgCanvasBrush" Color="#F4F6F0" />
+    <SolidColorBrush x:Key="Trace.BgSurfaceBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="Trace.BgRaisedBrush" Color="#E8EEE4" />
+    <SolidColorBrush x:Key="Trace.BgSelectionBrush" Color="#E3EBCD" />
+    <SolidColorBrush x:Key="Trace.BgDisabledBrush" Color="#E8EEE4" />
+    <SolidColorBrush x:Key="Trace.BorderPassiveBrush" Color="#CDD5CB" />
+    <SolidColorBrush x:Key="Trace.BorderControlBrush" Color="#718079" />
+    <SolidColorBrush x:Key="Trace.BorderDisabledBrush" Color="#B5BEB3" />
+    <SolidColorBrush x:Key="Trace.TextPrimaryBrush" Color="#17211B" />
+    <SolidColorBrush x:Key="Trace.TextSecondaryBrush" Color="#4D5B52" />
+    <SolidColorBrush x:Key="Trace.TextDisabledBrush" Color="#6E796F" />
+    <SolidColorBrush x:Key="Trace.ActionFillBrush" Color="#314D12" />
+    <SolidColorBrush x:Key="Trace.ActionFillHoverBrush" Color="#263D0D" />
+    <SolidColorBrush x:Key="Trace.ActionFillPressedBrush" Color="#1F330A" />
+    <SolidColorBrush x:Key="Trace.ActionTextBrush" Color="#F4F6F0" />
+    <SolidColorBrush x:Key="Trace.ActionOutlineBrush" Color="#314D12" />
+    <SolidColorBrush x:Key="Trace.SelectionIndicatorBrush" Color="#314D12" />
+    <SolidColorBrush x:Key="Trace.SelectionTextBrush" Color="#17211B" />
+    <SolidColorBrush x:Key="Trace.FocusRingBrush" Color="#314D12" />
+    <SolidColorBrush x:Key="Trace.LinkTextBrush" Color="#245E7E" />
+    <SolidColorBrush x:Key="Trace.StatusInfoBrush" Color="#245E7E" />
+    <SolidColorBrush x:Key="Trace.StatusAttentionBrush" Color="#795007" />
+    <SolidColorBrush x:Key="Trace.StatusErrorBrush" Color="#A53026" />
+    <SolidColorBrush x:Key="Trace.StatusSuccessBrush" Color="#17211B" />
+    <SolidColorBrush x:Key="Trace.StatusNotCheckedBrush" Color="#4D5B52" />
+    <SolidColorBrush x:Key="Trace.StatusOutOfDateBrush" Color="#795007" />
+    <SolidColorBrush x:Key="Trace.StatusRunningBrush" Color="#17211B" />
+    <SolidColorBrush x:Key="Trace.StatusCancelledBrush" Color="#4D5B52" />
+</ResourceDictionary>

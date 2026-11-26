@@ -117,6 +117,27 @@ function Invoke-Button([string] $Id) {
     $element.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
 }
 
+function Select-Stage([string] $Stage) {
+    $navigation = Wait-Observation { Find-Control "Stage$Stage" } "workflow stage $Stage"
+    $navigation.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern).Select()
+}
+
+function Read-PackageHistory() {
+    $summary = Find-Control 'PackageHistoryExpander'
+    if ($summary) {
+        $summary.GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
+        Read-Value 'SavedPackageHistory'
+    }
+}
+
+function Confirm-HandoverOpen() {
+    Select-Stage 'Handover'
+    $null = Wait-Observation {
+        $status = Find-Control 'HandoverStatus'
+        $status -and $status.Current.Name -ceq 'Device handover is still open'
+    } 'whole-device handover remains open'
+}
+
 function Select-Option([string] $Id, [string] $Name) {
     $combo = Wait-Observation { Find-Control $Id } $Id
     $expand = $combo.GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern)
@@ -198,6 +219,9 @@ function Read-Plan() {
         'Source notepad-plus-plus-releases',
         'Publisher Notepad Plus Plus',
         'Version 8.9.9.1',
+        'Architecture x64',
+        'Licence GPL-3.0-or-later',
+        'Installer route Windows Installer',
         'Installer SHA-256 e3b0607a092ce2604fbdac027db2c94915995e8e568ebd226f8c5493c2f61a80',
         'Scope Machine',
         'Verification Check the exact installed package identity and briefly launch the application with no documents'
@@ -228,10 +252,9 @@ try {
         }
     } 'application window' 30
     if ($window.Current.ProcessId -ne $process.Id) { throw 'Unexpected UI Automation window owner.' }
-    Invoke-Button 'OpenAuditWorkspaceButton'
-    $assess = Wait-Observation { Find-Control 'StartAssessmentButton' } 'intake gate'
-    if ((Read-Value 'CurrentJobId') -or $assess.Current.IsEnabled -or (Find-Control 'PrepareButton').Current.IsEnabled) {
-        throw 'The initial intake gate was not closed.'
+    $null = Wait-Observation { Find-Control 'CreateJobButton' } 'TRACE jobs entry'
+    if (Read-Value 'CurrentJobId') {
+        throw 'The initial jobs view exposed a job operation.'
     }
     $result.last_checkpoint = 'intake_gate_closed'
     if ($Preview) {
@@ -240,18 +263,22 @@ try {
         if ($Job -cnotmatch '\Ajob-[0-9a-f]{32}\z') { throw 'Unexpected saved job reference.' }
         $result.local_job = $Job
         $result.last_checkpoint = 'job_created'
+        Select-Stage 'Inspect'
+        $assess = Wait-Observation { Find-Control 'StartAssessmentButton' } 'intake gate'
+        if ($assess.Current.IsEnabled) { throw 'The initial intake gate was not closed.' }
     }
     elseif ($ResumePreview -or $Reopen -or $Install) {
         Set-Value 'JobIdInput' $Job
         Invoke-Button 'OpenJobButton'
         $null = Wait-Observation {
-            (Read-Value 'CurrentJobId') -ceq $Job -and (Find-Control 'OpenJobButton').Current.IsEnabled
+            (Read-Value 'CurrentJobId') -ceq $Job -and (Find-Control 'CloseJobButton').Current.IsEnabled
         } 'exact saved job'
         $result.local_job = $Job
         $result.last_checkpoint = 'job_reopened'
     }
 
     if ($Preview -or $resumeWithIntake) {
+        Select-Stage 'Intake'
         $expectedIntake = foreach ($culture in @([Globalization.CultureInfo]::GetCultureInfo('en-GB'),
             [Globalization.CultureInfo]::CurrentCulture)) {
             $displayDate = $intakeDate.ToString('d', $culture)
@@ -290,32 +317,45 @@ try {
         }
         $result.Remove('intake_validation')
         $result.last_checkpoint = 'attributed_intake_saved'
-        if (-not (Find-Control 'PrepareButton').Current.IsEnabled) {
+        Select-Stage 'Prepare'
+        $profile = Wait-Observation { Find-Control 'PlanProfileSelector' } 'preparation profile'
+        if (-not $profile.Current.IsEnabled) {
+            Select-Stage 'Intake'
             $complete = Find-Control 'CompleteSavedSanitizationButton'
             if ($complete -and $complete.Current.IsEnabled) {
                 Invoke-Button 'CompleteSavedSanitizationButton'
             }
+            Select-Stage 'Inspect'
             Invoke-Button 'StartAssessmentButton'
         }
     }
 
     if ($Preview -or $ResumePreview -or $Install) {
-        $null = Wait-Observation { (Find-Control 'PrepareButton').Current.IsEnabled } 'eligible preparation' 180
-        Invoke-Button 'PrepareButton'
+        if ($Install) {
+            Select-Stage 'Verify'
+            if (Read-PackageHistory) { throw 'Prior package history does not permit this first installation.' }
+        }
+        Select-Stage 'Prepare'
+        $null = Wait-Observation {
+            $profile = Find-Control 'PlanProfileSelector'
+            if ($profile -and $profile.Current.IsEnabled) { $profile }
+        } 'eligible preparation' 180
         Select-Option 'PlanProfileSelector' 'Plain-text editor (machine-wide setup)'
         Invoke-Button 'BuildPlanReviewButton'
         $result.plan_sha256 = Read-Plan
         $null = Wait-Observation {
             (Find-Control 'PackageSourceMessage').Current.Name -like 'The signed x64 installer matches*'
         } 'signed artifact and initial absence'
-        if ((Find-Control 'InstallPackageButton').Current.IsEnabled -or
-            (Find-Control 'HandoverButton').Current.IsEnabled) {
-            throw 'The unapproved plan exposed installation or handover.'
+        $unapprovedInstall = Find-Control 'InstallPackageButton'
+        if ($unapprovedInstall -and $unapprovedInstall.Current.IsEnabled) {
+            throw 'The unapproved plan exposed installation.'
         }
+        Confirm-HandoverOpen
+        Select-Stage 'Prepare'
         $result.last_checkpoint = 'exact_plan_displayed_without_approval'
         if ($Install) {
-            if ($result.plan_sha256 -cne $ExpectedPlanSha256 -or (Read-Value 'SavedPackageHistory')) {
-                throw 'The displayed plan or prior package history does not permit this first installation.'
+            if ($result.plan_sha256 -cne $ExpectedPlanSha256) {
+                throw 'The displayed plan does not match the approved digest.'
             }
             Set-Value 'PackageOperator' $OperatorCode
             if ((Read-Value 'PackageOperator') -cne $OperatorCode) {
@@ -335,16 +375,18 @@ try {
             $installControl.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
             $result.last_checkpoint = 'install_invoked_once'
             $outcome = Wait-Observation {
-                if ((Find-Control 'OpenJobButton').Current.IsEnabled) {
-                    $status = (Find-Control 'PlanStatusMessage').Current.Name
-                    $history = Read-Value 'SavedPackageHistory'
-                    if ($history -and $status -and $history.Contains($status) -and
-                        $status -cne 'Approved. No installation start was recorded.') {
-                        $status
-                    }
+                $status = (Find-Control 'PlanStatusMessage').Current.Name
+                if ((Find-Control 'CloseJobButton').Current.IsEnabled -and
+                    ($status -like 'Independent verification confirmed*' -or
+                    $status -like 'The installer reported that a restart is required*')) {
+                    $status
                 }
             } 'terminal package outcome' 600
-            if ((Find-Control 'HandoverButton').Current.IsEnabled) { throw 'Unexpected handover availability.' }
+            Select-Stage 'Verify'
+            $null = Wait-Observation {
+                $history = Read-PackageHistory
+                $history -and $history.Contains($outcome)
+            } 'saved outcome agrees with Prepare'
             switch -Exact ($outcome) {
                 'Independent verification confirmed the requested version is installed machine-wide and passed the launch check.' {
                     $result.last_checkpoint = 'machine_package_verified'
@@ -358,15 +400,13 @@ try {
                 }
                 default { throw 'The package attempt did not reach an accepted terminal state.' }
             }
+            Confirm-HandoverOpen
             $installSettled = $true
         }
     }
     elseif ($Reopen) {
-        $null = Wait-Observation {
-            (Find-Control 'AuditStatus').Current.Name -ceq 'Job opened. The committed records are shown below.'
-        } 'finished saved-job reconciliation' 45
-        $history = Wait-Observation { Read-Value 'SavedPackageHistory' } 'saved package journal' 35
-        if ((Find-Control 'HandoverButton').Current.IsEnabled) { throw 'Unexpected handover availability.' }
+        Select-Stage 'Verify'
+        $history = Wait-Observation { Read-PackageHistory } 'saved package journal' 35
         $verified = $history.Contains('Independent verification confirmed')
         if ($ExpectedRecovery -eq 'Verified' -and -not $verified) {
             throw 'The original transaction lacks independent verification.'
@@ -378,6 +418,7 @@ try {
                 throw 'The interrupted transaction did not re-observe registration and retain review.'
             }
         }
+        Confirm-HandoverOpen
         Invoke-Button 'GenerateReportButton'
         Invoke-Button 'OpenReportButton'
         $report = Wait-Observation { Read-Value 'WorkshopReportPreview' } 'reopened workshop report'

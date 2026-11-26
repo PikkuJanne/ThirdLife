@@ -5751,6 +5751,74 @@ tasks:
     authority: operator
     evidence: artifacts/evidence/TL-0412/report.md, attributable project-owner authorization and saved exact plan approval
   outcome: package-installation
+- id: TL-0413
+  title: Replace the normal application interface with TRACE
+  milestone: M4
+  workstream: ui
+  kind: code
+  priority: P0
+  status: done
+  size: L
+  executor: codex
+  environment: windows
+  depends_on:
+  - TL-0116
+  - TL-0207
+  - TL-0313
+  - TL-0411
+  decision_refs:
+  - D-002
+  - D-027
+  - D-039
+  - D-074
+  objective: Integrate the approved TRACE v1.0 presentation across the supported native workshop workflow.
+  deliverables:
+  - TRACE native shell, theme resources and stage-specific workspaces
+  - Native keyboard journey and deterministic package and accessibility verification
+  - artifacts/evidence/TL-0413/report.md
+  acceptance_criteria:
+  - Jobs and the six canonical stages expose their current operations and saved states through a single unelevated shell.
+  - Dark, light and Windows high contrast preserve selection, focus, reachable actions and scoped status.
+  - Saved jobs, evidence, policy, exact-plan approval, package execution, recovery and workshop reports retain existing authority and persistence.
+  verification:
+  - Run Quick, Targeted, clean Full and the native desktop keyboard and UI Automation journey.
+  - Exercise package recovery, historical results, focus, theme changes, and constrained native layout.
+  evidence:
+  - task: TL-0413
+    summary: The clean TRACE candidate passed governed validation, locked restore and all deterministic tests.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Separate clean worktree on active Windows 11 Pro 26H2 build 26300.9974 native x64
+    date: '2026-11-26'
+    duration: 371.694 s
+    reference: artifacts/evidence/TL-0413/report.md, source 0c0b22b989592540523e16c696fa888fcfcf1d7d
+    limitation: Active-machine and Extended scenarios were run separately.
+  - task: TL-0413
+    summary: The keyboard journey saved and reopened the same job and verified the original saved report bytes.
+    command_or_review: eng/run-m1-audit-journey.ps1 -VerifyAccessibility and eng/run-ui-smoke.ps1
+    tier: targeted
+    result: passed
+    environment: Unelevated active Windows 11 desktop, 240 DPI for the owned fixture journey
+    date: '2026-11-26'
+    duration: 7.884 s keyboard journey and 1.304 s ordinary apphost smoke
+    reference: artifacts/evidence/TL-0413/report.md, source 0c0b22b989592540523e16c696fa888fcfcf1d7d
+    limitation: UI Automation and fixtures cover technical accessibility. Live consent and physical hardware remain separately scoped.
+  - task: TL-0413
+    summary: Saved no-op and package journals recovered after owned fixture process and backend interruption.
+    command_or_review: Release UI Extended interruption filter listed in the evidence report
+    tier: extended
+    result: passed
+    environment: Unelevated active Windows 11 x64, isolated fixture stores
+    date: '2026-11-26'
+    duration: 14 s
+    reference: artifacts/evidence/TL-0413/report.md, source 0c0b22b989592540523e16c696fa888fcfcf1d7d
+    limitation: The fixtures made no real broker or package dispatch.
+  expected_test_tier: full
+  full_test_triggers:
+  - Major shared native UI refactor and cumulative integration.
+  extended_test_triggers:
+  - Verify close and interruption recovery through the replaced stage routes.
 - id: TL-0501
   title: Execute dependency-aware multi-action plans
   milestone: M5

@@ -11,18 +11,14 @@ namespace ThirdLife.UI.Features.PlanReview;
 public partial class PlanReviewView : UserControl
 {
     private IInputElement? _detailsHeaderFocus;
+    private PlanReviewSnapshot? _detailsPlan;
     private string? _announcedStatus;
     private string? _announcedPackageStatus;
-    private string? _announcedPackageRecovery;
-    private string? _announcedPackageRetry;
 
     public PlanReviewView() => InitializeComponent();
 
-    internal void FocusReview()
-    {
-        PlanReviewRegion.Focus();
-        PlanReviewRegion.BringIntoView();
-    }
+    private void ResizeMaterialImpact(object sender, SizeChangedEventArgs args) =>
+        MaterialImpactItems.Tag = args.NewSize.Width >= 560 ? 2 : 1;
 
     private async void BuildPlanReview(object sender, RoutedEventArgs args)
     {
@@ -40,7 +36,8 @@ public partial class PlanReviewView : UserControl
         {
             var hadFocus = ApprovePlanReviewButton.IsKeyboardFocused;
             await workspace.ApprovePlanReviewAsync();
-            RestoreFocus(PlanStatusMessage, hadFocus);
+            RestoreFocus(InstallPackageButton.IsVisible && InstallPackageButton.IsEnabled
+                ? InstallPackageButton : PlanStatusMessage, hadFocus);
         }
     }
 
@@ -60,7 +57,7 @@ public partial class PlanReviewView : UserControl
         {
             var hadFocus = InstallPackageButton.IsKeyboardFocused;
             await workspace.InstallPackageAsync();
-            RestoreFocus(workspace.HasPackageHistory ? SavedPackageHistory : PlanStatusMessage, hadFocus);
+            RestoreFocus(PlanStatusMessage, hadFocus);
         }
     }
 
@@ -74,39 +71,11 @@ public partial class PlanReviewView : UserControl
         }
     }
 
-    private async void RetryPackage(object sender, RoutedEventArgs args)
-    {
-        if (DataContext is AuditWorkspace workspace && workspace.CanRetryPackage)
-        {
-            var hadFocus = RetryPackageButton.IsKeyboardFocused;
-            await workspace.RetryPackageAsync();
-            RestoreFocus(PlanStatusMessage, hadFocus);
-        }
-    }
-
-    private async void CheckPackageRecovery(object sender, RoutedEventArgs args)
-    {
-        if (DataContext is AuditWorkspace workspace && workspace.CanCheckPackageRecovery)
-        {
-            var hadFocus = CheckPackageRecoveryButton.IsKeyboardFocused;
-            await workspace.CheckPackageRecoveryAsync();
-            RestoreFocus(PackageRecoveryMessage, hadFocus);
-        }
-    }
-
-    private void CancelPackageRecovery(object sender, RoutedEventArgs args)
-    {
-        if (DataContext is AuditWorkspace workspace && workspace.CanCancelPackageRecovery)
-        {
-            var hadFocus = CancelPackageRecoveryButton.IsKeyboardFocused;
-            workspace.CancelPackageOperation();
-            RestoreFocus(PackageRecoveryMessage, hadFocus);
-        }
-    }
-
     private void RestoreFocus(FrameworkElement target, bool hadFocus)
     {
-        if (hadFocus && target.IsVisible && (IsKeyboardFocusWithin || Keyboard.FocusedElement is null))
+        var focused = Keyboard.FocusedElement;
+        if (hadFocus && target.IsVisible && (IsKeyboardFocusWithin || focused is null ||
+            focused is ScrollViewer ancestor && ancestor.IsAncestorOf(this)))
         {
             target.Focus();
             target.BringIntoView();
@@ -155,10 +124,12 @@ public partial class PlanReviewView : UserControl
 
     private void UpdateDetailsVisibility(object sender, DependencyPropertyChangedEventArgs args)
     {
-        if (sender is Expander expander)
+        if (sender is Expander { IsVisible: true } expander && DataContext is AuditWorkspace workspace &&
+            !ReferenceEquals(_detailsPlan, workspace.PlanReview))
         {
             _detailsHeaderFocus = null;
-            expander.IsExpanded = expander.IsVisible;
+            _detailsPlan = workspace.PlanReview;
+            expander.IsExpanded = !workspace.HasMaterialPlanImpact;
         }
     }
 
@@ -169,9 +140,7 @@ public partial class PlanReviewView : UserControl
             return;
         }
 
-        ref var announced = ref (ReferenceEquals(message, PackageSourceMessage) ? ref _announcedPackageStatus :
-            ref (ReferenceEquals(message, PackageRecoveryMessage) ? ref _announcedPackageRecovery :
-                ref (ReferenceEquals(message, PackageRetryMessage) ? ref _announcedPackageRetry : ref _announcedStatus)));
+        ref var announced = ref (ReferenceEquals(message, PackageSourceMessage) ? ref _announcedPackageStatus : ref _announcedStatus);
         if (string.Equals(announced, message.Text, StringComparison.Ordinal))
         {
             return;

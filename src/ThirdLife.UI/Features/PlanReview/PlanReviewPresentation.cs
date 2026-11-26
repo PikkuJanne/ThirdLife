@@ -34,7 +34,10 @@ internal sealed class PlanCapabilityChoice(ProfileCapability capability, Func<bo
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
-internal sealed record PlanReviewSnapshot(ProposedPlan Plan, PlanImpact Impact, string Title, string Details);
+internal sealed record PlanReviewItem(string Label, string Value);
+
+internal sealed record PlanReviewSnapshot(ProposedPlan Plan, PlanImpact Impact, string Title, string Details,
+    string Identity, string Scope, IReadOnlyList<PlanReviewItem> MaterialImpact);
 
 internal enum PlanReviewOutcome
 {
@@ -94,8 +97,29 @@ internal static class PlanReviewPresentation
             }
         }
 
-        return new PlanReviewSnapshot(plan, impact, title, details.ToString());
+        var package = impact.Actions.Length == 1 ? impact.Actions[0].Action.Request as InstallPackageActionRequest : null;
+        var identity = package is null ? string.Empty :
+            $"{package.PackageId} · {package.ExactVersion} · {Architecture(package.Architecture)}";
+        var scope = package is null ? string.Empty :
+            $"{(package.Scope == ActionScope.Machine ? "All users" : "Current user")} · {package.SourceId}";
+        return new PlanReviewSnapshot(plan, impact, title, details.ToString(), identity, scope,
+            package is null ? [] : PackageImpact(impact.Actions[0], WorkshopPackageProfile.IncludesLaunchProbe(plan)));
     }
+
+    private static PlanReviewItem[] PackageImpact(ActionImpact impact, bool includesLaunchProbe) =>
+    [
+        new("Actions", $"Install the reviewed {impact.Action.CatalogEntry.Package.PackageId} package"),
+        new("Data touched", "Installer staging files, application files and Windows Installer registration"),
+        new("Windows permission", impact.Privilege == ActionPrivilege.Elevated ?
+            "Windows may request administrator consent" : "Unelevated"),
+        new("Network", $"{NetworkCategory(impact.NetworkCategory)} · {NetworkRequirement(impact.Network)}"),
+        new("Disk", $"Installer download {Bytes(impact.DownloadBytes)} · Installed size {Bytes(impact.InstalledBytes)}. Staging checks available space."),
+        new("Restart", $"Restart {Restart(impact.Restart).ToLower(CultureInfo.CurrentCulture)}. Use Windows to restart when required."),
+        new("Recovery", "Review actual installed state before another attempt. Changes are not undone automatically."),
+        new("Independent verification", includesLaunchProbe ?
+            "Exact product, version and scope, followed by an owned document-free launch and exit check" :
+            "Exact installed package identity"),
+    ];
 
     internal static string CapabilityName(string id) => id switch
     {
@@ -117,6 +141,17 @@ internal static class PlanReviewPresentation
         details.AppendLine(CultureInfo.CurrentCulture, $"Source {entry.Package.SourceId}");
         details.AppendLine(CultureInfo.CurrentCulture, $"Publisher {entry.Review.Publisher}");
         details.AppendLine(CultureInfo.CurrentCulture, $"Version {entry.Package.ExactVersion}");
+        if (impact.Action.Request is InstallPackageActionRequest request)
+        {
+            details.AppendLine(CultureInfo.CurrentCulture, $"Architecture {Architecture(request.Architecture)}");
+            details.AppendLine(CultureInfo.CurrentCulture, $"Licence {entry.Review.DeclaredLicense}");
+        }
+
+        if (includesLaunchProbe)
+        {
+            details.AppendLine("Installer route Windows Installer");
+        }
+
         if (entry.Package.InstallerSha256 is { } installer)
         {
             details.AppendLine(CultureInfo.CurrentCulture, $"Installer SHA-256 {installer}");
@@ -125,13 +160,7 @@ internal static class PlanReviewPresentation
         details.AppendLine(CultureInfo.CurrentCulture, $"Privilege {(impact.Privilege == ActionPrivilege.Elevated ? "Elevation required" : "Unelevated")}");
         details.AppendLine(CultureInfo.CurrentCulture, $"Download {Bytes(impact.DownloadBytes)}");
         details.AppendLine(CultureInfo.CurrentCulture, $"Installed size {Bytes(impact.InstalledBytes)}");
-        details.AppendLine(CultureInfo.CurrentCulture, $"Restart {impact.Restart switch
-        {
-            RestartEstimate.None => "None",
-            RestartEstimate.Possible => "Possible",
-            RestartEstimate.Required => "Required",
-            _ => "Unknown",
-        }}");
+        details.AppendLine(CultureInfo.CurrentCulture, $"Restart {Restart(impact.Restart)}");
         details.AppendLine(CultureInfo.CurrentCulture, $"Network {NetworkCategory(impact.NetworkCategory)} ({NetworkRequirement(impact.Network)})");
         details.AppendLine(CultureInfo.CurrentCulture, $"Rollback {(impact.Rollback == ActionRollback.NoChanges ? "No changes to reverse" : "Manual review")}");
         var verification = impact.Verification == ActionVerification.NoMachineChange ? "Confirm no machine change" :
@@ -150,6 +179,22 @@ internal static class PlanReviewPresentation
 
     private static string NetworkCategory(ActionNetworkUse category) =>
         category == ActionNetworkUse.None ? "None" : "Software download";
+
+    private static string Architecture(ActionArchitecture architecture) => architecture switch
+    {
+        ActionArchitecture.X64 => "x64",
+        ActionArchitecture.Arm64 => "ARM64",
+        ActionArchitecture.X86 => "x86",
+        _ => "Unknown architecture",
+    };
+
+    private static string Restart(RestartEstimate estimate) => estimate switch
+    {
+        RestartEstimate.None => "None",
+        RestartEstimate.Possible => "Possible",
+        RestartEstimate.Required => "Required",
+        _ => "Unknown",
+    };
 
     private static string NetworkRequirement(NetworkEstimate estimate) => estimate switch
     {

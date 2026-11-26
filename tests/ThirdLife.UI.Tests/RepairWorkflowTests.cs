@@ -144,9 +144,8 @@ public sealed class RepairWorkflowTests
                 var action = Named<ComboBox>(view, "RepairActionInput");
                 var operatorCode = Named<TextBox>(view, "RepairOperatorInput");
                 var saved = Named<ComboBox>(view, "SavedRepairInput");
-                var children = Assert.IsType<StackPanel>(form.Content).Children.OfType<Button>();
-                var record = Assert.Single(children, button => (string)button.Content == "Record completed repair");
-                var retest = Assert.Single(children, button => (string)button.Content == "Start linked read-only retest");
+                var record = Named<Button>(view, "RecordRepairButton");
+                var retest = Named<Button>(view, "StartRetestButton");
 
                 Assert.Equal("Device class", new ComboBoxAutomationPeer(deviceClass).GetName());
                 Assert.Equal("Saved finding for completed work", new ComboBoxAutomationPeer(finding).GetName());

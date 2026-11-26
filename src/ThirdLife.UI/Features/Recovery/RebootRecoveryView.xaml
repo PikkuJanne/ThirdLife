@@ -4,18 +4,21 @@
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="RecoveryVisibility" />
   </UserControl.Resources>
-  <GroupBox Header="Restart recovery" AutomationProperties.Name="Restart recovery"
-            Visibility="{Binding HasRebootRecovery, Converter={StaticResource RecoveryVisibility}}">
+  <Border Style="{DynamicResource Trace.EvidencePanel}" Margin="0,16,0,0"
+          Visibility="{Binding HasRebootRecovery, Converter={StaticResource RecoveryVisibility}}">
     <StackPanel>
+      <TextBlock Text="Restart recovery" Style="{DynamicResource Trace.SectionText}" TextWrapping="Wrap"
+                 AutomationProperties.HeadingLevel="Level2" />
       <StackPanel Visibility="{Binding HasPendingRebootRecovery, Converter={StaticResource RecoveryVisibility}}">
         <TextBlock Text="The saved action requires fresh verification. Resuming opens it for review without running it again."
-                   TextWrapping="Wrap" />
+                   TextWrapping="Wrap" Margin="0,4,0,0" />
         <Label Target="{Binding ElementName=RecoveryChoice}" Content="Saved restart checkpoint" />
         <ComboBox x:Name="RecoveryChoice" ItemsSource="{Binding RebootRecoveryChoices}"
                   SelectedItem="{Binding SelectedRebootRecovery}" DisplayMemberPath="Label"
                   AutomationProperties.Name="Saved restart checkpoint" />
-        <WrapPanel>
+        <WrapPanel Margin="0,8,0,0">
           <Button x:Name="ResumeButton" Content="Resume for review" Click="Resume"
+                  Style="{DynamicResource Trace.PrimaryButton}"
                   IsEnabled="{Binding CanResumeRebootRecovery}" Margin="0,0,8,4" />
           <Button x:Name="AbandonButton" Content="Abandon resume" Click="Abandon"
                   IsEnabled="{Binding CanAbandonRebootRecovery}" Margin="0,0,0,4" />
@@ -26,5 +29,5 @@
                  TextWrapping="Wrap" AutomationProperties.Name="{Binding RebootRecoveryStatus}"
                  AutomationProperties.LiveSetting="Polite" />
     </StackPanel>
-  </GroupBox>
+  </Border>
 </UserControl>

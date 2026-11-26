@@ -43,7 +43,7 @@ public sealed partial class PackageSetupTests
                 return new FixtureArtifact();
             };
 
-            InPackageRecoveryWindow(workspace, (window, panel) =>
+            InPackagePreparationWindow(workspace, (window, panel) =>
             {
                 var status = Named<TextBlock>(panel, "PackageSourceMessage");
                 var peer = new TextBlockAutomationPeer(status);
@@ -123,7 +123,7 @@ public sealed partial class PackageSetupTests
 
         clock.Current = Now.AddSeconds(5);
         Assert.True(reopened.CanRetryPackage, reopened.PlanReviewStatus);
-        InPackageRecoveryWindow(reopened, (window, panel) =>
+        InPackageVerificationWindow(reopened, (window, panel) =>
         {
             var retry = Named<Button>(panel, "RetryPackageButton");
             var peer = ShellTestHost.ButtonPeer(retry);
@@ -140,7 +140,7 @@ public sealed partial class PackageSetupTests
             Invoke(window, retry);
             PumpUntil(window, () => !reopened.IsBusy &&
                 reopened.PackageHistoryText.Contains("Independent verification confirmed", StringComparison.Ordinal));
-            Assert.Same(Named<TextBlock>(panel, "PlanStatusMessage"), Keyboard.FocusedElement);
+            Assert.Same(message, Keyboard.FocusedElement);
             Assert.Contains("lost its connection", reopened.PackageHistoryText, StringComparison.OrdinalIgnoreCase);
             Assert.False(reopened.CanRetryPackage);
         });
@@ -179,7 +179,7 @@ public sealed partial class PackageSetupTests
         await using (var workspace = OpenWorkspace(disk, reports, service))
         {
             jobId = await ApproveInitialPackagePlanAsync(workspace);
-            InPackageRecoveryWindow(workspace, (window, panel) =>
+            InPackagePreparationWindow(workspace, (window, panel) =>
             {
                 var status = Named<TextBlock>(panel, "PackageSourceMessage");
                 var peer = new TextBlockAutomationPeer(status);
@@ -216,7 +216,7 @@ public sealed partial class PackageSetupTests
         Assert.False(reopened.CanInstallPackage);
         Assert.True(reopened.CanCheckPackageRecovery);
         var inspections = runtime.Inspections;
-        InPackageRecoveryWindow(reopened, (window, panel) =>
+        InPackageVerificationWindow(reopened, (window, panel) =>
         {
             var check = Named<Button>(panel, "CheckPackageRecoveryButton");
             Assert.True(ShellTestHost.ButtonPeer(check).IsKeyboardFocusable());
@@ -288,14 +288,24 @@ public sealed partial class PackageSetupTests
         return workspace.Job!.Job.JobId;
     }
 
-    private static void InPackageRecoveryWindow(AuditWorkspace workspace, Action<Window, PlanReviewView> check) => ShellTestHost.Run(() =>
+    private static void InPackagePreparationWindow(AuditWorkspace workspace, Action<MainWindow, PlanReviewView> check) =>
+        InPackageStage(workspace, ShellStage.Prepare, "PlanReviewPanel", check);
+
+    private static void InPackageVerificationWindow(AuditWorkspace workspace, Action<MainWindow, PackageVerificationView> check) =>
+        InPackageStage(workspace, ShellStage.Verify, "PackageVerificationPanel", check);
+
+    private static void InPackageStage<T>(AuditWorkspace workspace, ShellStage stage, string viewName,
+        Action<MainWindow, T> check) where T : FrameworkElement => ShellTestHost.Run(() =>
     {
-        var window = new MainWindow(new ShellViewModel(), workspace);
+        var window = new MainWindow(workspace);
         try
         {
             ShellTestHost.Show(window);
-            ShellTestHost.Invoke(window, "PrepareButton");
-            check(window, Named<PlanReviewView>(Named<FrameworkElement>(window, "AuditView"), "PlanReviewPanel"));
+            window.ShowStage(stage);
+            ShellTestHost.Drain(window);
+            var view = Named<T>(Named<FrameworkElement>(window, "AuditView"), viewName);
+            Assert.True(view.IsVisible);
+            check(window, view);
         }
         finally { CloseWindow(window); }
     });

@@ -24,6 +24,9 @@ internal sealed partial class AuditWorkspace
     {
         PackageRetryStatus.CoolingDown when ShowPackageRetry => "Wait briefly before retrying the saved package attempt.",
         PackageRetryStatus.Ready when CanRetryPackage => "You can retry the saved package. ThirdLife will check the current plan and approval first.",
+        PackageRetryStatus.Ready when ShowPackageRetry && IsBusy => "Wait for the current job operation to finish before retrying.",
+        PackageRetryStatus.Ready when ShowPackageRetry && _packageNeedsReview => "Check the saved package state before retrying.",
+        PackageRetryStatus.Ready when ShowPackageRetry => "A current assessment and matching intake decision are required before retrying.",
         PackageRetryStatus.Exhausted => "This saved job has reached its package attempt limit. Review its history.",
         PackageRetryStatus.Verified => "The saved plan already has an independently verified result.",
         _ => string.Empty,

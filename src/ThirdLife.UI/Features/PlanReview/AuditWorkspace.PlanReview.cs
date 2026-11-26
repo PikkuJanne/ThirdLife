@@ -23,6 +23,7 @@ internal sealed partial class AuditWorkspace
     private string _planReviewStatus = "Open a current assessment to review a preparation plan.";
 
     public IReadOnlyList<PlanProfileOption> PlanProfiles { get; }
+    public IReadOnlyList<PlanProfileOption> VisiblePlanProfiles { get; }
     public IReadOnlyList<PlanCapabilityChoice> PlanCapabilities { get; private set; } = [];
     public PlanReviewSnapshot? PlanReview { get; private set; }
     public PlanReviewDecision? PlanReviewDecision { get; private set; }
@@ -30,6 +31,17 @@ internal sealed partial class AuditWorkspace
     public bool HasPlanReview => PlanReview is not null;
     public string PlanReviewTitle => PlanReview?.Title ?? string.Empty;
     public string PlanReviewDetails => DescribePlanReview();
+    public string PlanReviewChanges => _planReviewChanges ?? string.Empty;
+    public bool HasMaterialPlanImpact => PlanReview?.MaterialImpact.Count > 0;
+    public bool ShowsPackageInstall => IsPackageProfile && PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved };
+    public bool ShowsPlanDecision => HasPlanReview && PlanReviewDecision is null;
+    public bool CanChoosePlanProfile => VisiblePlanProfiles.Count != 0 && CanReviewPlan;
+    public string PlanReviewAccess => HasPlanReview || CanChoosePlanProfile ? string.Empty :
+        IsBusy ? "Wait for the current job operation to finish." :
+        Job is { IsArchived: true } ? "This job is archived. Its saved records are read-only." :
+        Gate is not { AllowsAssessment: true } ? GateStatus :
+        VisiblePlanProfiles.Count == 0 ? "No reviewed preparation profile is available in this build." :
+        "Complete a current assessment before building a plan.";
     public string PlanReviewStatus => CanRecordPlanReviewDecision
         ? _planReviewStatus
         : _planReviewStatus + " The decision history for this job session is full. Review remains available.";

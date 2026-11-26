@@ -31,6 +31,16 @@ internal sealed partial class AuditWorkspace
     public bool IsPackageProfile => SelectedPlanProfile?.PackagePolicy is not null;
     public string PackageHistoryText { get; private set; } = string.Empty;
     public bool HasPackageHistory => PackageHistoryText.Length != 0;
+    public string LatestPackageIdentity { get; private set; } = string.Empty;
+    public string LatestPackageOutcome { get; private set; } = string.Empty;
+    public IReadOnlyList<PackageJournalItem> PackageJournal { get; private set; } = [];
+    public bool IsPackageOperationRunning => _packageCancellation is not null;
+    public bool ShowsPackageOperationStatus => IsPackageProfile || IsPackageOperationRunning;
+    public bool ShowsVerifyEmptyState => !HasPackageHistory && !HasRebootRecovery && !HasBrokerHistory;
+    public bool ShowsPackageInstallActivity => IsPackageOperationRunning && !ShowsPackageRecoveryCancellation;
+    public bool ShowsPackageVerificationPlanStatus => HasPackageHistory && IsPackageProfile && PlanReviewStatus != LatestPackageOutcome;
+    public bool ShowsPackageVerificationActions => ShowsPackageRecovery || HasPackageRetryStatus ||
+        ShowPackageRetry || IsPackageOperationRunning || ShowsPackageVerificationPlanStatus;
     public bool CanCancelPackage => _packageCancellation is { IsCancellationRequested: false } &&
         (_packageAttemptProgress?.AcceptsCancellation ?? true);
     public bool ShowsPackageRecovery => OffersPackageRecoveryCheck || PackageRecoveryStatus.Length != 0;
@@ -500,7 +510,45 @@ internal sealed partial class AuditWorkspace
         PackageHistoryText = string.Join(Environment.NewLine, attempts.Select(package =>
             string.Create(CultureInfo.CurrentCulture,
                 $"{package.PackageId} {package.RequestedVersion}, machine-wide. {WorkshopReportRenderer.DescribePackageOutcome(package.Outcome)}")));
+        var last = attempts.LastOrDefault();
+        LatestPackageIdentity = last is null ? string.Empty :
+            $"{last.PackageId} · {last.RequestedVersion} · All users";
+        LatestPackageOutcome = last is null ? string.Empty : WorkshopReportRenderer.DescribePackageOutcome(last.Outcome);
+        PackageJournal = histories
+            .Where(history => PackageHistoryRequest(history) is not null)
+            .SelectMany(history => history.Entries.Reverse().Select(entry => (Entry: entry, Plan: history.Plan.Key.PlanSha256)))
+            .OrderByDescending(item => item.Entry.OccurredAtUtc)
+            .Take(24)
+            .Select(item => PresentPackageJournalEntry(item.Entry, item.Plan))
+            .ToArray();
         RefreshPackageRetryAfterDelay();
+    }
+
+    private static PackageJournalItem PresentPackageJournalEntry(JournalEntry entry, string planHash)
+    {
+        var outcome = entry.State switch
+        {
+            JournalState.Approved => "An operator approved the exact plan at this time.",
+            JournalState.Started => "The intent was recorded before requesting Windows Installer.",
+            JournalState.Applied when entry.Checkpoint != JournalCheckpoint.RestartRequired => "Windows Installer reported success.",
+            _ => WorkshopReportRenderer.DescribePackageOutcome(ReportOutcome(entry.State, entry.Result, entry.Checkpoint)),
+        };
+        var title = entry.State switch
+        {
+            JournalState.Approved => "Exact plan approval saved",
+            JournalState.Started => "Dispatch intent saved",
+            JournalState.Applied => "Installer result saved",
+            JournalState.Verified => "Independent verification saved",
+            JournalState.RequiresReview => "Review needed",
+            JournalState.Failed => "Operation failed",
+            JournalState.Skipped => "Operation skipped",
+            JournalState.RolledBack => "Rollback result saved",
+            _ => "Package record saved",
+        };
+        return new PackageJournalItem(title, outcome,
+            entry.OccurredAtUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture),
+            FormattableString.Invariant(
+                $"{entry.OccurredAtUtc:O}{Environment.NewLine}{entry.Checkpoint} · {entry.Result}{Environment.NewLine}Action {entry.ActionId:D}{Environment.NewLine}Plan SHA-256 {planHash}"));
     }
 
     private void ClearPackageHistory()
@@ -510,6 +558,9 @@ internal sealed partial class AuditWorkspace
         _packageNeedsReview = false;
         _canInspectSavedPackage = false;
         PackageHistoryText = string.Empty;
+        LatestPackageIdentity = string.Empty;
+        LatestPackageOutcome = string.Empty;
+        PackageJournal = [];
         PackageRecoveryStatus = string.Empty;
     }
 

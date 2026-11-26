@@ -1,81 +1,30 @@
-# ThirdLife Setup Core — Current status
+# ThirdLife Setup Core - Current status
 
 **Snapshot date** 2026-11-26  
 **Bundle baseline** 0.8.0  
-**Runtime authority** Active Codex machine only. Remote CI is supplementary.  
-**Verified outcomes** One machine-wide package transaction and the reviewed no-op broker
+**Runtime authority** Active Codex machine only. Remote CI is supplementary.
 
-The [development contract reset](docs/amendments/2026-11-25-development-contract-reset.md)
-establishes the product contract and separates implementation dependencies, execution
-prerequisites and exposure decisions. `TASKS.yaml` is the current work record.
+TRACE is the default unelevated native interface on `main`. Jobs and the six stages
+expose saved intake, findings and manual checks, candidate policy, exact
+package review and approval, independent verification and recovery, and the
+restricted workshop report. The verified application source and test limits
+are recorded with TL-0413. [TRACE verification](artifacts/evidence/TL-0413/report.md)
 
-TL-0412 completed. The ordinary unelevated application installed the reviewed Notepad++
-x64 vendor MSI machine-wide. Independent Windows Installer registration verified the
-exact product, version and scope. The reopened job, durable journal and saved workshop
-report agree. [Package evidence](artifacts/evidence/TL-0412/report.md)
+M4 is complete for the reviewed machine-wide vendor MSI. TL-0412 recorded an
+actual installation through the application, independent Windows Installer
+verification and matching saved job, journal and report. Each new transaction
+still requires exact action approval and applicable Windows consent.
+[M4 gate](artifacts/gates/M4-package-vertical-slice.md)
+[Live package evidence](artifacts/evidence/TL-0412/report.md)
 
-TL-0316 reconciled the broker checkpoint from PR #36 with the reset. The installed
-Microsoft x64 tools and pinned .NET inputs built the Native AOT broker. Protected
-provisioning verified, and one broker rehearsal authenticated the client, completed
-its no-op and exited through the Windows elevation route. [Broker evidence](artifacts/evidence/TL-0311/report.md)
+TL-0317 qualified the no-op broker in the same-machine Windows 11 guest.
+TL-0313 completed application orchestration at implementation scope.
+Ordinary broker-dependent dispatch still requires TL-0318 live application
+qualification and the TL-0314 privilege decision.
+[Guest qualification](artifacts/evidence/TL-0317/report.md)
+[Application orchestration](artifacts/evidence/TL-0313/report.md)
 
-TL-0317 completed the reviewed no-op broker qualification and cleared the TL-0311
-implementation prerequisite. All eight named cases passed in the Windows 11
-Hyper-V guest using PowerShell Direct and the local DPAPI credential. Evidence
-includes actual Windows consent and decline, distinct-account denial, recovery,
-and cleanup. Ordinary broker-dependent dispatch requires live application
-qualification under TL-0318 and the TL-0314 privilege decision.
-[Guest runner and evidence](artifacts/evidence/TL-0317/report.md)
-
-TL-0312 completed the focused broker security checks for the reviewed no-op scope.
-Forbidden request fields and failed peer reauthentication were rejected before
-dispatch. The unelevated launch and bounded parser checks passed, and clean Full
-passed on `e734b5f`. Windows consent, distinct-account denial and teardown retain
-their TL-0317 provenance. [Broker security evidence](artifacts/evidence/TL-0312/report.md)
-
-TL-0313 is complete at implementation scope on `main`. The guest preview reopened the
-exact no-op plan, and the WPF process-kill scenario recovered the durable job.
-TL-0318 holds the live guest cases for an attended window with exact WPF
-approval and Windows consent for each plan. M3 technical preparation can proceed.
-[Orchestration evidence](artifacts/evidence/TL-0313/report.md)
-
-TL-0405 verified journal-correlated package progress and the saved-job recovery
-paths. Download cancellation or connection loss permits a fresh reviewed
-approval. Installer timeout, reported cancellation and process termination
-leave uncertain attempts in review with a read-only registration check. A
-streamed connection fault also verified partial installer cleanup.
-[Package interruption evidence](artifacts/evidence/TL-0405/report.md)
-
-TL-0406 independently confirmed exact machine-wide Notepad++ registration and
-launched the reviewed installed executable in isolation on the active machine.
-The probe cleaned up its process and temporary files. WPF fixtures retained
-distinct applied and verified results through job reopen and report generation.
-[Package verification evidence](artifacts/evidence/TL-0406/report.md)
-
-TL-0407 records typed package failure codes in the app, durable journal and
-workshop report. Protected logs and support omit raw backend details.
-[Package diagnostics evidence](artifacts/evidence/TL-0407/report.md)
-
-TL-0408 completed package recovery implementation. Reopening the saved job
-continues independent verification after an applied result and rechecks
-registration for ambiguous attempts. A protected restart checkpoint permits
-verification after confirmed boot evidence.
-[Package recovery evidence](artifacts/evidence/TL-0408/report.md)
-
-TL-0409 completed package idempotency and retry. Verified plans skip another
-installation. Eligible failures retain linked attempts and a durable three-start
-limit. Expired approvals or changed resolutions require fresh review.
-[Package retry evidence](artifacts/evidence/TL-0409/report.md)
-
-TL-0410 completed the first live package write slice. The verified installation
-and its report survived an orderly restart. Native UAC decline and exact
-installer-client interruption preserved one dispatch per job and withheld
-handover. Independent MSI checks and the final clean checkpoint restore passed.
-[M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)
-
-TL-0411 completed the M4 package-installation gate. Clean Full, the failure
-matrix, and package trust and privacy checks passed. The product and security
-owner approved the exact verified candidate for internal use of the pinned
-package route. Each transaction retains exact plan approval and Windows consent.
-TL-0501 is the next M5 implementation task.
-[M4 evidence and approval](artifacts/gates/M4-package-vertical-slice.md)
+TL-0501 is the next M5 implementation task. Start by validating dependency
+and phase ordering against a bounded plan and recovering per-action state
+from its saved journal. `TASKS.yaml` records the existing execution and release
+prerequisites.
