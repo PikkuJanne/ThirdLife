@@ -5554,7 +5554,7 @@ tasks:
   workstream: release
   kind: gate
   priority: P0
-  status: blocked
+  status: done
   size: M
   executor: codex
   environment: windows
@@ -5632,8 +5632,16 @@ tasks:
     duration: Per-case timings in the retained TL-0410 evidence
     reference: artifacts/e2e/M4-first-write-slice.md, reviewed guest binaries from 20247fbd3c785bf6b85e7e7c8f98ac6aa22a46e7
     limitation: Actual warm restart observed. Native MSI restart-required and perceptual accessibility remain unobserved for this slice.
-  blocked_reason: The technical gate and exact decision packet are ready. Reopen when the accountable product and security owners
-    record a disposition on this candidate and packet. Internal write-capable approval requires an affirmative disposition.
+  - task: TL-0411
+    summary: Janne Vuorela approved the exact verified candidate and internal M4 scope as product owner and security owner.
+    command_or_review: Review of the exact first-write decision packet and the attributable approval in the active Codex conversation
+    tier: accountable product and security disposition
+    result: approved for the recorded internal scope
+    environment: Active Codex conversation, with active-machine package verification retained from the integrated technical checkpoint
+    date: '2026-11-26'
+    duration: One recorded decision response
+    reference: artifacts/gates/M4-package-vertical-slice.md#product-and-security-disposition
+    limitation: The reviewed catalogue and policy expire at 2026-12-25T00:00:00Z. Each action and later exposure retain their own authorizations.
   notes:
   - TL-0410 supplies installation, independent verification, failure and cleanup proof for the scoped release decision.
   expected_test_tier: full
@@ -5648,6 +5656,7 @@ tasks:
     scope: Accountable product and security decision-makers record one first write-capable disposition on the prepared, verified
       package slice, with attributable scopes.
     authority: product-security-owners
+    evidence: artifacts/gates/M4-package-vertical-slice.md#product-and-security-disposition
   outcome: package-installation
 - id: TL-0412
   title: Verify one real machine-wide package transaction through ThirdLife
