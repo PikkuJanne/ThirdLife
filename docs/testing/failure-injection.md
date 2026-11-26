@@ -206,6 +206,12 @@ owns any consent prompt. TL-0412 covered one exact host install. The TL-0317
 profile covers the reviewed no-op broker. Bind each new run to its own approved
 package plan and verified candidate.
 
+For orderly restarts of the bound `ThirdLife-W11` guest, use the operator's
+standing restart authorization recorded in `artifacts/e2e/M4-first-write-slice.md`.
+Confirm the recorded VM identity and quiescence for each restart. Package
+execution, Windows consent, interruption and checkpoint restoration have their
+own authority.
+
 1. Record the candidate digests, package identity, signed installer digest,
    initial machine-wide registration, isolated job ID and initial boot evidence.
    Open the ordinary unelevated WPF application and confirm that the plan, applied

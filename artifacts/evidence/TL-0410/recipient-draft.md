@@ -30,6 +30,6 @@ The test leaves device readiness unknown and handover incomplete.
 
 The workshop's Windows application tests supplied these examples. They used
 an isolated job store and simulated installer, installed-state and launch
-results. Installation, interruption, reboot and restoration of the TL-0410
-Windows guest remain unobserved. This draft covers only the editor setup.
-[Verification results](../TL-0406/report.md) · [Test cases](../../../tests/ThirdLife.UI.Tests/PackageSetupTests.cs)
+results. This draft covers only the editor setup. The live Windows guest
+observations are recorded with their own validation limits.
+[Verification results](../TL-0406/report.md) · [Test cases](../../../tests/ThirdLife.UI.Tests/PackageSetupTests.cs) · [Live guest evidence](../../e2e/M4-first-write-slice.md)
