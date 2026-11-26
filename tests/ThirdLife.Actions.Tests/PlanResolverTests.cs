@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using ThirdLife.Actions.Contracts;
+using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
 using ThirdLife.Catalog.Profiles;
 using ThirdLife.Catalog.Schema;
@@ -369,10 +370,50 @@ public sealed class PlanResolverTests
         return PlanResolver.Resolve(job, reviewedPolicy, profile, catalog, observations, [], AsOfUtc);
     }
 
-    internal static ProposedPlan CreateSyntheticPlan(bool archived = false, bool includeVideoCalling = false)
+    internal static ProposedPlan CreateSyntheticPlan(bool archived = false, bool includeVideoCalling = false,
+        PolicyDocument? policy = null)
     {
         var observations = ReadyObservations();
-        return Resolve(Store(observations, archived), observations, selected: includeVideoCalling ? ["video_calling"] : []);
+        return PlanResolver.Resolve(Store(observations, archived), policy ?? Policy, Basic, Catalog, observations,
+            includeVideoCalling ? [VideoCalling] : [], AsOfUtc);
+    }
+
+    internal static PolicyDocument CreateSyntheticPolicy(JsonNode extraRule)
+    {
+        var json = JsonNode.Parse(PolicyJson)!;
+        json["rules"]!.AsArray().Add(extraRule);
+        return PolicySchema.Parse(Encoding.UTF8.GetBytes(json.ToJsonString()));
+    }
+
+    [Fact]
+    public void ChangingCapabilityIntentRequiresReapprovalAndPreservesTheOriginalSnapshot()
+    {
+        var observations = ReadyObservations();
+        var job = Store(observations);
+        var profileJson = JsonNode.Parse(ReadFixture("basic"))!;
+        var capability = profileJson["workshop"]!["capabilities"]!.AsArray()
+            .Single(item => item!["capability_id"]!.GetValue<string>() == VideoCalling)!;
+        capability["intent"] = "essential";
+        var revisedProfile = ProfileSchema.Parse(Encoding.UTF8.GetBytes(profileJson.ToJsonString()), Catalog);
+        var original = Resolve(job, observations, selected: [VideoCalling]);
+        var revised = Resolve(job, observations, revisedProfile);
+        var originalImpact = ImpactEstimator.Estimate(original);
+        var saved = JournalPlanSnapshot.Create(original, originalImpact);
+        var reopened = JournalPlanSnapshot.Restore(saved.Key, saved.CanonicalPlan.ToArray(), saved.CanonicalImpact.ToArray());
+        var difference = PlanDiff.Compare(original, originalImpact, revised, ImpactEstimator.Estimate(revised));
+
+        Assert.True(difference.RequiresReapproval);
+        Assert.NotEqual(original.ContentSha256, revised.ContentSha256);
+        Assert.Contains(difference.Changes, change => change.Kind == PlanChangeKind.Action &&
+            change.Message.Contains("video calling", StringComparison.Ordinal));
+        var originalAction = Assert.Single(reopened.Actions, action => action.CapabilityId == VideoCalling);
+        var revisedAction = Assert.Single(revised.Actions, action => action.CapabilityId == VideoCalling);
+        Assert.Equal(CapabilityIntent.Optional, originalAction.Intent);
+        Assert.Equal(CapabilityIntent.Essential, revisedAction.Intent);
+        Assert.Equal(revisedAction.ReasonCode, originalAction.ReasonCode);
+        Assert.Equal(Policy.ContentSha256, reopened.PolicySha256);
+        Assert.True(PlanResolver.MatchesEvidence(reopened, observations.Reverse(), AsOfUtc));
+        Assert.False(PlanResolver.MatchesEvidence(reopened, observations.Skip(1), AsOfUtc));
     }
 
     private static PolicyDocument MakeEffectivePolicy(string expiresUtc)

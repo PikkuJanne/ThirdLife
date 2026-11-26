@@ -244,6 +244,8 @@ public sealed partial class PlanReviewTests
         using var disk = new AuditTestStore();
         await using var workspace = OpenWorkspace(disk, new PlanFactsProvider());
         await PrepareAssessmentAsync(workspace);
+        var jobId = workspace.Job!.Job.JobId;
+        JournalPlanKey? key = null;
 
         InPlanReview(workspace, (window, panel) =>
         {
@@ -251,6 +253,9 @@ public sealed partial class PlanReviewTests
             Build(window, panel, workspace);
             var shown = workspace.PlanReview!;
             var decline = Named<Button>(panel, "DeclinePlanReviewButton");
+            Assert.False(workspace.CanDeclinePlanReview);
+            Named<TextBox>(panel, "BrokerOperator").Text = "fixture-decline-operator";
+            ShellTestHost.Drain(window);
             Assert.True(workspace.CanDeclinePlanReview);
             Invoke(window, decline);
             PumpUntil(window, () => workspace.PlanReviewDecision is not null && !workspace.IsBusy,
@@ -260,7 +265,26 @@ public sealed partial class PlanReviewTests
             Assert.Equal(shown.Plan.ContentSha256, decision.PlanSha256);
             Assert.Same(shown, decision.Snapshot);
             Assert.Equal(EvaluationTime, decision.DecidedAtUtc);
+            key = JournalPlanSnapshot.Create(shown.Plan, shown.Impact).Key;
         });
+
+        await using var store = await disk.OpenSqliteAsync();
+        var saved = Assert.IsType<JournalHistory>(await store.LoadJournalAsync(key!));
+        Assert.Empty(saved.Approvals);
+        Assert.Equal(saved.Plan.Actions.Length, saved.Entries.Length);
+        Assert.All(saved.Entries, entry =>
+        {
+            Assert.Equal(JournalState.Skipped, entry.State);
+            Assert.Equal(JournalResult.Declined, entry.Result);
+            Assert.Equal("fixture-decline-operator", entry.ActorId.Value);
+        });
+        await using var reopened = OpenWorkspace(disk, new PlanFactsProvider());
+        await reopened.OpenJobAsync(jobId.Value);
+        reopened.SelectedPlanProfile = Assert.Single(reopened.PlanProfiles, option => option.Profile.ProfileId == "basic");
+        await reopened.BuildPlanReviewAsync();
+        Assert.Equal(PlanReviewOutcome.Declined, reopened.PlanReviewDecision?.Outcome);
+        Assert.Equal(key!.PlanSha256, reopened.PlanReviewDecision?.PlanSha256);
+        Assert.False(reopened.CanApprovePlanReview);
     }
 
     [Fact]
@@ -337,6 +361,10 @@ public sealed partial class PlanReviewTests
 
             var approve = Named<Button>(panel, "ApprovePlanReviewButton");
             var decline = Named<Button>(panel, "DeclinePlanReviewButton");
+            var operatorCode = Named<TextBox>(panel, "BrokerOperator");
+            NextIs(window, operatorCode);
+            operatorCode.Text = "fixture-keyboard-operator";
+            ShellTestHost.Drain(window);
             NextIs(window, approve);
             NextIs(window, decline);
             decline.BringIntoView();
@@ -493,6 +521,110 @@ public sealed partial class PlanReviewTests
         Assert.Equal(2, verifier.ObservedActions.Count(id => id == firstAction));
         Assert.Single(finished.Entries, entry => entry.ActionId == firstAction && entry.State == JournalState.Started);
         Assert.All(finished.Plan.Actions, action => Assert.Equal(JournalState.Verified, finished.StateOf(action.ActionId)));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ScheduledReviewSavesAttributableSkipsAndRunsOnlyTheRemainingActions(bool skipEssential)
+    {
+        using var disk = new AuditTestStore();
+        var clock = new FixtureClock();
+        var verifier = new FixtureNoOpVerifier { CanConfirm = true };
+        var sent = new List<Guid>();
+        var backend = new FixtureBrokerBackend(async (_, batch, authorize, _, token) =>
+        {
+            Assert.True(await authorize(token));
+            var action = Assert.Single(batch.Actions);
+            sent.Add(action.ActionId);
+            return new NoOpBrokerBatchResult(NoOpBrokerBatchStatus.Finished,
+                [new(batch.CorrelationId, action.ActionId, NoOpBrokerActionStatus.Applied)]);
+        });
+        await using var workspace = OpenBrokerWorkspace(disk, clock, backend, verifier);
+        await PrepareAssessmentAsync(workspace);
+        var jobId = workspace.JobId;
+        var skipped = new List<Guid>();
+
+        InPlanReview(workspace, (window, panel) =>
+        {
+            SelectProfile(window, panel, workspace, "basic");
+            var optional = Assert.Single(workspace.PlanCapabilities, choice => !choice.IsEssential);
+            if (!optional.IsIncluded)
+            {
+                Toggle(window, panel, optional);
+            }
+
+            Build(window, panel, workspace);
+            workspace.BrokerOperatorCode = "fixture-approver";
+            _ = Approve(window, panel, workspace);
+            Named<TextBox>(panel, "BrokerOperator").Text = "fixture-skip-operator";
+            ShellTestHost.Drain(window);
+            Skip(optional.CapabilityId, "Optional");
+            if (skipEssential)
+            {
+                Skip("web_browsing", "Essential");
+            }
+
+            Assert.Empty(sent);
+            Assert.DoesNotContain(workspace.ActionSkipChoices, choice => skipped.Contains(choice.ActionId));
+            var execution = Named<BrokerExecutionView>(Named<FrameworkElement>(window, "AuditView"), "BrokerExecutionPanel");
+            Invoke(window, Named<Button>(execution, "RunBrokerButton"));
+            PumpUntil(window, () => !workspace.IsBusy, () => workspace.BrokerExecutionStatus);
+            Assert.Contains("Operator chose to skip this action", workspace.BrokerHistoryText, StringComparison.Ordinal);
+            Assert.Equal(skipEssential ? 2 : 3, sent.Count);
+            Assert.DoesNotContain(sent, skipped.Contains);
+            Assert.Equal(sent, verifier.ObservedActions);
+            if (!skipEssential)
+            {
+                Assert.Contains("recorded optional outcomes", workspace.BrokerExecutionStatus, StringComparison.Ordinal);
+            }
+
+            void Skip(string capabilityId, string classification)
+            {
+                var id = workspace.PlanReview!.Plan.Actions.Single(action => action.CapabilityId == capabilityId).Request.ActionId;
+                var name = $"Skip {PlanReviewPresentation.CapabilityName(capabilityId)}";
+                var button = Assert.Single(Buttons(Named<ItemsControl>(panel, "ActionSkipItems")),
+                    item => Equals(item.Content, name));
+                Assert.Equal(name, ShellTestHost.ButtonPeer(button).GetName());
+                Assert.StartsWith(classification, AutomationProperties.GetHelpText(button), StringComparison.Ordinal);
+                Assert.True(button.IsEnabled && button.IsTabStop);
+                Invoke(window, button);
+                PumpUntil(window, () => !workspace.IsBusy && !workspace.ActionSkipChoices.Any(choice => choice.ActionId == id),
+                    () => workspace.PlanReviewStatus);
+                skipped.Add(id);
+            }
+        });
+
+        await using var reopened = OpenBrokerWorkspace(disk, clock, backend, verifier);
+        await reopened.OpenJobAsync(jobId);
+        Assert.Contains("Operator chose to skip this action", reopened.BrokerHistoryText, StringComparison.Ordinal);
+        await using var store = await disk.OpenSqliteAsync();
+        var history = Assert.Single(await store.LoadJobJournalsAsync(reopened.Job!.Job.JobId));
+        foreach (var id in skipped)
+        {
+            var entry = history.Entries.Last(item => item.ActionId == id);
+            Assert.Equal(JournalState.Skipped, entry.State);
+            Assert.Equal(JournalResult.Declined, entry.Result);
+            Assert.Equal("fixture-skip-operator", entry.ActorId.Value);
+            Assert.DoesNotContain(history.Entries, item => item.ActionId == id && item.State == JournalState.Started);
+        }
+
+        static IEnumerable<Button> Buttons(DependencyObject parent)
+        {
+            for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, index);
+                if (child is Button button)
+                {
+                    yield return button;
+                }
+
+                foreach (var descendant in Buttons(child))
+                {
+                    yield return descendant;
+                }
+            }
+        }
     }
 
     [Fact]

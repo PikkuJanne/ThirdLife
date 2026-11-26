@@ -24,36 +24,45 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
         await ExecuteWriteAsync(async (connection, transaction, token) =>
         {
             _layout.ValidateJobDirectory(plan.Key.JobId);
-            var existing = await ReadJournalPlanAsync(connection, transaction, plan.Key, token).ConfigureAwait(false);
-            if (existing is not null)
+            if (await SaveJournalPlanAsync(connection, transaction, plan, token).ConfigureAwait(false))
             {
-                if (!existing.CanonicalPlan.AsSpan().SequenceEqual(plan.CanonicalPlan.AsSpan()) ||
-                    !existing.CanonicalImpact.AsSpan().SequenceEqual(plan.CanonicalImpact.AsSpan()))
-                {
-                    throw new JobStoreConflictException();
-                }
-
-                return;
+                outcome = JournalWriteResult.Recorded;
             }
-
-            if (!plan.HasPlanningProvenance)
-            {
-                throw new ArgumentException("A new journal plan requires a locally resolved proposal.", nameof(plan));
-            }
-
-            await RequireExpectedSanitizationGateAsync(connection, transaction, plan.Key.JobId, plan.GateDecisionId, token).ConfigureAwait(false);
-            await RequireJournalCapacityAsync(connection, transaction, plan.Key,
-                "SELECT count(*) FROM action_journal_plans WHERE job_id = $job_id;", JournalHistory.MaximumPlansPerJob, token).ConfigureAwait(false);
-            await using var insert = JournalCommand(connection, transaction, plan.Key, """
-                INSERT INTO action_journal_plans (job_id, plan_sha256, impact_sha256, plan_json, impact_json)
-                VALUES ($job_id, $plan, $impact, $plan_json, $impact_json);
-                """);
-            insert.Parameters.AddWithValue("$plan_json", plan.CanonicalPlan.ToArray());
-            insert.Parameters.AddWithValue("$impact_json", plan.CanonicalImpact.ToArray());
-            await insert.ExecuteNonQueryAsync(token).ConfigureAwait(false);
-            outcome = JournalWriteResult.Recorded;
         }, cancellationToken).ConfigureAwait(false);
         return outcome;
+    }
+
+    private async Task<bool> SaveJournalPlanAsync(SqliteConnection connection, SqliteTransaction transaction,
+        JournalPlanSnapshot plan, CancellationToken token)
+    {
+        var existing = await ReadJournalPlanAsync(connection, transaction, plan.Key, token).ConfigureAwait(false);
+        if (existing is not null)
+        {
+            if (!existing.CanonicalPlan.AsSpan().SequenceEqual(plan.CanonicalPlan.AsSpan()) ||
+                !existing.CanonicalImpact.AsSpan().SequenceEqual(plan.CanonicalImpact.AsSpan()))
+            {
+                throw new JobStoreConflictException();
+            }
+
+            return false;
+        }
+
+        if (!plan.HasPlanningProvenance)
+        {
+            throw new ArgumentException("A new journal plan requires a locally resolved proposal.", nameof(plan));
+        }
+
+        await RequireExpectedSanitizationGateAsync(connection, transaction, plan.Key.JobId, plan.GateDecisionId, token).ConfigureAwait(false);
+        await RequireJournalCapacityAsync(connection, transaction, plan.Key,
+            "SELECT count(*) FROM action_journal_plans WHERE job_id = $job_id;", JournalHistory.MaximumPlansPerJob, token).ConfigureAwait(false);
+        await using var insert = JournalCommand(connection, transaction, plan.Key, """
+            INSERT INTO action_journal_plans (job_id, plan_sha256, impact_sha256, plan_json, impact_json)
+            VALUES ($job_id, $plan, $impact, $plan_json, $impact_json);
+            """);
+        insert.Parameters.AddWithValue("$plan_json", plan.CanonicalPlan.ToArray());
+        insert.Parameters.AddWithValue("$impact_json", plan.CanonicalImpact.ToArray());
+        await insert.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+        return true;
     }
 
     public async Task<JournalWriteResult> AppendJournalApprovalAsync(JournalApproval approval, CancellationToken cancellationToken = default)

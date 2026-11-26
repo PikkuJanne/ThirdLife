@@ -24,7 +24,10 @@ qualification and the TL-0314 privilege decision.
 [Guest qualification](artifacts/evidence/TL-0317/report.md)
 [Application orchestration](artifacts/evidence/TL-0313/report.md)
 
-TL-0501 completed dependency-aware scheduling for approved package and no-op
-actions with per-action SQLite recovery. The live multi-action qualification
-and exact approval remain prerequisites at the M5 technical gate, TL-0511.
-[Scheduling and execution evidence](artifacts/evidence/TL-0501/report.md)
+TL-0501 and TL-0502 cover approval-bound scheduling and attributable action
+skips. Verify and the workshop report show the saved preparation disposition
+after reopen. Essential omissions require review. TL-0503 is next for disk,
+power and resource preflight. Live multi-action qualification and exact
+approval remain prerequisites at the M5 technical gate, TL-0511.
+[Scheduling evidence](artifacts/evidence/TL-0501/report.md)
+[Action outcome evidence](artifacts/evidence/TL-0502/report.md)

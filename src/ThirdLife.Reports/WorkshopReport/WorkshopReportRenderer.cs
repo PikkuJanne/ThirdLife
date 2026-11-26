@@ -18,14 +18,15 @@ public static partial class WorkshopReportRenderer
     public static string Render(
         StoredJob job,
         WorkshopAssessmentSummary? latestAssessment = null,
-        CancellationToken cancellationToken = default) => RenderCore(job, latestAssessment, null, cancellationToken);
+        CancellationToken cancellationToken = default) => RenderCore(job, latestAssessment, null, cancellationToken: cancellationToken);
 
     private static string RenderCore(
         StoredJob job,
         WorkshopAssessmentSummary? latestAssessment,
         StoredPolicyDecision? savedDecision,
-        CancellationToken cancellationToken,
-        IReadOnlyList<WorkshopPackageRecord>? packages = null)
+        IReadOnlyList<WorkshopPackageRecord>? packages = null,
+        IReadOnlyList<WorkshopPreparationPlan>? preparation = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);
         cancellationToken.ThrowIfCancellationRequested();
@@ -97,6 +98,11 @@ public static partial class WorkshopReportRenderer
         if (packages is { Count: > 0 })
         {
             WritePackageRecords(report, packages, cancellationToken);
+        }
+
+        if (preparation is { Count: > 0 })
+        {
+            WritePreparationRecords(report, job.Job.JobId, preparation, cancellationToken);
         }
 
         return report.ToString();

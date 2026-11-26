@@ -43,6 +43,106 @@ public sealed class ActionJournalStoreTests
         }
         """u8.ToArray());
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WholePlanDeclineCommitsTheSnapshotAndEveryOperatorDecisionTogether(bool committed)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        JournalPlanSnapshot plan;
+        await using (var store = await OpenAsync(workspace))
+        {
+            var (job, intake) = await CreateJobAsync(store);
+            var proposal = CreateProposal(job, intake, "0.1.0-candidate.1", actionCount: 3);
+            plan = Snapshot(proposal.WithSchedule(proposal.Actions.Select(action =>
+                new ScheduledAction(action.Request.ActionId, 1, []))));
+        }
+
+        var point = committed ? JobStoreFaultPoint.AfterWriteCommit : JobStoreFaultPoint.BeforeWriteCommit;
+        await using (var interrupted = await OpenAsync(workspace, new ThrowingFaultInjector(point)))
+        {
+            await Assert.ThrowsAsync<InjectedPersistenceException>(() =>
+                interrupted.RecordActionDeclineAsync(plan, null, null, Approver, Now));
+        }
+
+        await using var reopened = await OpenAsync(workspace);
+        var afterFault = await reopened.LoadJournalAsync(plan.Key);
+        if (committed)
+        {
+            Assert.Equal(plan.Actions.Length, Assert.IsType<JournalHistory>(afterFault).Entries.Length);
+        }
+        else
+        {
+            Assert.Null(afterFault);
+        }
+
+        Assert.Equal(committed ? JournalWriteResult.AlreadyRecorded : JournalWriteResult.Recorded,
+            await reopened.RecordActionDeclineAsync(plan, null, null, Approver, Now.AddMinutes(1)));
+        var history = Assert.IsType<JournalHistory>(await reopened.LoadJournalAsync(plan.Key));
+        Assert.Empty(history.Approvals);
+        Assert.Equal(plan.Actions.Select(action => action.ActionId), history.Entries.Select(entry => entry.ActionId));
+        Assert.All(history.Entries, entry =>
+        {
+            Assert.Null(entry.ApprovalId);
+            Assert.Equal(JournalState.Planned, entry.PriorState);
+            Assert.Equal(JournalState.Skipped, entry.State);
+            Assert.Equal(JournalResult.Declined, entry.Result);
+            Assert.Equal(Approver, entry.ActorId);
+            Assert.Equal(committed ? Now : Now.AddMinutes(1), entry.OccurredAtUtc);
+        });
+        Assert.Single(history.Entries.Select(entry => entry.CorrelationId).Distinct());
+        Assert.Null(history.Plan.Schedule!.Project(history).NextForReview);
+    }
+
+    [Fact]
+    public async Task ScheduledActionSkipRequiresCurrentApprovalAndCannotReplaceDispatch()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        JournalPlanSnapshot plan;
+        JournalApproval active;
+        Guid skipped;
+        Guid remaining;
+        await using (var store = await OpenAsync(workspace))
+        {
+            var (job, intake) = await CreateJobAsync(store);
+            var proposal = CreateProposal(job, intake, "0.1.0-candidate.1", actionCount: 2);
+            skipped = proposal.Actions[0].Request.ActionId;
+            remaining = proposal.Actions[1].Request.ActionId;
+            plan = Snapshot(proposal.WithSchedule([new(skipped, 1, []), new(remaining, 1, [])]));
+            await store.SaveJournalPlanAsync(plan);
+            var obsolete = new JournalApproval(ApprovalId, plan.Key, Approver, CorrelationId, Now);
+            await store.RecordBrokerApprovalAsync(obsolete, BrokerEntries(plan, obsolete, JournalState.Planned,
+                JournalState.Approved, JournalActor.Operator, JournalResult.None, JournalCheckpoint.BrokerApproval, obsolete.CorrelationId, Now));
+            active = new JournalApproval(Guid.NewGuid(), plan.Key, Approver, Guid.NewGuid(), Now.AddMinutes(1));
+            await store.RecordBrokerApprovalAsync(active, BrokerEntries(plan, active, JournalState.Approved,
+                JournalState.Approved, JournalActor.Operator, JournalResult.None, JournalCheckpoint.BrokerApproval,
+                active.CorrelationId, active.OccurredAtUtc));
+
+            await Assert.ThrowsAsync<JobStoreConflictException>(() =>
+                store.RecordActionDeclineAsync(plan, obsolete, skipped, Approver, Now.AddMinutes(2)));
+            await Assert.ThrowsAsync<JobStoreConflictException>(() =>
+                store.RecordActionDeclineAsync(plan, null, null, Approver, Now.AddMinutes(2)));
+            Assert.Equal(JournalWriteResult.Recorded,
+                await store.RecordActionDeclineAsync(plan, active, skipped, Approver, Now.AddMinutes(2)));
+        }
+
+        await using var reopened = await OpenAsync(workspace);
+        var history = Assert.IsType<JournalHistory>(await reopened.LoadJournalAsync(plan.Key));
+        Assert.Equal(JournalState.Skipped, history.StateOf(skipped));
+        Assert.Equal(remaining, history.Plan.Schedule!.Project(history).NextForReview);
+        Assert.Equal(JournalWriteResult.AlreadyRecorded,
+            await reopened.RecordActionDeclineAsync(plan, active, skipped, Approver, Now.AddMinutes(3)));
+        var dispatch = new JournalEntry(Guid.NewGuid(), plan.Key, remaining, active.ApprovalId, JournalState.Approved,
+            JournalState.Started, JournalActor.Coordinator, Approver, Guid.NewGuid(), Now.AddMinutes(4), JournalResult.None,
+            JournalCheckpoint.BrokerDispatchIntent);
+        await reopened.AppendBrokerBatchAsync([dispatch]);
+        await Assert.ThrowsAsync<JobStoreConflictException>(() =>
+            reopened.RecordActionDeclineAsync(plan, active, remaining, Approver, Now.AddMinutes(5)));
+        var afterDispatch = Assert.IsType<JournalHistory>(await reopened.LoadJournalAsync(plan.Key));
+        Assert.Equal(JournalState.Started, afterDispatch.StateOf(remaining));
+        Assert.Single(afterDispatch.Entries, entry => entry.State == JournalState.Skipped);
+    }
+
     [Fact]
     public async Task BrokerApprovalAndDispatchRequireTheWholeExactBatch()
     {

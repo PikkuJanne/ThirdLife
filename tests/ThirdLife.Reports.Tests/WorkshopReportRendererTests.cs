@@ -146,6 +146,31 @@ public sealed class WorkshopReportRendererTests
             WorkshopReportRenderer.Render(Stored(), cancellationToken: new CancellationToken(canceled: true)));
     }
 
+    [Fact]
+    public void PreparationRecordsExplainOptionalOmissionsAndPreserveEarlierFailures()
+    {
+        WorkshopPreparationAction earlier = new("document_editing", true, WorkshopPreparationState.Failed,
+            WorkshopPreparationEffect.ReviewRequired, false, @"C:\private\installer.log", SampleTime, null, null);
+        WorkshopPreparationAction optionalSkip = new("video_calling", false, WorkshopPreparationState.Skipped,
+            WorkshopPreparationEffect.OptionalOmission, true, "Declined", SampleTime, Operator, null);
+        WorkshopPreparationAction verified = new("document_editing", true, WorkshopPreparationState.Verified,
+            WorkshopPreparationEffect.Verified, true, "VerificationPassed", SampleTime.AddMinutes(1), null, null);
+        WorkshopPreparationPlan plan = new(SampleJob.JobId, new string('a', 64), false,
+            Disposition.ReadyToPrepare, [earlier, optionalSkip, verified]);
+
+        var report = WorkshopReportRenderer.RenderWithPackageRecords(Stored(), null, null, [], [plan]);
+
+        Assert.Contains("The current plan meets its essential action requirements", report);
+        Assert.Contains("Whole-device acceptance still requires", report);
+        Assert.Contains("video_calling (optional). Skipped", report);
+        Assert.Contains("The preparation disposition allows this optional outcome", report);
+        Assert.Contains("document_editing (essential). The attempt failed. A later record controls", report);
+        Assert.Contains("document_editing (essential). Independently verified", report);
+        Assert.DoesNotContain("installer.log", report);
+        Assert.Throws<ArgumentException>(() => WorkshopReportRenderer.RenderWithPackageRecords(Stored(), null, null,
+            [], [plan with { JobId = new JobId("unrelated-job") }]));
+    }
+
     private static StoredJob Stored(
         IEnumerable<Observation>? observations = null,
         IEnumerable<SanitizationEvidence>? sanitization = null,

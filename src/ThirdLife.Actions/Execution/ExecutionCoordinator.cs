@@ -16,6 +16,7 @@ public enum NoOpExecutionStatus
     Completed,
     Failed,
     RequiresReview,
+    CompletedWithOmissions,
 }
 
 /// <summary>Coordinates reviewed no-op actions through the durable unelevated journal.</summary>
@@ -146,9 +147,19 @@ public sealed class ExecutionCoordinator(IBrokerExecutionJournal journal, INoOpB
                 {
                     if (projection.NextForReview is not { } actionId)
                     {
-                        return projection.Actions.All(action => action.State == JournalState.Verified) ? NoOpExecutionStatus.Completed :
-                            projection.Actions.Any(action => action.State == JournalState.Failed) ? NoOpExecutionStatus.Failed :
-                            NoOpExecutionStatus.ApprovalRequired;
+                        if (projection.Actions.All(action => action.State == JournalState.Verified))
+                        {
+                            return NoOpExecutionStatus.Completed;
+                        }
+
+                        if (PreparationDisposition.Evaluate(history).Disposition == Disposition.ReadyToPrepare)
+                        {
+                            return NoOpExecutionStatus.CompletedWithOmissions;
+                        }
+
+                        return projection.Actions.Any(action => action.State == JournalState.Failed) ? NoOpExecutionStatus.Failed :
+                            projection.Actions.Any(action => action.State == JournalState.Skipped) ? NoOpExecutionStatus.RequiresReview :
+                                NoOpExecutionStatus.ApprovalRequired;
                     }
 
                     if (LatestEntry(history, actionId) is not { Checkpoint: JournalCheckpoint.BrokerApproval } ||

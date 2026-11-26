@@ -51,6 +51,16 @@ public partial class PlanReviewView : UserControl
         }
     }
 
+    private async void SkipApprovedAction(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && sender is Button { DataContext: ActionSkipChoice choice } button)
+        {
+            var hadFocus = button.IsKeyboardFocused;
+            await workspace.SkipApprovedActionAsync(choice.ActionId);
+            RestoreFocus(PlanStatusMessage, hadFocus);
+        }
+    }
+
     private async void InstallPackage(object sender, RoutedEventArgs args)
     {
         if (DataContext is AuditWorkspace workspace && workspace.CanInstallPackage)

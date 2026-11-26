@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using ThirdLife.Actions.Contracts;
+using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Registry;
 using ThirdLife.Catalog.Profiles;
 using ThirdLife.Catalog.Schema;
@@ -15,6 +16,16 @@ namespace ThirdLife.Actions.Planning;
 
 public static class PlanResolver
 {
+    /// <summary>Checks the current policy evidence against the evidence bound to a saved plan.</summary>
+    public static bool MatchesEvidence(JournalPlanSnapshot plan, IEnumerable<Observation> observations, DateTimeOffset asOfUtc)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(observations);
+        ArgumentOutOfRangeException.ThrowIfEqual(asOfUtc, default);
+        var facts = SnapshotEvidence(observations, plan.SyntheticData, asOfUtc);
+        return !facts.IsDefault && PlanIdentity.EvidenceHash(facts) == plan.EvidenceSha256;
+    }
+
     /// <summary>Proposes preparation for a current job and its normalized policy evidence.</summary>
     /// <remarks>Callers supply evidence projected from the current assessment under the saved sanitization gate.</remarks>
     public static ProposedPlan Resolve(
@@ -121,7 +132,7 @@ public static class PlanResolver
         version == SanitizationGate.WorkshopIntakePolicyVersion ||
         version == string.Concat(policy.PolicyId, "@", policy.Version);
 
-    private static bool PolicyApplies(PolicyDocument policy, bool synthetic, DateTimeOffset asOfUtc)
+    internal static bool PolicyApplies(PolicyDocument policy, bool synthetic, DateTimeOffset asOfUtc)
     {
         if (!policy.IsCurrentSchema)
         {

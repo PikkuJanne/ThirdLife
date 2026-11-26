@@ -22,7 +22,11 @@ internal sealed partial class AuditWorkspace
 
     public Task CheckPackageRecoveryAsync() =>
         CanCheckPackageRecovery && Job is { Job.JobId: var jobId }
-            ? RunAsync(() => ReconcileSavedPackageAsync(jobId))
+            ? RunAsync(async () =>
+            {
+                await ReconcileSavedPackageAsync(jobId);
+                await RefreshActionDecisionsAsync(jobId);
+            })
             : Task.CompletedTask;
 
     private async Task ReconcileSavedPackageAsync(JobId jobId)

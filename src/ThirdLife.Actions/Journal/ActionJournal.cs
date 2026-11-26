@@ -15,6 +15,14 @@ public interface IActionJournalStore
     Task<ImmutableArray<JournalHistory>> LoadJobJournalsAsync(JobId jobId, CancellationToken cancellationToken = default);
 }
 
+/// <summary>Records operator decisions for an exact plan before dispatch.</summary>
+public interface IActionDecisionJournal : IActionJournalStore
+{
+    /// <summary>Declines an unapproved plan or skips one pending action under its active approval.</summary>
+    Task<JournalWriteResult> RecordActionDeclineAsync(JournalPlanSnapshot plan, JournalApproval? approval,
+        Guid? actionId, OperatorId operatorId, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken = default);
+}
+
 /// <summary>Commits the approval, dispatch intents and outcomes of a bounded broker attempt.</summary>
 public interface IBrokerExecutionJournal : IActionJournalStore
 {

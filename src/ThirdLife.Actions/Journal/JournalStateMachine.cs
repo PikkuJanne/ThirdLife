@@ -12,6 +12,9 @@ public static class JournalStateMachine
     { State: JournalState.Approved, Checkpoint: JournalCheckpoint.PackagePlanApproval } ||
         PackageRetryPolicy.IsRetryableFailure(latest);
 
+    public static bool CanSkipApprovedAction(JournalEntry? latest, JournalApproval approval) =>
+        latest is { State: JournalState.Approved } && latest.Plan == approval.Plan && latest.ApprovalId == approval.ApprovalId;
+
     /// <summary>Recognizes a bound machine package graph. Each request still needs a qualified backend.</summary>
     public static bool IsScheduledPackagePlan(JournalPlanSnapshot plan)
     {

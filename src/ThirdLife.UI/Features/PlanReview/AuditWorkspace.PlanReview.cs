@@ -58,7 +58,8 @@ internal sealed partial class AuditWorkspace
         (plan.SyntheticData ? plan.Actions.All(action => action.Request is NoOpActionRequest) &&
             (_brokerExecution is null || CanApproveBrokerPlan) :
             CanApprovePackagePlan && PackageRequest(plan) is not null);
-    public bool CanDeclinePlanReview => CanReviewPlan && CanRecordPlanReviewDecision && HasPlanReview && PlanReviewDecision is null;
+    public bool CanDeclinePlanReview => CanReviewPlan && CanRecordPlanReviewDecision && ShowsPlanDecision &&
+        CanRecordDisplayedActionDecision && HasActionDecisionOperator && _displayedActionDecisionHistory?.Approvals.IsEmpty != false;
 
     private bool CanRecordPlanReviewDecision => _planReviewHistory.Length < MaximumPlanReviewDecisions;
 
@@ -105,6 +106,7 @@ internal sealed partial class AuditWorkspace
             }
 
             var current = PlanReviewPresentation.Describe(plan);
+            await LoadDisplayedActionDecisionAsync(current);
             if (active is not null)
             {
                 var approved = active.Snapshot;
@@ -151,6 +153,7 @@ internal sealed partial class AuditWorkspace
             var difference = PlanDiff.Compare(displayed.Plan, displayed.Impact, current.Plan, current.Impact);
             if (difference.RequiresReapproval)
             {
+                await LoadDisplayedActionDecisionAsync(current);
                 PresentPlan(current, difference.PlainLanguage);
                 return;
             }
@@ -166,26 +169,16 @@ internal sealed partial class AuditWorkspace
             }
 
             RecordPlanReviewDecision(PlanReviewOutcome.Approved, displayed);
+            await RefreshActionDecisionsAsync(displayed.Plan.JobId);
             _planReviewStatus = plan.SyntheticData
                 ? DescribeBrokerApproval()
                 : "Approval saved for this exact plan. Select Install approved package to continue.";
         });
     }
 
-    public Task DeclinePlanReviewAsync()
-    {
-        if (CanDeclinePlanReview && PlanReview is { } displayed)
-        {
-            RecordPlanReviewDecision(PlanReviewOutcome.Declined, displayed);
-            _planReviewStatus = displayed.Plan.Schedule.IsEmpty || DisplayedBrokerHistory is not { } history ||
-                !history.Entries.Any(entry => entry.State == JournalState.Started)
-                ? "Plan declined. No actions were started."
-                : "Plan declined. The saved outcomes for earlier actions remain available.";
-            Publish();
-        }
-
-        return Task.CompletedTask;
-    }
+    public Task DeclinePlanReviewAsync() => CanDeclinePlanReview && PlanReview is { } displayed
+        ? RecordActionDeclineAsync(displayed, null, null)
+        : Task.CompletedTask;
 
     private bool IncludedEssentials => PlanCapabilities.All(choice => !choice.IsEssential || choice.IsIncluded);
 
@@ -259,6 +252,17 @@ internal sealed partial class AuditWorkspace
         SetBrokerPlan(current);
         RestoreScheduledApproval();
         _planReviewChanges = changes;
+        if (RestorePlanDecline(current))
+        {
+            return;
+        }
+
+        if (IsPackageProfile && _displayedActionDecisionHistory?.Entries.LastOrDefault()?.State == JournalState.Skipped)
+        {
+            _planReviewStatus = "This exact plan has a saved action skip. Review the action outcome in Verify.";
+            return;
+        }
+
         _planReviewStatus = current.Plan.BlockedReason is not null
             ? "Preparation is blocked. Review the reason below."
             : changes is not null
@@ -315,6 +319,7 @@ internal sealed partial class AuditWorkspace
     {
         PlanReview = null;
         PlanReviewDecision = null;
+        _displayedActionDecisionHistory = null;
         _packageApproval = null;
         _packageResolution = null;
         _packageDiagnosticUnavailable = false;

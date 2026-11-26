@@ -42,6 +42,7 @@ public enum WorkshopPackageOutcome
     ProbeLaunchFailed,
     BackendUnavailableBeforeDispatch,
     ExistingTargetVerified,
+    Skipped,
 }
 
 public sealed record WorkshopPackageRecord(
@@ -59,6 +60,15 @@ public static partial class WorkshopReportRenderer
         WorkshopAssessmentSummary? assessment,
         StoredPolicyDecision? savedDecision,
         IReadOnlyList<WorkshopPackageRecord> packages,
+        CancellationToken cancellationToken = default) =>
+        RenderWithPackageRecords(job, assessment, savedDecision, packages, null, cancellationToken);
+
+    public static string RenderWithPackageRecords(
+        StoredJob job,
+        WorkshopAssessmentSummary? assessment,
+        StoredPolicyDecision? savedDecision,
+        IReadOnlyList<WorkshopPackageRecord> packages,
+        IReadOnlyList<WorkshopPreparationPlan>? preparation,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(packages);
@@ -68,7 +78,7 @@ public static partial class WorkshopReportRenderer
             throw new ArgumentException("The workshop report requires bounded package records and a matching assessment.");
         }
 
-        return RenderCore(job, assessment, savedDecision, cancellationToken, packages);
+        return RenderCore(job, assessment, savedDecision, packages, preparation, cancellationToken);
     }
 
     private static void WritePackageRecords(
@@ -107,6 +117,7 @@ public static partial class WorkshopReportRenderer
         WorkshopPackageOutcome.TimedOut => "The package operation reached its time limit. Windows Installer may still be running. Review actual installed state before taking further action.",
         WorkshopPackageOutcome.NoFinalResult => "No final result was saved. Windows Installer may still be running. Review actual installed state before taking further action.",
         WorkshopPackageOutcome.AuthorizationDeclined => "Windows installation consent was declined. Review the saved attempt with the authorized operator.",
+        WorkshopPackageOutcome.Skipped => "The operator skipped this package action.",
         WorkshopPackageOutcome.BackendUnavailable => "The installation backend was unavailable.",
         WorkshopPackageOutcome.BackendUnavailableBeforeDispatch => "The package backend was unavailable before Windows Installer started.",
         WorkshopPackageOutcome.TrustChanged => "The installer failed its package trust check. Stop and review the approved source and package identity.",

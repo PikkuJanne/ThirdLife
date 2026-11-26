@@ -15,7 +15,7 @@ public static partial class WorkshopReportRenderer
     {
         ArgumentNullException.ThrowIfNull(assessment);
         ArgumentNullException.ThrowIfNull(savedDecision);
-        return RenderCore(job, assessment, savedDecision, cancellationToken);
+        return RenderCore(job, assessment, savedDecision, cancellationToken: cancellationToken);
     }
 
     public static string SafePolicyPresentation(string value)

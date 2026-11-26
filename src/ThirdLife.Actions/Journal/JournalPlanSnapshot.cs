@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Planning;
+using ThirdLife.Catalog.Profiles;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Sanitization;
 
@@ -25,7 +26,8 @@ public sealed record JournalPlanKey
         JournalPlanEncoding.IsDigest(digest) ? digest! : throw new ArgumentException("A lowercase SHA-256 digest is required.", parameter);
 }
 
-public sealed record JournalAction(ActionRequest Request, ActionDefinition Definition)
+public sealed record JournalAction(ActionRequest Request, ActionDefinition Definition, string CapabilityId, string ReasonCode,
+    CapabilityIntent Intent)
 {
     public Guid ActionId => Request.ActionId;
 }
@@ -46,6 +48,8 @@ public sealed class JournalPlanSnapshot
         bool isCurrentPolicyPlan,
         string catalogSha256,
         string profileSha256,
+        string policySha256,
+        string evidenceSha256,
         bool syntheticData,
         ActionSchedule? schedule)
     {
@@ -58,6 +62,8 @@ public sealed class JournalPlanSnapshot
         IsCurrentPolicyPlan = isCurrentPolicyPlan;
         CatalogSha256 = catalogSha256;
         ProfileSha256 = profileSha256;
+        PolicySha256 = policySha256;
+        EvidenceSha256 = evidenceSha256;
         SyntheticData = syntheticData;
         Schedule = schedule;
     }
@@ -70,6 +76,8 @@ public sealed class JournalPlanSnapshot
     public bool HasPlanningProvenance { get; }
     public string CatalogSha256 { get; }
     public string ProfileSha256 { get; }
+    public string PolicySha256 { get; }
+    public string EvidenceSha256 { get; }
     public bool SyntheticData { get; }
 
     /// <summary>The graph bound to this exact plan digest, when the plan used the scheduled contract.</summary>
@@ -121,10 +129,11 @@ public sealed class JournalPlanSnapshot
 
         try
         {
-            var (gate, actions, current, catalog, profile, synthetic, schedule) = JournalPlanEncoding.ReadPlan(key, ownedPlan);
+            var (gate, actions, current, catalog, profile, policy, evidence, synthetic, schedule) =
+                JournalPlanEncoding.ReadPlan(key, ownedPlan);
             JournalPlanEncoding.RequireValidImpact(key, actions, ownedImpact);
             return new JournalPlanSnapshot(key, gate, ownedPlan, ownedImpact, actions, hasPlanningProvenance, current,
-                catalog, profile, synthetic, schedule);
+                catalog, profile, policy, evidence, synthetic, schedule);
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException or
             FormatException or KeyNotFoundException)
