@@ -5939,7 +5939,7 @@ tasks:
   workstream: policy
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: any
@@ -5966,10 +5966,54 @@ tasks:
   - Reports explain all skipped and failed actions and their disposition effect.
   verification:
   - Test optional skip, optional failure, essential skip, essential failure, and governed exception scenarios.
-  evidence: []
-  expected_test_tier: targeted
-  full_test_triggers: []
-  extended_test_triggers: []
+  evidence:
+  - task: TL-0502
+    summary: Verified plan-bound essentiality, attributable skips, SQLite reopen, preparation disposition and workshop reporting.
+    command_or_review: eng/verify.ps1 -Tier Targeted with Actions, Persistence, Reports, Packages and Policy projects
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64, .NET SDK 10.0.400
+    date: '2026-11-26'
+    duration: 176.333 s with 1207 Quick tests and 652 additional subsystem tests
+    reference: artifacts/evidence/TL-0502/report.md, source 82220b3ce48fe69e4e67adeaecbafff3004a9378
+    limitation: WPF package and broker fixtures supplied backend outcomes. Named exception authorization was synthetic.
+  - task: TL-0502
+    summary: Reopened the saved package and no-op jobs after interruption.
+    command_or_review: Release UI tests for owned package and no-op process interruption and owned package backend termination
+    tier: extended
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64
+    date: '2026-11-26'
+    duration: 20.872 s with five cases
+    reference: artifacts/evidence/TL-0502/report.md, source 82220b3ce48fe69e4e67adeaecbafff3004a9378
+    limitation: Owned fixture processes exercised recovery. Live multi-action qualification remains at TL-0511.
+  - task: TL-0502
+    summary: Verified clean source, prior journal compatibility and deterministic integration coverage.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore in a fresh detached worktree
+    tier: full
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64, .NET SDK 10.0.400 and Python 3.14.7
+    date: '2026-11-26'
+    duration: 373.704 s with 304 governance and 2209 .NET cases
+    reference: artifacts/evidence/TL-0502/report.md, source 82220b3ce48fe69e4e67adeaecbafff3004a9378
+    limitation: The default ActiveMachine, Extended and SandboxOnly exclusions apply. Separate interruption results are recorded above.
+  - task: TL-0502
+    summary: Observed unelevated desktop startup and Inspect navigation after repairing the automation observer.
+    command_or_review: eng/run-ui-smoke.ps1 and bounded Inspect-control timing diagnostic
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64
+    date: '2026-11-26'
+    duration: 1.231 s clean artifact diagnostic, 1.309 s with the repaired repository observer
+    reference: artifacts/evidence/TL-0502/report.md, source 82220b3ce48fe69e4e67adeaecbafff3004a9378 and clean Release digests
+    limitation: The first observer could sample before the WPF automation control was ready. This checks startup and navigation.
+  expected_test_tier: full
+  full_test_triggers:
+  - Approved action omission now affects the shared schedule phase gate, disposition and historical journal projection.
+  extended_test_triggers:
+  - Verify the existing package and broker interruption paths after adding governed pre-dispatch skips.
+  notes:
+  - Production exception authoring requires a reviewed effective authorization and durable workshop-restricted exception storage.
 - id: TL-0503
   title: Preflight disk, power, and resource requirements
   milestone: M5

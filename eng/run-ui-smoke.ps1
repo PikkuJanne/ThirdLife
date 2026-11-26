@@ -35,15 +35,21 @@ $timer = [Diagnostics.Stopwatch]::StartNew()
 $ownedShell = Start-Process -FilePath $apphost -WindowStyle Hidden -PassThru
 try {
     if (-not $ownedShell.WaitForInputIdle(10000)) { throw "Shell input-idle timeout." }
+    $window = $null
+    $inspect = $null
+    $inspectCondition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, "StageInspect")
+    # Input idle and a window handle can precede the WPF automation tree.
     for ($attempt = 0; $attempt -lt 50; $attempt++) {
         $ownedShell.Refresh()
-        if ($ownedShell.HasExited -or $ownedShell.MainWindowHandle -ne [IntPtr]::Zero) { break }
+        if ($ownedShell.HasExited) { break }
+        if ($ownedShell.MainWindowHandle -ne [IntPtr]::Zero) {
+            $window = [System.Windows.Automation.AutomationElement]::FromHandle($ownedShell.MainWindowHandle)
+            $inspect = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $inspectCondition)
+            if ($null -ne $inspect -and $inspect.Current.IsEnabled) { break }
+        }
         [Threading.Thread]::Sleep(100)
     }
-    if ($ownedShell.HasExited -or $ownedShell.MainWindowHandle -eq [IntPtr]::Zero) { throw "Shell window unavailable." }
-    $window = [System.Windows.Automation.AutomationElement]::FromHandle($ownedShell.MainWindowHandle)
-    $inspectCondition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, "StageInspect")
-    $inspect = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $inspectCondition)
+    if ($ownedShell.HasExited -or $null -eq $window) { throw "Shell window unavailable." }
     if ($null -eq $inspect -or -not $inspect.Current.IsEnabled) { throw "Inspection stage unavailable." }
     $inspect.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     $statusCondition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, "Inspect opened.")
