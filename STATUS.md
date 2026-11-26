@@ -67,9 +67,8 @@ installation. Eligible failures retain linked attempts and a durable three-start
 limit. Expired approvals or changed resolutions require fresh review.
 [Package retry evidence](artifacts/evidence/TL-0409/report.md)
 
-TL-0410 observed the exact installer transaction end after the operator's
-Windows choice. The package remained absent. The original job reopened in
-review and its journal survived one orderly guest restart without redispatch.
-Basic-console sign-in is needed for the post-restart workshop report.
-A successful install needs a fresh plan and approval.
+TL-0410 reopened the original job after an orderly guest restart and confirmed
+the timed-out review result, workshop report and unchanged dispatch history.
+The package remained absent. A separate guest job displayed a fresh exact
+plan awaiting operator approval for a supervised installation.
 [M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)

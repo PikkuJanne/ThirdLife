@@ -5367,9 +5367,31 @@ tasks:
     duration: 51.897 s through changed boot, 3.657 s for the post-boot journal read and 3.430 s for the persisted report read
     reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb
     limitation: Continuity of the ambiguous attempt only. The guest returned signed out, so the post-boot WPF report was unobserved.
-  blocked_reason: The approved attempt ended without exact package registration and remains in review. Basic-console sign-in is
-    needed for post-restart WPF reopening. A subsequent supervised installation requires its own exact plan and approval. Native
-    interruption and checkpoint restoration retain separate scoped authorization.
+  - task: TL-0410
+    summary: After the guest restart and operator sign-in, the original job reopened in review and displayed its matching workshop
+      report. A fresh MSI check found the package absent and the journal fingerprint still matched, with no additional dispatch.
+    command_or_review: Reopen RequiresReview, read-only original job journal comparison and native package preflight
+    tier: extended
+    result: passed
+    environment: Unelevated Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 49.175 s reopen, 5.053 s journal comparison and 6.544 s native preflight
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and post-restart reopen bundle
+    limitation: Recovery of the timed-out attempt. The package remained absent and installation verification was unavailable.
+  - task: TL-0410
+    summary: A separate job recorded the guest-scoped intake and displayed a distinct exact package proposal with installation and
+      handover disabled. The new job had zero approvals and action entries, and the runner cleaned its stage.
+    command_or_review: Bound unelevated guest Preview and read-only new job journal and process check
+    tier: targeted
+    result: passed
+    environment: Same Windows 11 Pro 26H2 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 55.700 s preview and 3.891 s independent check
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and fresh preview bundle
+    limitation: Plan preview only. This new job has its own exact plan and requires fresh installation approval.
+  blocked_reason: The original timed-out job remains in review and the exact package is absent. The new distinct supervised plan
+    awaits exact installation approval and the actual Windows choice if prompted. Native interruption and checkpoint restoration
+    retain separate scoped authorization.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.

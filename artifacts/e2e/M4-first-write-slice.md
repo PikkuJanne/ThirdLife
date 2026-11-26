@@ -261,14 +261,48 @@ survived without another action entry. No app, console installer, consent or
 runner stage remained. A bounded 3.430 s read of the protected report store
 found one matching pre-restart report. It retained the exact plan, machine
 scope and timeout, with no verification result. The new Basic console was
-signed out. Post-restart WPF report observation depends on the existing guest
-account signing in.
+signed out at that checkpoint.
 
 Quick with locked restore passed in 159.474 s in the isolated host worktree
 while the guest checks were running. The Release build took 31.90 s and the
 Quick WPF selection took 61 s. The warm Quick repeat passed in 115.046 s with
 1,233 .NET tests and eight governance regressions. The bundle and repository
 validators passed again after the evidence update.
+
+## 26 November 2026 post-restart WPF recovery
+
+After Basic-console sign-in, `eng/run-m4-package-desktop.ps1 -Reopen
+-ExpectedRecovery RequiresReview` passed in 49.175 s on the original saved job
+with the reviewed Release artifacts from `20247fb`. The unelevated application
+made a fresh registration check, kept the job in review, and generated and
+displayed the workshop report for the exact plan. Installation verification and
+handover remained unavailable. The app closed normally and the runner removed
+its staging files. The reopened bundle SHA-256 was
+`1ab89d9298e1b7cd3f2fecf6af0cce090179dc3c450c5e7299339dc7a0936e86`.
+
+A separate 5.053 s SQLite read found the same journal fingerprint as before the
+restart. The single approval, dispatch intent and timed-out review result were
+unchanged. A 6.544 s native preflight independently found the exact package
+absent, no active installer and the expected package-source length. A separate
+attempt to reread the newly rendered report file from the host hit a PowerShell
+Direct error. The report observation comes from the actual WPF display.
+
+The recovered job's timeout keeps its existing attempt in review. A separate
+unelevated `-Preview` created a new saved job and assessed the same reviewed
+guest. It recorded the operator's existing guest-scoped intake confirmation
+with its original date and code. The app displayed a distinct exact Notepad++
+8.9.9.1 x64 machine-wide proposal in 55.700 s. The preview completed with
+install and handover disabled, normal app exit and runner cleanup. A 3.891 s
+read-only check found one intake, 164 observations, zero approvals, zero action
+entries and no installer or runner residue. The original attempt remains in its
+own saved job. The fresh plan digest is recorded locally for operator review.
+The preview bundle SHA-256 was
+`ed7f882f6c07e6b2ad76722be26cd4d563452131dc379ebc28a62072fd7ae133`.
+
+Host Quick passed in 134.067 s at `82fe982` with locked dependencies, 1,233
+.NET tests and eight governance regressions. The build took 20.65 s and the
+Quick WPF selection took 58 s while native guest verification was in progress.
+The bundle and repository validators passed after the evidence update.
 
 ## Native procedure
 
