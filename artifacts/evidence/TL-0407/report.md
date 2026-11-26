@@ -70,5 +70,5 @@ The protected logger was exercised in a temporary root and the WPF entry point
 used an injected event sink. A new native install, UAC prompt, physical restart,
 and perceptual assistive-technology output were unobserved. Prior live install
 and launch observations retain their TL-0412 and TL-0406 authority. The support
-projection is in memory. Archive creation, recipient preview and explicit export
+projection is in memory. Archive creation, operator preview and explicit export
 remain TL-0606.
