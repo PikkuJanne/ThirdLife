@@ -68,7 +68,8 @@ limit. Expired approvals or changed resolutions require fresh review.
 [Package retry evidence](artifacts/evidence/TL-0409/report.md)
 
 TL-0410 verified guest admission, exact package absence, unelevated startup and
-ten deterministic package and recovery selections. The live plan preview needs
-an attributable no-donor-storage intake record for the dedicated guest. Once the
-plan is visible, obtain its scoped authority for the guest transactions,
-interruption, restart and cleanup. [M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)
+ten deterministic package and recovery selections. The corrected preview runner
+checks both verification steps and the saved intake date. Live preview awaits
+attributable confirmation of lawful ownership and no donor storage. The displayed
+plan then requires scoped authority for the guest transactions, interruption,
+restart and cleanup. [M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)

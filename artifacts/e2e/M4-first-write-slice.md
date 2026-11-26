@@ -68,6 +68,58 @@ logic. The recipient view at this stage is a test-only
 [draft](../evidence/TL-0410/recipient-draft.md). TL-0605 owns the product recipient
 guide. Technical WPF checks do not establish perceptual assistive-technology behavior.
 
+## 26 November 2026 preview runner correction
+
+PR #53 integrated the original harness as `3d273b5`. The pinned profile's plan
+describes an exact installed-package check and a short launch without documents.
+The old driver expected identity-only text and stopped before returning a valid
+plan digest. The corrected driver
+checks exact displayed lines for the reviewed route and validates the digest
+header and the saved intake date.
+
+A Windows PowerShell 5.1 probe ran the `Read-Plan` function extracted from both
+script versions against controlled UI Automation values using the production
+verification text and pinned catalogue. The original rejected the expected text.
+The corrected function returned the digest for CRLF and LF and refused a longer
+version, missing launch verification and an overlong digest. This probe exercised
+the reader without creating a guest job.
+
+Read-only preflight at `3d273b5` passed again in 4.822 s on the admitted dedicated
+guest. Windows Installer reported the reviewed package absent and no active
+installer. The optional source check returned the expected length. Host queries
+found one virtual disk and no pass-through disk or mounted DVD in both the running
+VM configuration and the reviewed checkpoint. That describes the attachments at
+inspection. The live intake still needs an attributable confirmation of lawful
+ownership and no donor storage, with the workshop operator code and actual date.
+
+`eng/run-m4-package-desktop.ps1 -Inspect` passed with the corrected driver and a
+locked Release build from `3d273b5`. The wrapper took 57.001 s including
+preflight, transfer and cleanup. The unelevated application opened the audit
+workspace, showed the closed intake gate and exited normally. A separate
+PowerShell Direct check took 2.514 s and found no ThirdLife application or
+installer process, runner task, staging directory or job-store directory.
+
+Continuation artifact SHA-256 digests
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Release apphost | `60768deea5b96f46efc5395af150c677204c99f7bc9255f7f2858cdc4d56094b` |
+| Release UI assembly | `d0de8fe3909c537ffe3aedc9ad986d58a2ef697a2d33265a38ff518385f8604a` |
+| Corrected driver | `eaaf2a987bd8f072919ee348fcaba825995ab6ca9d5eb9d76f03dc65126c1275` |
+| Staged bundle | `3d754b78904d38849bb863216ba422ce41a5dcc4ff1fe9a47dec4999c049b45d` |
+
+The new worktree's first Targeted invocation stopped before testing because
+PyYAML was absent. Installing the pinned requirements in its local virtual
+environment resolved that. The first test selection took 188.568 s and included
+four guest-only `PlanReviewTests` by name. They refused the host as designed.
+The deterministic rerun passed in 144.860 s with 1,233 Quick .NET tests,
+57 focused WPF cases and eight governance regressions. It excluded
+`ActiveMachine`, `Extended` and `SandboxOnly` selections.
+
+~~~powershell
+.\eng\verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -Filter '(FullyQualifiedName~PackageSetupTests|FullyQualifiedName~RebootRecoveryTests|FullyQualifiedName~PlanReviewTests)&Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly'
+~~~
+
 ## Native procedure
 
 Use the exact VM and clean checkpoint IDs from the reviewed profile. Retain the
@@ -81,13 +133,14 @@ public artifact digests, durations and limitations.
    affected native case.
 2. Use `eng/run-m4-package-desktop.ps1 -Inspect` with the same IDs and reviewed
    Release apphost and UI digests. This exercises the normal unelevated WPF
-   entry point on the Basic console. With attributable no-donor-storage
-   confirmation, use `-Preview` with the actual attestation date and operator
-   code. It creates one guest job, saves the intake, runs the live assessment
-   and reads the fully resolved package plan without approving it. Use
-   `-ResumePreview -Job` to continue the existing job if needed.
+   entry point on the Basic console. With attributable confirmation of lawful
+   ownership and no donor storage, use `-Preview` with the actual verification
+   date and operator code. It creates one guest job, saves the intake, runs the
+   live assessment and reads the fully resolved package plan without approving
+   it. Use `-ResumePreview -Job` to continue the existing job if needed.
 3. Obtain operator authority for the displayed plan digest and the exact
    target and action, then approve and dispatch in the ordinary application.
+   Compare the displayed digest again if reopening the job for approval.
    The pinned route is Notepad++ 8.9.9.1, source
    `notepad-plus-plus-releases`, x64 vendor MSI, machine scope, SHA-256
    `e3b0607a092ce2604fbdac027db2c94915995e8e568ebd226f8c5493c2f61a80`.
