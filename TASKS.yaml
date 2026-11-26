@@ -5279,9 +5279,31 @@ tasks:
     reference: artifacts/e2e/M4-first-write-slice.md, production source d61c49e
     limitation: Admission and startup only. External sanitization evidence, exact package plan, scoped authority, live
       dispatch and successful restoration remain outstanding.
-  blocked_reason: A truthful attributable no-donor-storage intake statement for the admitted guest is required to evaluate the
-    live policy and display the exact plan. Then record scoped authority for the guest plan, each planned interruption or
-    restart, and checkpoint restoration, with an actual Windows choice if it prompts.
+  - task: TL-0410
+    summary: The corrected plan reader accepts exact reviewed verification text and rejects altered version, verification or digest.
+      The rebuilt unelevated application shows the closed gate, and the guest retains no runner or job state after inspection.
+    command_or_review: Windows PowerShell 5.1 plan-reader probe, eng/run-m4-package-preflight.ps1 -CheckPackageSource,
+      eng/run-m4-package-desktop.ps1 -Inspect and PowerShell Direct cleanup inspection
+    tier: targeted
+    result: passed
+    environment: Unelevated active Windows 11 native x64 host and its dedicated Windows 11 native x64 Hyper-V guest
+    date: '2026-11-26'
+    duration: 4.822 s preflight, 57.001 s desktop wrapper and 2.514 s cleanup inspection
+    reference: artifacts/e2e/M4-first-write-slice.md, base 3d273b5 and recorded continuation artifact digests
+    limitation: Controlled UI Automation values exercised the reader. The live intake, package plan and execution remain outstanding.
+  - task: TL-0410
+    summary: Quick and 57 deterministic package, plan review and reboot recovery WPF cases passed.
+    command_or_review: eng/verify.ps1 -Tier Targeted with the filtered WPF selection recorded in the continuation evidence
+    tier: targeted
+    result: passed
+    environment: Unelevated active Windows 11 Pro 26H2 build 26300.9974, native x64, in an isolated worktree
+    date: '2026-11-26'
+    duration: 144.860 s
+    reference: artifacts/e2e/M4-first-write-slice.md, base 3d273b5 with the corrected preview runner
+    limitation: Separately invoked guest-only, extended and Sandbox-only cases were excluded.
+  blocked_reason: The admitted guest requires attributable confirmation of lawful ownership and no donor storage, with a workshop
+    operator code and actual verification date, before live policy evaluation and exact plan preview. Then record scoped authority
+    for the guest plan, each planned interruption or restart, and checkpoint restoration, with an actual Windows choice if it prompts.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.

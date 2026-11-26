@@ -132,19 +132,20 @@ function Read-Plan() {
     $details = Wait-Observation { Find-Control 'PlanDetailsExpander' } 'plan details'
     $details.GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
     $text = Wait-Observation { Read-Value 'PlanDetailsText' } 'exact package details'
+    $lines = $text -split '\r?\n'
     foreach ($line in @(
         'Package Notepad++.Notepad++',
         'Source notepad-plus-plus-releases',
+        'Publisher Notepad Plus Plus',
         'Version 8.9.9.1',
         'Installer SHA-256 e3b0607a092ce2604fbdac027db2c94915995e8e568ebd226f8c5493c2f61a80',
         'Scope Machine',
-        'Check exact installed package identity'
+        'Verification Check the exact installed package identity and briefly launch the application with no documents'
     )) {
-        if (-not $text.Contains($line)) { throw 'The plan differs from the reviewed route.' }
+        if ($line -cnotin $lines) { throw 'The plan differs from the reviewed route.' }
     }
-    $digest = [regex]::Match($text, 'Plan SHA-256 ([0-9a-f]{64})').Groups[1].Value
-    if (-not $digest) { throw 'The displayed plan has no digest.' }
-    $digest
+    if ($lines[0] -cnotmatch '\APlan SHA-256 ([0-9a-f]{64})\z') { throw 'The displayed plan has no digest.' }
+    $Matches[1]
 }
 
 $stopwatch = [Diagnostics.Stopwatch]::StartNew()
@@ -177,15 +178,15 @@ try {
         $result.local_job = $Job
         Set-Value 'OperatorIdInput' $OperatorCode
         Select-Option 'SanitizationResult' 'Verified no donor storage'
-        Set-Value 'SanitizationDate' ($intakeDate.ToString('d', [Globalization.CultureInfo]::CurrentCulture))
+        $displayDate = $intakeDate.ToString('d', [Globalization.CultureInfo]::CurrentCulture)
+        Set-Value 'SanitizationDate' $displayDate
         $confirmation = Wait-Observation { Find-Control 'ExternalRecordConfirmed' } 'external confirmation'
         $toggle = $confirmation.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
         if ($toggle.Current.ToggleState -ne [Windows.Automation.ToggleState]::On) { $toggle.Toggle() }
         Invoke-Button 'RecordSanitizationButton'
         $null = Wait-Observation { (Find-Control 'StartAssessmentButton').Current.IsEnabled } 'allowing sanitization state'
         $intake = (Find-Control 'SavedSanitization').Current.Name
-        if (-not $intake.Contains('no donor storage, verified. Human confirmed.') -or
-            -not $intake.Contains("Operator $OperatorCode,")) {
+        if ($intake -cne "Latest saved external result: no donor storage, verified. Human confirmed. Operator $OperatorCode, $displayDate.") {
             throw 'The saved external intake record does not match the supplied attestation.'
         }
         $result.last_checkpoint = 'attributed_intake_saved'
