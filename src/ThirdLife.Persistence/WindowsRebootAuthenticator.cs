@@ -11,13 +11,16 @@ internal static class WindowsRebootAuthenticator
 {
     private const uint UiForbidden = 0x1;
 
-    internal static RebootResumeToken Seal(RebootCheckpoint checkpoint, GuardedStoreFile databaseGuard)
+    internal static RebootResumeToken Seal(RebootCheckpoint checkpoint, GuardedStoreFile databaseGuard) =>
+        TrySeal(checkpoint, databaseGuard) ?? throw new JobStoreUnavailableException();
+
+    internal static RebootResumeToken? TrySeal(RebootCheckpoint checkpoint, GuardedStoreFile databaseGuard)
     {
         var digest = SHA256.HashData(checkpoint.CreateAuthenticationData());
         var sealedDigest = Transform(digest, Purpose(databaseGuard), protect: true);
         return sealedDigest is { Length: > 0 and <= RebootResumeToken.MaximumBytes }
             ? new RebootResumeToken(sealedDigest)
-            : throw new JobStoreUnavailableException();
+            : null;
     }
 
     internal static bool Matches(RebootCheckpoint checkpoint, RebootResumeToken token, GuardedStoreFile databaseGuard)

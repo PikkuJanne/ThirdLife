@@ -18,7 +18,7 @@ using ThirdLife.Policy.Schema;
 namespace ThirdLife.Persistence.Tests;
 
 [SupportedOSPlatform("windows")]
-public sealed class RebootCheckpointStoreTests
+public sealed partial class RebootCheckpointStoreTests
 {
     private static readonly DateTimeOffset IssueTime = PersistenceTestData.Timestamp.AddHours(1);
     private static readonly Guid ApprovalId = new("3ae8da15-9bb9-4269-b42b-22af93d59eb2");
@@ -291,7 +291,8 @@ public sealed class RebootCheckpointStoreTests
     private static Task<JournalEntry> SaveRestartRequiredAsync(SqliteJobStore store, string suffix) =>
         SaveAppliedAsync(store, suffix, needsRestart: true);
 
-    private static async Task<JournalEntry> SaveAppliedAsync(SqliteJobStore store, string suffix, bool needsRestart)
+    private static async Task<JournalEntry> SaveAppliedAsync(SqliteJobStore store, string suffix, bool needsRestart,
+        bool packageBackend = false)
     {
         var job = PersistenceTestData.CreateJob("reboot-" + suffix);
         var intake = new SanitizationEvidence(
@@ -323,13 +324,17 @@ public sealed class RebootCheckpointStoreTests
             new JournalApproval(ApprovalId, plan.Key, Approver, CorrelationId, IssueTime.AddMinutes(-4))));
         Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(
             Entry(plan.Key, action.ActionId, ApprovedId, JournalState.Planned, JournalState.Approved,
-                JournalActor.Operator, JournalResult.None, IssueTime.AddMinutes(-3))));
+                JournalActor.Operator, JournalResult.None, IssueTime.AddMinutes(-3),
+                packageBackend ? JournalCheckpoint.PackagePlanApproval : JournalCheckpoint.None)));
         Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(
             Entry(plan.Key, action.ActionId, StartedId, JournalState.Approved, JournalState.Started,
-                JournalActor.Coordinator, JournalResult.None, IssueTime.AddMinutes(-2), JournalCheckpoint.DispatchIntent)));
+                JournalActor.Coordinator, JournalResult.None, IssueTime.AddMinutes(-2),
+                packageBackend ? JournalCheckpoint.PackageDispatchIntent : JournalCheckpoint.DispatchIntent)));
+        var appliedCheckpoint = needsRestart ? JournalCheckpoint.RestartRequired :
+            packageBackend ? JournalCheckpoint.PackageLaunchPendingVerification : JournalCheckpoint.None;
         var applied = Entry(plan.Key, action.ActionId, AppliedId, JournalState.Started, JournalState.Applied,
-            JournalActor.Broker, JournalResult.BackendApplied, IssueTime.AddMinutes(-1),
-            needsRestart ? JournalCheckpoint.RestartRequired : JournalCheckpoint.None);
+            packageBackend ? JournalActor.PackageBackend : JournalActor.Broker, JournalResult.BackendApplied,
+            IssueTime.AddMinutes(-1), appliedCheckpoint);
         Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(applied));
         return applied;
     }

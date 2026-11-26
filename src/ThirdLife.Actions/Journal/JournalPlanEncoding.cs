@@ -24,7 +24,8 @@ internal static partial class JournalPlanEncoding
     public static bool IsDigest(string? value) => value is { Length: 64 } &&
         value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
 
-    public static (SanitizationGateDecisionId Gate, ImmutableArray<JournalAction> Actions, bool IsCurrentPolicyPlan) ReadPlan(
+    public static (SanitizationGateDecisionId Gate, ImmutableArray<JournalAction> Actions, bool IsCurrentPolicyPlan,
+        string CatalogSha256, string ProfileSha256, bool SyntheticData) ReadPlan(
         JournalPlanKey key, byte[] bytes)
     {
         using var document = Open(bytes);
@@ -45,9 +46,10 @@ internal static partial class JournalPlanEncoding
         RequireFields(subject,
             ["job_id", "gate_decision_id", "profile_sha256", "catalog_sha256", "policy_sha256", "evidence_sha256",
                 "synthetic_data", "active_capability_ids"]);
+        var catalog = ReadString(subject.GetProperty("catalog_sha256"));
+        var profile = ReadString(subject.GetProperty("profile_sha256"));
         if (!subject.GetProperty("job_id").ValueEquals(key.JobId.Value) ||
-            !IsDigest(ReadString(subject.GetProperty("profile_sha256"))) ||
-            !IsDigest(ReadString(subject.GetProperty("catalog_sha256"))) ||
+            !IsDigest(profile) || !IsDigest(catalog) ||
             !IsDigest(ReadString(subject.GetProperty("policy_sha256"))) ||
             !IsDigest(ReadString(subject.GetProperty("evidence_sha256"))))
         {
@@ -58,7 +60,7 @@ internal static partial class JournalPlanEncoding
         var synthetic = subject.GetProperty("synthetic_data").GetBoolean();
         var capabilities = ReadActiveCapabilities(subject.GetProperty("active_capability_ids"));
         return (gate, ReadActions(root.GetProperty("actions"), capabilities, synthetic),
-            schemaVersion == PlanIdentity.CurrentVersion);
+            schemaVersion == PlanIdentity.CurrentVersion, catalog, profile, synthetic);
     }
 
     public static byte[] WriteImpact(ProposedPlan plan, PlanImpact impact)

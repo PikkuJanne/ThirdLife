@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using ThirdLife.Actions.Journal;
+using ThirdLife.Actions.Recovery;
 using ThirdLife.Core.Jobs;
 
 namespace ThirdLife.Persistence;
@@ -82,7 +83,8 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
         ArgumentNullException.ThrowIfNull(entry);
         ThrowIfDisposed();
         if (entry.Checkpoint is JournalCheckpoint.BrokerApproval or JournalCheckpoint.BrokerDispatchIntent or
-            JournalCheckpoint.BrokerPreDispatchFailure)
+            JournalCheckpoint.BrokerPreDispatchFailure or JournalCheckpoint.PackageRecoveryVerification or
+            JournalCheckpoint.PackageRebootVerification)
         {
             throw new JobStoreConflictException();
         }
@@ -135,6 +137,10 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
             await RequireJournalCapacityAsync(connection, transaction, plan.Key,
                 "SELECT count(*) FROM action_journal_entries WHERE job_id = $job_id;", JournalHistory.MaximumEntriesPerJob, token).ConfigureAwait(false);
             await InsertJournalEntryAsync(connection, transaction, entry, token).ConfigureAwait(false);
+            if (RebootCheckpoint.IsRestartResult(entry, JournalActor.PackageBackend))
+            {
+                await IssuePackageRebootCheckpointAsync(connection, transaction, entry, token).ConfigureAwait(false);
+            }
             outcome = JournalWriteResult.Recorded;
         }, cancellationToken).ConfigureAwait(false);
         return outcome;

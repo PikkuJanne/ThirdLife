@@ -33,6 +33,7 @@ public sealed partial class SqliteJobStore : IJobStore
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly TimeProvider _timeProvider;
     private readonly IJobStoreFaultInjector? _faultInjector;
+    private readonly Func<ulong?> _readBootUptime;
     private bool _disposed;
 
     private SqliteJobStore(
@@ -42,7 +43,8 @@ public sealed partial class SqliteJobStore : IJobStore
         SqliteConnection connection,
         string databaseEngineVersion,
         TimeProvider timeProvider,
-        IJobStoreFaultInjector? faultInjector)
+        IJobStoreFaultInjector? faultInjector,
+        Func<ulong?> readBootUptime)
     {
         _layout = layout;
         _databaseGuard = databaseGuard;
@@ -51,6 +53,7 @@ public sealed partial class SqliteJobStore : IJobStore
         DatabaseEngineVersion = databaseEngineVersion;
         _timeProvider = timeProvider;
         _faultInjector = faultInjector;
+        _readBootUptime = readBootUptime;
         _jsonOptions = DomainJson.CreateStrictOptions();
     }
 
@@ -64,6 +67,7 @@ public sealed partial class SqliteJobStore : IJobStore
             SqliteMigrationCatalog.CurrentVersion,
             TimeProvider.System,
             faultInjector: null,
+            readBootUptime: null,
             cancellationToken);
 
     internal static Task<SqliteJobStore> OpenAsync(
@@ -74,6 +78,7 @@ public sealed partial class SqliteJobStore : IJobStore
             SqliteMigrationCatalog.CurrentVersion,
             TimeProvider.System,
             faultInjector: null,
+            readBootUptime: null,
             cancellationToken);
 
     public async Task CreateJobAsync(Job job, CancellationToken cancellationToken = default)
@@ -469,13 +474,23 @@ public sealed partial class SqliteJobStore : IJobStore
         TimeProvider timeProvider,
         IJobStoreFaultInjector? faultInjector,
         CancellationToken cancellationToken = default) =>
-        OpenInternalAsync(rootPath, maximumMigrationVersion, timeProvider, faultInjector, cancellationToken);
+        OpenInternalAsync(rootPath, maximumMigrationVersion, timeProvider, faultInjector, readBootUptime: null, cancellationToken);
+
+    internal static Task<SqliteJobStore> OpenForTestingAsync(
+        string rootPath,
+        int maximumMigrationVersion,
+        TimeProvider timeProvider,
+        IJobStoreFaultInjector? faultInjector,
+        Func<ulong?> readBootUptime,
+        CancellationToken cancellationToken = default) =>
+        OpenInternalAsync(rootPath, maximumMigrationVersion, timeProvider, faultInjector, readBootUptime, cancellationToken);
 
     private static async Task<SqliteJobStore> OpenInternalAsync(
         string rootPath,
         int maximumMigrationVersion,
         TimeProvider timeProvider,
         IJobStoreFaultInjector? faultInjector,
+        Func<ulong?>? readBootUptime,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -563,7 +578,8 @@ public sealed partial class SqliteJobStore : IJobStore
                 connection,
                 engineVersion,
                 timeProvider,
-                faultInjector);
+                faultInjector,
+                readBootUptime ?? WindowsBootUptime.Read);
             databaseGuard = null;
             journalGuard = null;
             connection = null;

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
 using ThirdLife.Catalog.Profiles;
 using ThirdLife.Catalog.Schema;
@@ -17,6 +18,9 @@ internal static class WorkshopPackageProfile
 
     public static bool IncludesLaunchProbe(ProposedPlan plan) =>
         plan.CatalogSha256 == CatalogSha256 && plan.ProfileSha256 == ProfileSha256;
+
+    public static bool IncludesLaunchProbe(JournalPlanSnapshot plan) =>
+        !plan.SyntheticData && plan.CatalogSha256 == CatalogSha256 && plan.ProfileSha256 == ProfileSha256;
 
     public static PlanProfileOption? Load(DateTimeOffset asOfUtc)
     {
