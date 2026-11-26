@@ -20,7 +20,8 @@ public sealed record RebootCheckpoint
         Guid approvalId,
         Guid correlationId,
         DateTimeOffset issuedAtUtc,
-        DateTimeOffset expiresAtUtc)
+        DateTimeOffset expiresAtUtc,
+        ulong? packageBootUptime = null)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(id, Guid.Empty);
         ArgumentOutOfRangeException.ThrowIfEqual(actionId, Guid.Empty);
@@ -41,6 +42,7 @@ public sealed record RebootCheckpoint
         CorrelationId = correlationId;
         IssuedAtUtc = issuedAtUtc.ToUniversalTime();
         ExpiresAtUtc = expiresAtUtc.ToUniversalTime();
+        PackageBootUptime = packageBootUptime;
     }
 
     public Guid Id { get; }
@@ -52,21 +54,28 @@ public sealed record RebootCheckpoint
     public DateTimeOffset IssuedAtUtc { get; }
     public DateTimeOffset ExpiresAtUtc { get; }
 
+    /// <summary>Kernel interrupt time in 100 ns ticks at the durable package restart result.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ulong? PackageBootUptime { get; }
+
     public bool IsCurrent(DateTimeOffset now) => now >= IssuedAtUtc && now < ExpiresAtUtc;
 
-    public bool MatchesRestart(JournalEntry? entry) =>
+    public bool MatchesRestart(JournalEntry? entry) => IsRestartResult(entry,
+        PackageBootUptime is null ? JournalActor.Broker : JournalActor.PackageBackend) &&
+        entry!.Plan == Plan && entry.ActionId == ActionId && entry.EntryId == JournalEntryId &&
+        entry.ApprovalId == ApprovalId && entry.CorrelationId == CorrelationId &&
+        entry.OccurredAtUtc <= IssuedAtUtc;
+
+    public static bool IsRestartResult(JournalEntry? entry, JournalActor backend) =>
         entry is
         {
             PriorState: JournalState.Started,
             State: JournalState.Applied,
-            Actor: JournalActor.Broker,
             Result: JournalResult.BackendApplied,
             Checkpoint: JournalCheckpoint.RestartRequired,
             Verification: null,
-        } &&
-        entry.Plan == Plan && entry.ActionId == ActionId && entry.EntryId == JournalEntryId &&
-        entry.ApprovalId == ApprovalId && entry.CorrelationId == CorrelationId &&
-        entry.OccurredAtUtc <= IssuedAtUtc;
+            ApprovalId: not null,
+        } && entry.Actor == backend && backend is JournalActor.Broker or JournalActor.PackageBackend;
 
     /// <summary>Encodes versioned workshop metadata for a user-scoped authenticator.</summary>
     public byte[] CreateAuthenticationData()
@@ -75,7 +84,8 @@ public sealed record RebootCheckpoint
         using (var writer = new Utf8JsonWriter(buffer))
         {
             writer.WriteStartObject();
-            writer.WriteString("purpose", "thirdlife.reboot-checkpoint.v1");
+            writer.WriteString("purpose", PackageBootUptime is null
+                ? "thirdlife.reboot-checkpoint.v1" : "thirdlife.package-reboot-checkpoint.v1");
             writer.WriteString("checkpoint_id", Id);
             writer.WriteString("job_id", Plan.JobId.Value);
             writer.WriteString("plan_sha256", Plan.PlanSha256);
@@ -86,6 +96,10 @@ public sealed record RebootCheckpoint
             writer.WriteString("correlation_id", CorrelationId);
             writer.WriteString("issued_at_utc", IssuedAtUtc);
             writer.WriteString("expires_at_utc", ExpiresAtUtc);
+            if (PackageBootUptime is { } uptime)
+            {
+                writer.WriteNumber("package_boot_uptime", uptime);
+            }
             writer.WriteEndObject();
         }
 

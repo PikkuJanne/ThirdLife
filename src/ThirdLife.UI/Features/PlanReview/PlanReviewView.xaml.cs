@@ -83,6 +83,16 @@ public partial class PlanReviewView : UserControl
         }
     }
 
+    private void CancelPackageRecovery(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanCancelPackageRecovery)
+        {
+            var hadFocus = CancelPackageRecoveryButton.IsKeyboardFocused;
+            workspace.CancelPackageOperation();
+            RestoreFocus(PackageRecoveryMessage, hadFocus);
+        }
+    }
+
     private void RestoreFocus(FrameworkElement target, bool hadFocus)
     {
         if (hadFocus && target.IsVisible && (IsKeyboardFocusWithin || Keyboard.FocusedElement is null))

@@ -92,10 +92,13 @@ public sealed partial class PackageSetupTests
                 Assert.Equal(new[] { JournalState.Approved, JournalState.Started, JournalState.Applied },
                     durable.Entries.Select(entry => entry.State));
                 Assert.Equal(JournalCheckpoint.PackageLaunchPendingVerification, durable.Entries[^1].Checkpoint);
-                await using var observer = OpenWorkspace(disk, reports, service);
+                var observingRuntime = new RecoveryObservationRuntime(
+                    new PackageObservation(PackageObservationStatus.Installed, PilotPackageService.Identity.ExactVersion));
+                await using var observer = OpenWorkspace(disk, reports, new PilotPackageService(observingRuntime));
                 await observer.OpenJobAsync(storedJobId.Value);
                 Assert.Contains("cleanup of any temporary launch check files have not been confirmed", observer.PackageHistoryText);
                 Assert.False(observer.CanInstallPackage);
+                Assert.Equal(0, observingRuntime.Probes);
             };
             await workspace.RecordSanitizationAsync(new SanitizationInput(SanitizationState.NoDonorStorage,
                 "fixture-operator", DateOnly.FromDateTime(Now.UtcDateTime), "", ConfirmedExternalRecord: true));
@@ -145,6 +148,14 @@ public sealed partial class PackageSetupTests
         Assert.Equal(JournalActor.PackageBackend, history.Entries[2].Actor);
         var last = history.Entries[^1];
         Assert.Equal(expectedResult, last.Result);
+        if (last.Checkpoint == JournalCheckpoint.RestartRequired)
+        {
+            var checkpoint = await check.LoadPackageRebootCheckpointAsync(last);
+            Assert.NotNull(checkpoint);
+            Assert.False(checkpoint.CanVerify);
+            Assert.False(checkpoint.IsExpired);
+        }
+
         if (expectedState is JournalState.Verified || expectedState == JournalState.RequiresReview && history.Entries[2].State == JournalState.Applied)
         {
             Assert.Equal(JournalActor.Verifier, last.Actor);

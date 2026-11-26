@@ -68,15 +68,15 @@ At revised `TL-0008`, every command cell was deliberately non-executable. An own
 | `FI-001` | Network/provider unavailable before operation, including timeout, exception, malformed/access-denied evidence. | Offline-capable work remains usable; no mutation; required evidence stays unavailable; unrelated observations remain; bounded retry/next action is shown. | Missing/malformed data becomes pass, raw provider output persists, or core local data becomes unavailable. | Targeted at provider work beginning `TL-0105`, network action `TL-0405`, or update scan `TL-0504`. | Common provider-contract subset: `dotnet test .\tests\ThirdLife.Inventory.Tests\ThirdLife.Inventory.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName=ThirdLife.Inventory.Tests.ProviderFailureInjectionTests.FI001SmcProviderUnavailableRemainsFailClosed"`; TL-0106 system-inventory subset uses the same project with filter `FullyQualifiedName=ThirdLife.Inventory.Tests.SystemInventoryProviderTests.FI001SmcSystemInventoryFailuresRemainFailClosed`; network/transfer owners add their own bounded case. | Common subset passed 1/1 at `e5e9c7ef26ddfb2674ce08d7ea35b0dd193b9a2c`; TL-0106 concrete deterministic subset passed 1/1 with exact commit/timing pinned in task evidence; real permission denial and network/transfer variants `Not run` |
 | `FI-002` | Network interruption, slowness, filtering, or timeout during metadata/package transfer. | Partial untrusted bytes are bounded/removed or quarantined; progress/cancel/uncertainty remain accessible; checkpoint is retry-safe; retry revalidates identity/trust. | Partial execution, infinite retry/wait, stale approval, hidden source fallback, UI deadlock, or unbounded cache. | Extended at transfer risk `TL-0405`/`TL-0408` or failure gate `TL-0510`. | [TL-0405 interrupted package transfer](#tl-0405-interrupted-package-transfer) | The streamed-download fixture checks bounded staging cleanup. The WPF fixture checks saved-job retry and fresh approval. See `artifacts/evidence/TL-0405/report.md` for results and limits. |
 | `FI-003` | Insufficient capacity/resource before mutation or bounded destination/resource exhaustion after preflight. | Preflight preserves rollback headroom; mid-operation failure leaves truthful review/failed state; output/store remains atomic or recoverable; cleanup is bounded. | Host system volume is filled, source data corrupts, work appears complete/verified, or security/accessibility is disabled for resources. | Targeted at storage preflight `TL-0503`; Extended for mid-write/resource risk at `TL-0510`/`TL-0606`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
-| `FI-004` | UI/manual workflow terminates or pauses before dispatch, after durable intent, or between manual-test steps. | Pre-dispatch state is unchanged; post-intent ambiguity is reconciled; completed manual results persist; incomplete work remains `Not run`/`Not available`; reopening offers safe recovery. | Unattributable dispatch, false verified/pass, blind repeat, wrong-job resume, or loss/rewrite of independent results. | Targeted at journal `TL-0308`, manual workflow `TL-0114`, or UI/broker integration `TL-0313`. | [TL-0313 interrupted dispatch and reopen](#tl-0313-application-no-op-scenarios) | Actual WPF fixture termination passed after durable intent. The backend held before any broker call. The same SQLite job reopened and reconciled. |
-| `FI-005` | Broker/backend terminates before mutation, during mutation, or immediately after an ambiguous attempt. | Correlated attempt remains attributable; no permanent elevated process; actual state is re-observed before retry; ambiguity blocks readiness. | Dispatch/backend exit becomes applied/verified, duplicate mutation, automatic unsafe retry, history rewrite, or privileged residue. | Targeted before mutation at `TL-0311`/`TL-0312`; Extended for ambiguous mutation at `TL-0408`/`TL-0409`. | Run the protected guest `Interrupt` case using Runner procedure in `artifacts/evidence/TL-0317/report.md`. | Pre-dispatch no-op interruption and cleanup passed in the protected guest. Ambiguous mutation remains assigned to `TL-0408`/`TL-0409`. |
+| `FI-004` | UI/manual workflow terminates or pauses before dispatch, after durable intent, or between manual-test steps. | Pre-dispatch state is unchanged; post-intent ambiguity is reconciled; completed manual results persist; incomplete work remains `Not run`/`Not available`; reopening offers safe recovery. | Unattributable dispatch, false verified/pass, blind repeat, wrong-job resume, or loss/rewrite of independent results. | Targeted at journal `TL-0308`, manual workflow `TL-0114`, or UI/broker integration `TL-0313`; Extended for package recovery at `TL-0408`. | [TL-0313 interrupted dispatch and reopen](#tl-0313-application-no-op-scenarios) or [TL-0408 package process loss](#tl-0408-package-interruption-and-restart) | The TL-0313 WPF fixture terminated after durable intent, before any broker call. Package recovery has separate TL-0408 evidence. |
+| `FI-005` | Broker/backend terminates before mutation, during mutation, or immediately after an ambiguous attempt. | Correlated attempt remains attributable; no permanent elevated process; actual state is re-observed before retry; ambiguity blocks readiness. | Dispatch/backend exit becomes applied/verified, duplicate mutation, automatic unsafe retry, history rewrite, or privileged residue. | Targeted before mutation at `TL-0311`/`TL-0312`; Extended for ambiguous mutation at `TL-0408`/`TL-0409`. | Run the protected guest `Interrupt` case in `artifacts/evidence/TL-0317/report.md`, the [owned fixture backend case](#tl-0408-package-interruption-and-restart), or the [native package interruption procedure](#tl-0408-native-package-route-and-windows-restart). | Pre-dispatch no-op interruption and cleanup passed in the protected guest. Owned fixture and native package-route results have separate scope. |
 | `FI-006` | Operator declines UAC before broker authorization. | Zero privileged mutation and a valid job with keyboard-reachable retry or stop. The operator's existing plan approval stays in history. | False authorization or applied state, lost UI context, inaccessible recovery, or elevated process residue. | Targeted at broker/UI approval `TL-0313` and live application qualification `TL-0318`. | [Application declined consent and cancellation](#tl-0313-application-no-op-scenarios) | WPF decline, fresh approval and cancellation fixtures passed. The transport-level secure-desktop decline passed under TL-0317. The composed live case is pending under TL-0318. |
 | `FI-007` | Catalogue/package identity, source, publisher, version, content digest, or trust metadata changes after preview/approval. | Approval is invalidated; a new resolution/preview is required; no stale request executes. | Source substitution, downgrade, hash bypass, or unchanged approval after material change. | Targeted at approval/digest `TL-0307` or catalogue resolution `TL-0403`. | `Not implemented at TL-0008; the named owning task must supply a checked-in single-scenario command or bounded procedure before invocation` | Defined; `Not run` |
 | `FI-008` | Package/update/backend reports success while expected product/version is absent or update service does not converge. | Record at most applied/pending/review; independent verification fails; finite pass/restart state and recovery guidance remain; readiness stays blocked. | Backend success becomes verified/ready, infinite update loop, settings scraping, firmware injection, or raw output leakage. | Targeted at verification `TL-0406`; Full at update sequence `TL-0504`/`TL-0505` when task contract triggers. | [TL-0406 package verification fixtures](#tl-0406-package-verification-fixtures) | Package absence and wrong-version fixtures passed. Update convergence remains under the update tasks. |
 | `FI-009` | Installed application launch immediately fails, hangs, or resolves the wrong executable/version. | Launch verification fails with stable bounded reason; state is not verified; safe cleanup/retry/manual guidance is shown. | Presence alone becomes functional pass, arbitrary executable/path is launched, infinite wait, or failure is hidden. | Targeted at application verification `TL-0406`. | [TL-0406 package verification fixtures](#tl-0406-package-verification-fixtures) | Injected launch outcomes passed. The active-machine successful launch and its cleanup have separate evidence. |
 | `FI-010` | Synthetic job/database/report or migration is corrupt, interrupted, older, or newer than supported; export final replace can fail. | Transaction rolls back or open/export blocks safely; original/source job remains intact; backup/recovery is explicit; no corrupt final artifact/history rewrite. | Silent data loss, partial migration, raw fallback, unintended overwrite, invented evidence, or personal destination path in logs. | Targeted at persistence `TL-0102`; Full at migration/lifecycle `TL-0704`; export subcase targeted at `TL-0604`/`TL-0606`. | TL-0102 persistence interruption subset: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\run-tl0102-sandbox.ps1 -Phase Interruption`; the four independently filtered child-process cases cover termination after first insert, before commit, after commit, and before migration commit. Report/export replacement remains owned by `TL-0604`/`TL-0606`. | Persistence subset implemented; Passed 4/4 in Windows Sandbox on the active machine; report/export subset `Not run` |
 | `FI-011` | Clock moves, request/session expires, or resume token is stale, copied, replayed, or bound to another job/device/action/session. | Invalid authority is rejected; no action executes; timestamps/history remain immutable; operator starts a newly approved attributable path. | Replay, cross-job/device resume, silent expiry extension, or evidence timestamp rewrite. | Targeted at IPC/session `TL-0310`/`TL-0312` and resume `TL-0309`. | [TL-0309 resume authentication](#tl-0309-restart-recovery-scenarios) and the named broker session cases under Invocation in `artifacts/security/broker-test-plan.md` | Resume slice, bounded IPC fixture checks, and protected guest timeout passed. See `artifacts/evidence/TL-0312/report.md`. |
-| `FI-012` | Expected/unexpected restart, safe interruption, or full powered-off cold boot resumes with failed/unavailable/changed post-boot verification. | Durable checkpoint binds correct job; fresh actual-state observation precedes retry/continue; failed/unknown checks and update convergence remain visible; readiness is blocked. | Warm/app restart or synthetic result counts as cold boot, old evidence is reused, unrelated job resumes, unsafe physical power cut, or false terminal success. | Targeted/full for resume at `TL-0309`/`TL-0505`; Extended approved VM cold start at `TL-0509`; broader gate `TL-0510` only as triggered. | [TL-0309 interrupted commit](#tl-0309-restart-recovery-scenarios) | Synthetic reopen only; cold-start evidence remains assigned to `TL-0509`. |
+| `FI-012` | Expected/unexpected restart, safe interruption, or full powered-off cold boot resumes with failed/unavailable/changed post-boot verification. | Durable checkpoint binds correct job; fresh actual-state observation precedes retry/continue; failed/unknown checks and update convergence remain visible; readiness is blocked. | Warm/app restart or synthetic result counts as cold boot, old evidence is reused, unrelated job resumes, unsafe physical power cut, or false terminal success. | Targeted/full for resume at `TL-0309`/`TL-0408`/`TL-0505`; Extended approved VM cold start at `TL-0509`; broader gate `TL-0510` only as triggered. | [TL-0309 interrupted commit](#tl-0309-restart-recovery-scenarios) or [TL-0408 package restart](#tl-0408-package-interruption-and-restart) | TL-0309 covers synthetic reopen. TL-0408 records modeled and native package recovery separately. Cold-start evidence remains assigned to `TL-0509`. |
 
 ### TL-0309 restart recovery scenarios
 
@@ -172,6 +172,69 @@ and the exact local diagnostic and support projection. The installer remains idl
 ```powershell
 dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.PackageDiagnosticsDiscardOversizedMalformedBackendDetails' -- 'RunConfiguration.TreatNoTestsAsError=true'
 ```
+
+### TL-0408 package interruption and restart
+
+Run each command from the repository root on the unelevated active Windows 11
+machine after locked restore. The first two Extended cases each start an owned
+WPF test process, confirm the last durable checkpoint, terminate the process,
+and reopen the same isolated SQLite job. The dispatch-intent case checks fresh
+registration and an unresolved outcome. The applied-result case checks
+independent verification before completion. The third Extended case interrupts
+an owned backend fixture and checks that an ambiguous attempt remains in review.
+The fourth command models same-boot and later-boot evidence with an injected
+boot source. The final Extended case interrupts the SQLite commit that records
+verification and consumes the restart token, then verifies their joint outcome
+after reopening. These fixtures leave package registration, Windows Installer
+and the operating system unchanged.
+
+```powershell
+dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.KilledPackageApplicationReopensTheSameJobForReviewWithoutDispatch' -- 'RunConfiguration.TreatNoTestsAsError=true'
+dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.KilledPackageApplicationReopensTheAppliedAttemptAndVerifiesWithoutDispatch' -- 'RunConfiguration.TreatNoTestsAsError=true'
+dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.TerminatedOwnedPackageBackendLeavesTheReopenedAttemptInReview' -- 'RunConfiguration.TreatNoTestsAsError=true'
+dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.RestartRequiredWaitsForWindowsBootEvidenceThenVerifiesTheSavedAttempt' -- 'RunConfiguration.TreatNoTestsAsError=true'
+dotnet test tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.Persistence.Tests.RebootCheckpointStoreTests.PackageRebootVerificationAndTokenConsumeCommitTogether' -- 'RunConfiguration.TreatNoTestsAsError=true'
+```
+
+### TL-0408 native package route and Windows restart
+
+Run each native scenario independently in a Windows 11 native x64 disposable
+guest on the active machine. Require an admitted isolated guest, a clean
+checkpoint or equivalent restoration method, and authority for the exact
+candidate, target, package action and planned interruption or restart. Windows
+owns any consent prompt. TL-0412 covered one exact host install. The TL-0317
+profile covers the reviewed no-op broker. Bind each new run to its own approved
+package plan and verified candidate.
+
+1. Record the candidate digests, package identity, signed installer digest,
+   initial machine-wide registration, isolated job ID and initial boot evidence.
+   Open the ordinary unelevated WPF application and confirm that the plan, applied
+   scope and expected verification match the package authorization.
+2. For process loss, confirm the durable package dispatch intent and its
+   correlation before interrupting the owned UI process or exact transaction's
+   installer client, one per run. Use a verified process handle and a bounded
+   observation window for the client. Leave shared Windows Installer services
+   alone. If the owned client or its phase cannot be confirmed, record that
+   injection as unavailable. Observe any continued Windows Installer activity
+   and wait for a safe inspection state within the run bound.
+3. For restart recovery, wait for Windows Installer to finish and inspect its
+   recorded result. When it reports restart required, confirm the durable
+   restart checkpoint before restarting. After an applied outcome, use an
+   orderly guest restart, record the changed boot evidence and reopen the
+   original job as the same user. If Windows Installer completed without
+   requesting a restart, the same run verifies warm-reboot continuity and
+   leaves the native restart-required result unobserved.
+4. In each case, reopen the same job and check the saved action, approval,
+   correlation, displayed recovery reason and fresh package observation. Verify
+   that recovery launches no installer and keeps an ambiguous result in review.
+   For an already verified attempt, independently recheck package registration
+   after the restart and compare it with the preserved verification.
+   Confirm that a verified result has independent exact machine-wide registration
+   and the approved launch result. Confirm that the report matches the journal.
+5. Verify process and temporary-file cleanup, save bounded evidence, and restore
+   the disposable guest using its authorized restoration method. Record any
+   remaining guest state and distinguish an actual Windows restart from the
+   modeled boot test and TL-0509 cold-start qualification.
 
 ## 8. Result record and current state
 

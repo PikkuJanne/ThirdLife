@@ -62,7 +62,7 @@
         </Expander>
         <StackPanel Visibility="{Binding IsPackageProfile, Converter={StaticResource PlanReviewVisibility}}">
           <TextBlock x:Name="PackageVerificationNotice"
-                     Text="After installation, ThirdLife checks the exact version for all users. It briefly starts Notepad++ with no documents and closes the instance it started."
+                     Text="After installation, ThirdLife checks the exact version for all users. It briefly starts Notepad++ with no documents and closes the instance it started. Reopening the job can continue an interrupted check."
                      TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True" />
           <Label Content="Workshop operator code for this approval" Target="{Binding ElementName=PackageOperator}" />
           <TextBox x:Name="PackageOperator" MaxLength="64" Text="{Binding PackageOperatorCode, UpdateSourceTrigger=PropertyChanged}"
@@ -92,7 +92,12 @@
                AutomationProperties.Name="Saved machine-wide setup journal" />
       <StackPanel Visibility="{Binding ShowsPackageRecovery, Converter={StaticResource PlanReviewVisibility}}">
         <Button x:Name="CheckPackageRecoveryButton" Content="Check installed package state"
+                Visibility="{Binding OffersPackageRecoveryCheck, Converter={StaticResource PlanReviewVisibility}}"
                 IsEnabled="{Binding CanCheckPackageRecovery}" Click="CheckPackageRecovery"
+                Margin="0,4,0,4" HorizontalAlignment="Left" />
+        <Button x:Name="CancelPackageRecoveryButton" Content="Cancel package verification"
+                Visibility="{Binding ShowsPackageRecoveryCancellation, Converter={StaticResource PlanReviewVisibility}}"
+                IsEnabled="{Binding CanCancelPackageRecovery}" Click="CancelPackageRecovery"
                 Margin="0,4,0,4" HorizontalAlignment="Left" />
         <TextBlock x:Name="PackageRecoveryMessage" Text="{Binding PackageRecoveryStatus, NotifyOnTargetUpdated=True}"
                    TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"

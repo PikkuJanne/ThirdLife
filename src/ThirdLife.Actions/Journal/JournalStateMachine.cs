@@ -41,6 +41,18 @@ public static class JournalStateMachine
             return false;
         }
 
+        if (candidate.Checkpoint is JournalCheckpoint.PackageRecoveryVerification or JournalCheckpoint.PackageRebootVerification)
+        {
+            var expected = candidate.Checkpoint == JournalCheckpoint.PackageRebootVerification
+                ? JournalCheckpoint.RestartRequired : JournalCheckpoint.PackageLaunchPendingVerification;
+            return IsMachinePackage(action) && previous is
+            { State: JournalState.Applied, Actor: JournalActor.PackageBackend, Result: JournalResult.BackendApplied } &&
+                previous.Checkpoint == expected && candidate.Actor == JournalActor.Verifier &&
+                ((candidate.State == JournalState.Verified && candidate.Result == JournalResult.PackageLaunchVerified &&
+                    candidate.Verification == action.Definition.Verification) ||
+                    (candidate.State == JournalState.RequiresReview && IsPackageVerificationFailure(candidate.Result)));
+        }
+
         return (candidate.PriorState, candidate.State) switch
         {
             (JournalState.Planned, JournalState.Approved) =>
@@ -115,10 +127,7 @@ public static class JournalStateMachine
                     candidate.Checkpoint == JournalCheckpoint.Reconcile &&
                     (candidate.Result == JournalResult.VerificationUnconfirmed ||
                         (IsMachinePackage(action) && previous?.Checkpoint == JournalCheckpoint.PackageLaunchPendingVerification &&
-                            candidate.Result is JournalResult.PackageProbeUnavailable or JournalResult.PackageProbeExitedEarly or
-                                JournalResult.PackageProbeTimedOut or JournalResult.PackageProbeCancelled or JournalResult.PackageProbeCleanupUnconfirmed or
-                                JournalResult.PackageDetectionAbsent or JournalResult.PackageDetectionMismatch or JournalResult.PackageDetectionUnavailable or
-                                JournalResult.PackageProbeExecutableMissing or JournalResult.PackageProbeExecutableUntrusted or JournalResult.PackageProbeLaunchFailed))),
+                            IsPackageVerificationFailure(candidate.Result)))),
             (JournalState.RequiresReview, JournalState.Failed) =>
                 candidate.Actor == JournalActor.Verifier && candidate.Result == JournalResult.NoChangeConfirmed &&
                 candidate.Checkpoint == JournalCheckpoint.None && candidate.Verification == ActionVerification.NoMachineChange &&
@@ -140,6 +149,12 @@ public static class JournalStateMachine
 
     private static bool IsInterruption(JournalEntry entry) =>
         entry.Result == JournalResult.Interrupted && entry.Checkpoint == JournalCheckpoint.Reconcile;
+
+    private static bool IsPackageVerificationFailure(JournalResult result) => result is
+        JournalResult.PackageProbeUnavailable or JournalResult.PackageProbeExitedEarly or JournalResult.PackageProbeTimedOut or
+        JournalResult.PackageProbeCancelled or JournalResult.PackageProbeCleanupUnconfirmed or JournalResult.PackageDetectionAbsent or
+        JournalResult.PackageDetectionMismatch or JournalResult.PackageDetectionUnavailable or JournalResult.PackageProbeExecutableMissing or
+        JournalResult.PackageProbeExecutableUntrusted or JournalResult.PackageProbeLaunchFailed;
 
     private static bool IsExecutionActor(JournalEntry entry, JournalEntry? previous) =>
         entry.Actor == (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent ? JournalActor.PackageBackend : JournalActor.Broker);

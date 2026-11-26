@@ -103,6 +103,8 @@ public enum JournalCheckpoint
     BrokerPreDispatchFailure,
     PackagePreDispatchFailure,
     PackageLaunchPendingVerification,
+    PackageRecoveryVerification,
+    PackageRebootVerification,
 }
 
 public sealed record JournalApproval

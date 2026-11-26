@@ -30,16 +30,13 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
     {
         ArgumentNullException.ThrowIfNull(restartEntry);
         ThrowIfDisposed();
-        if (restartEntry is not
-            {
-                PriorState: JournalState.Started,
-                State: JournalState.Applied,
-                Actor: JournalActor.Broker,
-                Result: JournalResult.BackendApplied,
-                Checkpoint: JournalCheckpoint.RestartRequired,
-                Verification: null,
-                ApprovalId: { } approvalId,
-            })
+        if (RebootCheckpoint.IsRestartResult(restartEntry, JournalActor.PackageBackend))
+        {
+            // Package proof is captured in the transaction that recorded the restart result.
+            return (await LoadPackageRebootCheckpointAsync(restartEntry, cancellationToken).ConfigureAwait(false))?.Candidate;
+        }
+
+        if (!RebootCheckpoint.IsRestartResult(restartEntry, JournalActor.Broker) || restartEntry.ApprovalId is not { } approvalId)
         {
             return null;
         }
@@ -80,25 +77,32 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
                 return;
             }
 
-            await RequireJournalCapacityAsync(connection, transaction, key,
-                "SELECT count(*) FROM reboot_checkpoints WHERE job_id = $job_id;",
-                MaximumRebootCheckpointsPerJob, token).ConfigureAwait(false);
             var checkpoint = new RebootCheckpoint(Guid.NewGuid(), key, restartEntry.ActionId, restartEntry.EntryId,
                 approvalId, restartEntry.CorrelationId, now, now + RebootCheckpoint.MaximumLifetime);
             var protectedToken = WindowsRebootAuthenticator.Seal(checkpoint, _databaseGuard);
-            var payload = SerializePayload(checkpoint, RebootCheckpointRecordLimit);
-            await using var insert = JournalCommand(connection, transaction, key, """
-                INSERT INTO reboot_checkpoints
-                    (job_id, checkpoint_id, plan_sha256, impact_sha256, journal_entry_id, payload_json, payload_sha256, authenticity_blob)
-                VALUES ($job_id, $id, $plan, $impact, $entry, $json, $sha, $authenticity);
-                """);
-            AddJournalPayload(insert, checkpoint.Id, payload);
-            insert.Parameters.AddWithValue("$entry", checkpoint.JournalEntryId.ToString("D"));
-            insert.Parameters.AddWithValue("$authenticity", protectedToken.AuthenticityBlob.ToArray());
-            await insert.ExecuteNonQueryAsync(token).ConfigureAwait(false);
-            candidate = new RebootResumeCandidate(checkpoint, protectedToken, isCurrentPolicyPlan: true);
+            candidate = await InsertRebootCheckpointAsync(connection, transaction, checkpoint, protectedToken, token).ConfigureAwait(false);
         }, cancellationToken).ConfigureAwait(false);
         return candidate;
+    }
+
+    private async Task<RebootResumeCandidate> InsertRebootCheckpointAsync(
+        SqliteConnection connection, SqliteTransaction transaction, RebootCheckpoint checkpoint,
+        RebootResumeToken protectedToken, CancellationToken token)
+    {
+        await RequireJournalCapacityAsync(connection, transaction, checkpoint.Plan,
+            "SELECT count(*) FROM reboot_checkpoints WHERE job_id = $job_id;",
+            MaximumRebootCheckpointsPerJob, token).ConfigureAwait(false);
+        var payload = SerializePayload(checkpoint, RebootCheckpointRecordLimit);
+        await using var insert = JournalCommand(connection, transaction, checkpoint.Plan, """
+            INSERT INTO reboot_checkpoints
+                (job_id, checkpoint_id, plan_sha256, impact_sha256, journal_entry_id, payload_json, payload_sha256, authenticity_blob)
+            VALUES ($job_id, $id, $plan, $impact, $entry, $json, $sha, $authenticity);
+            """);
+        AddJournalPayload(insert, checkpoint.Id, payload);
+        insert.Parameters.AddWithValue("$entry", checkpoint.JournalEntryId.ToString("D"));
+        insert.Parameters.AddWithValue("$authenticity", protectedToken.AuthenticityBlob.ToArray());
+        await insert.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+        return new RebootResumeCandidate(checkpoint, protectedToken, isCurrentPolicyPlan: true);
     }
 
     public Task<RebootResumeCandidate?> LoadRebootCheckpointAsync(
@@ -110,7 +114,7 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
         {
             var stored = await ReadRebootCheckpointAsync(
                 connection, transaction, jobId, checkpointId, byJournalEntry: false, token).ConfigureAwait(false);
-            if (stored is null || stored.IsDecided)
+            if (stored is null || stored.IsDecided || stored.Candidate.Checkpoint.PackageBootUptime is not null)
             {
                 return null;
             }
@@ -133,34 +137,46 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
         return ReadRebootCheckpointsAsync(async (connection, transaction, token) =>
         {
             await using var command = RebootCheckpointCommand(connection, transaction, jobId,
-                RebootCheckpointProjection + " AND disposition.checkpoint_id IS NOT NULL ORDER BY disposition.rowid DESC LIMIT 1;");
+                RebootCheckpointProjection + " AND disposition.checkpoint_id IS NOT NULL ORDER BY disposition.rowid DESC LIMIT $limit;");
+            command.Parameters.AddWithValue("$limit", MaximumRebootCheckpointsPerJob + 1);
             await using var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
-            if (!await reader.ReadAsync(token).ConfigureAwait(false))
+            var read = 0;
+            while (await reader.ReadAsync(token).ConfigureAwait(false))
             {
-                return null;
+                if (++read > MaximumRebootCheckpointsPerJob)
+                {
+                    throw new JobStoreCorruptionException("store_payload_mismatch");
+                }
+
+                _layout.ValidateJobDirectory(jobId);
+                var stored = ReadRebootCheckpoint(reader, jobId);
+                if (!IsAuthenticRebootCandidate(stored.Candidate))
+                {
+                    throw new JobStoreCorruptionException("store_payload_mismatch");
+                }
+
+                if (stored.Candidate.Checkpoint.PackageBootUptime is not null)
+                {
+                    continue;
+                }
+
+                if (reader.GetInt64(14) is < 2 or > RebootCheckpointRecordLimit)
+                {
+                    throw new JobStoreCorruptionException("store_payload_mismatch");
+                }
+
+                var decision = DeserializePayload<RebootRecoveryDecision>(
+                    reader.GetString(12), reader.GetString(13), RebootCheckpointRecordLimit);
+                if (decision.Checkpoint != stored.Candidate.Checkpoint ||
+                    (int)decision.Disposition != reader.GetInt32(10) || decision.DecidedAtUtc != ParseTimestamp(reader.GetString(11)))
+                {
+                    throw new JobStoreCorruptionException("store_payload_mismatch");
+                }
+
+                return decision;
             }
 
-            _layout.ValidateJobDirectory(jobId);
-            var stored = ReadRebootCheckpoint(reader, jobId);
-            if (!IsAuthenticRebootCandidate(stored.Candidate))
-            {
-                throw new JobStoreCorruptionException("store_payload_mismatch");
-            }
-
-            if (reader.GetInt64(14) is < 2 or > RebootCheckpointRecordLimit)
-            {
-                throw new JobStoreCorruptionException("store_payload_mismatch");
-            }
-
-            var decision = DeserializePayload<RebootRecoveryDecision>(
-                reader.GetString(12), reader.GetString(13), RebootCheckpointRecordLimit);
-            if (decision.Checkpoint != stored.Candidate.Checkpoint ||
-                (int)decision.Disposition != reader.GetInt32(10) || decision.DecidedAtUtc != ParseTimestamp(reader.GetString(11)))
-            {
-                throw new JobStoreCorruptionException("store_payload_mismatch");
-            }
-
-            return decision;
+            return null;
         }, cancellationToken);
     }
 
@@ -176,15 +192,19 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
             var candidates = ImmutableArray.CreateBuilder<RebootResumeCandidate>();
             await using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
             {
+                var read = 0;
                 while (await reader.ReadAsync(token).ConfigureAwait(false))
                 {
                     var stored = ReadRebootCheckpoint(reader, jobId);
-                    if (candidates.Count == MaximumRebootCheckpointsPerJob || !IsAuthenticRebootCandidate(stored.Candidate))
+                    if (++read > MaximumRebootCheckpointsPerJob || !IsAuthenticRebootCandidate(stored.Candidate))
                     {
                         throw new JobStoreCorruptionException("store_payload_mismatch");
                     }
 
-                    candidates.Add(stored.Candidate);
+                    if (stored.Candidate.Checkpoint.PackageBootUptime is null)
+                    {
+                        candidates.Add(stored.Candidate);
+                    }
                 }
             }
 
@@ -230,7 +250,7 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
         {
             var stored = await ReadRebootCheckpointAsync(
                 connection, transaction, jobId, checkpointId, byJournalEntry: false, ct).ConfigureAwait(false);
-            if (stored is null || stored.IsDecided ||
+            if (stored is null || stored.IsDecided || stored.Candidate.Checkpoint.PackageBootUptime is not null ||
                 !CryptographicOperations.FixedTimeEquals(stored.Candidate.Token.AuthenticityBlob.AsSpan(), token.AuthenticityBlob.AsSpan()))
             {
                 return;
@@ -261,20 +281,27 @@ public sealed partial class SqliteJobStore : IRebootCheckpointStore
                 return;
             }
 
-            var decision = new RebootRecoveryDecision(checkpoint, disposition, now);
-            var payload = SerializePayload(decision, RebootCheckpointRecordLimit);
-            await using var insert = RebootCheckpointCommand(connection, transaction, jobId, """
-                INSERT INTO reboot_checkpoint_dispositions
-                    (job_id, checkpoint_id, disposition, decided_at_utc, payload_json, payload_sha256)
-                VALUES ($job_id, $id, $disposition, $decided_at_utc, $json, $sha);
-                """);
-            AddJournalPayload(insert, checkpoint.Id, payload);
-            insert.Parameters.AddWithValue("$disposition", (int)disposition);
-            insert.Parameters.AddWithValue("$decided_at_utc", FormatTimestamp(now));
-            await insert.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+            await InsertRebootDecisionAsync(connection, transaction, checkpoint, disposition, now, ct).ConfigureAwait(false);
             decided = checkpoint;
         }, cancellationToken).ConfigureAwait(false);
         return decided;
+    }
+
+    private async Task InsertRebootDecisionAsync(
+        SqliteConnection connection, SqliteTransaction transaction, RebootCheckpoint checkpoint, RebootDisposition disposition,
+        DateTimeOffset now, CancellationToken token)
+    {
+        var decision = new RebootRecoveryDecision(checkpoint, disposition, now);
+        var payload = SerializePayload(decision, RebootCheckpointRecordLimit);
+        await using var insert = RebootCheckpointCommand(connection, transaction, checkpoint.Plan.JobId, """
+            INSERT INTO reboot_checkpoint_dispositions
+                (job_id, checkpoint_id, disposition, decided_at_utc, payload_json, payload_sha256)
+            VALUES ($job_id, $id, $disposition, $decided_at_utc, $json, $sha);
+            """);
+        AddJournalPayload(insert, checkpoint.Id, payload);
+        insert.Parameters.AddWithValue("$disposition", (int)disposition);
+        insert.Parameters.AddWithValue("$decided_at_utc", FormatTimestamp(now));
+        await insert.ExecuteNonQueryAsync(token).ConfigureAwait(false);
     }
 
     private Task<JournalEntry?> ReadLatestRebootEntryAsync(
