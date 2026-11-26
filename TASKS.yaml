@@ -5852,7 +5852,17 @@ tasks:
   - Resume reconstructs per-action state from the journal rather than from UI memory.
   verification:
   - Run ordered, branching, failed-dependency, cyclic-plan, interruption, and resume test cases.
-  evidence: []
+  evidence:
+  - task: TL-0501
+    summary: Validated dependency and phase ordering and projected per-action recovery from an exact reopened SQLite journal.
+    command_or_review: Targeted with locked restore for ActionScheduleTests and ActionJournalStoreTests plus committed-source reruns
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974, native x64
+    date: '2026-11-26'
+    duration: 121.959 s Targeted, then 340 ms Actions and 3 s journal suite on committed source
+    reference: artifacts/evidence/TL-0501/report.md, source ff3ac4622ff9d6731a272f99c24c60191e639f88
+    limitation: Scheduler checkpoint. Canonical graph approval binding, durable graph restore and multi-action dispatch remain open.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
