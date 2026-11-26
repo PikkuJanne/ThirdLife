@@ -304,6 +304,54 @@ Host Quick passed in 134.067 s at `82fe982` with locked dependencies, 1,233
 Quick WPF selection took 58 s while native guest verification was in progress.
 The bundle and repository validators passed after the evidence update.
 
+## 26 November 2026 supervised guest installation
+
+The operator separately approved one machine-wide installation for the new
+exact plan and confirmed availability at the Basic console. The ordinary
+unelevated app reopened the new job, checked the plan digest, saved its
+approval and invoked Install once. PowerShell Direct observed the owned
+`msiexec.exe` client with the reviewed MSI hash and exact arguments, and a
+Windows consent process in the same session. The operator reported Yes for
+that Windows choice.
+
+`eng/run-m4-package-desktop.ps1 -Install` completed in 51.749 s. The guest app
+reported the exact machine-wide package and independent launch check verified.
+It closed normally and the wrapper removed its stage. An independent 13.422 s
+Windows Installer query confirmed the exact Notepad++ 8.9.9.1 machine-wide
+registration. A 7.848 s read-only journal check found one approval and one
+correlated attempt with dispatch intent, backend applied and independent
+launch verified. No app, console installer client, consent process or runner
+stage remained. Windows Installer still had a background process at the
+registration check. A later 4.811 s read tied it to the registered session-zero
+service and found no temporary package directories or runner tasks. Windows
+Installer event 1033 reported status 0 for the exact product, version and
+publisher between the bound MSI transaction's start and end events.
+
+The run used the reviewed Release artifacts from `20247fb`. The guest driver
+SHA-256 was `702107c26f9679280ec79572e016281f74ddf4ea263c3dfe7392291f38a2d755`
+and the staged bundle SHA-256 was
+`fad753a4c9a1fe9dddbb9f27d99f6dd4aa6a0826d4ee3e00b22272870d49466d`.
+
+`-Reopen -ExpectedRecovery Verified` passed in 47.327 s for the same job.
+The unelevated app generated and displayed the workshop report, matched the
+exact plan, version and scope to the journal, and kept handover disabled.
+A fresh 4.267 s independent MSI query again confirmed exact machine-wide
+registration. A 2.009 s read-only journal check matched the fingerprint after
+installation and still found one approval and one dispatch. The app and runner
+closed and removed their temporary files. The reopen bundle SHA-256 was
+`1ed3d097ad8f8591f8de70c90691f158537d6b8a271eec9d9ad6ca2f3d2a9bc0`.
+
+This successful job was reopened on the same boot. A restart for this job
+requires its own authority before checking registration and the report after
+boot. The installer reported no restart requirement. The separate native
+decline and installer-client interruption and authorized checkpoint restoration
+remain open. The recipient draft evidence remains fixture-scoped.
+
+Host Quick passed in 145.064 s at `5883390`, with 1,233 .NET tests and eight
+governance regressions. The build took 28.42 s and the WPF test selection took
+62 s while native guest work was running. The bundle and repository validators
+passed after the evidence update.
+
 ## Native procedure
 
 Use the exact VM and clean checkpoint IDs from the reviewed profile. Retain the

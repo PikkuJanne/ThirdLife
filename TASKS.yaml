@@ -5389,9 +5389,31 @@ tasks:
     duration: 55.700 s preview and 3.891 s independent check
     reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and fresh preview bundle
     limitation: Plan preview only. This new job has its own exact plan and requires fresh installation approval.
-  blocked_reason: The original timed-out job remains in review and the exact package is absent. The new distinct supervised plan
-    awaits exact installation approval and the actual Windows choice if prompted. Native interruption and checkpoint restoration
-    retain separate scoped authorization.
+  - task: TL-0410
+    summary: One separately approved supervised guest installation returned Windows Installer status 0 and passed independent exact
+      machine-wide registration and launch verification. The journal retained one correlated approval, dispatch, applied and verified sequence.
+    command_or_review: Bound guest Install, native installer process and event review, independent MSI query and SQLite comparison
+    tier: targeted
+    result: passed
+    environment: Unelevated Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 51.749 s Install wrapper, 13.422 s independent registration, 7.848 s journal and 4.811 s event and cleanup observation
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and supervised install bundle
+    limitation: The operator reported Yes after the prompt process was observed. Windows Installer did not require a restart.
+  - task: TL-0410
+    summary: The same successfully installed guest job reopened and generated its matching verified workshop report. Exact MSI registration
+      remained present. The journal fingerprint was unchanged and the job retained one dispatch.
+    command_or_review: Bound same-job Reopen Verified, independent MSI query and SQLite comparison
+    tier: targeted
+    result: passed
+    environment: Same unelevated Windows 11 Pro 26H2 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 47.327 s reopen, 4.267 s independent registration and 2.009 s journal comparison
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and successful reopen bundle
+    limitation: Ordinary reopen on the same boot. The prior timed-out job supplies separate restart and review evidence.
+  blocked_reason: The supervised installation and same-boot report are verified. The successful-job restart requires separate
+    authority and post-boot re-observation. The native UAC decline, exact installer-client interruption and checkpoint restoration
+    require separate scoped actions and authority.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.
