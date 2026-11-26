@@ -10,13 +10,17 @@ namespace ThirdLife.Actions.Planning;
 
 public sealed class ProposedPlan
 {
+    private readonly PlanSubject _subject;
+
     internal ProposedPlan(
         PlanSubject subject,
         DispositionDecision? policyDecision,
         PlanBlockReason? blockedReason,
         ImmutableArray<PlannedAction> actions,
-        ImmutableArray<ProfileRecipientChoice> recipientChoices)
+        ImmutableArray<ProfileRecipientChoice> recipientChoices,
+        IEnumerable<ScheduledAction>? steps = null)
     {
+        _subject = subject;
         JobId = subject.JobId;
         GateDecisionId = subject.GateDecisionId;
         ProfileSha256 = subject.ProfileSha256;
@@ -29,7 +33,8 @@ public sealed class ProposedPlan
         BlockedReason = blockedReason;
         Actions = actions;
         RecipientChoices = recipientChoices;
-        ContentSha256 = PlanIdentity.PlanHash(subject, policyDecision, blockedReason, actions, recipientChoices);
+        Schedule = steps is null ? [] : ActionSchedule.Order(actions.Select(action => action.Request.ActionId), steps);
+        ContentSha256 = PlanIdentity.PlanHash(subject, policyDecision, blockedReason, actions, recipientChoices, Schedule);
     }
 
     public JobId JobId { get; }
@@ -56,7 +61,21 @@ public sealed class ProposedPlan
 
     public ImmutableArray<ProfileRecipientChoice> RecipientChoices { get; }
 
+    public ImmutableArray<ScheduledAction> Schedule { get; }
+
     public string ContentSha256 { get; }
+
+    /// <summary>Creates a reviewable proposal with a validated, immutable action graph.</summary>
+    public ProposedPlan WithSchedule(IEnumerable<ScheduledAction> steps)
+    {
+        ArgumentNullException.ThrowIfNull(steps);
+        if (BlockedReason is not null || Actions.Length < 2)
+        {
+            throw new InvalidOperationException("An action schedule requires a nonblocked proposal with multiple actions.");
+        }
+
+        return new ProposedPlan(_subject, PolicyDecision, BlockedReason, Actions, RecipientChoices, steps);
+    }
 }
 
 internal sealed record PlanSubject(

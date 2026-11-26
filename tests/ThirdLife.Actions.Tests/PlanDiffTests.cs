@@ -228,7 +228,7 @@ public sealed class PlanDiffTests
             [plan.JobId, plan.GateDecisionId, plan.ProfileSha256, plan.CatalogSha256, plan.PolicySha256,
                 plan.EvidenceSha256, plan.SyntheticData, plan.ActiveCapabilityIds]);
         return Assert.IsType<ProposedPlan>(constructor.Invoke(
-            [subject, plan.PolicyDecision, plan.BlockedReason, actions, plan.RecipientChoices]));
+            [subject, plan.PolicyDecision, plan.BlockedReason, actions, plan.RecipientChoices, null]));
     }
 
     private static PlanDiffResult Compare(ProposedPlan approved, ProposedPlan current) =>

@@ -369,6 +369,187 @@ public sealed class ExecutionCoordinatorTests
         Assert.True(ExecutionCoordinator.IsBrokerPlan(NoOpPlan()));
     }
 
+    [Fact]
+    public async Task ScheduledDispatchWaitsForIndependentVerificationAcrossBranchesAndPhases()
+    {
+        var plan = ScheduledNoOpPlan(ids =>
+        [
+            new(ids[0], 1, [ids[3]]),
+            new(ids[1], 2, [ids[0], ids[2]]),
+            new(ids[2], 1, [ids[3]]),
+            new(ids[3], 1, []),
+        ]);
+        var journal = new ExecutionJournal();
+        var steps = plan.Schedule!.Steps;
+        var observed = new List<Guid>();
+        var backend = new Backend(async (batch, authorize, _, token) =>
+        {
+            var action = Assert.Single(batch.Actions);
+            Assert.Equal(steps[observed.Count].ActionId, action.ActionId);
+            Assert.All(observed, id => Assert.Equal(JournalState.Verified, journal.Read(plan.Key).StateOf(id)));
+            Assert.Equal(JournalState.Started, journal.Read(plan.Key).StateOf(action.ActionId));
+            Assert.True(await authorize(token));
+            Assert.False(await authorize(token));
+            return Applied(batch);
+        });
+        var verifier = new Verifier(target =>
+        {
+            var saved = journal.Read(target.Plan);
+            var applied = saved.Entries.Last(entry => entry.ActionId == target.Action.ActionId);
+            Assert.Equal((JournalState.Applied, target.ApprovalId, target.CorrelationId),
+                (applied.State, applied.ApprovalId, applied.CorrelationId));
+            observed.Add(target.Action.ActionId);
+            return true;
+        });
+        var coordinator = new ExecutionCoordinator(journal, backend, verifier: verifier);
+        var approval = await coordinator.ApproveAsync(plan, Operator);
+
+        Assert.True(coordinator.CanDispatchPlan(plan));
+        Assert.Equal(NoOpExecutionStatus.Completed, await ExecuteCurrentScheduleAsync(coordinator, approval));
+        Assert.Equal(steps.Select(step => step.ActionId), observed);
+        Assert.Equal(steps.Length, backend.Calls);
+        Assert.Equal(steps.Length, journal.Read(plan.Key).Entries
+            .Where(entry => entry.State == JournalState.Started).Select(entry => entry.CorrelationId).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task KnownScheduledFailureBlocksItsDependentsAndRetainsIndependentResults()
+    {
+        var plan = ScheduledNoOpPlan(ids =>
+        [
+            new(ids[0], 1, []),
+            new(ids[1], 1, []),
+            new(ids[2], 1, [ids[1]]),
+            new(ids[3], 1, [ids[0]]),
+        ]);
+        var ids = plan.Actions.Select(action => action.ActionId).ToArray();
+        var journal = new ExecutionJournal();
+        var backend = new Backend(async (batch, authorize, _, token) =>
+        {
+            Assert.True(await authorize(token));
+            var id = Assert.Single(batch.Actions).ActionId;
+            return id == ids[1] ? new(NoOpBrokerBatchStatus.Finished,
+                [new(batch.CorrelationId, id, NoOpBrokerActionStatus.Failed)]) : Applied(batch);
+        });
+        var verifier = new Verifier(target => target.Action.ActionId == ids[0] || target.Action.ActionId == ids[3]);
+        var coordinator = new ExecutionCoordinator(journal, backend, verifier: verifier);
+        var approval = await coordinator.ApproveAsync(plan, Operator);
+
+        Assert.Equal(NoOpExecutionStatus.Failed, await ExecuteCurrentScheduleAsync(coordinator, approval));
+
+        var saved = journal.Read(plan.Key);
+        Assert.Equal([ids[0], ids[1], ids[3]], saved.Entries.Where(entry => entry.State == JournalState.Started).Select(entry => entry.ActionId));
+        Assert.Equal(JournalState.Verified, saved.StateOf(ids[0]));
+        Assert.Equal(JournalState.Failed, saved.StateOf(ids[1]));
+        Assert.Equal(JournalState.Approved, saved.StateOf(ids[2]));
+        Assert.Equal(JournalState.Verified, saved.StateOf(ids[3]));
+    }
+
+    [Fact]
+    public async Task ScheduledRecoveryReobservesTheAppliedActionAndResumesWithTheSavedApproval()
+    {
+        var plan = ScheduledNoOpPlan(ids => ids.Select((id, index) =>
+            new ScheduledAction(id, 1, index == 0 ? [] : [ids[index - 1]])).ToArray());
+        var first = plan.Schedule!.Steps[0].ActionId;
+        var journal = new ExecutionJournal();
+        var dispatched = new List<Guid>();
+        var backend = new Backend(async (batch, authorize, _, token) =>
+        {
+            Assert.True(await authorize(token));
+            dispatched.Add(Assert.Single(batch.Actions).ActionId);
+            return Applied(batch);
+        });
+        var unavailable = new ExecutionCoordinator(journal, backend);
+        var approval = await unavailable.ApproveAsync(plan, Operator);
+        Assert.False(unavailable.CanDispatchPlan(plan));
+        Assert.Equal(NoOpExecutionStatus.Unavailable, await ExecuteCurrentScheduleAsync(unavailable, approval));
+        Assert.Empty(dispatched);
+
+        var uncertain = new ExecutionCoordinator(journal, backend, verifier: new Verifier(_ => false));
+        Assert.Equal(NoOpExecutionStatus.ApprovalRequired, await uncertain.ExecuteAsync(plan.Key, approval.ApprovalId));
+        Assert.Empty(dispatched);
+        Assert.Equal(NoOpExecutionStatus.RequiresReview, await ExecuteCurrentScheduleAsync(uncertain, approval));
+        Assert.Equal(first, Assert.Single(dispatched));
+        Assert.Equal(JournalState.Applied, journal.Read(plan.Key).StateOf(first));
+        Assert.DoesNotContain(journal.Read(plan.Key).Entries, entry => entry.State == JournalState.Verified);
+
+        var resumed = new ExecutionCoordinator(journal, backend, verifier: new Verifier(target =>
+        {
+            Assert.Equal(approval.ApprovalId, target.ApprovalId);
+            return journal.Read(target.Plan).StateOf(target.Action.ActionId) == JournalState.Applied;
+        }));
+        Assert.Equal(NoOpExecutionStatus.Completed, await ExecuteCurrentScheduleAsync(resumed, approval));
+        Assert.Equal(plan.Schedule.Steps.Select(step => step.ActionId), dispatched);
+    }
+
+    [Fact]
+    public async Task ScheduledDispatchRechecksTheCurrentPlanBeforeEachIntent()
+    {
+        var plan = ScheduledNoOpPlan(ids => ids.Select(id => new ScheduledAction(id, 1, [])).ToArray());
+        var journal = new ExecutionJournal();
+        var currentPlanMatches = true;
+        var backend = new Backend(async (batch, authorize, _, token) =>
+        {
+            Assert.True(await authorize(token));
+            return Applied(batch);
+        });
+        var coordinator = new ExecutionCoordinator(journal, backend, verifier: new Verifier(_ =>
+        {
+            currentPlanMatches = false;
+            return true;
+        }));
+        var approval = await coordinator.ApproveAsync(plan, Operator);
+
+        Assert.Equal(NoOpExecutionStatus.ApprovalRequired, await coordinator.ExecuteAsync(plan.Key, approval.ApprovalId,
+            progress: null, validateCurrentPlan: _ => Task.FromResult(currentPlanMatches)));
+
+        var saved = journal.Read(plan.Key);
+        Assert.Equal(1, backend.Calls);
+        Assert.Single(saved.Entries, entry => entry.State == JournalState.Started);
+        Assert.Single(saved.Entries, entry => entry.State == JournalState.Verified);
+    }
+
+    [Fact]
+    public async Task ScheduledDeclineRequiresFreshApprovalAndDoesNotReplayVerifiedActions()
+    {
+        var plan = ScheduledNoOpPlan(ids => ids.Select(id => new ScheduledAction(id, 1, [])).ToArray());
+        var journal = new ExecutionJournal();
+        var requested = new List<Guid>();
+        var backend = new Backend(async (batch, authorize, _, token) =>
+        {
+            requested.Add(Assert.Single(batch.Actions).ActionId);
+            if (requested.Count == 2) { return new(NoOpBrokerBatchStatus.Declined, []); }
+
+            Assert.True(await authorize(token));
+            return Applied(batch);
+        });
+        var coordinator = new ExecutionCoordinator(journal, backend, verifier: new Verifier(_ => true));
+        var original = await coordinator.ApproveAsync(plan, Operator);
+        Assert.Equal(NoOpExecutionStatus.Declined, await ExecuteCurrentScheduleAsync(coordinator, original));
+        Assert.Equal(NoOpExecutionStatus.ApprovalRequired, await ExecuteCurrentScheduleAsync(coordinator, original));
+        Assert.Equal(2, backend.Calls);
+
+        var updated = await coordinator.ApproveAsync(plan, Operator);
+        Assert.Equal(NoOpExecutionStatus.Completed, await ExecuteCurrentScheduleAsync(coordinator, updated));
+
+        var steps = plan.Schedule!.Steps;
+        Assert.Equal([steps[0].ActionId, steps[1].ActionId, steps[1].ActionId, steps[2].ActionId, steps[3].ActionId], requested);
+        var saved = journal.Read(plan.Key);
+        var first = Assert.Single(saved.Entries, entry => entry.ActionId == steps[0].ActionId && entry.State == JournalState.Verified);
+        Assert.Equal(original.ApprovalId, first.ApprovalId);
+        Assert.DoesNotContain(saved.Entries, entry => entry.ActionId == steps[0].ActionId && entry.ApprovalId == updated.ApprovalId);
+    }
+
+    private static JournalPlanSnapshot ScheduledNoOpPlan(Func<Guid[], ScheduledAction[]> schedule)
+    {
+        var plan = PlanResolverTests.CreateSyntheticPlan(includeVideoCalling: true);
+        var scheduled = plan.WithSchedule(schedule(plan.Actions.Select(action => action.Request.ActionId).ToArray()));
+        return JournalPlanSnapshot.Create(scheduled, ImpactEstimator.Estimate(scheduled));
+    }
+
+    private static Task<NoOpExecutionStatus> ExecuteCurrentScheduleAsync(ExecutionCoordinator coordinator, JournalApproval approval) =>
+        coordinator.ExecuteAsync(approval.Plan, approval.ApprovalId, progress: null, validateCurrentPlan: static _ => Task.FromResult(true));
+
     private static JournalPlanSnapshot NoOpPlan()
     {
         var plan = PlanResolverTests.CreateSyntheticPlan();
@@ -390,6 +571,15 @@ public sealed class ExecutionCoordinatorTests
         {
             Calls++;
             return run(batch, canDispatch, progress, cancellationToken);
+        }
+    }
+
+    private sealed class Verifier(Func<NoOpVerificationTarget, bool> observe) : INoOpPostconditionVerifier
+    {
+        public Task<bool> ObserveNoMachineChangeAsync(NoOpVerificationTarget target, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(observe(target));
         }
     }
 

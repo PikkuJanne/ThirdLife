@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using ThirdLife.Actions.Contracts;
+using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
 using ThirdLife.Catalog.Profiles;
 using ThirdLife.Core.Sanitization;
@@ -176,7 +177,10 @@ internal sealed partial class AuditWorkspace
         if (CanDeclinePlanReview && PlanReview is { } displayed)
         {
             RecordPlanReviewDecision(PlanReviewOutcome.Declined, displayed);
-            _planReviewStatus = "Plan declined. No actions were started.";
+            _planReviewStatus = displayed.Plan.Schedule.IsEmpty || DisplayedBrokerHistory is not { } history ||
+                !history.Entries.Any(entry => entry.State == JournalState.Started)
+                ? "Plan declined. No actions were started."
+                : "Plan declined. The saved outcomes for earlier actions remain available.";
             Publish();
         }
 
@@ -230,7 +234,10 @@ internal sealed partial class AuditWorkspace
             }
 
             var evidence = AuditPolicyEvidence.Create(job, assessment, now);
-            return PlanResolver.Resolve(job, policy.Document, chosen.Profile, chosen.Catalog, evidence, optional, now);
+            var plan = PlanResolver.Resolve(job, policy.Document, chosen.Profile, chosen.Catalog, evidence, optional, now);
+            return _brokerExecution?.HasScheduledVerification == true && plan is { SyntheticData: true, Actions.Length: > 1 }
+                ? plan.WithSchedule(plan.Actions.Select(action => new ScheduledAction(action.Request.ActionId, 1, [])))
+                : plan;
         }, cancellationToken);
     }
 
@@ -249,12 +256,14 @@ internal sealed partial class AuditWorkspace
         PlanReview = current;
         PlanReviewDecision = null;
         SetBrokerPlan(current);
+        RestoreScheduledApproval();
         _planReviewChanges = changes;
         _planReviewStatus = current.Plan.BlockedReason is not null
             ? "Preparation is blocked. Review the reason below."
             : changes is not null
                 ? "The plan changed. Review the changes before approving."
-                : "Review the included actions and impact before approving.";
+                : _brokerApproval is not null ? DescribeBrokerApproval()
+                    : "Review the included actions and impact before approving.";
     }
 
     private void RecordPlanReviewDecision(PlanReviewOutcome outcome, PlanReviewSnapshot displayed)

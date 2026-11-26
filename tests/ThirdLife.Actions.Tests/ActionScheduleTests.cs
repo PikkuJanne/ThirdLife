@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
@@ -207,6 +209,75 @@ public sealed class ActionScheduleTests
         var schedule = ActionSchedule.Create(plan, PlanIds(plan).Select(id => new ScheduledAction(id, 1, [])));
 
         Assert.Throws<ArgumentException>("history", () => schedule.Project(new JournalHistory(other, [], [], null)));
+    }
+
+    [Fact]
+    public void GraphChangesRequireNewReviewWhileEquivalentInputOrderPreservesIdentity()
+    {
+        var proposal = PlanResolverTests.CreateSyntheticPlan();
+        var ids = proposal.Actions.Select(action => action.Request.ActionId).ToArray();
+        ScheduledAction[] steps =
+        [
+            new(ids[0], 2, [ids[2], ids[1]]),
+            new(ids[1], 1, []),
+            new(ids[2], 1, []),
+        ];
+        var approved = proposal.WithSchedule(steps);
+        var equivalent = proposal.WithSchedule(steps.Reverse().Select(step =>
+            step with { Dependencies = step.Dependencies.Reverse().ToImmutableArray() }));
+        var revised = proposal.WithSchedule([steps[0] with { Dependencies = [ids[1]] }, .. steps[1..]]);
+        var impact = ImpactEstimator.Estimate(approved);
+        var snapshot = JournalPlanSnapshot.Create(approved, impact);
+
+        Assert.Equal(approved.ContentSha256, equivalent.ContentSha256);
+        Assert.NotEqual(approved.ContentSha256, revised.ContentSha256);
+        Assert.Throws<ArgumentException>(() => JournalPlanSnapshot.Create(revised, impact));
+        var change = Assert.Single(PlanDiff.Compare(approved, impact, revised, ImpactEstimator.Estimate(revised)).Changes);
+        Assert.Equal(PlanChangeKind.ActionSchedule, change.Kind);
+        Assert.Throws<ArgumentException>("steps", () => ActionSchedule.Create(snapshot, revised.Schedule));
+    }
+
+    [Theory]
+    [InlineData("missing")]
+    [InlineData("reordered")]
+    [InlineData("uppercase")]
+    [InlineData("cycle")]
+    public void SavedScheduleMustBeCanonicalAndValidEvenWithMatchingDigests(string defect)
+    {
+        var proposal = PlanResolverTests.CreateSyntheticPlan();
+        var steps = proposal.Actions.Select(action => new ScheduledAction(action.Request.ActionId, 1, []));
+        proposal = proposal.WithSchedule(steps);
+        var snapshot = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+        var plan = JsonNode.Parse(snapshot.CanonicalPlan.AsSpan())!.AsObject();
+        var schedule = plan["schedule"]!.AsArray();
+        switch (defect)
+        {
+            case "missing":
+                plan.Remove("schedule");
+                break;
+            case "reordered":
+                var first = schedule[0]!.DeepClone();
+                schedule.RemoveAt(0);
+                schedule.Add(first);
+                break;
+            case "uppercase":
+                var id = schedule[0]!["action_id"]!.GetValue<string>();
+                Assert.NotEqual(id, id.ToUpperInvariant());
+                schedule[0]!["action_id"] = id.ToUpperInvariant();
+                break;
+            case "cycle":
+                schedule[0]!["dependencies"] = new JsonArray(schedule[1]!["action_id"]!.DeepClone());
+                schedule[1]!["dependencies"] = new JsonArray(schedule[0]!["action_id"]!.DeepClone());
+                break;
+        }
+
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(plan);
+        var digest = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var impact = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(snapshot.CanonicalImpact.AsSpan())
+            .Replace(snapshot.Key.PlanSha256, digest, StringComparison.Ordinal));
+        var key = new JournalPlanKey(snapshot.Key.JobId, digest, Convert.ToHexStringLower(SHA256.HashData(impact)));
+
+        Assert.Throws<JsonException>(() => JournalPlanSnapshot.Restore(key, bytes, impact));
     }
 
     [Fact]

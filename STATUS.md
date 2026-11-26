@@ -24,8 +24,7 @@ qualification and the TL-0314 privilege decision.
 [Guest qualification](artifacts/evidence/TL-0317/report.md)
 [Application orchestration](artifacts/evidence/TL-0313/report.md)
 
-TL-0501 is in progress. Its first checkpoint validates phase and dependency
-ordering and reconstructs confirmed, pending and interrupted action state
-from the exact saved journal. Next bind the graph to the reviewed plan and
-its durable approval before integrating multi-action dispatch.
-[Scheduling checkpoint](artifacts/evidence/TL-0501/report.md)
+TL-0501 binds the action graph to durable approval and resumes serial
+synthetic no-op execution from SQLite. Live multi-action work requires a
+second qualified action route and schedule-aware verification and recovery.
+[Scheduling and execution evidence](artifacts/evidence/TL-0501/report.md)

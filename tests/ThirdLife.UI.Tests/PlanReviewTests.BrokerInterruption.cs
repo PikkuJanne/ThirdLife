@@ -17,26 +17,29 @@ namespace ThirdLife.UI.Tests;
 public sealed partial class PlanReviewTests
 {
     private const string InterruptionRootVariable = "THIRDLIFE_TL0313_INTERRUPTION_ROOT";
+    private const string InterruptionScheduleVariable = "THIRDLIFE_TL0501_INTERRUPTION_SCHEDULE";
     private const string InterruptionRootPrefix = "ThirdLife-TL0313-";
     private const string InterruptionMarker = "intent-ready.json";
     private const string ConfirmedIntentMarker = "intent-confirmed.marker";
 
-    [Fact]
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     [Trait("Category", "Extended")]
-    public async Task KilledNoOpApplicationReopensTheSameJobAndReconcilesWithoutDispatch()
+    public async Task KilledNoOpApplicationReopensTheSameJobAndReconcilesWithoutDispatch(bool scheduled)
     {
         Assert.False(WindowsBrokerPeer.CurrentIdentity().IsElevated);
         var root = Directory.CreateTempSubdirectory(InterruptionRootPrefix);
         try
         {
-            var (job, pending) = await KillOwnedApplicationAfterIntentAsync(root.FullName);
+            var (job, pending) = await KillOwnedApplicationAfterIntentAsync(root.FullName, scheduled);
             var clock = new FixtureClock();
             var backend = new FixtureBrokerBackend(static (_, _, _, _, _) =>
                 throw new InvalidOperationException("Reopening the interrupted job must not dispatch."));
 
             ShellTestHost.Run(() =>
             {
-                var workspace = OpenInterruptionWorkspace(root.FullName, clock, backend);
+                var workspace = OpenInterruptionWorkspace(root.FullName, clock, backend, scheduled);
                 workspace.OpenJobAsync(job.Value).GetAwaiter().GetResult();
                 Assert.Equal(job.Value, workspace.JobId);
                 InQualificationWindow(workspace, (window, _) =>
@@ -77,7 +80,16 @@ public sealed partial class PlanReviewTests
                 Assert.Null(result.Verification);
             }
 
-            await using (var reopened = OpenInterruptionWorkspace(root.FullName, clock, backend))
+            if (scheduled)
+            {
+                var projection = recovered.Plan.Schedule!.Project(recovered);
+                Assert.True(projection.RequiresRecovery);
+                Assert.Null(projection.NextForReview);
+                Assert.Single(projection.Actions, action => action.State == JournalState.RequiresReview);
+                Assert.All(projection.Actions.Skip(1), action => Assert.Equal(JournalState.Approved, action.State));
+            }
+
+            await using (var reopened = OpenInterruptionWorkspace(root.FullName, clock, backend, scheduled))
             {
                 await reopened.OpenJobAsync(job.Value);
                 Assert.Contains("needs review", reopened.BrokerHistoryText, StringComparison.Ordinal);
@@ -97,6 +109,7 @@ public sealed partial class PlanReviewTests
     {
         var runRoot = Environment.GetEnvironmentVariable(InterruptionRootVariable);
         if (string.IsNullOrEmpty(runRoot)) { return; }
+        var scheduled = Environment.GetEnvironmentVariable(InterruptionScheduleVariable) == "1";
         Assert.False(WindowsBrokerPeer.CurrentIdentity().IsElevated);
         var root = new DirectoryInfo(runRoot);
         Assert.Equal(Path.TrimEndingDirectorySeparator(Path.GetTempPath()), root.Parent!.FullName, ignoreCase: true);
@@ -106,7 +119,7 @@ public sealed partial class PlanReviewTests
 
         var backend = new FixtureBrokerBackend(async (_, batch, _, _, token) =>
         {
-            // The coordinator has committed Started for each action. This fixture has no
+            // The coordinator has committed the dispatch intent. This fixture has no
             // protected adapter or send path, and leaves authorization untouched.
             var marker = Path.Combine(root.FullName, InterruptionMarker);
             var staged = marker + ".pending";
@@ -127,7 +140,7 @@ public sealed partial class PlanReviewTests
 
         ShellTestHost.Run(() =>
         {
-            var workspace = OpenInterruptionWorkspace(root.FullName, new FixtureClock(), backend);
+            var workspace = OpenInterruptionWorkspace(root.FullName, new FixtureClock(), backend, scheduled);
             PrepareAssessmentAsync(workspace).GetAwaiter().GetResult();
             InQualificationWindow(workspace, (window, panel) =>
             {
@@ -143,7 +156,7 @@ public sealed partial class PlanReviewTests
         }, TimeSpan.FromSeconds(75));
     }
 
-    private static async Task<(JobId Job, JournalHistory Journal)> KillOwnedApplicationAfterIntentAsync(string root)
+    private static async Task<(JobId Job, JournalHistory Journal)> KillOwnedApplicationAfterIntentAsync(string root, bool scheduled)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -158,6 +171,7 @@ public sealed partial class PlanReviewTests
         startInfo.ArgumentList.Add("--");
         startInfo.ArgumentList.Add("RunConfiguration.TreatNoTestsAsError=true");
         startInfo.Environment[InterruptionRootVariable] = root;
+        startInfo.Environment[InterruptionScheduleVariable] = scheduled ? "1" : "0";
         using var process = Assert.IsType<Process>(Process.Start(startInfo));
         try
         {
@@ -179,10 +193,18 @@ public sealed partial class PlanReviewTests
             Assert.Equal(WindowsBrokerPeer.CurrentIdentity().SessionId, client.SessionId);
             var pending = await LoadInterruptionJournalAsync(root, job);
             var approval = Assert.Single(pending.Approvals);
-            Assert.Equal(pending.Plan.Actions.Length * 2, pending.Entries.Length);
+            Assert.Equal(scheduled, pending.Plan.Schedule is not null);
+            var firstScheduled = pending.Plan.Schedule?.Steps[0].ActionId;
+            Assert.Equal(pending.Plan.Actions.Length + (scheduled ? 1 : pending.Plan.Actions.Length), pending.Entries.Length);
             Assert.All(pending.Plan.Actions, action =>
             {
                 var entries = pending.Entries.Where(entry => entry.ActionId == action.ActionId).ToArray();
+                if (scheduled && action.ActionId != firstScheduled)
+                {
+                    Assert.Equal(JournalState.Approved, Assert.Single(entries).State);
+                    return;
+                }
+
                 Assert.Equal(new[] { JournalState.Approved, JournalState.Started }, entries.Select(entry => entry.State));
                 Assert.Equal(approval.ApprovalId, entries[1].ApprovalId);
                 Assert.Equal(JournalCheckpoint.BrokerDispatchIntent, entries[1].Checkpoint);
@@ -204,10 +226,11 @@ public sealed partial class PlanReviewTests
         }
     }
 
-    private static AuditWorkspace OpenInterruptionWorkspace(string root, FixtureClock clock, INoOpBrokerBackend backend) =>
+    private static AuditWorkspace OpenInterruptionWorkspace(string root, FixtureClock clock, INoOpBrokerBackend backend,
+        bool scheduled) =>
         new(async token => await SqliteJobStore.OpenAsync(Path.Combine(root, "store"), token).ConfigureAwait(false),
             [new PlanFactsProvider()], clock, fixturePlanPolicy: static _ => ReadyPolicy,
-            fixtureBrokerCoordinator: journal => new(journal, backend, clock));
+            fixtureBrokerCoordinator: journal => new(journal, backend, clock, scheduled ? new FixtureNoOpVerifier() : null));
 
     private static async Task<JournalHistory> LoadInterruptionJournalAsync(string root, JobId job)
     {

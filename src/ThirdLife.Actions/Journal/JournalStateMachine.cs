@@ -4,6 +4,10 @@ namespace ThirdLife.Actions.Journal;
 
 public static class JournalStateMachine
 {
+    public static bool CanApproveBrokerAction(JournalEntry? latest) => latest is null or
+    { State: JournalState.Approved, Checkpoint: JournalCheckpoint.BrokerApproval } or
+    { State: JournalState.Failed, Checkpoint: JournalCheckpoint.BrokerPreDispatchFailure };
+
     public static bool CanAppend(JournalPlanSnapshot plan, JournalApproval? approval, JournalEntry? previous, JournalEntry candidate)
     {
         ArgumentNullException.ThrowIfNull(plan);

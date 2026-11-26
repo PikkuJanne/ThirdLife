@@ -25,15 +25,18 @@ internal static partial class JournalPlanEncoding
         value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
 
     public static (SanitizationGateDecisionId Gate, ImmutableArray<JournalAction> Actions, bool IsCurrentPolicyPlan,
-        string CatalogSha256, string ProfileSha256, bool SyntheticData) ReadPlan(
+        string CatalogSha256, string ProfileSha256, bool SyntheticData, ActionSchedule? Schedule) ReadPlan(
         JournalPlanKey key, byte[] bytes)
     {
         using var document = Open(bytes);
         var root = document.RootElement;
         RequireCanonical(root, bytes);
-        RequireFields(root, ["schema_version", "subject", "decision", "blocked_reason", "actions", "recipient_choices"]);
         var schemaVersion = ReadString(root.GetProperty("schema_version"));
-        if (schemaVersion is not (PlanIdentity.CurrentVersion or PlanIdentity.LegacyVersion) ||
+        var hasSchedule = schemaVersion == PlanIdentity.ScheduledVersion;
+        RequireFields(root, hasSchedule
+            ? ["schema_version", "subject", "decision", "blocked_reason", "actions", "recipient_choices", "schedule"]
+            : ["schema_version", "subject", "decision", "blocked_reason", "actions", "recipient_choices"]);
+        if (schemaVersion is not (PlanIdentity.CurrentVersion or PlanIdentity.LegacyVersion or PlanIdentity.ScheduledVersion) ||
             root.GetProperty("blocked_reason").ValueKind != JsonValueKind.Null)
         {
             throw new JsonException();
@@ -59,9 +62,44 @@ internal static partial class JournalPlanEncoding
         var gate = new SanitizationGateDecisionId(ReadString(subject.GetProperty("gate_decision_id")));
         var synthetic = subject.GetProperty("synthetic_data").GetBoolean();
         var capabilities = ReadActiveCapabilities(subject.GetProperty("active_capability_ids"));
-        return (gate, ReadActions(root.GetProperty("actions"), capabilities, synthetic),
-            schemaVersion == PlanIdentity.CurrentVersion, catalog, profile, synthetic);
+        var actions = ReadActions(root.GetProperty("actions"), capabilities, synthetic);
+        var schedule = hasSchedule ? ReadSchedule(key, actions, root.GetProperty("schedule")) : null;
+        return (gate, actions, schemaVersion != PlanIdentity.LegacyVersion, catalog, profile, synthetic, schedule);
     }
+
+    private static ActionSchedule ReadSchedule(JournalPlanKey key, ImmutableArray<JournalAction> actions, JsonElement value)
+    {
+        if (actions.Length < 2 || value.GetArrayLength() != actions.Length)
+        {
+            throw new JsonException();
+        }
+
+        var steps = ImmutableArray.CreateBuilder<ScheduledAction>(actions.Length);
+        foreach (var row in value.EnumerateArray())
+        {
+            RequireFields(row, ["action_id", "phase", "dependencies"]);
+            var dependencies = row.GetProperty("dependencies");
+            if (dependencies.GetArrayLength() >= actions.Length)
+            {
+                throw new JsonException();
+            }
+
+            steps.Add(new ScheduledAction(ReadActionId(row.GetProperty("action_id")), ReadInt(row.GetProperty("phase")),
+                dependencies.EnumerateArray().Select(ReadActionId).ToImmutableArray()));
+        }
+
+        var saved = steps.MoveToImmutable();
+        var ordered = ActionSchedule.Order(actions.Select(action => action.ActionId), saved);
+        if (!ActionSchedule.SameSteps(saved, ordered))
+        {
+            throw new JsonException();
+        }
+
+        return new ActionSchedule(key, ordered);
+    }
+
+    private static Guid ReadActionId(JsonElement value) =>
+        value.TryGetGuid(out var id) && value.ValueEquals(id.ToString("D")) ? id : throw new JsonException();
 
     public static byte[] WriteImpact(ProposedPlan plan, PlanImpact impact)
     {

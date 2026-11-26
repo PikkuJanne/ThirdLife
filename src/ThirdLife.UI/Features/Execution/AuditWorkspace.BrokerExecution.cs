@@ -25,15 +25,26 @@ internal sealed partial class AuditWorkspace
     public bool HasBrokerHistory => !_brokerHistories.IsEmpty;
     public bool ShowsBrokerExecution => HasBrokerPlan || HasBrokerHistory;
     public bool CanEditBrokerOperator => CanEditJob && HasBrokerPlan && PlanReviewDecision is null;
-    public bool CanRunBrokerExecution => CanEditJob && _brokerExecution is { CanDispatch: true } &&
-        _brokerApproval is not null && PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved };
+    public bool CanRunBrokerExecution => CanEditJob && CanDispatchBrokerPlan &&
+        _brokerApproval is not null && PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } &&
+        (_brokerPlan?.Schedule is null || ApprovedScheduleProgress is { } projection && CanResumeScheduledPlan(projection));
     public bool CanCancelBrokerExecution => _brokerCancellation is { IsCancellationRequested: false };
     public bool CanCheckBrokerRecovery => CanEditJob && _brokerHistories.Any(history =>
         history.Plan.Actions.Any(action => history.StateOf(action.ActionId) == JournalState.Started));
 
+    private bool CanDispatchBrokerPlan => _brokerPlan is { } plan && _brokerExecution?.CanDispatchPlan(plan) == true;
+
+    private JournalHistory? DisplayedBrokerHistory => _brokerPlan is { } plan
+        ? _brokerHistories.FirstOrDefault(history => history.Plan.Key == plan.Key) : null;
+
+    private ActionScheduleProjection? ApprovedScheduleProgress => DisplayedBrokerHistory is
+    { ActiveApproval: not null, Plan.Schedule: { } schedule } history ? schedule.Project(history) : null;
+
     private bool CanApproveBrokerPlan => _brokerPlan is { } plan && !string.IsNullOrWhiteSpace(_brokerOperatorCode) &&
-        !_brokerHistories.Any(history => history.Plan.Key == plan.Key &&
-            history.Plan.Actions.Any(action => !CanReapprove(history, action.ActionId)));
+        (DisplayedBrokerHistory is not { } saved ||
+            (plan.Schedule is { } schedule
+                ? !schedule.Project(saved).RequiresRecovery && saved.Plan.Actions.Any(action => CanReapprove(saved, action.ActionId))
+                : saved.Plan.Actions.All(action => CanReapprove(saved, action.ActionId))));
 
     public string BrokerOperatorCode
     {
@@ -48,8 +59,10 @@ internal sealed partial class AuditWorkspace
         }
     }
 
-    public string BrokerExecutionStatus => _brokerActivity ?? (_brokerExecution?.CanDispatch == true
-        ? "Running the approved no-op requests Windows consent. The test actions make no machine changes."
+    public string BrokerExecutionStatus => _brokerActivity ?? (CanDispatchBrokerPlan
+        ? _brokerPlan?.Schedule is not null
+            ? "Each scheduled test action may request Windows consent. The no-ops make no machine changes."
+            : "Running the approved no-op requests Windows consent. The test actions make no machine changes."
         : "The no-op broker is unavailable in this build. Saved approvals and execution history remain accessible.");
 
     public string BrokerHistoryText { get; private set; } = string.Empty;
@@ -105,7 +118,7 @@ internal sealed partial class AuditWorkspace
 
                 var outcome = await execution.ExecuteAsync(approval.Plan, approval.ApprovalId, progress,
                     validateCurrentPlan: MatchesCurrentPlanAsync, cancellationToken: cancellation.Token);
-                _brokerActivity = DescribeBrokerOutcome(outcome);
+                _brokerActivity = DescribeBrokerOutcome(outcome, displayed.Plan.Schedule.Length > 0);
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
@@ -116,6 +129,7 @@ internal sealed partial class AuditWorkspace
                 _brokerApproval = null;
                 PlanReviewDecision = null;
                 await LoadBrokerHistoryAsync(approval.Plan.JobId, reconcile: false);
+                RestoreScheduledApproval();
             }
         });
     }
@@ -172,9 +186,31 @@ internal sealed partial class AuditWorkspace
         await LoadBrokerHistoryAsync(plan.Key.JobId, reconcile: false);
     }
 
+    private void RestoreScheduledApproval()
+    {
+        if (PlanReview is not { } displayed || DisplayedBrokerHistory?.ActiveApproval is not { } approval ||
+            ApprovedScheduleProgress is not { } projection)
+        {
+            return;
+        }
+
+        if (!CanResumeScheduledPlan(projection) && !projection.Actions.All(action => action.State == JournalState.Verified))
+        {
+            return;
+        }
+
+        _brokerApproval = approval;
+        PlanReviewDecision = new PlanReviewDecision(PlanReviewOutcome.Approved, displayed, approval.OccurredAtUtc);
+    }
+
+    private static bool CanResumeScheduledPlan(ActionScheduleProjection projection) => !projection.RequiresFreshApproval &&
+        (projection.NextForReview is not null || projection.Actions.Any(action => action.State == JournalState.Applied));
+
     private string DescribeBrokerApproval() => _brokerApproval is null
         ? "Approval recorded for this synthetic plan. Device readiness still requires verification."
-        : _brokerExecution?.CanDispatch == true
+        : ApprovedScheduleProgress is { } projection && projection.Actions.All(action => action.State == JournalState.Verified)
+            ? "All scheduled actions have saved independent verification."
+            : CanDispatchBrokerPlan
             ? "Approval saved for this exact test plan. Select Run approved no-op to continue."
             : "Approval saved for this exact test plan. Broker execution is unavailable in this build.";
 
@@ -215,17 +251,23 @@ internal sealed partial class AuditWorkspace
         history.Entries.Any(entry => entry.Checkpoint == JournalCheckpoint.BrokerApproval);
 
     private static bool CanReapprove(JournalHistory history, Guid actionId) =>
-        history.Entries.LastOrDefault(entry => entry.ActionId == actionId) is null or
-        { State: JournalState.Approved, Checkpoint: JournalCheckpoint.BrokerApproval } or
-        { State: JournalState.Failed, Checkpoint: JournalCheckpoint.BrokerPreDispatchFailure };
+        JournalStateMachine.CanApproveBrokerAction(history.Entries.LastOrDefault(entry => entry.ActionId == actionId));
 
     private static string DescribeBrokerHistory(JournalHistory history)
     {
-        var actions = history.Plan.Actions.Select((action, index) =>
+        var projection = history.Plan.Schedule?.Project(history);
+        var ids = projection is null ? history.Plan.Actions.Select(action => action.ActionId) :
+            projection.Actions.Select(action => action.ActionId);
+        var actions = ids.Select((id, index) =>
         {
-            var latest = history.Entries.LastOrDefault(entry => entry.ActionId == action.ActionId);
+            var latest = history.Entries.LastOrDefault(entry => entry.ActionId == id);
+            var scheduled = projection?.Actions[index];
             var outcome = (latest?.State, latest?.Result) switch
             {
+                (JournalState.Approved, _) when scheduled is { EarlierPhasePending: true } =>
+                    "Approved. Waiting for verification of the earlier phase.",
+                (JournalState.Approved, _) when scheduled is { PendingDependencies.IsEmpty: false } =>
+                    "Approved. Waiting for verification of prerequisite actions.",
                 (JournalState.Approved, _) => "Approved. No action started.",
                 (JournalState.Started, _) => "Started. Waiting for a final result or recovery.",
                 (JournalState.Applied, _) => "Broker reported completion. Independent verification is pending.",
@@ -244,14 +286,18 @@ internal sealed partial class AuditWorkspace
         return $"Plan SHA-256 {history.Plan.Key.PlanSha256}{Environment.NewLine}{string.Join(Environment.NewLine, actions)}";
     }
 
-    private static string DescribeBrokerOutcome(NoOpExecutionStatus outcome) => outcome switch
+    private static string DescribeBrokerOutcome(NoOpExecutionStatus outcome, bool scheduled) => outcome switch
     {
         NoOpExecutionStatus.ApprovalRequired => "The saved approval or plan changed. Review the current plan before retrying.",
         NoOpExecutionStatus.AlreadyStarted => "A saved no-op action has started. Check the saved history for its result or recovery.",
+        NoOpExecutionStatus.Declined when scheduled =>
+            "Windows consent was declined for the current action. Review the saved results and approve again to continue.",
         NoOpExecutionStatus.Declined => "Windows consent was declined. No action was sent. Review and approve again to retry.",
         NoOpExecutionStatus.Cancelled => "Cancellation finished. Check the saved outcome for each action.",
+        NoOpExecutionStatus.Completed when scheduled => "All scheduled actions have saved independent verification.",
         NoOpExecutionStatus.Completed => "The broker returned results. Check the saved outcome for each action.",
         NoOpExecutionStatus.Failed => "The broker reported a failure. Check the saved outcome for each action.",
+        NoOpExecutionStatus.RequiresReview when scheduled => "Check the saved actions for pending verification or recovery.",
         NoOpExecutionStatus.RequiresReview => "The broker stopped before confirming the outcome. Check the saved execution history.",
         _ => "The broker is unavailable. Review the saved execution history.",
     };

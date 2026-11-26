@@ -11,6 +11,15 @@ public interface INoOpBrokerBackend
         IProgress<NoOpExecutionProgress>? progress, CancellationToken cancellationToken);
 }
 
+public interface INoOpPostconditionVerifier
+{
+    /// <summary>Independently observes whether the exact no-op left machine state unchanged.</summary>
+    /// <remarks>The observation is read-only. Missing or ambiguous evidence returns false.</remarks>
+    Task<bool> ObserveNoMachineChangeAsync(NoOpVerificationTarget target, CancellationToken cancellationToken);
+}
+
+public sealed record NoOpVerificationTarget(JournalPlanKey Plan, Guid ApprovalId, Guid CorrelationId, NoOpActionRequest Action);
+
 public sealed record NoOpExecutionBatch(JournalPlanKey Plan, Guid ApprovalId, Guid CorrelationId,
     DateTimeOffset ExpiresAtUtc, ImmutableArray<NoOpActionRequest> Actions);
 
