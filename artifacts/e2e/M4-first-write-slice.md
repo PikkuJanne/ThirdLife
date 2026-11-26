@@ -89,8 +89,8 @@ guest. Windows Installer reported the reviewed package absent and no active
 installer. The optional source check returned the expected length. Host queries
 found one virtual disk and no pass-through disk or mounted DVD in both the running
 VM configuration and the reviewed checkpoint. That describes the attachments at
-inspection. The live intake still needs an attributable confirmation of lawful
-ownership and no donor storage, with the workshop operator code and actual date.
+inspection. At that checkpoint the live intake still needed the operator's
+attributable confirmation of lawful ownership and no donor storage.
 
 `eng/run-m4-package-desktop.ps1 -Inspect` passed with the corrected driver and a
 locked Release build from `3d273b5`. The wrapper took 57.001 s including
@@ -120,6 +120,57 @@ The deterministic rerun passed in 144.860 s with 1,233 Quick .NET tests,
 .\eng\verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -Filter '(FullyQualifiedName~PackageSetupTests|FullyQualifiedName~RebootRecoveryTests|FullyQualifiedName~PlanReviewTests)&Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly'
 ~~~
 
+## 26 November 2026 live guest preview
+
+The operator confirmed lawful ownership and no donor storage for the dedicated
+guest and its reviewed clean checkpoint. The guest intake uses the date of that
+confirmation. A generated local operator code links it to the protected
+attestation. Codex operated the unelevated UI on the operator's behalf.
+
+The initial `-Preview` created a durable job and stopped before recording intake.
+The wrapper exited after 48.900 s and cleaned its stage. A read-only guest check
+confirmed that the job store existed and there were no app, scheduled task or
+stage remnants. Subsequent runs reopened that job with the original attestation.
+The first resume isolated the intake save in 52.811 s. A 66.388 s diagnostic
+identified the invalid date message. The ISO text input and calendar trials
+confirmed a difference between the automation process culture and the guest's
+date picker. The picker displayed the selected date in British format. The
+final runner selects the exact day from the calendar, reads it back as a date
+and compares the saved record with the original code and date before assessment.
+A partial resume attestation was refused before guest admission.
+
+`eng/run-m4-package-desktop.ps1 -ResumePreview` passed in 46.597 s on the same
+Windows 11 Pro 26H2 native x64 guest, including staging and cleanup. The live
+assessment let the unelevated application display the signed Notepad++
+8.9.9.1 x64 machine-wide plan. The package was absent. Installation and handover
+were disabled before approval. The wrapper cleaned the stage and left the job
+available. The exact job, target binding and plan digest are retained in the
+protected local record for approval. The live package operation, Windows
+consent, interruption, restart and restoration remain unobserved.
+
+| Live preview artifact | SHA-256 |
+| --- | --- |
+| Release apphost at `20247fb` | `143289c265e36180be76d605366f59c848081a498daa30d54dad85bde5ca5763` |
+| Release UI assembly at `20247fb` | `f74ee32bb94746fde7e9b2777aca91b11a6f2c6cefdcb6098684b85c40edf476` |
+| Guest preview driver | `99d6d90b50796d923a918797209f8607f0a10b8ac76ece34fa85279755222ad1` |
+| Staged preview bundle | `5148670d752647051118774d0598552ee65ca0f192f1ae0292b055e0be42edb9` |
+
+The final driver reopened the same job without re-entering intake and displayed
+the identical plan digest in 49.015 s including staging and cleanup. Release
+app artifacts matched the earlier run. The driver SHA-256 was
+`a37ef874724c3e4e499aab84db3a27bf4873ad385607b5564e2ef5a07a89424a` and bundle
+SHA-256 was `96563b7fab4e976687eaba3a89ec0cd05cec34d64a1def54d23a1349f56f44ac`.
+An independent read-only SQLite count and guest cleanup inspection took 4.251 s.
+The job had one intake record and 164 observations. It had zero approvals or
+action entries. There were no app or installer processes, runner tasks or
+staging directories. The exact saved job remains available for approval.
+
+Quick with locked restore passed in the clean host worktree in 134.357 s. It
+included the initial Release build and ran alongside guest verification. The
+final Quick run reused locked dependencies and passed in 110.096 s with 1,233
+.NET tests, eight governance regressions and a warnings-as-errors build. The
+native guest checks above establish the separate UI Automation observations.
+
 ## Native procedure
 
 Use the exact VM and clean checkpoint IDs from the reviewed profile. Retain the
@@ -137,7 +188,8 @@ public artifact digests, durations and limitations.
    ownership and no donor storage, use `-Preview` with the actual verification
    date and operator code. It creates one guest job, saves the intake, runs the
    live assessment and reads the fully resolved package plan without approving
-   it. Use `-ResumePreview -Job` to continue the existing job if needed.
+   it. Use `-ResumePreview -Job` to continue the existing job. Supply both
+   original attestation parameters to complete interrupted intake or assessment.
 3. Obtain operator authority for the displayed plan digest and the exact
    target and action, then approve and dispatch in the ordinary application.
    Compare the displayed digest again if reopening the job for approval.

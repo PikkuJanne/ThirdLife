@@ -67,9 +67,8 @@ installation. Eligible failures retain linked attempts and a durable three-start
 limit. Expired approvals or changed resolutions require fresh review.
 [Package retry evidence](artifacts/evidence/TL-0409/report.md)
 
-TL-0410 verified guest admission, exact package absence, unelevated startup and
-ten deterministic package and recovery selections. The corrected preview runner
-checks both verification steps and the saved intake date. Live preview awaits
-attributable confirmation of lawful ownership and no donor storage. The displayed
-plan then requires scoped authority for the guest transactions, interruption,
-restart and cleanup. [M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)
+TL-0410 saved attributed no-donor-storage intake in the dedicated guest, ran
+live assessment and displayed the exact machine-wide package plan with install
+and handover disabled. The saved job awaits scoped plan approval and authority
+for the native interruption, restart and cleanup cases.
+[M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)

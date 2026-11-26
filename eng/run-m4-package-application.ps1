@@ -6,8 +6,10 @@ param(
     [Parameter(Mandatory, ParameterSetName = 'ResumePreview')][switch] $ResumePreview,
     [Parameter(Mandatory, ParameterSetName = 'Reopen')][switch] $Reopen,
     [Parameter(Mandatory, ParameterSetName = 'Preview')]
+    [Parameter(ParameterSetName = 'ResumePreview')]
     [ValidatePattern('\A[A-Za-z0-9_.-]{1,64}\z')][string] $OperatorCode,
     [Parameter(Mandatory, ParameterSetName = 'Preview')]
+    [Parameter(ParameterSetName = 'ResumePreview')]
     [ValidatePattern('\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z')][string] $VerifiedNoDonorStorageOn,
     [Parameter(Mandatory, ParameterSetName = 'ResumePreview')]
     [Parameter(Mandatory, ParameterSetName = 'Reopen')]
@@ -49,7 +51,11 @@ if ((Get-FileHash -LiteralPath $exe).Hash -ine $AppHostSha256 -or
 if (Get-Process -Name 'ThirdLife.UI' -ErrorAction SilentlyContinue) {
     throw 'Close the previous application session before opening the candidate.'
 }
-if ($Preview) {
+$resumeWithIntake = $ResumePreview -and [bool]$OperatorCode -and [bool]$VerifiedNoDonorStorageOn
+if ($ResumePreview -and ([bool]$OperatorCode -xor [bool]$VerifiedNoDonorStorageOn)) {
+    throw 'Supply both the original operator code and verification date to continue intake.'
+}
+if ($Preview -or $resumeWithIntake) {
     $intakeDate = [DateTime]::ParseExact($VerifiedNoDonorStorageOn, 'yyyy-MM-dd',
         [Globalization.CultureInfo]::InvariantCulture)
     if ($intakeDate -gt [DateTime]::Today) { throw 'The external intake date is in the future.' }
@@ -58,12 +64,16 @@ if ($Preview) {
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 
 function Wait-Observation([scriptblock] $Condition, [string] $Label, [int] $Seconds = 10) {
+    $result.waiting_for = $Label
     $timer = [Diagnostics.Stopwatch]::StartNew()
     do {
         if ($process.HasExited) { throw 'The owned application exited before the observation.' }
         try {
             $value = & $Condition
-            if ($value) { return $value }
+            if ($value) {
+                $result.waiting_for = $null
+                return $value
+            }
         }
         catch [Windows.Automation.ElementNotAvailableException] { }
         Start-Sleep -Milliseconds 100
@@ -123,6 +133,44 @@ function Select-Option([string] $Id, [string] $Name) {
     }
 }
 
+function Select-IntakeDate([DateTime] $Date, [string] $IsoDate) {
+    $calendarCulture = [Globalization.CultureInfo]::GetCultureInfo('en-GB')
+    $picker = Wait-Observation { Find-Control 'SanitizationDate' } 'date picker'
+    $expand = $picker.GetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern)
+    $expand.Expand()
+    try {
+        $calendarType = [Windows.Automation.PropertyCondition]::new(
+            [Windows.Automation.AutomationElement]::ControlTypeProperty, [Windows.Automation.ControlType]::Calendar)
+        $calendar = Wait-Observation {
+            $picker.FindFirst([Windows.Automation.TreeScope]::Descendants, $calendarType)
+        } 'intake calendar'
+        $items = $calendar.GetCurrentPattern([Windows.Automation.ItemContainerPattern]::Pattern)
+        $day = $items.FindItemByProperty($null, [Windows.Automation.AutomationElement]::NameProperty, $IsoDate)
+        if (-not $day) { throw 'The intake calendar did not expose the verified date.' }
+        $virtualized = $null
+        if ($day.TryGetCurrentPattern([Windows.Automation.VirtualizedItemPattern]::Pattern, [ref]$virtualized)) {
+            $virtualized.Realize()
+        }
+        $namedDate = [DateTime]::MinValue
+        if (-not [DateTime]::TryParse($day.Current.Name, $calendarCulture,
+                [Globalization.DateTimeStyles]::None, [ref]$namedDate) -or $namedDate.Date -ne $Date) {
+            throw 'The calendar day does not match the verified date.'
+        }
+        $day.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
+        $null = Wait-Observation {
+            $selectedDate = [DateTime]::MinValue
+            [DateTime]::TryParse((Read-Value 'SanitizationDate'), $calendarCulture,
+                [Globalization.DateTimeStyles]::None, [ref]$selectedDate) -and
+                $selectedDate.Date -eq $Date
+        } 'exact selected intake date'
+    }
+    finally {
+        if ($expand.Current.ExpandCollapseState -eq [Windows.Automation.ExpandCollapseState]::Expanded) {
+            $expand.Collapse()
+        }
+    }
+}
+
 function Read-Plan() {
     $title = Wait-Observation {
         $element = Find-Control 'PlanResultTitle'
@@ -155,6 +203,7 @@ $result = [ordered]@{
     candidate_apphost_sha256 = $AppHostSha256
     candidate_ui_sha256 = $UiSha256
     last_checkpoint = 'launch'
+    waiting_for = $null
     result = 'failed'
 }
 try {
@@ -176,28 +225,64 @@ try {
         $Job = Wait-Observation { Read-Value 'CurrentJobId' } 'saved job'
         if ($Job -cnotmatch '\Ajob-[0-9a-f]{32}\z') { throw 'Unexpected saved job reference.' }
         $result.local_job = $Job
-        Set-Value 'OperatorIdInput' $OperatorCode
-        Select-Option 'SanitizationResult' 'Verified no donor storage'
-        $displayDate = $intakeDate.ToString('d', [Globalization.CultureInfo]::CurrentCulture)
-        Set-Value 'SanitizationDate' $displayDate
-        $confirmation = Wait-Observation { Find-Control 'ExternalRecordConfirmed' } 'external confirmation'
-        $toggle = $confirmation.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
-        if ($toggle.Current.ToggleState -ne [Windows.Automation.ToggleState]::On) { $toggle.Toggle() }
-        Invoke-Button 'RecordSanitizationButton'
-        $null = Wait-Observation { (Find-Control 'StartAssessmentButton').Current.IsEnabled } 'allowing sanitization state'
-        $intake = (Find-Control 'SavedSanitization').Current.Name
-        if ($intake -cne "Latest saved external result: no donor storage, verified. Human confirmed. Operator $OperatorCode, $displayDate.") {
-            throw 'The saved external intake record does not match the supplied attestation.'
-        }
-        $result.last_checkpoint = 'attributed_intake_saved'
-        Invoke-Button 'StartAssessmentButton'
+        $result.last_checkpoint = 'job_created'
     }
     elseif ($ResumePreview -or $Reopen) {
         Set-Value 'JobIdInput' $Job
         Invoke-Button 'OpenJobButton'
-        $null = Wait-Observation { (Read-Value 'CurrentJobId') -ceq $Job } 'exact saved job'
+        $null = Wait-Observation {
+            (Read-Value 'CurrentJobId') -ceq $Job -and (Find-Control 'OpenJobButton').Current.IsEnabled
+        } 'exact saved job'
         $result.local_job = $Job
         $result.last_checkpoint = 'job_reopened'
+    }
+
+    if ($Preview -or $resumeWithIntake) {
+        $expectedIntake = foreach ($culture in @([Globalization.CultureInfo]::GetCultureInfo('en-GB'),
+            [Globalization.CultureInfo]::CurrentCulture)) {
+            $displayDate = $intakeDate.ToString('d', $culture)
+            "Latest saved external result: no donor storage, verified. Human confirmed. Operator $OperatorCode, $displayDate."
+        }
+        $intake = Wait-Observation { (Find-Control 'SavedSanitization').Current.Name } 'saved intake status'
+        if ($intake -ceq 'No external result is saved for this job.') {
+            Set-Value 'OperatorIdInput' $OperatorCode
+            Select-Option 'SanitizationResult' 'Verified no donor storage'
+            Select-IntakeDate $intakeDate $VerifiedNoDonorStorageOn
+            $confirmation = Wait-Observation { Find-Control 'ExternalRecordConfirmed' } 'external confirmation'
+            $toggle = $confirmation.GetCurrentPattern([Windows.Automation.TogglePattern]::Pattern)
+            if ($toggle.Current.ToggleState -ne [Windows.Automation.ToggleState]::On) { $toggle.Toggle() }
+            Invoke-Button 'RecordSanitizationButton'
+            $intake = Wait-Observation {
+                $name = (Find-Control 'SavedSanitization').Current.Name
+                if ($name -cne 'No external result is saved for this job.') { $name }
+                else {
+                    $errorControl = Find-Control 'SanitizationInputError'
+                    if ($errorControl -and $errorControl.Current.Name) {
+                        $result.intake_validation = switch -Exact ($errorControl.Current.Name) {
+                            'Choose the external outcome before saving.' { 'missing_outcome' }
+                            'Choose a valid date for the external result.' { 'invalid_date' }
+                            'Confirm ownership and the external record before saving this outcome.' { 'missing_confirmation' }
+                            'Choose the method shown in the external record.' { 'missing_method' }
+                            'Check the required fields. Use a workshop identifier and an allowed outcome, date or reason.' { 'invalid_fields' }
+                            'The local job store could not complete this operation. Reopen the job to check what was saved.' { 'store_failure' }
+                            default { 'other_validation_message' }
+                        }
+                    }
+                }
+            } 'saved attributable intake'
+        }
+        if ($intake -cnotin $expectedIntake) {
+            throw 'The saved external intake record does not match the supplied attestation.'
+        }
+        $result.Remove('intake_validation')
+        $result.last_checkpoint = 'attributed_intake_saved'
+        if (-not (Find-Control 'PrepareButton').Current.IsEnabled) {
+            $complete = Find-Control 'CompleteSavedSanitizationButton'
+            if ($complete -and $complete.Current.IsEnabled) {
+                Invoke-Button 'CompleteSavedSanitizationButton'
+            }
+            Invoke-Button 'StartAssessmentButton'
+        }
     }
 
     if ($Preview -or $ResumePreview) {
