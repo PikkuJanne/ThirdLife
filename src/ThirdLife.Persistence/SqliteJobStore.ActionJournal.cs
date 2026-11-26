@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
+using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Recovery;
 using ThirdLife.Core.Jobs;
@@ -123,10 +124,9 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
             if (needsCurrentApproval)
             {
                 await RequireCurrentJournalPlanAsync(connection, transaction, plan, token).ConfigureAwait(false);
-                if (entry.Checkpoint == JournalCheckpoint.PackageDispatchIntent &&
-                    await HasUnreconciledJournalActionAsync(connection, transaction, plan.Key, token).ConfigureAwait(false))
+                if (PackageRetryPolicy.IsDispatchIntent(entry.Checkpoint))
                 {
-                    throw new JobStoreConflictException();
+                    await RequirePackageAttemptAsync(connection, transaction, plan, approval!, entry, token).ConfigureAwait(false);
                 }
             }
             else if (entry.State == JournalState.Skipped && await ReadArchiveStateAsync(connection, transaction, plan.Key.JobId, token).ConfigureAwait(false))
@@ -144,6 +144,46 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
             outcome = JournalWriteResult.Recorded;
         }, cancellationToken).ConfigureAwait(false);
         return outcome;
+    }
+
+    private async Task RequirePackageAttemptAsync(SqliteConnection connection, SqliteTransaction transaction,
+        JournalPlanSnapshot plan, JournalApproval approval, JournalEntry entry, CancellationToken token)
+    {
+        if (await HasUnreconciledJournalActionAsync(connection, transaction, plan.Key, token).ConfigureAwait(false))
+        {
+            throw new JobStoreConflictException();
+        }
+
+        if (plan is not
+            {
+                SyntheticData: false, Actions: [
+                    {
+                        Request: InstallPackageActionRequest
+                        { Scope: ActionScope.Machine, Architecture: ActionArchitecture.X64 } target
+                    }]
+            })
+        {
+            return;
+        }
+
+        var histories = await ReadJobJournalHistoriesAsync(transaction, plan.Key.JobId, token).ConfigureAwait(false);
+        var now = _timeProvider.GetUtcNow();
+        var eligibility = PackageRetryPolicy.Evaluate(histories, target, now);
+        if (entry.Checkpoint == JournalCheckpoint.PackageDispatchIntent && eligibility.Status == PackageRetryStatus.Initial)
+        {
+            return;
+        }
+
+        if (entry.Checkpoint != JournalCheckpoint.PackageRetryDispatchIntent ||
+            eligibility is not { Status: PackageRetryStatus.Ready, LatestAttemptEntry: { } prior, RetryAtUtc: { } retryAt } ||
+            entry.PriorAttemptEntryId != prior.EntryId || histories.Any(history => history.Entries.Any(previous =>
+                previous.CorrelationId == entry.CorrelationId && PackageRetryPolicy.IsDispatchIntent(previous.Checkpoint))) ||
+            entry.OccurredAtUtc < retryAt || entry.OccurredAtUtc > now || !PackageRetryPolicy.IsFreshApproval(approval, now) ||
+            (prior.Result == JournalResult.PackageDispatchAuthorizationChanged &&
+                (approval.ApprovalId == prior.ApprovalId || approval.OccurredAtUtc < prior.OccurredAtUtc)))
+        {
+            throw new JobStoreConflictException();
+        }
     }
 
     private async Task InsertJournalApprovalAsync(SqliteConnection connection, SqliteTransaction transaction,
@@ -212,46 +252,49 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
     public Task<ImmutableArray<JournalHistory>> LoadJobJournalsAsync(JobId jobId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(jobId);
-        return ReadJournalTransactionAsync(async (transaction, token) =>
+        return ReadJournalTransactionAsync((transaction, token) => ReadJobJournalHistoriesAsync(transaction, jobId, token), cancellationToken);
+    }
+
+    private async Task<ImmutableArray<JournalHistory>> ReadJobJournalHistoriesAsync(SqliteTransaction transaction, JobId jobId,
+        CancellationToken token)
+    {
+        _layout.ValidateJobDirectory(jobId);
+        using var command = _connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT plan_sha256, impact_sha256 FROM action_journal_plans WHERE job_id = $job_id
+            ORDER BY rowid LIMIT $limit;
+            """;
+        command.Parameters.AddWithValue("$job_id", jobId.Value);
+        command.Parameters.AddWithValue("$limit", JournalHistory.MaximumPlansPerJob + 1);
+        var keys = new List<JournalPlanKey>();
+        try
         {
-            _layout.ValidateJobDirectory(jobId);
-            using var command = _connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = """
-                SELECT plan_sha256, impact_sha256 FROM action_journal_plans WHERE job_id = $job_id
-                ORDER BY rowid LIMIT $limit;
-                """;
-            command.Parameters.AddWithValue("$job_id", jobId.Value);
-            command.Parameters.AddWithValue("$limit", JournalHistory.MaximumPlansPerJob + 1);
-            var keys = new List<JournalPlanKey>();
-            try
+            await using var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
+            while (await reader.ReadAsync(token).ConfigureAwait(false))
             {
-                await using var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
-                while (await reader.ReadAsync(token).ConfigureAwait(false))
+                if (keys.Count == JournalHistory.MaximumPlansPerJob)
                 {
-                    if (keys.Count == JournalHistory.MaximumPlansPerJob)
-                    {
-                        throw new JobStoreCorruptionException("store_payload_mismatch");
-                    }
-
-                    keys.Add(new JournalPlanKey(jobId, reader.GetString(0), reader.GetString(1)));
+                    throw new JobStoreCorruptionException("store_payload_mismatch");
                 }
-            }
-            catch (ArgumentException)
-            {
-                throw new JobStoreCorruptionException("store_payload_mismatch");
-            }
 
-            var histories = ImmutableArray.CreateBuilder<JournalHistory>(keys.Count);
-            foreach (var key in keys)
-            {
-                var plan = await ReadJournalPlanAsync(_connection, transaction, key, token).ConfigureAwait(false)
-                    ?? throw new JobStoreCorruptionException("store_payload_mismatch");
-                histories.Add(await ReadJournalHistoryAsync(transaction, plan, token).ConfigureAwait(false));
+                keys.Add(new JournalPlanKey(jobId, reader.GetString(0), reader.GetString(1)));
             }
+        }
+        catch (ArgumentException)
+        {
+            throw new JobStoreCorruptionException("store_payload_mismatch");
+        }
 
-            return histories.MoveToImmutable();
-        }, cancellationToken);
+        var histories = ImmutableArray.CreateBuilder<JournalHistory>(keys.Count);
+        foreach (var key in keys)
+        {
+            var plan = await ReadJournalPlanAsync(_connection, transaction, key, token).ConfigureAwait(false)
+                ?? throw new JobStoreCorruptionException("store_payload_mismatch");
+            histories.Add(await ReadJournalHistoryAsync(transaction, plan, token).ConfigureAwait(false));
+        }
+
+        return histories.MoveToImmutable();
     }
 
     private async Task<T> ReadJournalTransactionAsync<T>(

@@ -7,6 +7,7 @@ using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Diagnostics.Logging;
 using ThirdLife.Packages;
+using ThirdLife.Persistence;
 using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Features.PlanReview;
 
@@ -14,7 +15,6 @@ namespace ThirdLife.UI.Shell;
 
 internal sealed partial class AuditWorkspace
 {
-    private static readonly TimeSpan PackageApprovalLifetime = TimeSpan.FromMinutes(10);
     private static readonly OperatorId PackageCoordinator = new("thirdlife-package-coordinator");
     private static readonly OperatorId InstallerBackend = new("windows-installer");
     private static readonly OperatorId PackageVerifier = new("thirdlife-package-verifier");
@@ -40,7 +40,7 @@ internal sealed partial class AuditWorkspace
     public bool CanEditPackageOperator => CanEditJob && PlanReviewDecision is null;
     public bool CanInstallPackage => CanEditJob && !_packageNeedsReview && _packageService is not null &&
         PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } && _packageApproval is not null &&
-        _packageResolution?.Status == PackageResolutionStatus.Ready;
+        _packageResolution?.Status == PackageResolutionStatus.Ready && CanStartPackagePlan;
 
     public string PackageOperatorCode
     {
@@ -57,8 +57,21 @@ internal sealed partial class AuditWorkspace
         }
     }
 
-    public string PackageSourceStatus => _packageActivity ?? (DescribePackageSource(_packageResolution?.Status) +
+    public string PackageSourceStatus => _packageActivity ?? (CurrentPackageSourceStatus() +
         (_packageDiagnosticUnavailable ? " Local diagnostic storage was not confirmed." : string.Empty));
+
+    private string CurrentPackageSourceStatus() =>
+        SavedPackageRetry.Status == PackageRetryStatus.Verified && _packageResolution is { Observation: var observation }
+            ? observation switch
+            {
+                { Status: PackageObservationStatus.Absent } => "The previously verified package is no longer installed. Review the current device state.",
+                { Status: PackageObservationStatus.Installed, ExactVersion: var version } when version == PilotPackageService.Identity.ExactVersion =>
+                    DescribePackageSource(PackageResolutionStatus.AlreadyInstalled),
+                { Status: PackageObservationStatus.Installed or PackageObservationStatus.Conflict } =>
+                    "The current installation differs from the previously verified package. Review the current device state.",
+                _ => "The saved verification is available, but current installed state could not be checked.",
+            }
+            : DescribePackageSource(_packageResolution?.Status);
 
     private static string DescribePackageSource(PackageResolutionStatus? status) => status switch
     {
@@ -75,7 +88,8 @@ internal sealed partial class AuditWorkspace
     };
 
     private bool CanApprovePackagePlan => IsPackageProfile && !_packageNeedsReview && _store is IActionJournalStore &&
-        _packageResolution?.Status == PackageResolutionStatus.Ready && !string.IsNullOrWhiteSpace(_packageOperatorCode);
+        _packageResolution?.Status == PackageResolutionStatus.Ready && !string.IsNullOrWhiteSpace(_packageOperatorCode) &&
+        CanStartPackagePlan;
 
     private async Task CheckPackageAsync()
     {
@@ -90,6 +104,13 @@ internal sealed partial class AuditWorkspace
         try
         {
             var token = _packageCancellation.Token;
+            if (SavedPackageRetry.Status == PackageRetryStatus.Verified)
+            {
+                var observed = await Task.Run(service.Inspect);
+                _packageResolution = new PackageResolution(PackageResolutionStatus.Unavailable, observed);
+                return;
+            }
+
             _packageResolution = await Task.Run(() => service.ResolveAsync(token));
             var diagnostic = _packageResolution.Status switch
             {
@@ -118,6 +139,14 @@ internal sealed partial class AuditWorkspace
         }
 
         var snapshot = JournalPlanSnapshot.Create(displayed.Plan, displayed.Impact);
+        var histories = await LoadPackageJournalsAsync(snapshot.Key.JobId, CancellationToken.None);
+        if (EvaluatePackageRetry(histories, request).Status is not (PackageRetryStatus.Initial or PackageRetryStatus.Ready))
+        {
+            await LoadPackageHistoryAsync(snapshot.Key.JobId);
+            _planReviewStatus = "The saved attempts changed. Review the package history before approving.";
+            return false;
+        }
+
         var actor = new OperatorId(_packageOperatorCode.Trim());
         await journal.SaveJournalPlanAsync(snapshot);
         var existing = await journal.LoadJournalAsync(snapshot.Key);
@@ -166,78 +195,113 @@ internal sealed partial class AuditWorkspace
                 return;
             }
 
-            var durable = await journal.LoadJournalAsync(approval.Plan);
-            if (durable?.ActiveApproval != approval || durable.StateOf(request.ActionId) != JournalState.Approved ||
-                !IsFreshPackageApproval(approval))
+            var histories = await LoadPackageJournalsAsync(approval.Plan.JobId, CancellationToken.None);
+            var durable = histories.SingleOrDefault(history => history.Plan.Key == approval.Plan);
+            var eligibility = EvaluatePackageRetry(histories, request);
+            if (durable?.ActiveApproval != approval || durable.Entries.LastOrDefault() is not
+                { State: JournalState.Approved, Checkpoint: JournalCheckpoint.PackagePlanApproval } previous ||
+                previous.ApprovalId != approval.ApprovalId || !IsFreshPackageApproval(approval) ||
+                eligibility.Status is not (PackageRetryStatus.Initial or PackageRetryStatus.Ready))
             {
                 ClearPlanReview();
                 _planReviewStatus = "The saved approval is no longer current. Build and approve a fresh plan.";
-                return;
-            }
-
-            if (token.IsCancellationRequested)
-            {
-                _packageActivity = null;
-                _planReviewStatus = "Installation was cancelled before dispatch.";
-                return;
-            }
-
-            var correlation = Guid.NewGuid();
-            if (await AppendPackageEntryAsync(journal, approval, request, correlation, JournalState.Approved,
-                JournalState.Started, JournalActor.Coordinator, PackageCoordinator, JournalResult.None,
-                JournalCheckpoint.PackageDispatchIntent) != JournalWriteResult.Recorded)
-            {
-                return;
-            }
-
-            ClearReport();
-            _packageDiagnosticUnavailable = false;
-            PackageRecoveryStatus = string.Empty;
-            var display = new Progress<PackageInstallProgress>(update =>
-            {
-                if (_packageAttemptProgress is { } attempt && attempt.IsCurrent(update) && !token.IsCancellationRequested)
-                {
-                    _packageActivity = update.Stage switch
-                    {
-                        PackageInstallStage.Resolving => "Downloading and checking the approved installer.",
-                        PackageInstallStage.Installing => "Windows Installer is applying the approved change. Use Windows Installer if it offers a cancel option.",
-                        _ => _packageActivity,
-                    };
-                    Publish();
-                }
-            });
-            var stage = new PackageAttemptProgress(request.ActionId, correlation, display);
-            _packageAttemptProgress = stage;
-            _packageActivity = "Preparing the approved package.";
-            Publish();
-            try
-            {
-                var digest = current.Actions[0].CatalogEntry.Package.InstallerSha256!;
-                var result = await Task.Run(() => service.InstallAsync(request, digest, correlation,
-                    cancellation => CanDispatchPackageAsync(journal, approval, displayed, request, correlation, cancellation),
-                    stage, token));
-                stage.Complete();
-                var outcome = await RecordPackageResultAsync(journal, approval, request, correlation, result.Status, service, digest, token);
                 await LoadPackageHistoryAsync(approval.Plan.JobId);
-                _planReviewStatus = WorkshopReportRenderer.DescribePackageOutcome(outcome);
+                return;
             }
-            finally
-            {
-                _packageActivity = null;
-                _packageResolution = null;
-            }
+
+            await StartPackageAttemptAsync(journal, service, approval, displayed, current, request, previous, eligibility, token);
         });
     }
 
-    private bool IsFreshPackageApproval(JournalApproval approval)
+    private async Task StartPackageAttemptAsync(IActionJournalStore journal, PilotPackageService service,
+        JournalApproval approval, PlanReviewSnapshot displayed, ProposedPlan current, InstallPackageActionRequest request,
+        JournalEntry previous, PackageRetryEligibility eligibility, CancellationToken token)
     {
-        var age = _timeProvider.GetUtcNow() - approval.OccurredAtUtc;
-        return age >= TimeSpan.Zero && age < PackageApprovalLifetime;
+        if (token.IsCancellationRequested)
+        {
+            _planReviewStatus = "Installation was cancelled before dispatch.";
+            return;
+        }
+
+        var isRetry = eligibility.Status == PackageRetryStatus.Ready;
+        if (isRetry && JournalPlanSnapshot.Create(current, ImpactEstimator.Estimate(current)).Key != approval.Plan)
+        {
+            ClearPlanReview();
+            _planReviewStatus = "The approved resolution changed. Build and approve the current plan before retrying.";
+            return;
+        }
+
+        var correlation = Guid.NewGuid();
+        var intent = new JournalEntry(Guid.NewGuid(), approval.Plan, request.ActionId, approval.ApprovalId,
+            previous.State, JournalState.Started, JournalActor.Coordinator, PackageCoordinator, correlation,
+            _timeProvider.GetUtcNow(), JournalResult.None,
+            isRetry ? JournalCheckpoint.PackageRetryDispatchIntent : JournalCheckpoint.PackageDispatchIntent,
+            priorAttemptEntryId: isRetry ? eligibility.LatestAttemptEntry?.EntryId : null);
+        try
+        {
+            if (await journal.AppendJournalEntryAsync(intent, CancellationToken.None) != JournalWriteResult.Recorded)
+            {
+                return;
+            }
+        }
+        catch (JobStoreConflictException)
+        {
+            await LoadPackageHistoryAsync(approval.Plan.JobId);
+            _planReviewStatus = "The saved approval or attempt changed before dispatch. Review the current package history.";
+            return;
+        }
+
+        ClearReport();
+        _packageDiagnosticUnavailable = false;
+        PackageRecoveryStatus = string.Empty;
+        var display = new Progress<PackageInstallProgress>(update =>
+        {
+            if (_packageAttemptProgress is { } attempt && attempt.IsCurrent(update) && !token.IsCancellationRequested)
+            {
+                _packageActivity = update.Stage switch
+                {
+                    PackageInstallStage.Resolving => "Downloading and checking the approved installer.",
+                    PackageInstallStage.Installing => "Windows Installer is applying the approved change. Use Windows Installer if it offers a cancel option.",
+                    _ => _packageActivity,
+                };
+                Publish();
+            }
+        });
+        var stage = new PackageAttemptProgress(request.ActionId, correlation, display);
+        _packageAttemptProgress = stage;
+        _packageActivity = "Preparing the approved package.";
+        Publish();
+        try
+        {
+            var digest = current.Actions[0].CatalogEntry.Package.InstallerSha256!;
+            var result = await Task.Run(() => service.InstallAsync(request, digest, correlation,
+                cancellation => CanDispatchPackageAsync(journal, approval, displayed, request, intent, cancellation),
+                stage, token));
+            stage.Complete();
+            var status = result.Status;
+            if (status == PackageInstallStatus.AlreadyInstalled &&
+                !await CanDispatchPackageAsync(journal, approval, displayed, request, intent, CancellationToken.None))
+            {
+                status = PackageInstallStatus.PreconditionChanged;
+            }
+
+            var outcome = await RecordPackageResultAsync(journal, approval, request, correlation, status, service, digest, token);
+            await LoadPackageHistoryAsync(approval.Plan.JobId);
+            _planReviewStatus = WorkshopReportRenderer.DescribePackageOutcome(outcome);
+        }
+        finally
+        {
+            _packageActivity = null;
+            _packageResolution = null;
+        }
     }
+
+    private bool IsFreshPackageApproval(JournalApproval approval) =>
+        PackageRetryPolicy.IsFreshApproval(approval, _timeProvider.GetUtcNow());
 
     private async Task<bool> CanDispatchPackageAsync(
         IActionJournalStore journal, JournalApproval approval, PlanReviewSnapshot displayed, InstallPackageActionRequest request,
-        Guid correlation, CancellationToken cancellationToken)
+        JournalEntry intent, CancellationToken cancellationToken)
     {
         if (!IsFreshPackageApproval(approval))
         {
@@ -246,12 +310,16 @@ internal sealed partial class AuditWorkspace
 
         var current = await ResolveCurrentPlanAsync(cancellationToken).ConfigureAwait(false);
         var durable = await journal.LoadJournalAsync(approval.Plan, cancellationToken).ConfigureAwait(false);
-        return current is not null && PackageRequest(current) is not null &&
-            !PlanDiff.Compare(displayed.Plan, displayed.Impact, current, ImpactEstimator.Estimate(current)).RequiresReapproval &&
+        if (current is null || PackageRequest(current) is null)
+        {
+            return false;
+        }
+
+        var impact = ImpactEstimator.Estimate(current);
+        return !PlanDiff.Compare(displayed.Plan, displayed.Impact, current, impact).RequiresReapproval &&
+            (intent.Checkpoint != JournalCheckpoint.PackageRetryDispatchIntent || JournalPlanSnapshot.Create(current, impact).Key == approval.Plan) &&
             durable?.ActiveApproval == approval &&
-            durable.Entries.LastOrDefault(entry => entry.ActionId == request.ActionId) is
-            { Checkpoint: JournalCheckpoint.PackageDispatchIntent, State: JournalState.Started } started &&
-            started.CorrelationId == correlation && started.ApprovalId == approval.ApprovalId &&
+            durable.Entries.LastOrDefault(entry => entry.ActionId == request.ActionId) == intent &&
             IsFreshPackageApproval(approval);
     }
 
@@ -294,6 +362,12 @@ internal sealed partial class AuditWorkspace
         InstallPackageActionRequest request, Guid correlation, PackageInstallStatus result, PilotPackageService service,
         string installerSha256, CancellationToken cancellationToken)
     {
+        if (result == PackageInstallStatus.AlreadyInstalled)
+        {
+            return await VerifyPackageAttemptAsync(journal, approval, request, correlation, JournalState.Started,
+                service, installerSha256, cancellationToken);
+        }
+
         var (state, reason, checkpoint, diagnostic) = result switch
         {
             PackageInstallStatus.Applied => (JournalState.Applied, JournalResult.BackendApplied, JournalCheckpoint.PackageLaunchPendingVerification, (DiagnosticResultCode?)null),
@@ -312,11 +386,12 @@ internal sealed partial class AuditWorkspace
             PackageInstallStatus.AuthorizationDeclined => (JournalState.Failed, JournalResult.AuthorizationDeclined, JournalCheckpoint.None, DiagnosticResultCode.PackageElevationDeclined),
             PackageInstallStatus.ElevationUnavailable =>
                 (JournalState.Failed, JournalResult.PackageElevationUnavailable, JournalCheckpoint.None, DiagnosticResultCode.PackageElevationUnavailable),
-            PackageInstallStatus.Unavailable => (JournalState.Failed, JournalResult.BackendUnavailable, JournalCheckpoint.None, DiagnosticResultCode.PackageResolutionUnavailable),
+            PackageInstallStatus.Unavailable => (JournalState.Failed, JournalResult.BackendUnavailable, JournalCheckpoint.PackagePreDispatchFailure,
+                DiagnosticResultCode.PackageResolutionUnavailable),
             PackageInstallStatus.TrustMismatch => (JournalState.Failed, JournalResult.TrustMismatch, JournalCheckpoint.None, DiagnosticResultCode.PackageTrustMismatch),
             PackageInstallStatus.Conflict => (JournalState.Failed, JournalResult.PreconditionChanged, JournalCheckpoint.None, DiagnosticResultCode.PackageResolutionConflict),
-            PackageInstallStatus.AlreadyInstalled or PackageInstallStatus.PreconditionChanged =>
-                (JournalState.Failed, JournalResult.PreconditionChanged, JournalCheckpoint.None, DiagnosticResultCode.PackagePreconditionChanged),
+            PackageInstallStatus.PreconditionChanged => (JournalState.Failed, JournalResult.PackageDispatchAuthorizationChanged,
+                JournalCheckpoint.PackagePreDispatchFailure, DiagnosticResultCode.PackagePreconditionChanged),
             _ => (JournalState.Failed, JournalResult.OperationFailed, JournalCheckpoint.None, DiagnosticResultCode.PackageInstallerFailed),
         };
         using var lease = result == PackageInstallStatus.Applied
@@ -345,6 +420,14 @@ internal sealed partial class AuditWorkspace
         }
 
         // Backend application is durable before the separate, cancellable verification runs.
+        return await VerifyPackageAttemptAsync(journal, approval, request, correlation, JournalState.Applied,
+            service, installerSha256, cancellationToken);
+    }
+
+    private async Task<WorkshopPackageOutcome> VerifyPackageAttemptAsync(IActionJournalStore journal, JournalApproval approval,
+        InstallPackageActionRequest request, Guid correlation, JournalState prior, PilotPackageService service,
+        string installerSha256, CancellationToken cancellationToken)
+    {
         _packageAttemptProgress = null;
         _packageActivity = "Checking the installed version and testing application launch.";
         Publish();
@@ -352,8 +435,10 @@ internal sealed partial class AuditWorkspace
         var (verificationResult, verificationDiagnostic) = DescribePackageVerification(status);
         var verified = verificationResult == JournalResult.PackageLaunchVerified;
         var verifiedState = verified ? JournalState.Verified : JournalState.RequiresReview;
-        var verificationCheckpoint = verified ? JournalCheckpoint.None : JournalCheckpoint.Reconcile;
-        if (await AppendPackageEntryAsync(journal, approval, request, correlation, JournalState.Applied,
+        var verificationCheckpoint = prior == JournalState.Started
+            ? JournalCheckpoint.PackageExistingTargetVerification
+            : verified ? JournalCheckpoint.None : JournalCheckpoint.Reconcile;
+        if (await AppendPackageEntryAsync(journal, approval, request, correlation, prior,
             verifiedState, JournalActor.Verifier, PackageVerifier, verificationResult, verificationCheckpoint,
             verified ? ActionVerification.ExactPackageIdentity : null) != JournalWriteResult.Recorded)
         {
@@ -400,22 +485,28 @@ internal sealed partial class AuditWorkspace
 
     private async Task LoadPackageHistoryAsync(JobId jobId)
     {
-        var packages = await ReadPackageRecordsAsync(jobId, CancellationToken.None);
-        _packageNeedsReview = packages.Any(NeedsPackageReview);
-        _canInspectSavedPackage = packages.Any(package => NeedsPackageReview(package) &&
+        var histories = await LoadPackageJournalsAsync(jobId, CancellationToken.None);
+        RememberPackageRetry(histories);
+        var latest = ReadPackageRecords(histories, includeEarlierAttempts: false);
+        _packageNeedsReview = latest.Any(NeedsPackageReview);
+        _canInspectSavedPackage = latest.Any(package => NeedsPackageReview(package) &&
             package.RequestedVersion == PilotPackageService.Identity.ExactVersion);
         if (OffersPackageRecoveryCheck && PackageRecoveryStatus.Length == 0)
         {
             PackageRecoveryStatus = "Reopen this job or check the installed package state to continue its saved verification.";
         }
 
-        PackageHistoryText = string.Join(Environment.NewLine, packages.Select(package =>
+        var attempts = ReadPackageRecords(histories, includeEarlierAttempts: true);
+        PackageHistoryText = string.Join(Environment.NewLine, attempts.Select(package =>
             string.Create(CultureInfo.CurrentCulture,
                 $"{package.PackageId} {package.RequestedVersion}, machine-wide. {WorkshopReportRenderer.DescribePackageOutcome(package.Outcome)}")));
+        RefreshPackageRetryAfterDelay();
     }
 
     private void ClearPackageHistory()
     {
+        StopPackageRetryRefresh();
+        _savedPackageRetry = default;
         _packageNeedsReview = false;
         _canInspectSavedPackage = false;
         PackageHistoryText = string.Empty;
@@ -431,14 +522,11 @@ internal sealed partial class AuditWorkspace
         WorkshopPackageOutcome.DetectionAbsent or WorkshopPackageOutcome.DetectionMismatch or WorkshopPackageOutcome.DetectionUnavailable or
         WorkshopPackageOutcome.ProbeExecutableMissing or WorkshopPackageOutcome.ProbeExecutableUntrusted or WorkshopPackageOutcome.ProbeLaunchFailed;
 
-    private async Task<IReadOnlyList<WorkshopPackageRecord>> ReadPackageRecordsAsync(JobId jobId, CancellationToken cancellationToken)
-    {
-        if (_store is not IActionJournalStore journal || IsFixtureScenario)
-        {
-            return [];
-        }
+    private async Task<IReadOnlyList<WorkshopPackageRecord>> ReadPackageRecordsAsync(JobId jobId, CancellationToken cancellationToken) =>
+        ReadPackageRecords(await LoadPackageJournalsAsync(jobId, cancellationToken), includeEarlierAttempts: true);
 
-        var histories = await Task.Run(() => journal.LoadJobJournalsAsync(jobId, cancellationToken), cancellationToken);
+    private static WorkshopPackageRecord[] ReadPackageRecords(IReadOnlyList<JournalHistory> histories, bool includeEarlierAttempts)
+    {
         var packages = new List<WorkshopPackageRecord>();
         foreach (var history in histories)
         {
@@ -447,11 +535,25 @@ internal sealed partial class AuditWorkspace
                 continue;
             }
 
-            packages.Add(new WorkshopPackageRecord(request.PackageId, request.SourceId, request.ExactVersion,
-                history.Plan.Key.PlanSha256, ReportOutcome(latest.State, latest.Result, latest.Checkpoint), latest.OccurredAtUtc));
+            if (includeEarlierAttempts)
+            {
+                foreach (var attempt in history.Entries.Where(entry => entry.State != JournalState.Approved)
+                    .GroupBy(entry => (entry.ApprovalId, entry.CorrelationId)).Select(entries => entries.Last()))
+                {
+                    AddRecord(attempt);
+                }
+            }
+
+            if (!includeEarlierAttempts || latest.State == JournalState.Approved)
+            {
+                AddRecord(latest);
+            }
+
+            void AddRecord(JournalEntry entry) => packages.Add(new WorkshopPackageRecord(request.PackageId, request.SourceId,
+                request.ExactVersion, history.Plan.Key.PlanSha256, ReportOutcome(entry.State, entry.Result, entry.Checkpoint), entry.OccurredAtUtc));
         }
 
-        return packages;
+        return packages.OrderBy(package => package.OccurredAtUtc).ToArray();
     }
 
     private static InstallPackageActionRequest? PackageHistoryRequest(JournalHistory history)
@@ -471,6 +573,8 @@ internal sealed partial class AuditWorkspace
             (JournalState.Applied, _, JournalCheckpoint.RestartRequired) => WorkshopPackageOutcome.RestartRequired,
             (JournalState.Applied, _, JournalCheckpoint.PackageLaunchPendingVerification) => WorkshopPackageOutcome.LaunchVerificationPending,
             (JournalState.Applied, _, _) => WorkshopPackageOutcome.Applied,
+            (JournalState.Verified, JournalResult.PackageLaunchVerified, JournalCheckpoint.PackageExistingTargetVerification) =>
+                WorkshopPackageOutcome.ExistingTargetVerified,
             (JournalState.Verified, JournalResult.PackageLaunchVerified, _) => WorkshopPackageOutcome.LaunchVerified,
             (JournalState.Verified, _, _) => WorkshopPackageOutcome.Verified,
             (JournalState.RolledBack, _, _) => WorkshopPackageOutcome.RolledBack,
@@ -482,9 +586,10 @@ internal sealed partial class AuditWorkspace
             (_, JournalResult.TimedOut, _) => WorkshopPackageOutcome.TimedOut,
             (_, JournalResult.AuthorizationDeclined, _) => WorkshopPackageOutcome.AuthorizationDeclined,
             (_, JournalResult.PackageElevationUnavailable, _) => WorkshopPackageOutcome.ElevationUnavailable,
+            (_, JournalResult.BackendUnavailable, JournalCheckpoint.PackagePreDispatchFailure) => WorkshopPackageOutcome.BackendUnavailableBeforeDispatch,
             (_, JournalResult.BackendUnavailable, _) => WorkshopPackageOutcome.BackendUnavailable,
             (_, JournalResult.TrustMismatch, _) => WorkshopPackageOutcome.TrustChanged,
-            (_, JournalResult.PreconditionChanged, _) => WorkshopPackageOutcome.PreconditionChanged,
+            (_, JournalResult.PreconditionChanged or JournalResult.PackageDispatchAuthorizationChanged, _) => WorkshopPackageOutcome.PreconditionChanged,
             (_, JournalResult.VerificationUnconfirmed, _) => WorkshopPackageOutcome.VerificationUnconfirmed,
             (_, JournalResult.PackageDetectionAbsent, _) => WorkshopPackageOutcome.DetectionAbsent,
             (_, JournalResult.PackageDetectionMismatch, _) => WorkshopPackageOutcome.DetectionMismatch,

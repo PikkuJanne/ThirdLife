@@ -294,6 +294,18 @@ public sealed partial class RebootCheckpointStoreTests
     private static async Task<JournalEntry> SaveAppliedAsync(SqliteJobStore store, string suffix, bool needsRestart,
         bool packageBackend = false)
     {
+        var started = await SaveStartedAsync(store, suffix, packageBackend);
+        var appliedCheckpoint = needsRestart ? JournalCheckpoint.RestartRequired :
+            packageBackend ? JournalCheckpoint.PackageLaunchPendingVerification : JournalCheckpoint.None;
+        var applied = Entry(started.Plan, started.ActionId, AppliedId, JournalState.Started, JournalState.Applied,
+            packageBackend ? JournalActor.PackageBackend : JournalActor.Broker, JournalResult.BackendApplied,
+            IssueTime.AddMinutes(-1), appliedCheckpoint);
+        Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(applied));
+        return applied;
+    }
+
+    private static async Task<JournalEntry> SaveStartedAsync(SqliteJobStore store, string suffix, bool packageBackend)
+    {
         var job = PersistenceTestData.CreateJob("reboot-" + suffix);
         var intake = new SanitizationEvidence(
             PersistenceTestData.CreateMetadata("evidence-reboot-intake-" + suffix, EvidenceClassification.Observed,
@@ -306,18 +318,7 @@ public sealed partial class RebootCheckpointStoreTests
             SanitizationGate.Evaluate(job.JobId, intake, PersistenceTestData.Timestamp.AddMinutes(2)));
         var stored = await store.LoadJobAsync(job.JobId);
         Assert.NotNull(stored);
-        var catalog = CreateReviewedCatalog();
-        var profile = CreateReviewedProfile(catalog);
-        Observation[] facts =
-        [
-            new(intake.Metadata, new EvidenceKey("sanitization.state"), EvidenceValue.FromEnum("verified"), null, null),
-            Observed("system.architecture", "x64", "architecture"),
-            Observed("operating_system.release", "windows_11", "release"),
-            Observed("operating_system.support_state", "supported", "support"),
-        ];
-        var proposal = PlanResolver.Resolve(stored, Policy, profile, catalog, facts, [], IssueTime);
-        Assert.Null(proposal.BlockedReason);
-        var plan = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+        var plan = BuildReviewedPlan(stored, intake, CreateReviewedCatalog());
         var action = Assert.Single(plan.Actions);
         Assert.Equal(JournalWriteResult.Recorded, await store.SaveJournalPlanAsync(plan));
         Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalApprovalAsync(
@@ -326,17 +327,11 @@ public sealed partial class RebootCheckpointStoreTests
             Entry(plan.Key, action.ActionId, ApprovedId, JournalState.Planned, JournalState.Approved,
                 JournalActor.Operator, JournalResult.None, IssueTime.AddMinutes(-3),
                 packageBackend ? JournalCheckpoint.PackagePlanApproval : JournalCheckpoint.None)));
-        Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(
-            Entry(plan.Key, action.ActionId, StartedId, JournalState.Approved, JournalState.Started,
-                JournalActor.Coordinator, JournalResult.None, IssueTime.AddMinutes(-2),
-                packageBackend ? JournalCheckpoint.PackageDispatchIntent : JournalCheckpoint.DispatchIntent)));
-        var appliedCheckpoint = needsRestart ? JournalCheckpoint.RestartRequired :
-            packageBackend ? JournalCheckpoint.PackageLaunchPendingVerification : JournalCheckpoint.None;
-        var applied = Entry(plan.Key, action.ActionId, AppliedId, JournalState.Started, JournalState.Applied,
-            packageBackend ? JournalActor.PackageBackend : JournalActor.Broker, JournalResult.BackendApplied,
-            IssueTime.AddMinutes(-1), appliedCheckpoint);
-        Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(applied));
-        return applied;
+        var started = Entry(plan.Key, action.ActionId, StartedId, JournalState.Approved, JournalState.Started,
+            JournalActor.Coordinator, JournalResult.None, IssueTime.AddMinutes(-2),
+            packageBackend ? JournalCheckpoint.PackageDispatchIntent : JournalCheckpoint.DispatchIntent);
+        Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(started));
+        return started;
     }
 
     private static JournalEntry Entry(
@@ -347,13 +342,28 @@ public sealed partial class RebootCheckpointStoreTests
             actor == JournalActor.Operator ? Approver : new OperatorId("actor-" + actor.ToString().ToLowerInvariant()),
             CorrelationId, time, result, checkpoint, verification);
 
-    private static CatalogDocument CreateReviewedCatalog()
+    private static JournalPlanSnapshot BuildReviewedPlan(StoredJob stored, SanitizationEvidence intake, CatalogDocument catalog)
+    {
+        var profile = CreateReviewedProfile(catalog);
+        Observation[] facts =
+        [
+            new(intake.Metadata, new EvidenceKey("sanitization.state"), EvidenceValue.FromEnum("verified"), null, null),
+            Observed("system.architecture", "x64", "architecture"),
+            Observed("operating_system.release", "windows_11", "release"),
+            Observed("operating_system.support_state", "supported", "support"),
+        ];
+        var proposal = PlanResolver.Resolve(stored, Policy, profile, catalog, facts, [], IssueTime);
+        Assert.Null(proposal.BlockedReason);
+        return JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+    }
+
+    private static CatalogDocument CreateReviewedCatalog(string version = "1.0.0")
     {
         var json = JsonNode.Parse(ReadFixture("catalog"))!;
         json["catalog_id"] = "reviewed-reboot-fixture";
         json["status"] = "reviewed";
         json["synthetic_data"] = false;
-        json["version"] = "1.0.0";
+        json["version"] = version;
         var entry = JsonNode.Parse("""
             {
               "id":"fictional.web-browser","version":"1.0.0","capability_id":"web_browsing",

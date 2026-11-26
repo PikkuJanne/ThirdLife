@@ -27,9 +27,10 @@ public sealed partial class PackageSetupTests
         using var disk = new AuditTestStore();
         var runtime = new InterruptedPackageRuntime();
         var service = new PilotPackageService(runtime);
+        var clock = new FixedClock();
         var reports = new WorkshopReportStore(Path.Combine(disk.Root, "reports"));
         JobId jobId;
-        await using (var workspace = OpenWorkspace(disk, reports, service))
+        await using (var workspace = OpenWorkspace(disk, reports, service, clock))
         {
             jobId = await ApproveInitialPackagePlanAsync(workspace);
             JournalHistory? pending = null;
@@ -82,7 +83,8 @@ public sealed partial class PackageSetupTests
         var saved = await ReadRecoveryHistoryAsync(disk, jobId);
         AssertInterruptedAttempt(saved, JournalState.Failed, JournalResult.Cancelled, JournalCheckpoint.PackagePreDispatchFailure);
         Assert.Equal(0, runtime.InstallCalls);
-        await VerifyExplicitRetryAsync(disk, service, runtime, reports, jobId, saved, "cancelled");
+        clock.Current = Now.AddMinutes(11);
+        await VerifyFreshPackageApprovalAsync(disk, service, runtime, reports, jobId, saved, clock);
     }
 
     [Fact]
@@ -92,9 +94,10 @@ public sealed partial class PackageSetupTests
         using var disk = new AuditTestStore();
         var runtime = new InterruptedPackageRuntime();
         var service = new PilotPackageService(runtime);
+        var clock = new FixedClock();
         var reports = new WorkshopReportStore(Path.Combine(disk.Root, "reports"));
         JobId jobId;
-        await using (var workspace = OpenWorkspace(disk, reports, service))
+        await using (var workspace = OpenWorkspace(disk, reports, service, clock))
         {
             jobId = await ApproveInitialPackagePlanAsync(workspace);
             runtime.NextAcquisition = _ => throw new HttpRequestException(HttpRequestError.ConnectionError, backendDetail);
@@ -110,7 +113,48 @@ public sealed partial class PackageSetupTests
         var saved = await ReadRecoveryHistoryAsync(disk, jobId);
         AssertInterruptedAttempt(saved, JournalState.Failed, JournalResult.NetworkUnavailable, JournalCheckpoint.PackagePreDispatchFailure);
         Assert.DoesNotContain(backendDetail, JsonSerializer.Serialize(saved.Entries), StringComparison.Ordinal);
-        await VerifyExplicitRetryAsync(disk, service, runtime, reports, jobId, saved, "lost its connection", backendDetail);
+
+        await using var reopened = OpenWorkspace(disk, reports, service, clock);
+        await reopened.OpenJobAsync(jobId.Value);
+        Assert.False(reopened.CanRetryPackage);
+        await reopened.RetryPackageAsync();
+        Assert.Equal(saved.Entries.AsEnumerable(), (await ReadRecoveryHistoryAsync(disk, jobId)).Entries.AsEnumerable());
+        Assert.Equal(0, runtime.InstallCalls);
+
+        clock.Current = Now.AddSeconds(5);
+        Assert.True(reopened.CanRetryPackage, reopened.PlanReviewStatus);
+        InPackageRecoveryWindow(reopened, (window, panel) =>
+        {
+            var retry = Named<Button>(panel, "RetryPackageButton");
+            var peer = ShellTestHost.ButtonPeer(retry);
+            Assert.True(retry.IsVisible && retry.IsEnabled && retry.IsTabStop);
+            Assert.True(peer.IsKeyboardFocusable());
+            Assert.Contains("retry", peer.GetName(), StringComparison.OrdinalIgnoreCase);
+            var message = Named<TextBlock>(panel, "PackageRetryMessage");
+            var messagePeer = new TextBlockAutomationPeer(message);
+            Assert.True(message.IsVisible && message.Focusable && KeyboardNavigation.GetIsTabStop(message));
+            Assert.Equal(AutomationLiveSetting.Polite, messagePeer.GetLiveSetting());
+            Assert.Contains("plan and approval", messagePeer.GetName(), StringComparison.OrdinalIgnoreCase);
+            retry.BringIntoView();
+            Assert.True(retry.Focus());
+            Invoke(window, retry);
+            PumpUntil(window, () => !reopened.IsBusy &&
+                reopened.PackageHistoryText.Contains("Independent verification confirmed", StringComparison.Ordinal));
+            Assert.Same(Named<TextBlock>(panel, "PlanStatusMessage"), Keyboard.FocusedElement);
+            Assert.Contains("lost its connection", reopened.PackageHistoryText, StringComparison.OrdinalIgnoreCase);
+            Assert.False(reopened.CanRetryPackage);
+        });
+
+        var retried = await AssertPackageRetryAsync(disk, jobId, saved, Assert.Single(saved.Approvals).ApprovalId);
+        Assert.Equal(saved.Approvals.AsEnumerable(), retried.Approvals.AsEnumerable());
+        Assert.Equal(1, runtime.InstallCalls);
+        await using var reportWorkspace = OpenWorkspace(disk, reports, service, clock);
+        await reportWorkspace.OpenJobAsync(jobId.Value);
+        await reportWorkspace.GenerateReportAsync();
+        await reportWorkspace.OpenReportAsync();
+        Assert.Contains("lost its connection", reportWorkspace.ReportPreview, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Independent verification confirmed", reportWorkspace.ReportPreview, StringComparison.Ordinal);
+        Assert.DoesNotContain(backendDetail, reportWorkspace.ReportPreview, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -226,15 +270,21 @@ public sealed partial class PackageSetupTests
 
     private static async Task<JobId> ApproveInitialPackagePlanAsync(AuditWorkspace workspace)
     {
+        var jobId = await PrepareInitialPackagePlanAsync(workspace);
+        workspace.PackageOperatorCode = "fixture-operator";
+        await workspace.ApprovePlanReviewAsync();
+        Assert.True(workspace.CanInstallPackage, workspace.PlanReviewStatus);
+        return jobId;
+    }
+
+    private static async Task<JobId> PrepareInitialPackagePlanAsync(AuditWorkspace workspace)
+    {
         await workspace.CreateJobAsync();
         await workspace.RecordSanitizationAsync(new SanitizationInput(SanitizationState.NoDonorStorage,
             "fixture-operator", DateOnly.FromDateTime(Now.UtcDateTime), "", ConfirmedExternalRecord: true));
         await workspace.StartAssessmentAsync();
         workspace.SelectedPlanProfile = Assert.Single(workspace.PlanProfiles, option => !option.Profile.SyntheticData);
         await workspace.BuildPlanReviewAsync();
-        workspace.PackageOperatorCode = "fixture-operator";
-        await workspace.ApprovePlanReviewAsync();
-        Assert.True(workspace.CanInstallPackage, workspace.PlanReviewStatus);
         return workspace.Job!.Job.JobId;
     }
 
@@ -273,22 +323,18 @@ public sealed partial class PackageSetupTests
         Assert.Null(outcome.Verification);
     }
 
-    private static async Task VerifyExplicitRetryAsync(AuditTestStore disk, PilotPackageService service, InterruptedPackageRuntime runtime,
-        WorkshopReportStore reports, JobId jobId, JournalHistory saved, string expectedHistory, string? backendDetail = null)
+    private static async Task VerifyFreshPackageApprovalAsync(AuditTestStore disk, PilotPackageService service,
+        InterruptedPackageRuntime runtime, WorkshopReportStore reports, JobId jobId, JournalHistory saved, FixedClock clock)
     {
-        await using var reopened = OpenWorkspace(disk, reports, service);
+        await using var reopened = OpenWorkspace(disk, reports, service, clock);
         await reopened.OpenJobAsync(jobId.Value);
-        Assert.Contains(expectedHistory, reopened.PackageHistoryText, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("build and approve a new plan", reopened.PackageHistoryText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cancelled", reopened.PackageHistoryText, StringComparison.OrdinalIgnoreCase);
         Assert.False(reopened.CanInstallPackage);
-        await reopened.GenerateReportAsync();
-        await reopened.OpenReportAsync();
-        Assert.Contains(expectedHistory, reopened.ReportPreview, StringComparison.OrdinalIgnoreCase);
-        if (backendDetail is not null)
-        {
-            Assert.DoesNotContain(backendDetail, reopened.ReportPreview, StringComparison.Ordinal);
-        }
-
+        Assert.True(reopened.CanRetryPackage);
+        await reopened.RetryPackageAsync();
+        Assert.Null(reopened.PlanReviewDecision);
+        Assert.False(reopened.CanInstallPackage);
+        Assert.Equal(saved.Approvals.AsEnumerable(), (await ReadRecoveryHistoryAsync(disk, jobId)).Approvals.AsEnumerable());
         await reopened.InstallPackageAsync();
         Assert.Equal(0, runtime.InstallCalls);
         var acquisitions = runtime.Acquisitions;
@@ -308,15 +354,25 @@ public sealed partial class PackageSetupTests
         Assert.Contains("Independent verification confirmed", reopened.PackageHistoryText, StringComparison.Ordinal);
 
         var retried = await ReadRecoveryHistoryAsync(disk, jobId);
-        Assert.Equal(saved.Plan.Key, retried.Plan.Key);
-        Assert.Equal(saved.Entries.AsEnumerable(), retried.Entries.Take(saved.Entries.Length));
         Assert.Equal(2, retried.Approvals.Length);
         Assert.Equal(Assert.Single(saved.Approvals), retried.Approvals[0]);
         Assert.NotEqual(retried.Approvals[0].ApprovalId, retried.Approvals[1].ApprovalId);
+        await AssertPackageRetryAsync(disk, jobId, saved, retried.Approvals[1].ApprovalId);
+    }
+
+    private static async Task<JournalHistory> AssertPackageRetryAsync(
+        AuditTestStore disk, JobId jobId, JournalHistory saved, Guid approvalId)
+    {
+        var retried = await ReadRecoveryHistoryAsync(disk, jobId);
+        Assert.Equal(saved.Plan.Key, retried.Plan.Key);
+        Assert.Equal(saved.Entries.AsEnumerable(), retried.Entries.Take(saved.Entries.Length));
         var started = Assert.Single(retried.Entries.Skip(saved.Entries.Length), entry => entry.State == JournalState.Started);
         Assert.NotEqual(saved.Entries.Last().CorrelationId, started.CorrelationId);
-        Assert.Equal(retried.Approvals[1].ApprovalId, started.ApprovalId);
+        Assert.Equal(approvalId, started.ApprovalId);
+        Assert.Equal(JournalCheckpoint.PackageRetryDispatchIntent, started.Checkpoint);
+        Assert.Equal(saved.Entries[^1].EntryId, started.PriorAttemptEntryId);
         Assert.Equal(JournalState.Verified, retried.StateOf(started.ActionId));
+        return retried;
     }
 
     private sealed class InterruptedPackageRuntime : IPilotPackageRuntime
@@ -325,20 +381,26 @@ public sealed partial class PackageSetupTests
         private int _acquisitions;
         private int _inspections;
         private int _installCalls;
+        private int _probeCalls;
+        private PackageObservation? _nextObservation;
         private Func<CancellationToken, Task<IPackageArtifact>>? _nextAcquisition;
 
         public int Acquisitions => Volatile.Read(ref _acquisitions);
         public int Inspections => Volatile.Read(ref _inspections);
         public int InstallCalls => Volatile.Read(ref _installCalls);
+        public int ProbeCalls => Volatile.Read(ref _probeCalls);
         public TrackedRecoveryArtifact? LastArtifact { get; private set; }
+        public bool Installed { set => _installed = value; }
+        public PackageObservation? NextObservation { set => _nextObservation = value; }
         public Func<CancellationToken, Task<IPackageArtifact>>? NextAcquisition { set => _nextAcquisition = value; }
         public Func<CancellationToken, Task<PackageInstallResult>>? Install { get; init; }
 
         public PackageObservation Inspect()
         {
             Interlocked.Increment(ref _inspections);
-            return _installed ? new(PackageObservationStatus.Installed, PilotPackageService.Identity.ExactVersion)
-                : new(PackageObservationStatus.Absent);
+            return Interlocked.Exchange(ref _nextObservation, null) ?? (_installed
+                ? new(PackageObservationStatus.Installed, PilotPackageService.Identity.ExactVersion)
+                : new(PackageObservationStatus.Absent));
         }
 
         public Task<IPackageArtifact> AcquireAsync(CancellationToken cancellationToken)
@@ -356,8 +418,11 @@ public sealed partial class PackageSetupTests
             return result;
         }
 
-        public Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(PackageVerificationStatus.Passed);
+        public Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _probeCalls);
+            return Task.FromResult(PackageVerificationStatus.Passed);
+        }
     }
 
     private sealed class TrackedRecoveryArtifact : IPackageArtifact

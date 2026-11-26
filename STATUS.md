@@ -58,8 +58,12 @@ workshop report. Protected logs and support omit raw backend details.
 
 TL-0408 completed package recovery implementation. Reopening the saved job
 continues independent verification after an applied result and rechecks
-registration for ambiguous attempts. The protected restart checkpoint permits
-verification after confirmed boot evidence. TL-0409 can implement bounded
-idempotency and retry. TL-0410 retains native installer interruption and actual
-Windows restart qualification.
+registration for ambiguous attempts. A protected restart checkpoint permits
+verification after confirmed boot evidence.
 [Package recovery evidence](artifacts/evidence/TL-0408/report.md)
+
+TL-0409 completed package idempotency and retry. Verified plans skip another
+installation. Eligible failures retain linked attempts and a durable three-start
+limit. Expired approvals or changed resolutions require fresh review. Prepare
+the disposable Windows 11 x64 guest for TL-0410 native interruption and restart
+qualification. [Package retry evidence](artifacts/evidence/TL-0409/report.md)

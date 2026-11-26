@@ -14,6 +14,7 @@ public partial class PlanReviewView : UserControl
     private string? _announcedStatus;
     private string? _announcedPackageStatus;
     private string? _announcedPackageRecovery;
+    private string? _announcedPackageRetry;
 
     public PlanReviewView() => InitializeComponent();
 
@@ -70,6 +71,16 @@ public partial class PlanReviewView : UserControl
             var hadFocus = CancelPackageButton.IsKeyboardFocused;
             workspace.CancelPackageOperation();
             RestoreFocus(PackageSourceMessage, hadFocus);
+        }
+    }
+
+    private async void RetryPackage(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanRetryPackage)
+        {
+            var hadFocus = RetryPackageButton.IsKeyboardFocused;
+            await workspace.RetryPackageAsync();
+            RestoreFocus(PlanStatusMessage, hadFocus);
         }
     }
 
@@ -159,7 +170,8 @@ public partial class PlanReviewView : UserControl
         }
 
         ref var announced = ref (ReferenceEquals(message, PackageSourceMessage) ? ref _announcedPackageStatus :
-            ref (ReferenceEquals(message, PackageRecoveryMessage) ? ref _announcedPackageRecovery : ref _announcedStatus));
+            ref (ReferenceEquals(message, PackageRecoveryMessage) ? ref _announcedPackageRecovery :
+                ref (ReferenceEquals(message, PackageRetryMessage) ? ref _announcedPackageRetry : ref _announcedStatus)));
         if (string.Equals(announced, message.Text, StringComparison.Ordinal))
         {
             return;

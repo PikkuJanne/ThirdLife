@@ -9,6 +9,7 @@ using ThirdLife.Diagnostics.Logging;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Packages;
+using ThirdLife.Persistence;
 using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Features.PlanReview;
 using ThirdLife.UI.Shell;
@@ -259,8 +260,14 @@ public sealed partial class PackageSetupTests
     private static AuditWorkspace OpenWorkspace(
         AuditTestStore disk, WorkshopReportStore reports, PilotPackageService service, TimeProvider? clock = null,
         Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null) =>
-        new(async token => await disk.OpenSqliteAsync(token), [OsSample(), SystemSample()], clock ?? new FixedClock(), reports,
+        new(async token => await (clock is null ? disk.OpenSqliteAsync(token) : OpenPackageStoreAsync(disk, clock, token)),
+            [OsSample(), SystemSample()], clock ?? new FixedClock(), reports,
             packageService: service, appendPackageDiagnostic: appendPackageDiagnostic);
+
+    private static Task<SqliteJobStore> OpenPackageStoreAsync(
+        AuditTestStore disk, TimeProvider clock, CancellationToken cancellationToken = default) =>
+        SqliteJobStore.OpenForTestingAsync(Path.Combine(disk.Root, "store"), SqliteJobStore.CurrentSchemaVersion,
+            clock, faultInjector: null, cancellationToken);
 
     private static FixtureProvider OsSample() => new("windows-operating-system",
         Enum("os.family", "windows_11", "os.windows.identity"),

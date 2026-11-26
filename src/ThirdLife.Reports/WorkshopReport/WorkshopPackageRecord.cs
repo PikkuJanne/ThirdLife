@@ -40,6 +40,8 @@ public enum WorkshopPackageOutcome
     ProbeExecutableMissing,
     ProbeExecutableUntrusted,
     ProbeLaunchFailed,
+    BackendUnavailableBeforeDispatch,
+    ExistingTargetVerified,
 }
 
 public sealed record WorkshopPackageRecord(
@@ -60,7 +62,8 @@ public static partial class WorkshopReportRenderer
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(packages);
-        if (packages.Count > 128 || (savedDecision is not null && assessment is null))
+        // Each projected attempt or unused approval represents one bounded journal entry.
+        if (packages.Count > 1_024 || (savedDecision is not null && assessment is null))
         {
             throw new ArgumentException("The workshop report requires bounded package records and a matching assessment.");
         }
@@ -96,14 +99,16 @@ public static partial class WorkshopReportRenderer
         WorkshopPackageOutcome.RestartRequired => "The installer reported that a restart is required. Save open work before restarting through Windows. Independent verification remains pending.",
         WorkshopPackageOutcome.Verified => "Independent verification confirmed the requested version is installed machine-wide.",
         WorkshopPackageOutcome.LaunchVerified => "Independent verification confirmed the requested version is installed machine-wide and passed the launch check.",
+        WorkshopPackageOutcome.ExistingTargetVerified => "Independent verification confirmed the requested version is already installed machine-wide and passed the launch check. ThirdLife skipped Windows Installer for this attempt.",
         WorkshopPackageOutcome.Failed => "The installer reported failure. Review actual installed state before taking further action.",
         WorkshopPackageOutcome.Cancelled => "Cancellation was recorded. Review actual installed state before taking further action.",
-        WorkshopPackageOutcome.CancelledBeforeDispatch => "The attempt was cancelled before Windows Installer started. To retry, build and approve a new plan.",
-        WorkshopPackageOutcome.NetworkUnavailable => "The installer download lost its connection before Windows Installer started. When the source is reachable, build and approve a new plan.",
+        WorkshopPackageOutcome.CancelledBeforeDispatch => "The attempt was cancelled before Windows Installer started.",
+        WorkshopPackageOutcome.NetworkUnavailable => "The installer download lost its connection before Windows Installer started.",
         WorkshopPackageOutcome.TimedOut => "The package operation reached its time limit. Windows Installer may still be running. Review actual installed state before taking further action.",
         WorkshopPackageOutcome.NoFinalResult => "No final result was saved. Windows Installer may still be running. Review actual installed state before taking further action.",
         WorkshopPackageOutcome.AuthorizationDeclined => "Windows installation consent was declined. Review the saved attempt with the authorized operator.",
         WorkshopPackageOutcome.BackendUnavailable => "The installation backend was unavailable.",
+        WorkshopPackageOutcome.BackendUnavailableBeforeDispatch => "The package backend was unavailable before Windows Installer started.",
         WorkshopPackageOutcome.TrustChanged => "The installer failed its package trust check. Stop and review the approved source and package identity.",
         WorkshopPackageOutcome.PreconditionChanged => "The approval, plan or installed state changed before dispatch. Review the job and build a new plan.",
         WorkshopPackageOutcome.VerificationUnconfirmed => "Independent verification could not confirm the requested version and machine-wide scope.",

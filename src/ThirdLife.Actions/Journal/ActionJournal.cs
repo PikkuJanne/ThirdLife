@@ -88,6 +88,7 @@ public enum JournalResult
     PackageProbeExecutableMissing,
     PackageProbeExecutableUntrusted,
     PackageProbeLaunchFailed,
+    PackageDispatchAuthorizationChanged,
 }
 
 public enum JournalCheckpoint
@@ -105,6 +106,8 @@ public enum JournalCheckpoint
     PackageLaunchPendingVerification,
     PackageRecoveryVerification,
     PackageRebootVerification,
+    PackageRetryDispatchIntent,
+    PackageExistingTargetVerification,
 }
 
 public sealed record JournalApproval
@@ -145,13 +148,16 @@ public sealed record JournalEntry
         DateTimeOffset occurredAtUtc,
         JournalResult result,
         JournalCheckpoint checkpoint = JournalCheckpoint.None,
-        ActionVerification? verification = null)
+        ActionVerification? verification = null,
+        Guid? priorAttemptEntryId = null)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(entryId, Guid.Empty);
         ArgumentOutOfRangeException.ThrowIfEqual(actionId, Guid.Empty);
         ArgumentOutOfRangeException.ThrowIfEqual(correlationId, Guid.Empty);
         ArgumentOutOfRangeException.ThrowIfEqual(occurredAtUtc, default);
-        if (approvalId == Guid.Empty || !Enum.IsDefined(priorState) || !Enum.IsDefined(state) || !Enum.IsDefined(actor) ||
+        if (approvalId == Guid.Empty || priorAttemptEntryId == Guid.Empty || priorAttemptEntryId == entryId ||
+            (priorAttemptEntryId is not null) != (checkpoint == JournalCheckpoint.PackageRetryDispatchIntent) ||
+            !Enum.IsDefined(priorState) || !Enum.IsDefined(state) || !Enum.IsDefined(actor) ||
             !Enum.IsDefined(result) || !Enum.IsDefined(checkpoint) ||
             (verification is { } method && !Enum.IsDefined(method)))
         {
@@ -171,6 +177,7 @@ public sealed record JournalEntry
         Result = result;
         Checkpoint = checkpoint;
         Verification = verification;
+        PriorAttemptEntryId = priorAttemptEntryId;
     }
 
     public Guid EntryId { get; }
@@ -186,6 +193,8 @@ public sealed record JournalEntry
     public JournalResult Result { get; }
     public JournalCheckpoint Checkpoint { get; }
     public ActionVerification? Verification { get; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? PriorAttemptEntryId { get; }
 }
 
 public sealed class JournalHistory
