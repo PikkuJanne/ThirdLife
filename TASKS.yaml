@@ -4834,6 +4834,16 @@ tasks:
     duration: Full 368.793 s and Extended 5.843 s
     reference: artifacts/evidence/TL-0405/report.md, source a9315be
     limitation: Full uses the deterministic suite. The independent Extended test used a held fixture adapter.
+  - task: TL-0405
+    summary: A streamed connection fault removed the partial installer from private staging. The saved-job review and retry checks passed again.
+    command_or_review: Targeted with Actions, Packages, Persistence, Reports and UI plus named FI-002 and WPF termination tests
+    tier: targeted and extended
+    result: passed
+    environment: Active Windows 11 Pro 26H2 native x64, synthetic HTTP response, private staging and isolated WPF/SQLite
+    date: '2026-11-26'
+    duration: Targeted 153.137 s, transfer 1.774 s, WPF termination 6.247 s
+    reference: artifacts/evidence/TL-0405/report.md, source 053758d
+    limitation: Controlled network stream and held installer. Live network, real installer continuation and perceptual screen-reader output were unobserved.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers:

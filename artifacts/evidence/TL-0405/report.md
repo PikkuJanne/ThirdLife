@@ -50,9 +50,41 @@ invocations identified stale governed file hashes and formatting differences in
 the edited C# files. The bundle hashes were refreshed and the repository
 formatter applied before the passing run.
 
+## Interrupted transfer follow-up
+
+On 2026-11-26, a clean rerun at `2cd1bb1` passed the 17 package and seven
+WPF baseline fixtures in 28.695 s combined wall time. A clean rerun at merge
+`05ba81d` passed Targeted in 179.948 s and the named WPF termination case
+in 6.892 s. Both ran on the active native x64 Windows 11 machine described above.
+
+Follow-up source `053758d542a09385f84fded5f79076ad7292f94a` is based on `05ba81d`.
+The [FI-002 scenario](../../../docs/testing/failure-injection.md#tl-0405-interrupted-package-transfer)
+uses the production copy and private Windows staging path with a synthetic HTTP
+response. The fixture observed 131,072 staged bytes before the stream raised an
+I/O exception. The runtime classified the failure as a network interruption,
+omitted the raw exception detail, and removed the exact partial file and staging
+directory. It made one fixture request. The payload was 128 KiB of zero bytes
+(SHA-256 `fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471`).
+The saved-job retry check remains covered by the separate WPF network fixture.
+
+| Scope | Command or selector | Result |
+| --- | --- | --- |
+| Targeted | `eng/verify.ps1 -Tier Targeted -Restore -TestProject` with Actions, Packages, Persistence, Reports and UI | 8 work-contract and 1,560 .NET tests passed in 153.137 s. Formatting and warnings-as-errors Release build passed. |
+| Extended transfer | `dotnet test tests/ThirdLife.Packages.Tests/ThirdLife.Packages.Tests.csproj -c Release --no-build --no-restore` with the exact FI-002 filter linked above | 1 passed in 1.774 s wall time. No staging residue. |
+| Extended WPF termination | `dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-build --no-restore` with the exact termination filter in [TESTING.md](../../../TESTING.md) | 1 passed in 6.247 s wall time. The same job reopened for read-only review without repeat dispatch. |
+
+The Release `ThirdLife.Packages.dll` SHA-256 was
+`80acad1703e83bf7821f77098caa77d7ac1e06123ea615c1fb3597c4fcaaa01e`.
+The Release `ThirdLife.Packages.Tests.dll` SHA-256 was
+`adf4f069eeec9d1e250610a1b75459afcc0b9f0772bc82af348c0df4275dd103`.
+The first Targeted invocation on the follow-up stopped at documentation
+validation because the matrix links used parent-directory paths. Repository
+relative text references passed validation. The scoped follow-up reuses the
+original clean Full evidence for the unchanged shared contracts.
+
 ## Evidence limits and continuation
 
-Interruption tests used a controlled package adapter, isolated SQLite and actual
+The application interruption tests used a controlled package adapter, isolated SQLite and actual
 WPF windows. This record covers technical UI Automation properties, binding
 updates and focusability. It makes no perceptual screen-reader claim. The
 fixtures made no live package download, Windows Installer, Windows consent, or
