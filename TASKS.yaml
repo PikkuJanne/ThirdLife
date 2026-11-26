@@ -5433,8 +5433,30 @@ tasks:
     duration: 63.507 s reopen, 4.663 s independent registration, 3.733 s journal comparison and 3.622 s report preservation
     reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and post-restart reopen bundle
     limitation: App preview uses saved verification. Fresh post-boot observation confirms registration. Native restart-required behavior is unobserved.
-  blocked_reason: The guest retains the verified installation. Restore the exact clean checkpoint with scoped operator authority
-    and re-admit the guest. Native UAC decline and attributable installer-client interruption then require separately reviewed plans and authority.
+  - task: TL-0410
+    summary: The standing-authorized restore applied the exact clean checkpoint to the bound guest and started that guest.
+      Re-admission confirmed that the package, previous job store and workshop reports, app, installer, consent and runner residue were absent.
+    command_or_review: Exact Restore-VMSnapshot and guest start, supported package preflight and read-only residue check
+    tier: extended
+    result: passed
+    environment: Same Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 17.886 s apply and start, 27.438 s re-admission and MSI preflight, and 10.620 s residue check
+    reference: artifacts/e2e/M4-first-write-slice.md, first standing-authorized checkpoint restore
+    limitation: This restore establishes the baseline for the remaining native cases. Final guest disposition follows those cases.
+  - task: TL-0410
+    summary: The admitted package-absent guest displayed the exact new native UAC-decline plan. The fresh durable job had zero
+      approvals and zero journal entries after preview, and the app and stage were cleaned up.
+    command_or_review: Bound unelevated Preview using the retained intake attestation and read-only SQLite job and journal check
+    tier: extended
+    result: passed
+    environment: Same Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 141.693 s preview, 97.542 s in the desktop case and 4.412 s independent journal check
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and native UAC-decline preview bundle
+    limitation: This preview stops before approval and dispatch. The native Windows choice and terminal outcome remain pending.
+  blocked_reason: The displayed native UAC-decline plan awaits exact dispatch authorization and a supervised Windows No.
+    Attributable installer-client interruption requires a separate plan and scoped authority.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.
@@ -5449,13 +5471,18 @@ tasks:
       package route and a bounded package interruption and restart procedure.
   - kind: authorization
     scope: Attributable authority for the exact saved package plan and guest target, any applicable Windows consent, and the
-      planned installer-client interruption or checkpoint restoration.
+      planned installer-client interruption.
     authority: operator
   - kind: authorization
     scope: Standing operator authority for orderly, task-related Windows restarts of the bound ThirdLife-W11 guest, with
       identity and quiescence verified before each restart.
     authority: operator
     evidence: artifacts/e2e/M4-first-write-slice.md, standing guest restart authorization recorded 2026-11-26
+  - kind: authorization
+    scope: Standing operator authority to apply the bound Clean-Windows11-ThirdLife checkpoint to the bound ThirdLife-W11 guest
+      and start that same guest if needed for verification. Preserve evidence and confirm identity and quiescence before applying.
+    authority: operator
+    evidence: artifacts/e2e/M4-first-write-slice.md, standing guest checkpoint restoration authorization recorded 2026-11-26
   outcome: package-installation
 - id: TL-0411
   title: Validate the M4 package-installation gate

@@ -209,8 +209,13 @@ package plan and verified candidate.
 For orderly restarts of the bound `ThirdLife-W11` guest, use the operator's
 standing restart authorization recorded in `artifacts/e2e/M4-first-write-slice.md`.
 Confirm the recorded VM identity and quiescence for each restart. Package
-execution, Windows consent, interruption and checkpoint restoration have their
-own authority.
+execution, Windows consent and interruption have their own authority.
+
+For checkpoint restoration, use the separate standing operator grant in
+`artifacts/e2e/M4-first-write-slice.md`. Confirm the recorded identity of the
+same guest and its exact `Clean-Windows11-ThirdLife` checkpoint. Preserve the
+required evidence and confirm quiescence before each apply. Re-admit the
+restored guest and verify the expected baseline.
 
 1. Record the candidate digests, package identity, signed installer digest,
    initial machine-wide registration, isolated job ID and initial boot evidence.
