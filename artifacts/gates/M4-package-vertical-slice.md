@@ -6,9 +6,9 @@
 | Verification date | 2026-11-26 (Europe/Berlin) |
 | Integrated product candidate | `a637198615ca674a8ca8a2fcde0e62edd4ca3d7f` ([PR #64](https://github.com/PikkuJanne/ThirdLife/pull/64)) |
 | Evidence branch | `codex/tl-0411-m4-gate` |
-| Record state | Technical verification passed. Product and security disposition pending. |
+| Record state | Done. Technical verification and internal product and security approval complete. |
 | Runtime authority | Active Codex machine, Windows 11 Pro 26H2 build 26300.9974, native x64 |
-| Decision packet | [Proposed internal M4 scope](../evidence/TL-0411/first-write-decision.md), SHA-256 `b6be6d71fe7afb90017500aa22106d7d9ef2ab164b628492f3097ae9317c7c3f` |
+| Decision packet | [Reviewed internal M4 scope](../evidence/TL-0411/first-write-decision.md), SHA-256 `b6be6d71fe7afb90017500aa22106d7d9ef2ab164b628492f3097ae9317c7c3f` |
 
 ## Observed application outcome
 
@@ -60,7 +60,32 @@ retains its own artifact and authorization provenance.
 | Failure and recovery | The named fixtures covered transfer, modeled decline, UI loss, owned backend loss and boot checkpoint commit. The native cases above supply actual decline, client loss and warm restart. The saved job retains typed failure and blocks handover when proof is insufficient. [Failure register](../../docs/testing/failure-injection.md) |
 | Idempotency and retry | The Full suite covered the verified-plan repeat with one installer call, fresh registration re-observation, a durable three-start retry cap, linked history, and renewed approval after expiry or changed resolution. Eligible retries require proven pre-dispatch failure. [TL-0409](../evidence/TL-0409/report.md) |
 | Diagnostic privacy | The Extended package diagnostic test passed against a malformed oversized backend error. The persisted journal, protected event, UI history, workshop report and support projection excluded raw detail. The support projection also omitted workflow correlation. Runtime case reports and receipts remain restricted locally. [TL-0407](../evidence/TL-0407/report.md) · [Privacy contract](../../docs/privacy/privacy-model.md) |
-| Accountable disposition | Pending. The packet binds the sole write route, approved-input validity, retained controls and residual risks for one product and security disposition. [Decision packet](../evidence/TL-0411/first-write-decision.md) |
+| Accountable disposition | Janne Vuorela approved the exact proposal in both owner roles. [Decision record](#product-and-security-disposition) |
+
+## Product and security disposition
+
+On 2026-11-26 (Europe/Berlin), Janne Vuorela, acting as product owner and
+security owner, replied “Approved” in the active Codex conversation. The
+request named both roles and presented the exact gate candidate, reviewed
+scope, expiry, and restart evidence limits.
+
+The approval binds product candidate `a637198615ca674a8ca8a2fcde0e62edd4ca3d7f`
+and the reviewed decision packet SHA-256
+`b6be6d71fe7afb90017500aa22106d7d9ef2ab164b628492f3097ae9317c7c3f`.
+The technical checkpoint `2e600f7cf7e3e882a8c29029208559c347772a1b` was
+integrated as `1c11dda39c8c07fa4cc6c825cd4bebd8e25da2c5`.
+[Reviewed decision packet](../evidence/TL-0411/first-write-decision.md) ·
+[PR #65](https://github.com/PikkuJanne/ThirdLife/pull/65)
+
+The disposition authorizes internal M4 use on the active Codex machine or its
+admitted disposable Windows 11 native x64 guest. The scope covers direct vendor
+acquisition and machine-wide installation of the pinned Notepad++ 8.9.9.1 x64
+MSI through Windows Installer, subject to the reviewed catalogue and policy
+validity ending at `2026-12-25T00:00:00Z`. Each transaction requires exact plan
+approval and applicable Windows consent. The packet records the applicable
+controls, residual risks and evidence limits. Pilot and stable exposure retain
+`TL-0611` and `TL-0710`. Vendor binary distribution and additional write routes
+retain their own decisions.
 
 ## Active-machine verification
 
@@ -101,7 +126,16 @@ dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-b
 | Embedded package policy | `a31ca86348602d6d378f96502627525c9a3f344f4be6f02afcc9bdb286fedb59` |
 | Failure-fixture runner | `31df9b7deed496708c9f4606afe353ecff070b7f5dc266e7a63399bd1865e7ee` |
 
-The product checkout remained Git-clean through these runs.
+The product checkout remained Git-clean through these runs. The approval
+checkpoint updates the gate, task and status records and refreshes the
+bundle manifest. The Full and named runtime results carry forward for the
+same product, dependencies, tests, runners and fixtures.
+
+`eng/verify.ps1 -Tier Quick -Restore` on the approval checkpoint passed eight
+governance checks and 1,233 .NET tests, along with a zero-warning Release
+build. The 139.913 s run exceeded the 120 s target. The fresh build took
+28.26 s, compared with 2.66 s for the preceding evidence checkpoint's
+incremental Quick build.
 
 ## Coverage and reopening conditions
 
@@ -125,8 +159,3 @@ The product checkout remained Git-clean through these runs.
   checked runtime bounds waits, retries and concurrency. These checks carry
   no modest-hardware throughput or cross-hardware claims.
   [Resource requirements](../../LOW_SPEC.md)
-- Complete the gate after the accountable product and security owners
-  record the disposition against the exact verified packet. A hold or
-  decline keeps the affected scope withheld. Action-specific approval and
-  Windows consent continue to apply. Pilot and stable exposure retain
-  `TL-0611` and `TL-0710`.

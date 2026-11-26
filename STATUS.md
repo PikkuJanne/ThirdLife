@@ -73,7 +73,9 @@ installer-client interruption preserved one dispatch per job and withheld
 handover. Independent MSI checks and the final clean checkpoint restore passed.
 [M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)
 
-TL-0411 passed clean Full, the M4 failure matrix, and the package trust and
-diagnostic privacy checks. The internal first write-capable gate awaits the
-accountable product and security disposition on the exact verified candidate.
-[M4 gate and decision packet](artifacts/gates/M4-package-vertical-slice.md)
+TL-0411 completed the M4 package-installation gate. Clean Full, the failure
+matrix, and package trust and privacy checks passed. The product and security
+owner approved the exact verified candidate for internal use of the pinned
+package route. Each transaction retains exact plan approval and Windows consent.
+TL-0501 is the next M5 implementation task.
+[M4 evidence and approval](artifacts/gates/M4-package-vertical-slice.md)
