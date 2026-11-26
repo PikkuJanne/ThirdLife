@@ -60,12 +60,17 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
         }
     }
 
-    public async Task<IPackageArtifact> AcquireAsync(CancellationToken cancellationToken)
+    public async Task<IPackageArtifact> AcquireAsync(CancellationToken cancellationToken) =>
+        await AcquireAsync(Client, PackageStagingDirectory.Create(DiskHeadroomBytes + InstallerLength), cancellationToken)
+            .ConfigureAwait(false);
+
+    internal static async Task<IPackageArtifact> AcquireAsync(HttpClient client, PackageStagingDirectory directory,
+        CancellationToken cancellationToken)
     {
-        var artifact = new PackageArtifact(PackageStagingDirectory.Create(DiskHeadroomBytes + InstallerLength));
+        var artifact = new PackageArtifact(directory);
         try
         {
-            using var response = await OpenReleaseAsync(cancellationToken).ConfigureAwait(false);
+            using var response = await OpenReleaseAsync(client, cancellationToken).ConfigureAwait(false);
             if (response.Content.Headers.ContentLength is { } length && length != InstallerLength)
             {
                 throw new PackageTrustException("The installer length differs from the reviewed artifact.");
@@ -174,9 +179,9 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
         }
     }
 
-    private static async Task<HttpResponseMessage> OpenReleaseAsync(CancellationToken cancellationToken)
+    private static async Task<HttpResponseMessage> OpenReleaseAsync(HttpClient client, CancellationToken cancellationToken)
     {
-        var response = await Client.GetAsync(Release, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+        var response = await client.GetAsync(Release, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
         try
         {
@@ -194,7 +199,7 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
                 }
 
                 response.Dispose();
-                response = await Client.GetAsync(target, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                response = await client.GetAsync(target, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                     .ConfigureAwait(false);
             }
 

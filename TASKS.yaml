@@ -4838,6 +4838,7 @@ tasks:
   full_test_triggers: []
   extended_test_triggers:
   - Run the owned WPF process interruption scenario during a held package apply.
+  - Run FI-002 for a connection interruption after a partial installer is written to staging.
   outcome: package-installation
 - id: TL-0406
   title: Verify package installation and application launch
