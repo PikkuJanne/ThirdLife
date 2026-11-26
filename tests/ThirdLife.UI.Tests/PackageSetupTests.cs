@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Sanitization;
+using ThirdLife.Diagnostics.Logging;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Packages;
@@ -36,7 +37,9 @@ public sealed partial class PackageSetupTests
 
     [Theory]
     [InlineData(PackageVerificationStatus.Passed, JournalResult.PackageLaunchVerified, "passed the launch check")]
-    [InlineData(PackageVerificationStatus.ExecutableMissing, JournalResult.PackageProbeUnavailable, "could not be started")]
+    [InlineData(PackageVerificationStatus.ExecutableMissing, JournalResult.PackageProbeExecutableMissing, "reviewed executable was missing")]
+    [InlineData(PackageVerificationStatus.ExecutableUntrusted, JournalResult.PackageProbeExecutableUntrusted, "failed its launch trust check")]
+    [InlineData(PackageVerificationStatus.LaunchFailed, JournalResult.PackageProbeLaunchFailed, "could not be started")]
     [InlineData(PackageVerificationStatus.ExitedEarly, JournalResult.PackageProbeExitedEarly, "closed before the launch check completed")]
     [InlineData(PackageVerificationStatus.TimedOut, JournalResult.PackageProbeTimedOut, "launch check reached its time limit")]
     [InlineData(PackageVerificationStatus.Cancelled, JournalResult.PackageProbeCancelled, "verification was cancelled")]
@@ -48,15 +51,22 @@ public sealed partial class PackageSetupTests
             expectedResult, expectedReport, probeCalls: 1);
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("8.9.9.0")]
-    public Task BackendSuccessCannotVerifyMissingOrWrongPackage(string? registeredVersion) =>
+    [InlineData(null, JournalResult.PackageDetectionAbsent, "registration was not found")]
+    [InlineData("8.9.9.0", JournalResult.PackageDetectionMismatch, "registration did not match")]
+    public Task BackendSuccessCannotVerifyMissingOrWrongPackage(string? registeredVersion, JournalResult result, string guidance) =>
         CheckPackageJournalAsync(new FixtureInstaller(PackageInstallStatus.Applied, register: registeredVersion is not null)
         { RegisteredVersion = registeredVersion },
-            JournalState.RequiresReview, JournalResult.VerificationUnconfirmed, "could not confirm", probeCalls: 0);
+            JournalState.RequiresReview, result, guidance, probeCalls: 0);
+
+    [Fact]
+    public Task BackendSuccessCannotVerifyUnavailableRegistration() =>
+        CheckPackageJournalAsync(new FixtureInstaller(PackageInstallStatus.Applied, register: true) { RegistrationUnavailable = true },
+            JournalState.RequiresReview, JournalResult.PackageDetectionUnavailable, "registration could not be read", probeCalls: 0);
 
     [Theory]
     [InlineData(PackageInstallStatus.AuthorizationDeclined, JournalState.Failed, JournalResult.AuthorizationDeclined, "consent was declined")]
+    [InlineData(PackageInstallStatus.ElevationUnavailable, JournalState.Failed, JournalResult.PackageElevationUnavailable, "authorization was unavailable")]
+    [InlineData(PackageInstallStatus.Failed, JournalState.Failed, JournalResult.OperationFailed, "installer reported failure")]
     [InlineData(PackageInstallStatus.RestartRequired, JournalState.Applied, JournalResult.BackendApplied, "a restart is required")]
     public Task PackageVerificationWaitsForCompletedApply(
         PackageInstallStatus installerResult, JournalState expectedState, JournalResult expectedResult, string expectedReport) =>
@@ -135,7 +145,7 @@ public sealed partial class PackageSetupTests
         Assert.Equal(JournalActor.PackageBackend, history.Entries[2].Actor);
         var last = history.Entries[^1];
         Assert.Equal(expectedResult, last.Result);
-        if (expectedState is JournalState.Verified or JournalState.RequiresReview)
+        if (expectedState is JournalState.Verified || expectedState == JournalState.RequiresReview && history.Entries[2].State == JournalState.Applied)
         {
             Assert.Equal(JournalActor.Verifier, last.Actor);
             Assert.Equal(history.Entries[2].ApprovalId, last.ApprovalId);
@@ -236,8 +246,10 @@ public sealed partial class PackageSetupTests
     }
 
     private static AuditWorkspace OpenWorkspace(
-        AuditTestStore disk, WorkshopReportStore reports, PilotPackageService service, TimeProvider? clock = null) =>
-        new(async token => await disk.OpenSqliteAsync(token), [OsSample(), SystemSample()], clock ?? new FixedClock(), reports, packageService: service);
+        AuditTestStore disk, WorkshopReportStore reports, PilotPackageService service, TimeProvider? clock = null,
+        Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null) =>
+        new(async token => await disk.OpenSqliteAsync(token), [OsSample(), SystemSample()], clock ?? new FixedClock(), reports,
+            packageService: service, appendPackageDiagnostic: appendPackageDiagnostic);
 
     private static FixtureProvider OsSample() => new("windows-operating-system",
         Enum("os.family", "windows_11", "os.windows.identity"),
@@ -285,9 +297,10 @@ public sealed partial class PackageSetupTests
         public Func<Task>? Probing { get; set; }
         public PackageVerificationStatus ProbeStatus { get; init; } = PackageVerificationStatus.Passed;
         public string? RegisteredVersion { get; init; } = PilotPackageService.Identity.ExactVersion;
+        public bool RegistrationUnavailable { get; init; }
 
         public PackageObservation Inspect() => _registered
-            ? new(PackageObservationStatus.Installed, RegisteredVersion)
+            ? RegistrationUnavailable ? new(PackageObservationStatus.Unavailable) : new(PackageObservationStatus.Installed, RegisteredVersion)
             : new(PackageObservationStatus.Absent);
 
         public Task<IPackageArtifact> AcquireAsync(CancellationToken cancellationToken)

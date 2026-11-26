@@ -180,6 +180,7 @@
           "ThirdLife.Broker.Protocol": "[1.0.0, )",
           "ThirdLife.Catalog": "[1.0.0, )",
           "ThirdLife.Core": "[1.0.0, )",
+          "ThirdLife.Diagnostics": "[1.0.0, )",
           "ThirdLife.Inventory": "[1.0.0, )",
           "ThirdLife.Packages": "[1.0.0, )",
           "ThirdLife.Persistence": "[1.0.0, )",

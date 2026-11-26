@@ -85,6 +85,9 @@ public static class JournalStateMachine
                     (candidate.Result == JournalResult.OperationFailed ||
                         (candidate.Actor == JournalActor.PackageBackend && candidate.Result is JournalResult.BackendUnavailable or
                             JournalResult.AuthorizationDeclined or JournalResult.TrustMismatch or JournalResult.PreconditionChanged))) ||
+                (IsMachinePackage(action) && previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent &&
+                    candidate.Actor == JournalActor.PackageBackend && candidate.Checkpoint == JournalCheckpoint.None &&
+                    candidate.Result is JournalResult.PackageDownloadUnavailable or JournalResult.PackageElevationUnavailable) ||
                 (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent && IsMachinePackage(action) &&
                     candidate.Actor == JournalActor.PackageBackend && candidate.Checkpoint == JournalCheckpoint.PackagePreDispatchFailure &&
                     candidate.Result is JournalResult.NetworkUnavailable or JournalResult.Cancelled) ||
@@ -93,8 +96,9 @@ public static class JournalStateMachine
                     candidate.Result is JournalResult.AuthorizationDeclined or JournalResult.BackendUnavailable or JournalResult.Cancelled),
             (JournalState.Started, JournalState.RequiresReview) =>
                 ((candidate.Actor is JournalActor.Coordinator or JournalActor.Broker && IsInterruption(candidate)) ||
-                    (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent && candidate.Actor == JournalActor.PackageBackend &&
-                        candidate.Result is JournalResult.Interrupted or JournalResult.Cancelled or JournalResult.TimedOut &&
+                    (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent && IsMachinePackage(action) && candidate.Actor == JournalActor.PackageBackend &&
+                        candidate.Result is JournalResult.Interrupted or JournalResult.Cancelled or JournalResult.TimedOut or
+                            JournalResult.PackageDownloadTimedOut &&
                         candidate.Checkpoint == JournalCheckpoint.Reconcile) ||
                     (previous?.Checkpoint == JournalCheckpoint.BrokerDispatchIntent && IsBrokerNoOp(action) &&
                         candidate.Actor == JournalActor.Coordinator && candidate.Result == JournalResult.Cancelled &&
@@ -112,7 +116,9 @@ public static class JournalStateMachine
                     (candidate.Result == JournalResult.VerificationUnconfirmed ||
                         (IsMachinePackage(action) && previous?.Checkpoint == JournalCheckpoint.PackageLaunchPendingVerification &&
                             candidate.Result is JournalResult.PackageProbeUnavailable or JournalResult.PackageProbeExitedEarly or
-                                JournalResult.PackageProbeTimedOut or JournalResult.PackageProbeCancelled or JournalResult.PackageProbeCleanupUnconfirmed))),
+                                JournalResult.PackageProbeTimedOut or JournalResult.PackageProbeCancelled or JournalResult.PackageProbeCleanupUnconfirmed or
+                                JournalResult.PackageDetectionAbsent or JournalResult.PackageDetectionMismatch or JournalResult.PackageDetectionUnavailable or
+                                JournalResult.PackageProbeExecutableMissing or JournalResult.PackageProbeExecutableUntrusted or JournalResult.PackageProbeLaunchFailed))),
             (JournalState.RequiresReview, JournalState.Failed) =>
                 candidate.Actor == JournalActor.Verifier && candidate.Result == JournalResult.NoChangeConfirmed &&
                 candidate.Checkpoint == JournalCheckpoint.None && candidate.Verification == ActionVerification.NoMachineChange &&

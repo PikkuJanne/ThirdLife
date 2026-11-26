@@ -9,6 +9,7 @@ public enum DiagnosticEventCode
     DiagnosticRejected,
     UnhandledException,
     RetentionCleanup,
+    PackageOutcome,
 }
 
 public enum DiagnosticComponent
@@ -57,6 +58,9 @@ public enum DiagnosticOperationType
     BuildSupportProjection,
     CleanRetention,
     RecoverState,
+    ResolvePackage,
+    InstallPackage,
+    VerifyPackage,
 }
 
 public enum DiagnosticResultCode
@@ -73,6 +77,30 @@ public enum DiagnosticResultCode
     UnexpectedFailure,
     CleanupCompleted,
     CleanupFailed,
+    PackageResolutionConflict,
+    PackageResolutionUnavailable,
+    PackageTrustMismatch,
+    PackageElevationDeclined,
+    PackageElevationUnavailable,
+    PackageDownloadUnavailable,
+    PackageDownloadTimedOut,
+    PackageInstallerFailed,
+    PackageInstallerTimedOut,
+    PackageInstallerInterrupted,
+    PackageRestartRequired,
+    PackageDetectionAbsent,
+    PackageDetectionMismatch,
+    PackageDetectionUnavailable,
+    PackageLaunchExecutableMissing,
+    PackageLaunchExecutableUntrusted,
+    PackageLaunchFailed,
+    PackageLaunchExitedEarly,
+    PackageLaunchTimedOut,
+    PackageVerificationCancelled,
+    PackageLaunchCleanupUnconfirmed,
+    PackageCancelled,
+    PackageDownloadNetworkUnavailable,
+    PackagePreconditionChanged,
 }
 
 public enum DiagnosticErrorCategory
@@ -84,6 +112,13 @@ public enum DiagnosticErrorCategory
     InvalidInput,
     InvalidState,
     UnexpectedFailure,
+    PackageResolution,
+    PackageTrust,
+    PackageElevation,
+    PackageDownload,
+    PackageInstaller,
+    PackageDetection,
+    PackageLaunch,
 }
 
 public enum DiagnosticLimitationCode
@@ -113,6 +148,7 @@ internal enum SafeMessageKey
     DiagnosticRejected,
     UnexpectedFailure,
     RetentionCleanup,
+    PackageOutcome,
 }
 
 public sealed class DiagnosticCorrelationId
@@ -125,6 +161,13 @@ public sealed class DiagnosticCorrelationId
     internal string Value { get; }
 
     public static DiagnosticCorrelationId CreateRandom() => new(Guid.NewGuid().ToString("N"));
+
+    /// <summary>Uses an existing opaque random operation ID for local diagnostic correlation.</summary>
+    public static DiagnosticCorrelationId FromOperation(Guid operationId)
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(operationId, Guid.Empty);
+        return new DiagnosticCorrelationId(operationId.ToString("N"));
+    }
 
     internal static DiagnosticCorrelationId CreateForTesting(string value) => new(value);
 
@@ -256,6 +299,7 @@ internal static class DiagnosticWireNames
         DiagnosticEventCode.DiagnosticRejected => "diagnostic_rejected",
         DiagnosticEventCode.UnhandledException => "unhandled_exception",
         DiagnosticEventCode.RetentionCleanup => "retention_cleanup",
+        DiagnosticEventCode.PackageOutcome => "package_outcome",
         _ => throw Undefined(value),
     };
 
@@ -308,6 +352,9 @@ internal static class DiagnosticWireNames
         DiagnosticOperationType.BuildSupportProjection => "build_support_projection",
         DiagnosticOperationType.CleanRetention => "clean_retention",
         DiagnosticOperationType.RecoverState => "recover_state",
+        DiagnosticOperationType.ResolvePackage => "resolve_package",
+        DiagnosticOperationType.InstallPackage => "install_package",
+        DiagnosticOperationType.VerifyPackage => "verify_package",
         _ => throw Undefined(value),
     };
 
@@ -325,6 +372,30 @@ internal static class DiagnosticWireNames
         DiagnosticResultCode.UnexpectedFailure => "unexpected_failure",
         DiagnosticResultCode.CleanupCompleted => "cleanup_completed",
         DiagnosticResultCode.CleanupFailed => "cleanup_failed",
+        DiagnosticResultCode.PackageResolutionConflict => "package_resolution_conflict",
+        DiagnosticResultCode.PackageResolutionUnavailable => "package_resolution_unavailable",
+        DiagnosticResultCode.PackageTrustMismatch => "package_trust_mismatch",
+        DiagnosticResultCode.PackageElevationDeclined => "package_elevation_declined",
+        DiagnosticResultCode.PackageElevationUnavailable => "package_elevation_unavailable",
+        DiagnosticResultCode.PackageDownloadUnavailable => "package_download_unavailable",
+        DiagnosticResultCode.PackageDownloadTimedOut => "package_download_timed_out",
+        DiagnosticResultCode.PackageInstallerFailed => "package_installer_failed",
+        DiagnosticResultCode.PackageInstallerTimedOut => "package_installer_timed_out",
+        DiagnosticResultCode.PackageInstallerInterrupted => "package_installer_interrupted",
+        DiagnosticResultCode.PackageRestartRequired => "package_restart_required",
+        DiagnosticResultCode.PackageDetectionAbsent => "package_detection_absent",
+        DiagnosticResultCode.PackageDetectionMismatch => "package_detection_mismatch",
+        DiagnosticResultCode.PackageDetectionUnavailable => "package_detection_unavailable",
+        DiagnosticResultCode.PackageLaunchExecutableMissing => "package_launch_executable_missing",
+        DiagnosticResultCode.PackageLaunchExecutableUntrusted => "package_launch_executable_untrusted",
+        DiagnosticResultCode.PackageLaunchFailed => "package_launch_failed",
+        DiagnosticResultCode.PackageLaunchExitedEarly => "package_launch_exited_early",
+        DiagnosticResultCode.PackageLaunchTimedOut => "package_launch_timed_out",
+        DiagnosticResultCode.PackageVerificationCancelled => "package_verification_cancelled",
+        DiagnosticResultCode.PackageLaunchCleanupUnconfirmed => "package_launch_cleanup_unconfirmed",
+        DiagnosticResultCode.PackageCancelled => "package_cancelled",
+        DiagnosticResultCode.PackageDownloadNetworkUnavailable => "package_download_network_unavailable",
+        DiagnosticResultCode.PackagePreconditionChanged => "package_precondition_changed",
         _ => throw Undefined(value),
     };
 
@@ -337,6 +408,13 @@ internal static class DiagnosticWireNames
         DiagnosticErrorCategory.InvalidInput => "invalid_input",
         DiagnosticErrorCategory.InvalidState => "invalid_state",
         DiagnosticErrorCategory.UnexpectedFailure => "unexpected_failure",
+        DiagnosticErrorCategory.PackageResolution => "package_resolution",
+        DiagnosticErrorCategory.PackageTrust => "package_trust",
+        DiagnosticErrorCategory.PackageElevation => "package_elevation",
+        DiagnosticErrorCategory.PackageDownload => "package_download",
+        DiagnosticErrorCategory.PackageInstaller => "package_installer",
+        DiagnosticErrorCategory.PackageDetection => "package_detection",
+        DiagnosticErrorCategory.PackageLaunch => "package_launch",
         _ => throw Undefined(value),
     };
 
@@ -369,6 +447,7 @@ internal static class DiagnosticWireNames
         SafeMessageKey.DiagnosticRejected => "diagnostic.rejected",
         SafeMessageKey.UnexpectedFailure => "diagnostic.unexpected_failure",
         SafeMessageKey.RetentionCleanup => "diagnostic.retention_cleanup",
+        SafeMessageKey.PackageOutcome => "diagnostic.package_outcome",
         _ => throw Undefined(value),
     };
 

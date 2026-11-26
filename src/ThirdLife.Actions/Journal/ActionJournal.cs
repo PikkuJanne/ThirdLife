@@ -79,6 +79,15 @@ public enum JournalResult
     PackageProbeTimedOut,
     PackageProbeCancelled,
     PackageProbeCleanupUnconfirmed,
+    PackageDownloadUnavailable,
+    PackageDownloadTimedOut,
+    PackageElevationUnavailable,
+    PackageDetectionAbsent,
+    PackageDetectionMismatch,
+    PackageDetectionUnavailable,
+    PackageProbeExecutableMissing,
+    PackageProbeExecutableUntrusted,
+    PackageProbeLaunchFailed,
 }
 
 public enum JournalCheckpoint

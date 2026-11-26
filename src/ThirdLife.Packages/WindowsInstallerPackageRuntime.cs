@@ -18,6 +18,8 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
     private const int InstallerLength = 7_933_952;
     private const int BufferSize = 64 * 1024;
     private const int DiskHeadroomBytes = 128 * 1024 * 1024;
+    private const int ErrorElevationRequired = 740;
+    private const int ErrorCancelled = 1223;
     private static readonly Uri Release = new(
         "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.9.1/" + InstallerName);
     private static readonly HttpClient Client = new(new HttpClientHandler
@@ -139,7 +141,7 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
         using var currentIdentity = WindowsIdentity.GetCurrent();
         if (new WindowsPrincipal(currentIdentity).IsInRole(WindowsBuiltInRole.Administrator))
         {
-            return new(PackageInstallStatus.Unavailable);
+            return new(PackageInstallStatus.ElevationUnavailable);
         }
 
         // The installed Windows Installer handles machine authorization and any UAC.
@@ -160,9 +162,9 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
         {
             process = Process.Start(info);
         }
-        catch (Win32Exception error) when (error.NativeErrorCode == 1223)
+        catch (Win32Exception error)
         {
-            return new(PackageInstallStatus.AuthorizationDeclined);
+            return new(ClassifyInstallerStartFailure(error.NativeErrorCode));
         }
 
         using (process)
@@ -178,13 +180,20 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
             {
                 0 => PackageInstallStatus.Applied,
                 3010 => PackageInstallStatus.RestartRequired,
-                1223 => PackageInstallStatus.AuthorizationDeclined,
+                ErrorCancelled => PackageInstallStatus.AuthorizationDeclined,
                 1602 => PackageInstallStatus.Cancelled,
                 1618 or 1641 => PackageInstallStatus.ReviewRequired,
                 _ => PackageInstallStatus.Failed,
             });
         }
     }
+
+    internal static PackageInstallStatus ClassifyInstallerStartFailure(int nativeErrorCode) => nativeErrorCode switch
+    {
+        ErrorElevationRequired => PackageInstallStatus.ElevationUnavailable,
+        ErrorCancelled => PackageInstallStatus.AuthorizationDeclined,
+        _ => PackageInstallStatus.ReviewRequired,
+    };
 
     private static async Task<HttpResponseMessage> OpenReleaseAsync(HttpClient client, CancellationToken cancellationToken)
     {

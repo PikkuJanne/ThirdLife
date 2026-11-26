@@ -8,6 +8,7 @@ using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
 using ThirdLife.Core.Repairs;
 using ThirdLife.Core.Sanitization;
+using ThirdLife.Diagnostics.Logging;
 using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
@@ -58,7 +59,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         WorkshopReportStore? reportStore = null,
         Func<PolicyDeviceClass, PolicySnapshot?>? fixturePlanPolicy = null,
         PilotPackageService? packageService = null,
-        Func<IBrokerExecutionJournal, ExecutionCoordinator>? fixtureBrokerCoordinator = null)
+        Func<IBrokerExecutionJournal, ExecutionCoordinator>? fixtureBrokerCoordinator = null,
+        Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -98,6 +100,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         }
 
         _packageService = packageService;
+        _appendPackageDiagnostic = appendPackageDiagnostic;
         PlanProfiles = packageService is not null && WorkshopPackageProfile.Load(timeProvider.GetUtcNow()) is { } package
             ? [.. WorkshopPlanCandidate.Options, package]
             : WorkshopPlanCandidate.Options;
@@ -162,7 +165,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ],
         TimeProvider.System,
         RegisteredReportStore(),
-        packageService: new PilotPackageService());
+        packageService: new PilotPackageService(),
+        appendPackageDiagnostic: AppendLocalPackageDiagnosticAsync);
 
     private static WorkshopReportStore? RegisteredReportStore()
     {
