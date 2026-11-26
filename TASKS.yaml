@@ -5411,9 +5411,19 @@ tasks:
     duration: 47.327 s reopen, 4.267 s independent registration and 2.009 s journal comparison
     reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and successful reopen bundle
     limitation: Ordinary reopen on the same boot. The prior timed-out job supplies separate restart and review evidence.
-  blocked_reason: The supervised installation and same-boot report are verified. The successful-job restart requires separate
-    authority and post-boot re-observation. The native UAC decline, exact installer-client interruption and checkpoint restoration
-    require separate scoped actions and authority.
+  - task: TL-0410
+    summary: The standing-authorized orderly guest restart changed boot evidence. The verified package registration, one-dispatch
+      journal and saved report persisted across it.
+    command_or_review: Bound guest shutdown.exe /r /t 0, Windows restart event, independent MSI query, SQLite and protected report comparison
+    tier: extended
+    result: passed
+    environment: Same Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 18.545 s through changed boot, 6.476 s journal comparison and 3.092 s for the stored report comparison
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb
+    limitation: Native warm restart after a verified install. The existing guest account must sign in to finish the post-boot WPF check.
+  blocked_reason: Basic-console sign-in is needed to reopen the verified job after the observed restart. The native UAC decline,
+    exact installer-client interruption and checkpoint restoration require separate scoped actions and authority.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.
@@ -5428,8 +5438,13 @@ tasks:
       package route and a bounded package interruption and restart procedure.
   - kind: authorization
     scope: Attributable authority for the exact saved package plan and guest target, any applicable Windows consent, and the
-      planned installer-client interruption or orderly guest restart.
+      planned installer-client interruption or checkpoint restoration.
     authority: operator
+  - kind: authorization
+    scope: Standing operator authority for orderly, task-related Windows restarts of the bound ThirdLife-W11 guest, with
+      identity and quiescence verified before each restart.
+    authority: operator
+    evidence: artifacts/e2e/M4-first-write-slice.md, standing guest restart authorization recorded 2026-11-26
   outcome: package-installation
 - id: TL-0411
   title: Validate the M4 package-installation gate

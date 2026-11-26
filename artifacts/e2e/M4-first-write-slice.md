@@ -341,16 +341,51 @@ installation and still found one approval and one dispatch. The app and runner
 closed and removed their temporary files. The reopen bundle SHA-256 was
 `1ed3d097ad8f8591f8de70c90691f158537d6b8a271eec9d9ad6ca2f3d2a9bc0`.
 
-This successful job was reopened on the same boot. A restart for this job
-requires its own authority before checking registration and the report after
-boot. The installer reported no restart requirement. The separate native
-decline and installer-client interruption and authorized checkpoint restoration
-remain open. The recipient draft evidence remains fixture-scoped.
+This reopen observation used the same boot. The installer reported no restart
+requirement. The separate native decline and installer-client interruption and
+authorized checkpoint restoration remain open. The recipient draft evidence
+remains fixture-scoped.
 
 Host Quick passed in 145.064 s at `5883390`, with 1,233 .NET tests and eight
 governance regressions. The build took 28.42 s and the WPF test selection took
 62 s while native guest work was running. The bundle and repository validators
 passed after the evidence update.
+
+## Standing guest restart authorization
+
+On 26 November 2026 the operator granted standing authority for task-related,
+orderly Windows restarts of the bound `ThirdLife-W11` guest. Use the recorded
+VM identity and verify the guest is idle before each restart. Record changed
+boot evidence and reopen the applicable saved job for verification. The grant
+continues until the operator changes or revokes it. Package execution, Windows
+consent, process interruption, checkpoint restoration and actions on other
+targets require their own authority.
+
+The attributable grant and exact VM binding are in the protected local
+`%LOCALAPPDATA%\ThirdLife\HyperV\Authority\ThirdLife-W11-orderly-restarts.json`
+record. Retain the per-run job, plan and authorization binding with private
+evidence for each restart.
+
+## 26 November 2026 successful-job restart
+
+The successful job and exact guest were bound to the standing grant. The
+quiescent guest used `shutdown.exe /r /t 0` to restart. PowerShell Direct
+observed a changed Windows boot in 18.545 s. A 1.814 s System event check found
+exactly one planned restart initiation for this run.
+
+After boot, the independent MSI query confirmed the exact machine-wide
+registration. The 6.476 s journal read found the same fingerprint and one
+correlated approval, dispatch, applied result and verification. There were no
+console installer, consent or app processes and no runner stage. A 3.092 s
+comparison found the saved pre-restart workshop report byte-identical to its
+protected copy. The successful job's post-boot WPF check awaits the existing
+account's Basic-console sign-in. This is an orderly warm restart following an
+already verified install.
+
+Host Quick passed at `90fde78` with 1,233 .NET tests and eight governance
+regressions. The first run took 137.786 s including a 26.94 s rebuild while
+guest verification was running. The warm run passed in 109.400 s, and the
+bundle and repository validators passed on the updated evidence and runbook.
 
 ## Native procedure
 
@@ -387,9 +422,9 @@ public artifact digests, durations and limitations.
    installer arguments, correlation and confirmed phase. Use a verified process
    handle within the bounded window. Leave shared installer services alone.
    If attribution or timing is unavailable, record it and leave the client alone.
-   The orderly guest restart follows a completed installer result and authority
-   for that guest restart. A successful install without 3010 can still verify
-   continuity after an actual warm restart.
+   The orderly guest restart follows a completed installer result and uses the
+   recorded standing grant for this guest. A successful install without 3010
+   can still verify continuity after an actual warm restart.
 5. Run the same-job `-Reopen` case with its captured job reference, reviewed plan
    digest and expected state (`Verified` or `RequiresReview`). Compare the
    reopened report, journal and fresh exact machine-scope MSI observation.
