@@ -6,8 +6,10 @@ param(
     [Parameter(Mandatory, ParameterSetName = 'ResumePreview')][switch] $ResumePreview,
     [Parameter(Mandatory, ParameterSetName = 'Reopen')][switch] $Reopen,
     [Parameter(Mandatory, ParameterSetName = 'Preview')]
+    [Parameter(ParameterSetName = 'ResumePreview')]
     [ValidatePattern('\A[A-Za-z0-9_.-]{1,64}\z')][string] $OperatorCode,
     [Parameter(Mandatory, ParameterSetName = 'Preview')]
+    [Parameter(ParameterSetName = 'ResumePreview')]
     [ValidatePattern('\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z')][string] $VerifiedNoDonorStorageOn,
     [Parameter(Mandatory, ParameterSetName = 'ResumePreview')]
     [Parameter(Mandatory, ParameterSetName = 'Reopen')]
@@ -24,6 +26,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+if ($ResumePreview -and ([bool]$OperatorCode -xor [bool]$VerifiedNoDonorStorageOn)) {
+    throw 'Supply both the original operator code and verification date to continue intake.'
+}
 $profile = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'thirdlife-hyperv-profile.json') -Raw | ConvertFrom-Json
 $preflight = & (Join-Path $PSScriptRoot 'run-m4-package-preflight.ps1') -ExpectedVMId $ExpectedVMId -ExpectedCheckpointId $ExpectedCheckpointId
 if ($null -eq $preflight) { throw 'The dedicated guest did not pass preflight.' }
@@ -45,7 +50,11 @@ if ((Get-FileHash -LiteralPath (Join-Path $app 'ThirdLife.UI.exe')).Hash -ine $A
 $arguments = switch ($PSCmdlet.ParameterSetName) {
     'Inspect' { '-Inspect' }
     'Preview' { "-Preview -OperatorCode '$OperatorCode' -VerifiedNoDonorStorageOn '$VerifiedNoDonorStorageOn'" }
-    'ResumePreview' { "-ResumePreview -Job '$Job'" }
+    'ResumePreview' {
+        if ($OperatorCode) {
+            "-ResumePreview -Job '$Job' -OperatorCode '$OperatorCode' -VerifiedNoDonorStorageOn '$VerifiedNoDonorStorageOn'"
+        } else { "-ResumePreview -Job '$Job'" }
+    }
     'Reopen' { "-Reopen -Job '$Job' -ExpectedPlanSha256 '$ExpectedPlanSha256' -ExpectedRecovery '$ExpectedRecovery'" }
 }
 $task = 'ThirdLife-TL0410-' + [guid]::NewGuid().ToString('N')

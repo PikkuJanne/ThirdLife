@@ -5301,9 +5301,30 @@ tasks:
     duration: 144.860 s
     reference: artifacts/e2e/M4-first-write-slice.md, base 3d273b5 with the corrected preview runner
     limitation: Separately invoked guest-only, extended and Sandbox-only cases were excluded.
-  blocked_reason: The admitted guest requires attributable confirmation of lawful ownership and no donor storage, with a workshop
-    operator code and actual verification date, before live policy evaluation and exact plan preview. Then record scoped authority
-    for the guest plan, each planned interruption or restart, and checkpoint restoration, with an actual Windows choice if it prompts.
+  - task: TL-0410
+    summary: The ordinary guest application reopened the saved job, recorded the operator-confirmed intake, ran live assessment and
+      displayed the exact machine-wide proposal while installation and handover remained disabled.
+    command_or_review: eng/run-m4-package-desktop.ps1 -ResumePreview with the bound job and original attestation
+    tier: targeted
+    result: passed
+    environment: Unelevated Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 46.597 s including staging and cleanup
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and recorded live preview artifact digests
+    limitation: The saved job and plan digest are protected local records. No approval or package dispatch occurred.
+  - task: TL-0410
+    summary: The same saved job displayed the identical plan digest after reopening, and read-only inspection confirmed one intake,
+      164 observations, zero approvals or action entries and no remaining runner stage.
+    command_or_review: eng/run-m4-package-desktop.ps1 -ResumePreview and PowerShell Direct read-only SQLite and cleanup check
+    tier: targeted
+    result: passed
+    environment: Unelevated Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 49.015 s reopen wrapper and 4.251 s independent inspection
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and final driver digest
+    limitation: Continuity of a preview only. Actual post-dispatch recovery and guest restoration remain unobserved.
+  blocked_reason: The exact live guest plan is displayed and requires attributable operator approval for dispatch. Record the
+    authority for each planned interruption, restart and checkpoint restoration and the actual Windows choice if prompted.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.
