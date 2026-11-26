@@ -1,7 +1,7 @@
 {
   "schema_version": "thirdlife.profile.v1",
   "profile_id": "plain-text-editor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "reviewed",
   "synthetic_data": false,
   "classification": "PUBLIC_REFERENCE",
@@ -11,7 +11,7 @@
   },
   "catalog": {
     "id": "workshop-package-setup",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "workshop": {
     "capabilities": [

@@ -355,6 +355,9 @@ public sealed partial class PackageSetupTests
             _installed = result.Status == PackageInstallStatus.Applied;
             return result;
         }
+
+        public Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(PackageVerificationStatus.Passed);
     }
 
     private sealed class TrackedRecoveryArtifact : IPackageArtifact

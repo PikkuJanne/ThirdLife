@@ -69,12 +69,12 @@ internal static class PlanReviewPresentation
         {
             details.AppendLine(plan.SyntheticData
                 ? "Preparation uses synthetic no-op actions. Expected readiness requires independent verification."
-                : "Installation changes this computer for all users and may prompt for Windows consent. ThirdLife checks the exact installed version after the installer exits. Device readiness needs a separate assessment.");
+                : "Installation changes this computer for all users and may prompt for Windows consent. Device readiness needs a separate assessment.");
             details.AppendLine(CultureInfo.CurrentCulture, $"Estimated download {Total(impact.Download)}");
             details.AppendLine(CultureInfo.CurrentCulture, $"Estimated installation {Total(impact.Installation)}");
             foreach (var row in impact.Actions)
             {
-                AppendAction(details, row);
+                AppendAction(details, row, WorkshopPackageProfile.IncludesLaunchProbe(plan));
             }
         }
 
@@ -106,7 +106,7 @@ internal static class PlanReviewPresentation
         _ => "Unavailable capability",
     };
 
-    private static void AppendAction(StringBuilder details, ActionImpact impact)
+    private static void AppendAction(StringBuilder details, ActionImpact impact, bool includesLaunchProbe)
     {
         var entry = impact.Action.CatalogEntry;
         var purpose = impact.ReasonCode.Replace('_', ' ');
@@ -134,7 +134,10 @@ internal static class PlanReviewPresentation
         }}");
         details.AppendLine(CultureInfo.CurrentCulture, $"Network {NetworkCategory(impact.NetworkCategory)} ({NetworkRequirement(impact.Network)})");
         details.AppendLine(CultureInfo.CurrentCulture, $"Rollback {(impact.Rollback == ActionRollback.NoChanges ? "No changes to reverse" : "Manual review")}");
-        details.AppendLine(CultureInfo.CurrentCulture, $"Verification {(impact.Verification == ActionVerification.NoMachineChange ? "Confirm no machine change" : "Check exact installed package identity")}");
+        var verification = impact.Verification == ActionVerification.NoMachineChange ? "Confirm no machine change" :
+            includesLaunchProbe ? "Check the exact installed package identity and briefly launch the application with no documents" :
+                "Check exact installed package identity";
+        details.AppendLine(CultureInfo.CurrentCulture, $"Verification {verification}");
     }
 
     private static string Bytes(long? bytes) => bytes is { } known

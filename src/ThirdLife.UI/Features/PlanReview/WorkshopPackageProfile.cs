@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using ThirdLife.Actions.Planning;
 using ThirdLife.Catalog.Profiles;
 using ThirdLife.Catalog.Schema;
 using ThirdLife.Packages;
@@ -11,6 +12,11 @@ namespace ThirdLife.UI.Features.PlanReview;
 internal static class WorkshopPackageProfile
 {
     private const string ResourcePrefix = "ThirdLife.UI.Features.PlanReview.PackageSetup.";
+    private const string CatalogSha256 = "bf8db490a32f3a71ba6ce35c0a24ef91700d0f97536281fd1d2f69c395c90c89";
+    private const string ProfileSha256 = "675d6e038c779deadec6d14e08fb71ca1c0893a2db537afaf1d0d6186837aa31";
+
+    public static bool IncludesLaunchProbe(ProposedPlan plan) =>
+        plan.CatalogSha256 == CatalogSha256 && plan.ProfileSha256 == ProfileSha256;
 
     public static PlanProfileOption? Load(DateTimeOffset asOfUtc)
     {
@@ -18,9 +24,9 @@ internal static class WorkshopPackageProfile
         try
         {
             var catalog = CatalogSchema.Parse(WorkshopPlanCandidate.ReadPinned(ResourcePrefix + "catalog.json",
-                CatalogSchema.MaximumDocumentBytes, "11e9948a1e100c174487aed08d71f3314b3c83299891bf2de8c3f3e6b4dd87f4"), asOfUtc);
+                CatalogSchema.MaximumDocumentBytes, CatalogSha256), asOfUtc);
             var profile = ProfileSchema.Parse(WorkshopPlanCandidate.ReadPinned(ResourcePrefix + "profile.json",
-                ProfileSchema.MaximumDocumentBytes, "276e13b23d75cb81f3e9eb06ea8d60ae64b8c70a79225db8a3bc7d4b76d027b5"), catalog);
+                ProfileSchema.MaximumDocumentBytes, ProfileSha256), catalog);
             var policy = PolicySnapshot.Restore(WorkshopPlanCandidate.ReadPinned(ResourcePrefix + "policy.json",
                 PolicySchema.MaximumDocumentBytes, policySha256), policySha256);
             var identity = PilotPackageService.Identity;

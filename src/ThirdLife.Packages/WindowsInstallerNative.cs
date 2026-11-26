@@ -92,6 +92,37 @@ internal static partial class WindowsInstallerNative
         return handle;
     }
 
+    public static unsafe SafeFileHandle OpenProbeFile(string path)
+    {
+        const uint read = 0x80000000;
+        const uint shareRead = 1;
+        const uint openExisting = 3;
+        const uint openWithoutReparse = 0x00200000;
+        const int attributeTagInfo = 9;
+        var handle = CreateFile(path, read, shareRead, 0, openExisting, openWithoutReparse, 0);
+        if (handle.IsInvalid)
+        {
+            var error = Marshal.GetLastPInvokeError();
+            handle.Dispose();
+            if (error is 2 or 3)
+            {
+                throw new FileNotFoundException();
+            }
+
+            throw new IOException("The package probe file could not be opened.");
+        }
+
+        var info = default(FileAttributeTagInfo);
+        if (GetFileInformationByHandleEx(handle, attributeTagInfo, &info, (uint)sizeof(FileAttributeTagInfo)) == 0 ||
+            (info.Attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != 0)
+        {
+            handle.Dispose();
+            throw new PackageTrustException("The package probe file is redirected or unavailable.");
+        }
+
+        return handle;
+    }
+
     [LibraryImport("msi.dll", EntryPoint = "MsiGetProductInfoExW", StringMarshalling = StringMarshalling.Utf16)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static unsafe partial uint MsiGetProductInfoEx(string product, string? userSid, uint context,
@@ -105,7 +136,7 @@ internal static partial class WindowsInstallerNative
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static unsafe partial int WinVerifyTrust(nint window, Guid* action, TrustData* trust);
 
-    [LibraryImport("kernel32.dll", EntryPoint = "CreateFileW", StringMarshalling = StringMarshalling.Utf16)]
+    [LibraryImport("kernel32.dll", EntryPoint = "CreateFileW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static partial SafeFileHandle CreateFile(string path, uint access, uint share, nint security,
         uint disposition, uint flags, nint template);

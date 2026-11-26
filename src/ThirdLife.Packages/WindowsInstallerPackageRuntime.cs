@@ -11,6 +11,7 @@ namespace ThirdLife.Packages;
 internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
 {
     private const string ProductCode = "{A23B657D-838B-4C9B-8F9D-386E50C1A76B}";
+    private const string PackageCode = "{18CD7780-F2FF-4F13-9070-BBE80D108501}";
     private const string UpgradeCode = "{CDB13460-04DF-4708-A7FD-4CB4A0684605}";
     private const string InstalledPublisher = "Notepad++ team (MSI installer)";
     private const string InstallerName = "npp.8.9.9.1.Installer.x64.msi";
@@ -40,7 +41,10 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
             {
                 var (_, version) = WindowsInstallerNative.ReadMachineProperty(ProductCode, "VersionString");
                 var (_, publisher) = WindowsInstallerNative.ReadMachineProperty(ProductCode, "Publisher");
-                return state == "5" && version == PilotPackageService.Identity.ExactVersion && publisher == InstalledPublisher
+                var (_, package) = WindowsInstallerNative.ReadMachineProperty(ProductCode, "PackageCode");
+                var (_, assignment) = WindowsInstallerNative.ReadMachineProperty(ProductCode, "AssignmentType");
+                return state == "5" && version == PilotPackageService.Identity.ExactVersion && publisher == InstalledPublisher &&
+                    string.Equals(package, PackageCode, StringComparison.OrdinalIgnoreCase) && assignment == "1"
                     ? new(PackageObservationStatus.Installed, version)
                     : new(PackageObservationStatus.Conflict);
             }
@@ -59,6 +63,9 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
             return new(PackageObservationStatus.Unavailable);
         }
     }
+
+    public Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken) =>
+        Task.Run(() => WindowsPackageLaunchProbe.Run(cancellationToken), cancellationToken);
 
     public async Task<IPackageArtifact> AcquireAsync(CancellationToken cancellationToken) =>
         await AcquireAsync(Client, PackageStagingDirectory.Create(DiskHeadroomBytes + InstallerLength), cancellationToken)

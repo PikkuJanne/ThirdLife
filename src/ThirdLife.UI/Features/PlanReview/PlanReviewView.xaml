@@ -61,6 +61,9 @@
                    AutomationProperties.HelpText="Press Escape to close the details and return to the heading." />
         </Expander>
         <StackPanel Visibility="{Binding IsPackageProfile, Converter={StaticResource PlanReviewVisibility}}">
+          <TextBlock x:Name="PackageVerificationNotice"
+                     Text="After installation, ThirdLife checks the exact version for all users. It briefly starts Notepad++ with no documents and closes the instance it started."
+                     TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True" />
           <Label Content="Workshop operator code for this approval" Target="{Binding ElementName=PackageOperator}" />
           <TextBox x:Name="PackageOperator" MaxLength="64" Text="{Binding PackageOperatorCode, UpdateSourceTrigger=PropertyChanged}"
                    IsEnabled="{Binding CanEditPackageOperator}" AutomationProperties.Name="Workshop operator code for this approval" />

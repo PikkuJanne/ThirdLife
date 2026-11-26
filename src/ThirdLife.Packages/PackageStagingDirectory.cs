@@ -6,7 +6,7 @@ namespace ThirdLife.Packages;
 
 internal sealed class PackageStagingDirectory : IDisposable
 {
-    private readonly List<SafeFileHandle> parents = [];
+    private PackageDirectoryGuards? parents;
     private SafeFileHandle? guard;
 
     private PackageStagingDirectory(string path)
@@ -15,6 +15,7 @@ internal sealed class PackageStagingDirectory : IDisposable
     }
 
     public string Path { get; }
+    public bool Removed { get; private set; }
 
     public static PackageStagingDirectory Create(long requiredBytes)
     {
@@ -38,17 +39,7 @@ internal sealed class PackageStagingDirectory : IDisposable
             System.IO.Path.Combine(location.FullName, $"ThirdLife-package-{Guid.NewGuid():N}"));
         try
         {
-            var ancestors = new Stack<string>();
-            for (var parent = location; parent is not null; parent = parent.Parent)
-            {
-                ancestors.Push(parent.FullName);
-            }
-
-            foreach (var ancestor in ancestors)
-            {
-                directory.parents.Add(WindowsInstallerNative.GuardDirectory(ancestor));
-            }
-
+            directory.parents = new PackageDirectoryGuards(location);
             var info = new DirectoryInfo(directory.Path);
             var security = PrivateDirectorySecurity();
             info.Create(security);
@@ -71,25 +62,21 @@ internal sealed class PackageStagingDirectory : IDisposable
 
     public void Dispose()
     {
-        if (guard is not null)
+        if (guard is { IsClosed: false })
         {
             guard.Dispose();
             try
             {
                 Directory.Delete(Path, recursive: false);
+                Removed = true;
             }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            catch (Exception error) when (PackageFailure.IsUnavailable(error))
             {
                 // A failed cleanup never follows an unexpected child or reuses the path.
             }
         }
 
-        for (var index = parents.Count - 1; index >= 0; index--)
-        {
-            parents[index].Dispose();
-        }
-
-        parents.Clear();
+        parents?.Dispose();
     }
 
     private static DirectorySecurity PrivateDirectorySecurity()
@@ -108,5 +95,42 @@ internal sealed class PackageStagingDirectory : IDisposable
         }
 
         return security;
+    }
+}
+
+internal sealed class PackageDirectoryGuards : IDisposable
+{
+    private readonly List<SafeFileHandle> guards = [];
+
+    public PackageDirectoryGuards(DirectoryInfo location)
+    {
+        var ancestors = new Stack<string>();
+        for (var parent = location; parent is not null; parent = parent.Parent)
+        {
+            ancestors.Push(parent.FullName);
+        }
+
+        try
+        {
+            foreach (var ancestor in ancestors)
+            {
+                guards.Add(WindowsInstallerNative.GuardDirectory(ancestor));
+            }
+        }
+        catch
+        {
+            Dispose();
+            throw;
+        }
+    }
+
+    public void Dispose()
+    {
+        for (var index = guards.Count - 1; index >= 0; index--)
+        {
+            guards[index].Dispose();
+        }
+
+        guards.Clear();
     }
 }

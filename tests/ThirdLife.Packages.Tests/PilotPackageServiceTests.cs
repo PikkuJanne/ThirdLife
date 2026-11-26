@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Registry;
 
@@ -209,6 +210,89 @@ public sealed class PilotPackageServiceTests
         Assert.True(runtime.Artifact.Disposed);
     }
 
+    [Theory]
+    [InlineData(PackageObservationStatus.Absent, null, PackageVerificationStatus.PackageAbsent)]
+    [InlineData(PackageObservationStatus.Installed, "8.9.9", PackageVerificationStatus.PackageMismatch)]
+    [InlineData(PackageObservationStatus.Conflict, null, PackageVerificationStatus.PackageMismatch)]
+    [InlineData(PackageObservationStatus.Unavailable, null, PackageVerificationStatus.PackageUnavailable)]
+    public async Task IndependentRegistrationFailureDoesNotLaunch(PackageObservationStatus observation, string? version,
+        PackageVerificationStatus expected)
+    {
+        var runtime = new FakeRuntime { Observation = new(observation, version) };
+        var service = new PilotPackageService(runtime);
+
+        Assert.Equal(expected, await service.VerifyInstalledAsync(Request(), Identity.InstallerSha256, CancellationToken.None));
+        Assert.Equal(0, runtime.Probes);
+        Assert.Equal(0, runtime.Dispatches);
+    }
+
+    [Theory]
+    [InlineData(PackageVerificationStatus.Passed)]
+    [InlineData(PackageVerificationStatus.ExecutableMissing)]
+    [InlineData(PackageVerificationStatus.ExecutableUntrusted)]
+    [InlineData(PackageVerificationStatus.LaunchFailed)]
+    [InlineData(PackageVerificationStatus.ExitedEarly)]
+    [InlineData(PackageVerificationStatus.TimedOut)]
+    [InlineData(PackageVerificationStatus.Cancelled)]
+    [InlineData(PackageVerificationStatus.CleanupUnconfirmed)]
+    public async Task MatchingRegistrationRequiresTheProbeResult(PackageVerificationStatus expected)
+    {
+        var runtime = new FakeRuntime
+        {
+            Observation = new(PackageObservationStatus.Installed, Identity.ExactVersion),
+            ProbeResult = expected,
+        };
+        var service = new PilotPackageService(runtime);
+
+        Assert.Equal(expected, await service.VerifyInstalledAsync(Request(), Identity.InstallerSha256, CancellationToken.None));
+        Assert.Equal(1, runtime.Probes);
+        Assert.Equal(0, runtime.Dispatches);
+    }
+
+    [Fact]
+    public async Task ChangedApprovalAndCancelledVerificationDoNotLaunch()
+    {
+        var runtime = new FakeRuntime { Observation = new(PackageObservationStatus.Installed, Identity.ExactVersion) };
+        var service = new PilotPackageService(runtime);
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        Assert.Equal(PackageVerificationStatus.PackageMismatch,
+            await service.VerifyInstalledAsync(Request(), new string('1', 64), CancellationToken.None));
+        Assert.Equal(PackageVerificationStatus.Cancelled,
+            await service.VerifyInstalledAsync(Request(), Identity.InstallerSha256, cancelled.Token));
+        Assert.Equal(0, runtime.Probes);
+    }
+
+    [Fact]
+    [Trait("Category", "ActiveMachine")]
+    public async Task VerifyPreviouslyInstalledReviewedPackageWithIsolatedLaunch()
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var service = new PilotPackageService();
+        var stageRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var stagesBefore = Directory.EnumerateDirectories(stageRoot, "ThirdLife-package-*").Count();
+        var instancesBefore = CountEditorInstances();
+
+        Assert.Equal(new PackageObservation(PackageObservationStatus.Installed, Identity.ExactVersion), service.Inspect());
+        Assert.Equal(PackageVerificationStatus.Passed,
+            await service.VerifyInstalledAsync(Request(), Identity.InstallerSha256, deadline.Token));
+        Assert.Equal(new PackageObservation(PackageObservationStatus.Installed, Identity.ExactVersion), service.Inspect());
+        Assert.Equal(stagesBefore, Directory.EnumerateDirectories(stageRoot, "ThirdLife-package-*").Count());
+        Assert.Equal(instancesBefore, CountEditorInstances());
+    }
+
+    private static int CountEditorInstances()
+    {
+        var editors = Process.GetProcessesByName("notepad++");
+        foreach (var editor in editors)
+        {
+            editor.Dispose();
+        }
+
+        return editors.Length;
+    }
+
     [Fact]
     public async Task CancellingAfterDispatchKeepsArtifactAndBlocksConcurrentRetry()
     {
@@ -313,6 +397,7 @@ public sealed class PilotPackageServiceTests
     {
         public int Acquisitions { get; private set; }
         public int Dispatches { get; private set; }
+        public int Probes { get; private set; }
         public CancellationToken ApplyToken { get; private set; }
         public FakeArtifact Artifact { get; } = new();
         public Exception? AcquisitionError { get; init; }
@@ -320,8 +405,16 @@ public sealed class PilotPackageServiceTests
         public Func<Task<PackageInstallResult>> Apply { get; init; } = () =>
             Task.FromResult(new PackageInstallResult(PackageInstallStatus.Applied));
         public PackageObservation Observation { get; set; } = new(PackageObservationStatus.Absent);
+        public PackageVerificationStatus ProbeResult { get; init; } = PackageVerificationStatus.Passed;
 
         public PackageObservation Inspect() => Observation;
+
+        public Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Probes++;
+            return Task.FromResult(ProbeResult);
+        }
 
         public Task<IPackageArtifact> AcquireAsync(CancellationToken cancellationToken)
         {
