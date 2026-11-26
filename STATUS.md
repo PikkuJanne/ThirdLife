@@ -71,5 +71,7 @@ TL-0410 installed and independently verified the reviewed Notepad++ package
 in the supervised guest. After an orderly restart the app reopened the same
 verified job and generated a matching workshop report. The journal retained
 one dispatch and a fresh MSI query confirmed exact machine-wide registration.
-Native decline, installer-client interruption and checkpoint restoration remain open.
+The standing-authorized checkpoint restore returned the guest to a
+package-absent baseline. The app displayed a new UAC-decline plan, which awaits
+approval. Native installer-client interruption remains open.
 [M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)

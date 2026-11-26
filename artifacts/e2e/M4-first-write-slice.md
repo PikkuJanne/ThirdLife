@@ -358,8 +358,8 @@ orderly Windows restarts of the bound `ThirdLife-W11` guest. Use the recorded
 VM identity and verify the guest is idle before each restart. Record changed
 boot evidence and reopen the applicable saved job for verification. The grant
 continues until the operator changes or revokes it. Package execution, Windows
-consent, process interruption, checkpoint restoration and actions on other
-targets require their own authority.
+consent, process interruption and actions on other targets require their own
+authority. Checkpoint restoration uses the separate standing grant below.
 
 The attributable grant and exact VM binding are in the protected local
 `%LOCALAPPDATA%\ThirdLife\HyperV\Authority\ThirdLife-W11-orderly-restarts.json`
@@ -412,12 +412,69 @@ and the staged bundle SHA-256 was
 The WPF report used saved verification and the independent MSI query observed
 fresh registration. The installer completed without requesting a restart.
 Native UAC decline and attributable installer-client interruption remain open.
-The clean checkpoint must be restored and re-admitted under scoped authority
-before those package-absent cases can run.
+Both require a package-absent guest.
 
 Host Quick passed at base `817fa76` in 135.154 s with 1,233 .NET tests and
 eight governance regressions. A 25.64 s rebuild contributed to exceeding the
 120 s target. Bundle and repository validation passed on the evidence changes.
+
+## Standing guest checkpoint restoration authorization
+
+On 26 November 2026 the operator granted standing authority to apply
+`Clean-Windows11-ThirdLife` to the bound disposable `ThirdLife-W11` guest
+and start that same guest if needed to verify the clean baseline. Each apply
+discards guest changes made after the checkpoint. The grant applies to
+the recorded VM and checkpoint identities until changed or revoked.
+
+Before each apply, retain the required evidence locally and confirm the
+exact VM, checkpoint and guest quiescence. Re-admit the resulting guest and
+check package, prior job, report, process and staging state. Record each
+invocation against the standing grant. The attributable grant and exact
+bindings are in the protected local
+`%LOCALAPPDATA%\ThirdLife\HyperV\Authority\ThirdLife-W11-clean-checkpoint-restores.json`
+record. Package execution, Windows consent, installer-client interruption,
+checkpoint deletion and actions on other targets retain their own authority.
+
+## 26 November 2026 first standing-authorized checkpoint restore
+
+The preflight matched the exact standard checkpoint and bound guest, confirmed
+quiescence and matched the two retained verified workshop reports on the host.
+`Restore-VMSnapshot` applied that checkpoint once and the same guest was started.
+The apply and start took 17.886 s. The independent preflight re-admitted the
+Windows 11 Pro 26H2 x64 guest in 27.438 s, confirmed absent MSI registration
+and an idle Windows Installer, and matched the expected package source length.
+The guest reported a changed Windows boot timestamp after the apply and start.
+
+A separate 10.620 s guest check found no previous job store, workshop reports,
+installer, consent or app processes, runner tasks, or staging directories.
+The existing Basic-console desktop was available. The protected host evidence
+remains available for both earlier jobs. This restore provides the clean
+baseline for the remaining native cases.
+
+## 26 November 2026 native UAC-decline plan
+
+On the restored guest, the ordinary unelevated app used the existing
+guest-scoped intake attestation and displayed a new reviewed package plan
+for the native Windows consent-decline case. The preview took 141.693 s,
+including 97.542 s in the desktop case. Installation and handover were
+disabled. The app closed normally and the runner removed its stage.
+
+A 4.412 s independent read-only journal check found one exact saved job,
+zero approvals and zero journal entries. There were no installer client,
+consent or app processes or runner stages. Keep the job reference and
+exact plan digest in the protected local record for the requested attempt.
+The next action requires authority for this plan and a supervised No at
+the Windows consent prompt.
+
+The reviewed Release artifacts came from `20247fb`. The guest driver
+SHA-256 was `a37ef874724c3e4e499aab84db3a27bf4873ad385607b5564e2ef5a07a89424a`
+and the staged preview bundle SHA-256 was
+`3609d3be430b89a11d9fd640af54338a2ef32db99b440de03993d08d1c818cf6`.
+
+Host Quick passed at base `e995177` in 159.313 s with 1,233 .NET tests and
+eight governance regressions. The WPF selection took 73 s while native guest
+work was in progress. The run exceeded the 120 s target. Bundle and repository
+validation passed on the evidence and runbook changes.
 
 ## Native procedure
 
@@ -461,10 +518,10 @@ public artifact digests, durations and limitations.
    digest and expected state (`Verified` or `RequiresReview`). Compare the
    reopened report, journal and fresh exact machine-scope MSI observation.
    Check that no second dispatch occurred and capture the remaining recovery and
-   process state. Restore only the bound disposable guest to its reviewed clean
-   checkpoint after scope-bound authorization. Re-admit it and check package,
-   job, process and staging absence. Retain a guest recovery record if restoration
-   is unavailable.
+   process state. Use the recorded standing restore grant to apply the exact
+   reviewed checkpoint to the bound guest. Re-admit it and check package, job,
+   report, process and staging absence. Retain a guest recovery record if
+   restoration is unavailable.
 
 The isolated guest installation, native client interruption, actual Windows
 restart, operator Windows consent and checkpoint restoration require separate
