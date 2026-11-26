@@ -5825,7 +5825,7 @@ tasks:
   workstream: execution
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -5894,19 +5894,45 @@ tasks:
     duration: 404.156 s Full with 304 governance and 2174 .NET cases, then 2.623 s active-machine shell smoke
     reference: artifacts/evidence/TL-0501/report.md, source 9e00a1b929cc7b810e787acf86d280d145056433 and clean Release artifact digests
     limitation: Default Full exclusions apply. Shell smoke observes startup and stage navigation. Multi-action execution evidence is synthetic.
+  - task: TL-0501
+    summary: Routed the ordinary WPF package plan through serial approved dispatch, per-action verification, retry and durable recovery.
+    command_or_review: eng/verify.ps1 -Tier Targeted for Actions, Persistence, UI and Packages after locked restore
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974, native x64, .NET SDK 10.0.400
+    date: '2026-11-26'
+    duration: 161.354 s, 1204 Quick, 102 Actions, 25 SQLite, 43 WPF and 41 package adapter cases
+    reference: artifacts/evidence/TL-0501/report.md, source 5c466d91a747d100d629b4b8053925c2d62089e8
+    limitation: The scheduled package outcomes and boot evidence use fixtures. The pinned native transaction remains evidenced by TL-0412.
+  - task: TL-0501
+    summary: Reopened exact scheduled package and no-op jobs at the committed intent, applied result or backend loss.
+    command_or_review: Release UI tests for owned package and no-op process interruption and owned package backend termination
+    tier: extended
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974, native x64
+    date: '2026-11-26'
+    duration: 26.657 s, five cases passed
+    reference: artifacts/evidence/TL-0501/report.md, source 5c466d91a747d100d629b4b8053925c2d62089e8
+    limitation: Owned fixture processes and synthetic outcomes. The scheduled package jobs retained the same approval without a second dispatch.
+  - task: TL-0501
+    summary: Verified the clean source, M5 gate responsibility, deterministic regressions and unelevated desktop startup.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore in a fresh detached worktree, then eng/run-ui-smoke.ps1
+    tier: full
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974, native x64, .NET SDK 10.0.400 and Python 3.14.7
+    date: '2026-11-26'
+    duration: 379.143 s Full with 304 governance and 2181 .NET cases, then 2.407 s shell smoke
+    reference: artifacts/evidence/TL-0501/report.md, source 5c466d91a747d100d629b4b8053925c2d62089e8 and clean Release digests
+    limitation: The guest window timeout reproduced with the prior verified artifact. Live multi-action qualification remains with TL-0511.
   expected_test_tier: full
   full_test_triggers:
   - The shared canonical plan and approval contract gained a scheduled version, with prior snapshot compatibility required.
+  - Package approval, dispatch, recovery and retry now use the saved action schedule.
   extended_test_triggers:
   - Terminate the owned WPF fixture at its committed dispatch intent and reopen the same journal for the legacy and scheduled paths.
-  completion_phase: execution
-  execution_prerequisites:
-  - kind: capability
-    scope: A live sequence of at least two distinct actions with qualified supported backends and per-action independent verification,
-      restart and reconciliation under the exact approved schedule.
-  - kind: authorization
-    scope: Attributable approval for the exact live schedule and target, with applicable Windows consent at each dispatch.
-    authority: operator
+  notes:
+  - The live sequence and its consent prerequisite recorded at the first execution checkpoint are carried by the M5 technical
+    gate TL-0511. TL-0501 covers the package and no-op scheduling implementation and its verification.
 - id: TL-0502
   title: Implement essential and optional action semantics
   milestone: M5
@@ -6396,6 +6422,7 @@ tasks:
   - Version-bound matrix evidence, unresolved findings, and physical/perceptual claim limits
   acceptance_criteria:
   - The job-seeker machine profile succeeds in the approved same-machine clean-environment and constraint scenarios.
+  - An exact approved live schedule with at least two distinct supported actions retains per-action verification and recovery across reopen.
   - Essential/optional semantics and free-space protection behave as specified.
   - Windows Update and package work survive required restart cycles.
   - The security baseline is evidence-based and ownership blockers fail closed.
@@ -6416,6 +6443,14 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  completion_phase: execution
+  execution_prerequisites:
+  - kind: capability
+    scope: A live sequence of at least two distinct actions with qualified supported backends and per-action independent verification,
+      restart and reconciliation under the exact approved schedule.
+  - kind: authorization
+    scope: Attributable approval for the exact live schedule and target, with applicable Windows consent at each dispatch.
+    authority: operator
 - id: TL-0601
   title: Implement finalization rules and checklist state
   milestone: M6

@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using Microsoft.Data.Sqlite;
-using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Recovery;
 
@@ -157,15 +156,15 @@ public sealed partial class SqliteJobStore : IPackageRecoveryStore
         SqliteConnection connection, SqliteTransaction transaction, JournalEntry entry, CancellationToken token)
     {
         var plan = await RequireJournalPlanAsync(connection, transaction, entry.Plan, token).ConfigureAwait(false);
-        if (plan is not { IsCurrentPolicyPlan: true, SyntheticData: false, Actions: [var action] } ||
-            action.Request is not InstallPackageActionRequest { Scope: ActionScope.Machine, Architecture: ActionArchitecture.X64 } package ||
-            package.ActionId != entry.ActionId)
+        if (!plan.IsCurrentPolicyPlan || FindPackageJournalAction(plan, entry.ActionId) is null ||
+            (plan.Schedule is not null &&
+                !await HasMatchingPackageDispatchAsync(connection, transaction, entry, entry, token).ConfigureAwait(false)))
         {
             return null;
         }
 
         var approval = await ReadApprovalAsync(connection, transaction, entry.Plan, null, token).ConfigureAwait(false);
-        if (approval is null || approval.ApprovalId != entry.ApprovalId)
+        if (approval is null || approval.Plan != entry.Plan || approval.ApprovalId != entry.ApprovalId)
         {
             return null;
         }

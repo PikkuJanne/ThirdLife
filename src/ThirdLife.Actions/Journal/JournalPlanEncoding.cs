@@ -69,7 +69,7 @@ internal static partial class JournalPlanEncoding
 
     private static ActionSchedule ReadSchedule(JournalPlanKey key, ImmutableArray<JournalAction> actions, JsonElement value)
     {
-        if (actions.Length < 2 || value.GetArrayLength() != actions.Length)
+        if (value.GetArrayLength() != actions.Length)
         {
             throw new JsonException();
         }

@@ -266,6 +266,7 @@ public sealed partial class PackageSetupTests
             var pending = await LoadPackageInterruptionJournalAsync(root, job);
             var approval = Assert.Single(pending.Approvals);
             var action = Assert.Single(pending.Plan.Actions);
+            Assert.Equal(action.ActionId, Assert.Single(pending.Plan.Schedule!.Steps).ActionId);
             JournalState[] expectedStates = holdVerification
                 ? [JournalState.Approved, JournalState.Started, JournalState.Applied]
                 : [JournalState.Approved, JournalState.Started];
@@ -374,9 +375,13 @@ public sealed partial class PackageSetupTests
         Assert.True(window.IsVisible && File.Exists(path), "The launcher did not confirm the durable package intent.");
     }
 
-    private static AuditWorkspace OpenPackageInterruptionWorkspace(string root, IPilotPackageRuntime runtime) =>
-        new(async token => await SqliteJobStore.OpenAsync(Path.Combine(root, "store"), token).ConfigureAwait(false),
-            [OsSample(), SystemSample()], new FixedClock(), packageService: new PilotPackageService(runtime));
+    private static AuditWorkspace OpenPackageInterruptionWorkspace(string root, IPilotPackageRuntime runtime)
+    {
+        var time = new FixedClock();
+        return new(async token => await SqliteJobStore.OpenForTestingAsync(Path.Combine(root, "store"),
+                SqliteJobStore.CurrentSchemaVersion, time, faultInjector: null, token).ConfigureAwait(false),
+            [OsSample(), SystemSample()], time, packageService: new PilotPackageService(runtime));
+    }
 
     private static async Task<JournalHistory> LoadPackageInterruptionJournalAsync(string root, JobId job)
     {

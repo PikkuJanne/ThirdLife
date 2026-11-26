@@ -57,8 +57,15 @@ public static class PackageRetryPolicy
         var ambiguousOrder = false;
         foreach (var history in histories)
         {
-            if (history.Plan is not { SyntheticData: false, Actions: [{ Request: InstallPackageActionRequest package }] } ||
-                !MatchesTarget(package, target))
+            if (history.Plan.SyntheticData ||
+                (history.Plan.Actions.Length != 1 && !JournalStateMachine.IsScheduledPackagePlan(history.Plan)))
+            {
+                continue;
+            }
+
+            var package = history.Plan.Actions.Select(action => action.Request).OfType<InstallPackageActionRequest>()
+                .FirstOrDefault(package => MatchesTarget(package, target));
+            if (package is null)
             {
                 continue;
             }
@@ -67,6 +74,11 @@ public static class PackageRetryPolicy
             JournalEntry? result = null;
             foreach (var entry in history.Entries)
             {
+                if (entry.ActionId != package.ActionId)
+                {
+                    continue;
+                }
+
                 if (IsDispatchIntent(entry.Checkpoint))
                 {
                     attemptCount++;

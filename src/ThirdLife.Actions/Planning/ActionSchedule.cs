@@ -116,7 +116,10 @@ public sealed class ActionSchedule
             entry.State is JournalState.Started or JournalState.Applied or JournalState.RequiresReview);
         var approval = history.ActiveApproval;
         var requiresFreshApproval = history.Plan.Schedule is not null && approval is not null && latest.Values.Any(entry =>
-            entry.Checkpoint == JournalCheckpoint.BrokerPreDispatchFailure && entry.ApprovalId == approval.ApprovalId);
+            entry.ApprovalId == approval.ApprovalId &&
+            (entry.Checkpoint == JournalCheckpoint.BrokerPreDispatchFailure ||
+                entry is { Checkpoint: JournalCheckpoint.PackagePreDispatchFailure, Result: JournalResult.PackageDispatchAuthorizationChanged } or
+                { State: JournalState.Failed, Actor: JournalActor.PackageBackend, Result: JournalResult.AuthorizationDeclined }));
         var progress = ImmutableArray.CreateBuilder<ScheduledActionProgress>(Steps.Length);
         Guid? nextForReview = null;
         foreach (var step in Steps)
@@ -139,6 +142,22 @@ public sealed class ActionSchedule
 
         bool IsVerified(Guid id) => latest.GetValueOrDefault(id)?.State == JournalState.Verified;
     }
+
+    /// <summary>Checks the graph prerequisites and active approval for a selected failed package step.</summary>
+    /// <remarks>The store must also check job-wide recovery, retry eligibility and the prior attempt inside the write transaction.</remarks>
+    public bool CanRetryPackageAction(JournalHistory history, Guid actionId)
+    {
+        var projection = Project(history);
+        if (!JournalStateMachine.IsScheduledPackagePlan(history.Plan) || projection.RequiresRecovery ||
+            projection.RequiresFreshApproval || history.ActiveApproval is not { } approval)
+        {
+            return false;
+        }
+
+        var latest = history.Entries.LastOrDefault(entry => entry.ActionId == actionId);
+        return latest is not null && latest.ApprovalId == approval.ApprovalId && PackageRetryPolicy.IsRetryableFailure(latest) &&
+            projection.Actions.Any(action => action.ActionId == actionId && !action.EarlierPhasePending && action.PendingDependencies.IsEmpty);
+    }
 }
 
 public sealed record ScheduledAction(Guid ActionId, int Phase, ImmutableArray<Guid> Dependencies);
@@ -149,6 +168,6 @@ public sealed record ScheduledActionProgress(Guid ActionId, JournalState State, 
 /// <param name="Actions">Durable progress in schedule order.</param>
 /// <param name="NextForReview">The first dependency-ready action matching the saved active approval. Backend and job-wide admission still apply.</param>
 /// <param name="RequiresRecovery">The journal contains a started, applied or review-required action.</param>
-/// <param name="RequiresFreshApproval">The current approval has a recorded failure before dispatch.</param>
+/// <param name="RequiresFreshApproval">The active approval needs renewal before another action can be dispatched.</param>
 public sealed record ActionScheduleProjection(ImmutableArray<ScheduledActionProgress> Actions, Guid? NextForReview, bool RequiresRecovery,
     bool RequiresFreshApproval);

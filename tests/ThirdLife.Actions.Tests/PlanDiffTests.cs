@@ -207,7 +207,7 @@ public sealed class PlanDiffTests
 
     private static JsonNode FirstApplication(JsonObject catalog) => catalog["applications"]![0]!;
 
-    private static void AddDocumentEditor(JsonObject catalog)
+    internal static void AddDocumentEditor(JsonObject catalog)
     {
         var applications = catalog["applications"]!.AsArray();
         var editor = applications[0]!.DeepClone();

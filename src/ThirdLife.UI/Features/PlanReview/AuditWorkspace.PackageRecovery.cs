@@ -33,14 +33,19 @@ internal sealed partial class AuditWorkspace
         }
 
         var histories = await Task.Run(() => journal.LoadJobJournalsAsync(jobId));
-        var saved = histories
-            .Where(history => PackageHistoryRequest(history)?.ExactVersion == PilotPackageService.Identity.ExactVersion)
-            .Select(history => (History: history, Latest: history.Entries.Last()))
-            .OrderByDescending(attempt => attempt.Latest.OccurredAtUtc)
-            .ToArray();
+        var attempts = new List<(JournalHistory History, InstallPackageActionRequest Request, JournalEntry Latest)>();
+        foreach (var history in histories)
+        {
+            if (PackageHistoryRequest(history) is { } request && request.ExactVersion == PilotPackageService.Identity.ExactVersion)
+            {
+                attempts.Add((history, request, history.Entries.Last(entry => entry.ActionId == request.ActionId)));
+            }
+        }
+
+        var saved = attempts.OrderByDescending(attempt => attempt.Latest.OccurredAtUtc).ToArray();
         var pending = saved.FirstOrDefault(attempt => attempt.Latest.State is
             JournalState.Started or JournalState.Applied or JournalState.RequiresReview);
-        if (pending is not { History: { } history, Latest: { } latest })
+        if (pending is not { History: { } savedHistory, Request: { } savedRequest, Latest: { } latest })
         {
             if (_canInspectSavedPackage)
             {
@@ -59,18 +64,17 @@ internal sealed partial class AuditWorkspace
         Publish();
         try
         {
-            if (_store is IPackageRecoveryStore recovery && history.Plan.IsCurrentPolicyPlan &&
-                history.Plan.GateDecisionId == Gate?.Decision?.DecisionId &&
-                WorkshopPackageProfile.IncludesLaunchProbe(history.Plan) &&
-                history.Plan.Actions is [{ Request: InstallPackageActionRequest request }] &&
-                request.Architecture == ActionArchitecture.X64 && history.ActiveApproval?.ApprovalId == latest.ApprovalId &&
+            if (_store is IPackageRecoveryStore recovery && savedHistory.Plan.IsCurrentPolicyPlan &&
+                savedHistory.Plan.GateDecisionId == Gate?.Decision?.DecisionId &&
+                WorkshopPackageProfile.IncludesLaunchProbe(savedHistory.Plan) &&
+                savedRequest.Architecture == ActionArchitecture.X64 && savedHistory.ActiveApproval?.ApprovalId == latest.ApprovalId &&
                 latest is
                 {
                     State: JournalState.Applied, Actor: JournalActor.PackageBackend,
                     Checkpoint: JournalCheckpoint.PackageLaunchPendingVerification or JournalCheckpoint.RestartRequired
                 })
             {
-                await RecoverAppliedPackageAsync(journal, recovery, service, request, latest);
+                await RecoverAppliedPackageAsync(journal, recovery, service, savedRequest, latest);
                 return;
             }
 

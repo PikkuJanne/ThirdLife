@@ -8,6 +8,24 @@ public static class JournalStateMachine
     { State: JournalState.Approved, Checkpoint: JournalCheckpoint.BrokerApproval } or
     { State: JournalState.Failed, Checkpoint: JournalCheckpoint.BrokerPreDispatchFailure };
 
+    public static bool CanApprovePackageAction(JournalEntry? latest) => latest is null or
+    { State: JournalState.Approved, Checkpoint: JournalCheckpoint.PackagePlanApproval } ||
+        PackageRetryPolicy.IsRetryableFailure(latest);
+
+    /// <summary>Recognizes a bound machine package graph. Each request still needs a qualified backend.</summary>
+    public static bool IsScheduledPackagePlan(JournalPlanSnapshot plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (plan is not { IsCurrentPolicyPlan: true, SyntheticData: false, Schedule: not null })
+        {
+            return false;
+        }
+
+        var packageIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return plan.Actions.All(action => action.Request is InstallPackageActionRequest
+        { Scope: ActionScope.Machine, Architecture: ActionArchitecture.X64 } package && packageIds.Add(package.PackageId));
+    }
+
     public static bool CanAppend(JournalPlanSnapshot plan, JournalApproval? approval, JournalEntry? previous, JournalEntry candidate)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -32,6 +50,13 @@ public static class JournalStateMachine
             return false;
         }
 
+        if (plan.Schedule is not null && action.Request is InstallPackageActionRequest &&
+            (!IsScheduledPackagePlan(plan) || candidate.Checkpoint == JournalCheckpoint.DispatchIntent ||
+                (candidate.State == JournalState.Approved && candidate.Checkpoint != JournalCheckpoint.PackagePlanApproval)))
+        {
+            return false;
+        }
+
         if (candidate.Checkpoint == JournalCheckpoint.PackageRetryDispatchIntent)
         {
             return CanStartPackageRetry(plan, action, previous, candidate);
@@ -52,7 +77,7 @@ public static class JournalStateMachine
 
         if (candidate.Checkpoint == JournalCheckpoint.PackageExistingTargetVerification)
         {
-            return IsSingleLivePackage(plan, action) && previous is
+            return IsLiveMachinePackage(plan, action) && previous is
             { State: JournalState.Started, Actor: JournalActor.Coordinator, Result: JournalResult.None } &&
                 IsPackageDispatchIntent(previous) && candidate.Actor == JournalActor.Verifier &&
                 ((candidate.State == JournalState.Verified && candidate.Result == JournalResult.PackageLaunchVerified &&
@@ -154,15 +179,15 @@ public static class JournalStateMachine
 
     private static bool CanStartPackageRetry(JournalPlanSnapshot plan, JournalAction action, JournalEntry? previous,
         JournalEntry candidate) =>
-        IsSingleLivePackage(plan, action) &&
+        IsLiveMachinePackage(plan, action) &&
         candidate is { State: JournalState.Started, Actor: JournalActor.Coordinator, Result: JournalResult.None, Verification: null } &&
         previous is not null && candidate.CorrelationId != previous.CorrelationId && candidate.ApprovalId == previous.ApprovalId &&
         ((previous is { State: JournalState.Approved, Checkpoint: JournalCheckpoint.PackagePlanApproval }) ||
             (PackageRetryPolicy.IsRetryableFailure(previous) && previous.Result != JournalResult.PackageDispatchAuthorizationChanged &&
                 candidate.PriorAttemptEntryId == previous.EntryId));
 
-    private static bool IsSingleLivePackage(JournalPlanSnapshot plan, JournalAction action) =>
-        plan is { SyntheticData: false, Actions.Length: 1 } &&
+    private static bool IsLiveMachinePackage(JournalPlanSnapshot plan, JournalAction action) =>
+        (plan is { SyntheticData: false, Actions.Length: 1 } || IsScheduledPackagePlan(plan)) &&
         action.Request is InstallPackageActionRequest { Scope: ActionScope.Machine, Architecture: ActionArchitecture.X64 };
 
     private static bool IsPackageDispatchIntent(JournalEntry? entry) =>

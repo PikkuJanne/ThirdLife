@@ -69,9 +69,9 @@ public sealed class ProposedPlan
     public ProposedPlan WithSchedule(IEnumerable<ScheduledAction> steps)
     {
         ArgumentNullException.ThrowIfNull(steps);
-        if (BlockedReason is not null || Actions.Length < 2)
+        if (BlockedReason is not null || Actions.IsEmpty)
         {
-            throw new InvalidOperationException("An action schedule requires a nonblocked proposal with multiple actions.");
+            throw new InvalidOperationException("An action schedule requires a nonblocked proposal with at least one action.");
         }
 
         return new ProposedPlan(_subject, PolicyDecision, BlockedReason, Actions, RecipientChoices, steps);

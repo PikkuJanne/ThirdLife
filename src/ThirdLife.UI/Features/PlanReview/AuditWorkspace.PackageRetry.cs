@@ -96,7 +96,7 @@ internal sealed partial class AuditWorkspace
                 PlanReviewOutcome.Declined;
             var saved = histories.SingleOrDefault(history => history.Plan.Key == key);
             var approval = saved?.ActiveApproval;
-            var previous = saved?.Entries.LastOrDefault();
+            var previous = saved?.Entries.LastOrDefault(entry => entry.ActionId == request.ActionId);
             if (declined || approval is null || !IsFreshPackageApproval(approval) || previous?.ApprovalId != approval.ApprovalId ||
                 (previous.State != JournalState.Approved &&
                     (previous != expected || expected.Result == JournalResult.PackageDispatchAuthorizationChanged)))

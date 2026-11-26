@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
-using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Recovery;
 using ThirdLife.Core.Jobs;
@@ -100,7 +99,11 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
         {
             _layout.ValidateJobDirectory(entry.Plan.JobId);
             var plan = await RequireJournalPlanAsync(connection, transaction, entry.Plan, token).ConfigureAwait(false);
-            if (plan.Schedule is not null)
+            var scheduled = plan.Schedule is not null;
+            var packageDispatch = PackageRetryPolicy.IsDispatchIntent(entry.Checkpoint);
+            if (scheduled && (!JournalStateMachine.IsScheduledPackagePlan(plan) ||
+                (entry.State == JournalState.Started ? !packageDispatch :
+                    entry.State is not (JournalState.Applied or JournalState.Verified or JournalState.Failed or JournalState.RequiresReview))))
             {
                 throw new JobStoreConflictException();
             }
@@ -115,7 +118,9 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
 
             var previous = await ReadLatestActionEntryAsync(connection, transaction, entry, token).ConfigureAwait(false);
             if (previous?.Checkpoint == JournalCheckpoint.BrokerApproval || (IsBrokerOutcome(entry) &&
-                await HasMatchingBrokerDispatchAsync(connection, transaction, entry, previous, token).ConfigureAwait(false)))
+                await HasMatchingBrokerDispatchAsync(connection, transaction, entry, previous, token).ConfigureAwait(false)) ||
+                (scheduled && !packageDispatch &&
+                    !await HasMatchingPackageDispatchAsync(connection, transaction, entry, previous, token).ConfigureAwait(false)))
             {
                 throw new JobStoreConflictException();
             }
@@ -134,7 +139,7 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
             if (needsCurrentApproval)
             {
                 await RequireCurrentJournalPlanAsync(connection, transaction, plan, token).ConfigureAwait(false);
-                if (PackageRetryPolicy.IsDispatchIntent(entry.Checkpoint))
+                if (packageDispatch)
                 {
                     await RequirePackageAttemptAsync(connection, transaction, plan, approval!, entry, token).ConfigureAwait(false);
                 }
@@ -145,7 +150,8 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
             }
 
             await RequireJournalCapacityAsync(connection, transaction, plan.Key,
-                "SELECT count(*) FROM action_journal_entries WHERE job_id = $job_id;", JournalHistory.MaximumEntriesPerJob, token).ConfigureAwait(false);
+                "SELECT count(*) FROM action_journal_entries WHERE job_id = $job_id;", JournalHistory.MaximumEntriesPerJob,
+                scheduled && packageDispatch ? 4 : 1, token).ConfigureAwait(false);
             await InsertJournalEntryAsync(connection, transaction, entry, token).ConfigureAwait(false);
             if (RebootCheckpoint.IsRestartResult(entry, JournalActor.PackageBackend))
             {
@@ -164,21 +170,38 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
             throw new JobStoreConflictException();
         }
 
-        if (plan is not
-            {
-                SyntheticData: false, Actions: [
-                    {
-                        Request: InstallPackageActionRequest
-                        { Scope: ActionScope.Machine, Architecture: ActionArchitecture.X64 } target
-                    }]
-            })
+        if (FindPackageJournalAction(plan, entry.ActionId) is not { } target)
         {
+            if (plan.Actions.Length > 1)
+            {
+                throw new JobStoreConflictException();
+            }
+
             return;
         }
 
         var histories = await ReadJobJournalHistoriesAsync(transaction, plan.Key.JobId, token).ConfigureAwait(false);
         var now = _timeProvider.GetUtcNow();
         var eligibility = PackageRetryPolicy.Evaluate(histories, target, now);
+        var repeatedCorrelation = histories.Any(history => history.Entries.Any(previous =>
+            previous.CorrelationId == entry.CorrelationId && PackageRetryPolicy.IsDispatchIntent(previous.Checkpoint)));
+        if (plan.Schedule is { } schedule)
+        {
+            var current = histories.Single(history => history.Plan.Key == entry.Plan);
+            var isNext = entry.PriorState == JournalState.Failed
+                ? entry.Checkpoint == JournalCheckpoint.PackageRetryDispatchIntent && schedule.CanRetryPackageAction(current, entry.ActionId)
+                : schedule.Project(current).NextForReview == entry.ActionId;
+            if (!isNext || repeatedCorrelation || entry.OccurredAtUtc > now || !PackageRetryPolicy.IsFreshApproval(approval, now))
+            {
+                throw new JobStoreConflictException();
+            }
+
+            // A package may need a boot proof before the next scheduled action is eligible.
+            await RequireJournalCapacityAsync(connection, transaction, plan.Key,
+                "SELECT count(*) FROM reboot_checkpoints WHERE job_id = $job_id;", MaximumRebootCheckpointsPerJob, token)
+                .ConfigureAwait(false);
+        }
+
         if (entry.Checkpoint == JournalCheckpoint.PackageDispatchIntent && eligibility.Status == PackageRetryStatus.Initial)
         {
             return;
@@ -186,8 +209,7 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
 
         if (entry.Checkpoint != JournalCheckpoint.PackageRetryDispatchIntent ||
             eligibility is not { Status: PackageRetryStatus.Ready, LatestAttemptEntry: { } prior, RetryAtUtc: { } retryAt } ||
-            entry.PriorAttemptEntryId != prior.EntryId || histories.Any(history => history.Entries.Any(previous =>
-                previous.CorrelationId == entry.CorrelationId && PackageRetryPolicy.IsDispatchIntent(previous.Checkpoint))) ||
+            entry.PriorAttemptEntryId != prior.EntryId || repeatedCorrelation ||
             entry.OccurredAtUtc < retryAt || entry.OccurredAtUtc > now || !PackageRetryPolicy.IsFreshApproval(approval, now) ||
             (prior.Result == JournalResult.PackageDispatchAuthorizationChanged &&
                 (approval.ApprovalId == prior.ApprovalId || approval.OccurredAtUtc < prior.OccurredAtUtc)))

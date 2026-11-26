@@ -253,6 +253,53 @@ public sealed class JournalTests
     }
 
     [Theory]
+    [InlineData(JournalResult.NetworkUnavailable, JournalCheckpoint.PackagePreDispatchFailure, true, false, PackageRetryStatus.Ready)]
+    [InlineData(JournalResult.PackageDispatchAuthorizationChanged, JournalCheckpoint.PackagePreDispatchFailure, false, true, PackageRetryStatus.Ready)]
+    [InlineData(JournalResult.AuthorizationDeclined, JournalCheckpoint.None, false, true, PackageRetryStatus.Blocked)]
+    [InlineData(JournalResult.OperationFailed, JournalCheckpoint.None, false, false, PackageRetryStatus.Blocked)]
+    public void ScheduledPackageRetryIsScopedToTheFailedTargetAndCurrentApproval(JournalResult result, JournalCheckpoint checkpoint,
+        bool canRetry, bool requiresFreshApproval, PackageRetryStatus expectedRetry)
+    {
+        var proposal = PlanResolverTests.CreateReviewedPlan(adjustCatalog: PlanDiffTests.AddDocumentEditor);
+        var first = Assert.IsType<InstallPackageActionRequest>(proposal.Actions[0].Request);
+        var second = Assert.IsType<InstallPackageActionRequest>(proposal.Actions[1].Request);
+        var scheduled = proposal.WithSchedule([new(first.ActionId, 1, []), new(second.ActionId, 2, [first.ActionId])]);
+        var plan = JournalPlanSnapshot.Create(scheduled, ImpactEstimator.Estimate(scheduled));
+        var approval = Approval(plan);
+        var secondAttempt = Guid.NewGuid();
+        var failure = Entry(plan, second.ActionId, Guid.NewGuid(), JournalState.Started, JournalState.Failed, JournalActor.PackageBackend,
+            result, checkpoint, correlationId: secondAttempt);
+        var history = new JournalHistory(plan, [approval],
+        [
+            Entry(plan, first.ActionId, Guid.NewGuid(), JournalState.Planned, JournalState.Approved, JournalActor.Operator,
+                JournalResult.None, JournalCheckpoint.PackagePlanApproval),
+            Entry(plan, second.ActionId, Guid.NewGuid(), JournalState.Planned, JournalState.Approved, JournalActor.Operator,
+                JournalResult.None, JournalCheckpoint.PackagePlanApproval),
+            Entry(plan, first.ActionId, Guid.NewGuid(), JournalState.Approved, JournalState.Started, JournalActor.Coordinator,
+                JournalResult.None, JournalCheckpoint.PackageDispatchIntent),
+            Entry(plan, first.ActionId, Guid.NewGuid(), JournalState.Started, JournalState.Verified, JournalActor.Verifier,
+                JournalResult.PackageLaunchVerified, JournalCheckpoint.PackageExistingTargetVerification, ActionVerification.ExactPackageIdentity),
+            Entry(plan, second.ActionId, Guid.NewGuid(), JournalState.Approved, JournalState.Started, JournalActor.Coordinator,
+                JournalResult.None, JournalCheckpoint.PackageDispatchIntent, correlationId: secondAttempt),
+            failure,
+        ], approval);
+
+        var schedule = Assert.IsType<ActionSchedule>(plan.Schedule);
+        Assert.True(JournalStateMachine.IsScheduledPackagePlan(plan));
+        Assert.Equal(requiresFreshApproval, schedule.Project(history).RequiresFreshApproval);
+        Assert.False(schedule.CanRetryPackageAction(history, first.ActionId));
+        Assert.Equal(canRetry, schedule.CanRetryPackageAction(history, second.ActionId));
+        Assert.False(schedule.CanRetryPackageAction(new JournalHistory(plan, [approval], history.Entries, null), second.ActionId));
+
+        var now = ApprovalTime.AddMinutes(3);
+        Assert.Equal(PackageRetryStatus.Verified, PackageRetryPolicy.Evaluate([history], first, now).Status);
+        var retry = PackageRetryPolicy.Evaluate([history], second, now);
+        Assert.Equal(expectedRetry, retry.Status);
+        Assert.Equal(1, retry.AttemptCount);
+        Assert.Equal(failure, retry.LatestAttemptEntry);
+    }
+
+    [Theory]
     [InlineData(JournalCheckpoint.PackageDispatchIntent, true)]
     [InlineData(JournalCheckpoint.PackageRetryDispatchIntent, true)]
     [InlineData(JournalCheckpoint.DispatchIntent, false)]
