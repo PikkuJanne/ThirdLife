@@ -4767,7 +4767,7 @@ tasks:
   workstream: execution
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: M
   executor: codex
   environment: windows
@@ -4793,7 +4793,47 @@ tasks:
   verification:
   - Inject cancellation, timeout, network loss, and UI termination during package operations.
   - Confirm the journal and UI distinguish failed, cancelled/review-required, and verified outcomes.
-  evidence: []
+  evidence:
+  - task: TL-0405
+    summary: All 24 package and WPF fixtures passed at the baseline.
+    command_or_review: dotnet test PilotPackageServiceTests and PackageSetupTests excluding ActiveMachine
+    tier: targeted baseline
+    result: passed
+    environment: Active Windows 11 Pro 26H2 native x64, isolated fixtures
+    date: '2026-11-26'
+    duration: 34.703 s combined wall time
+    reference: artifacts/evidence/TL-0405/report.md, source 2cd1bb1
+    limitation: Existing fixtures only.
+  - task: TL-0405
+    summary: Correlated progress, cancellation, timeout, network loss and safe retry or review passed.
+    command_or_review: eng/verify.ps1 -Tier Targeted with Actions, Packages, Persistence, Reports and UI
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 native x64, isolated installer and SQLite fixtures, WPF UI Automation
+    date: '2026-11-26'
+    duration: 145.116 s, 8 work-contract and 1,560 .NET tests
+    reference: artifacts/evidence/TL-0405/report.md, source a9315be
+    limitation: Package faults were injected. No real installer or host network change.
+  - task: TL-0405
+    summary: The terminated WPF process left a reopenable job with read-only review and no repeat dispatch.
+    command_or_review: dotnet test KilledPackageApplicationReopensTheSameJobForReviewWithoutDispatch
+    tier: extended
+    result: passed
+    environment: Active Windows 11 Pro 26H2 native x64, unelevated owned WPF process and isolated SQLite
+    date: '2026-11-26'
+    duration: 6.176 s wall time
+    reference: artifacts/evidence/TL-0405/report.md, source a9315be
+    limitation: Held fixture apply. Native installer continuation and reboot reconciliation remain outside this check.
+  - task: TL-0405
+    summary: Full and the named WPF interruption scenario passed on the clean implementation checkpoint.
+    command_or_review: eng/verify.ps1 -Tier Full -Restore and the named Extended test
+    tier: full and extended
+    result: passed
+    environment: Active Windows 11 Pro 26H2 native x64, same-machine clean worktree
+    date: '2026-11-26'
+    duration: Full 368.793 s and Extended 5.843 s
+    reference: artifacts/evidence/TL-0405/report.md, source a9315be
+    limitation: Full uses the deterministic suite. The independent Extended test used a held fixture adapter.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers:
