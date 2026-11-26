@@ -42,6 +42,7 @@ approval and Windows consent for each plan. M3 technical preparation can proceed
 TL-0405 verified journal-correlated package progress and the saved-job recovery
 paths. Download cancellation or connection loss permits a fresh reviewed
 approval. Installer timeout, reported cancellation and process termination
-leave uncertain attempts in review with a read-only registration check. Next,
-TL-0406 can verify independent package identity and application launch.
+leave uncertain attempts in review with a read-only registration check. A
+streamed connection fault also verified partial installer cleanup. TL-0406 can
+verify independent package identity and application launch.
 [Package interruption evidence](artifacts/evidence/TL-0405/report.md)
