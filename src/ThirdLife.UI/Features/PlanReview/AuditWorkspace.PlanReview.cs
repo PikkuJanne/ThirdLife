@@ -72,7 +72,8 @@ internal sealed partial class AuditWorkspace
         ? Task.CompletedTask
         : RunAsync(async () =>
         {
-            var active = PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } approval ? approval : null;
+            var active = PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } approval &&
+                (!IsPackageProfile || _packageApproval is not null) ? approval : null;
             var changes = _planReviewChanges;
             var savedApproval = _packageApproval;
             var savedBrokerPlan = _brokerPlan;

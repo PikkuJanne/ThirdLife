@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Current status
 
-**Snapshot date** 2026-11-25  
+**Snapshot date** 2026-11-26  
 **Bundle baseline** 0.8.0  
 **Runtime authority** Active Codex machine only. Remote CI is supplementary.  
 **Verified outcomes** One machine-wide package transaction and the reviewed no-op broker
@@ -39,5 +39,9 @@ TL-0318 holds the live guest cases for an attended window with exact WPF
 approval and Windows consent for each plan. M3 technical preparation can proceed.
 [Orchestration evidence](artifacts/evidence/TL-0313/report.md)
 
-The next independent package task is TL-0405, covering progress, cancellation,
-timeout and network loss.
+TL-0405 verified journal-correlated package progress and the saved-job recovery
+paths. Download cancellation or connection loss permits a fresh reviewed
+approval. Installer timeout, reported cancellation and process termination
+leave uncertain attempts in review with a read-only registration check. Next,
+TL-0406 can verify independent package identity and application launch.
+[Package interruption evidence](artifacts/evidence/TL-0405/report.md)

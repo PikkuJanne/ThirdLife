@@ -13,6 +13,7 @@ public partial class PlanReviewView : UserControl
     private IInputElement? _detailsHeaderFocus;
     private string? _announcedStatus;
     private string? _announcedPackageStatus;
+    private string? _announcedPackageRecovery;
 
     public PlanReviewView() => InitializeComponent();
 
@@ -69,6 +70,16 @@ public partial class PlanReviewView : UserControl
             var hadFocus = CancelPackageButton.IsKeyboardFocused;
             workspace.CancelPackageOperation();
             RestoreFocus(PackageSourceMessage, hadFocus);
+        }
+    }
+
+    private async void CheckPackageRecovery(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanCheckPackageRecovery)
+        {
+            var hadFocus = CheckPackageRecoveryButton.IsKeyboardFocused;
+            await workspace.CheckPackageRecoveryAsync();
+            RestoreFocus(PackageRecoveryMessage, hadFocus);
         }
     }
 
@@ -137,7 +148,8 @@ public partial class PlanReviewView : UserControl
             return;
         }
 
-        ref var announced = ref (ReferenceEquals(message, PackageSourceMessage) ? ref _announcedPackageStatus : ref _announcedStatus);
+        ref var announced = ref (ReferenceEquals(message, PackageSourceMessage) ? ref _announcedPackageStatus :
+            ref (ReferenceEquals(message, PackageRecoveryMessage) ? ref _announcedPackageRecovery : ref _announcedStatus));
         if (string.Equals(announced, message.Text, StringComparison.Ordinal))
         {
             return;

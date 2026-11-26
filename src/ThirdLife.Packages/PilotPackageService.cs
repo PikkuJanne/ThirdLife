@@ -5,18 +5,20 @@ namespace ThirdLife.Packages;
 /// <summary>Resolves, applies and observes the one reviewed package without the ThirdLife broker.</summary>
 public sealed class PilotPackageService
 {
-    private static readonly TimeSpan PreparationTimeout = TimeSpan.FromMinutes(2);
-    private static readonly TimeSpan InstallTimeout = TimeSpan.FromMinutes(10);
     private readonly IPilotPackageRuntime runtime;
+    private readonly TimeSpan preparationTimeout;
+    private readonly TimeSpan installTimeout;
     private int installInProgress;
 
     public PilotPackageService() : this(new WindowsInstallerPackageRuntime())
     {
     }
 
-    internal PilotPackageService(IPilotPackageRuntime runtime)
+    internal PilotPackageService(IPilotPackageRuntime runtime, TimeSpan? preparationTimeout = null, TimeSpan? installTimeout = null)
     {
         this.runtime = runtime;
+        this.preparationTimeout = preparationTimeout ?? TimeSpan.FromMinutes(2);
+        this.installTimeout = installTimeout ?? TimeSpan.FromMinutes(10);
     }
 
     public static PilotPackageIdentity Identity { get; } = new(
@@ -47,10 +49,11 @@ public sealed class PilotPackageService
         }
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(PreparationTimeout);
+        deadline.CancelAfter(preparationTimeout);
         try
         {
             using var artifact = await runtime.AcquireAsync(deadline.Token).ConfigureAwait(false);
+            deadline.Token.ThrowIfCancellationRequested();
             return new(PackageResolutionStatus.Ready, observation);
         }
         catch (PackageTrustException)
@@ -62,6 +65,12 @@ public sealed class PilotPackageService
             return new(cancellationToken.IsCancellationRequested
                 ? PackageResolutionStatus.Cancelled : PackageResolutionStatus.TimedOut, observation);
         }
+        catch (Exception error) when (PackageFailure.IsNetwork(error))
+        {
+            var status = cancellationToken.IsCancellationRequested ? PackageResolutionStatus.Cancelled :
+                deadline.IsCancellationRequested ? PackageResolutionStatus.TimedOut : PackageResolutionStatus.NetworkUnavailable;
+            return new(status, observation);
+        }
         catch (Exception error) when (PackageFailure.IsUnavailable(error))
         {
             return new(PackageResolutionStatus.Unavailable, observation);
@@ -71,12 +80,14 @@ public sealed class PilotPackageService
     public async Task<PackageInstallResult> InstallAsync(
         InstallPackageActionRequest request,
         string approvedInstallerSha256,
+        Guid correlationId,
         Func<CancellationToken, Task<bool>> authorizeDispatch,
-        IProgress<PackageInstallStage>? progress,
+        IProgress<PackageInstallProgress>? progress,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(authorizeDispatch);
+        ArgumentOutOfRangeException.ThrowIfEqual(correlationId, Guid.Empty);
         if (!MatchesApproval(request, approvedInstallerSha256))
         {
             return new(PackageInstallStatus.TrustMismatch);
@@ -88,7 +99,8 @@ public sealed class PilotPackageService
         }
 
         IPackageArtifact? artifact = null;
-        var dispatched = false;
+        var artifactTransferred = false;
+        var dispatch = new DispatchBoundary();
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -97,22 +109,32 @@ public sealed class PilotPackageService
                 return existing;
             }
 
-            progress?.Report(PackageInstallStage.Resolving);
-            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            deadline.CancelAfter(PreparationTimeout);
-            artifact = await runtime.AcquireAsync(deadline.Token).ConfigureAwait(false);
-            deadline.Token.ThrowIfCancellationRequested();
+            progress?.Report(new(request.ActionId, correlationId, PackageInstallStage.Resolving));
+            using var preparationDeadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            preparationDeadline.CancelAfter(preparationTimeout);
+            try
+            {
+                artifact = await runtime.AcquireAsync(preparationDeadline.Token).ConfigureAwait(false);
+            }
+            catch (Exception error) when (PackageFailure.IsNetwork(error))
+            {
+                preparationDeadline.Token.ThrowIfCancellationRequested();
+                return new(PackageInstallStatus.NetworkUnavailable);
+            }
+            preparationDeadline.Token.ThrowIfCancellationRequested();
 
             if (GetInstallObservationResult() is { } changed)
             {
                 return changed;
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
-            progress?.Report(PackageInstallStage.Installing);
-            var operation = DispatchAsync(artifact, authorizeDispatch, cancellationToken);
-            dispatched = true;
-            return await operation.WaitAsync(InstallTimeout, cancellationToken).ConfigureAwait(false);
+            preparationDeadline.Token.ThrowIfCancellationRequested();
+            using var installDeadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            installDeadline.CancelAfter(installTimeout);
+            var operation = DispatchAsync(artifact, authorizeDispatch, dispatch,
+                new(request.ActionId, correlationId, PackageInstallStage.Installing), progress, installDeadline.Token, cancellationToken);
+            artifactTransferred = true;
+            return await operation.WaitAsync(installDeadline.Token).ConfigureAwait(false);
         }
         catch (PackageTrustException)
         {
@@ -120,20 +142,26 @@ public sealed class PilotPackageService
         }
         catch (OperationCanceledException)
         {
-            return new(dispatched ? PackageInstallStatus.ReviewRequired : cancellationToken.IsCancellationRequested
-                ? PackageInstallStatus.Cancelled : PackageInstallStatus.TimedOut);
+            var preventedDispatch = dispatch.PreventStart();
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                return new(PackageInstallStatus.TimedOut);
+            }
+
+            return new(preventedDispatch ? PackageInstallStatus.CancelledBeforeDispatch : PackageInstallStatus.ReviewRequired);
         }
         catch (TimeoutException)
         {
-            return new(dispatched ? PackageInstallStatus.ReviewRequired : PackageInstallStatus.TimedOut);
+            dispatch.PreventStart();
+            return new(PackageInstallStatus.TimedOut);
         }
         catch (Exception error) when (PackageFailure.IsUnavailable(error))
         {
-            return new(dispatched ? PackageInstallStatus.ReviewRequired : PackageInstallStatus.Unavailable);
+            return new(artifactTransferred ? PackageInstallStatus.ReviewRequired : PackageInstallStatus.Unavailable);
         }
         finally
         {
-            if (!dispatched)
+            if (!artifactTransferred)
             {
                 artifact?.Dispose();
                 Interlocked.Exchange(ref installInProgress, 0);
@@ -150,7 +178,8 @@ public sealed class PilotPackageService
     };
 
     private async Task<PackageInstallResult> DispatchAsync(IPackageArtifact artifact,
-        Func<CancellationToken, Task<bool>> authorizeDispatch, CancellationToken cancellationToken)
+        Func<CancellationToken, Task<bool>> authorizeDispatch, DispatchBoundary dispatch, PackageInstallProgress installing,
+        IProgress<PackageInstallProgress>? progress, CancellationToken dispatchToken, CancellationToken cancellationToken)
     {
         try
         {
@@ -160,18 +189,28 @@ public sealed class PilotPackageService
                 // Transfer ownership of the read-locked artifact to this operation.
                 return await Task.Run(async () =>
                 {
-                    if (!await authorizeDispatch(cancellationToken).ConfigureAwait(false))
+                    if (!await authorizeDispatch(dispatchToken).ConfigureAwait(false))
                     {
                         return new PackageInstallResult(PackageInstallStatus.PreconditionChanged);
                     }
 
+                    dispatchToken.ThrowIfCancellationRequested();
+                    progress?.Report(installing);
+                    // A cancellation accepted before the stage changed can still be propagating to the linked token.
                     cancellationToken.ThrowIfCancellationRequested();
-                    return await runtime.ApplyAsync(artifact, cancellationToken).ConfigureAwait(false);
-                }, cancellationToken)
+                    dispatchToken.ThrowIfCancellationRequested();
+                    if (!dispatch.TryStart())
+                    {
+                        throw new OperationCanceledException(dispatchToken);
+                    }
+
+                    // Cancelling observation never sends a termination request to Windows Installer.
+                    return await runtime.ApplyAsync(artifact, CancellationToken.None).ConfigureAwait(false);
+                }, dispatchToken)
                     .ConfigureAwait(false);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (dispatch.Started && !dispatchToken.IsCancellationRequested)
         {
             return new(PackageInstallStatus.Cancelled);
         }
@@ -183,6 +222,19 @@ public sealed class PilotPackageService
         {
             Interlocked.Exchange(ref installInProgress, 0);
         }
+    }
+
+    private sealed class DispatchBoundary
+    {
+        private const int Applying = 1;
+        private const int Prevented = 2;
+        private int state;
+
+        public bool Started => Volatile.Read(ref state) == Applying;
+
+        public bool TryStart() => Interlocked.CompareExchange(ref state, Applying, 0) == 0;
+
+        public bool PreventStart() => Interlocked.CompareExchange(ref state, Prevented, 0) != Applying;
     }
 
     private static bool MatchesApproval(InstallPackageActionRequest request, string approvedInstallerSha256) =>
@@ -219,6 +271,7 @@ public enum PackageResolutionStatus
     TrustMismatch,
     Cancelled,
     TimedOut,
+    NetworkUnavailable,
 }
 
 public sealed record PackageInstallResult(PackageInstallStatus Status);
@@ -237,7 +290,11 @@ public enum PackageInstallStatus
     Cancelled,
     TimedOut,
     ReviewRequired,
+    CancelledBeforeDispatch,
+    NetworkUnavailable,
 }
+
+public sealed record PackageInstallProgress(Guid ActionId, Guid CorrelationId, PackageInstallStage Stage);
 
 public enum PackageInstallStage
 {
@@ -256,8 +313,15 @@ internal interface IPackageArtifact : IDisposable;
 
 internal sealed class PackageTrustException(string message = "Package trust validation failed.") : Exception(message);
 
+internal sealed class PackageNetworkException() : Exception("The package download connection was interrupted.");
+
 internal static class PackageFailure
 {
+    public static bool IsNetwork(Exception error) => error is PackageNetworkException or HttpRequestException
+    {
+        HttpRequestError: HttpRequestError.NameResolutionError or HttpRequestError.ConnectionError or HttpRequestError.ResponseEnded,
+    };
+
     public static bool IsUnavailable(Exception error) =>
         error is IOException or UnauthorizedAccessException or System.Security.SecurityException or HttpRequestException
             or System.ComponentModel.Win32Exception or System.Runtime.InteropServices.COMException;

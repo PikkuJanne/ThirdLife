@@ -87,6 +87,14 @@
                VerticalScrollBarVisibility="Auto" Margin="0,6,0,0"
                Visibility="{Binding HasPackageHistory, Converter={StaticResource PlanReviewVisibility}}"
                AutomationProperties.Name="Saved machine-wide setup journal" />
+      <StackPanel Visibility="{Binding ShowsPackageRecovery, Converter={StaticResource PlanReviewVisibility}}">
+        <Button x:Name="CheckPackageRecoveryButton" Content="Check installed package state"
+                IsEnabled="{Binding CanCheckPackageRecovery}" Click="CheckPackageRecovery"
+                Margin="0,4,0,4" HorizontalAlignment="Left" />
+        <TextBlock x:Name="PackageRecoveryMessage" Text="{Binding PackageRecoveryStatus, NotifyOnTargetUpdated=True}"
+                   TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                   AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
+      </StackPanel>
     </StackPanel>
   </GroupBox>
 </UserControl>

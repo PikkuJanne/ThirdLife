@@ -78,7 +78,7 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
                 var buffer = new byte[BufferSize];
                 var downloaded = 0;
                 int count;
-                while ((count = await input.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) != 0)
+                while ((count = await ReadDownloadAsync(input, buffer, cancellationToken).ConfigureAwait(false)) != 0)
                 {
                     downloaded += count;
                     if (downloaded > InstallerLength)
@@ -209,6 +209,19 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
         {
             response.Dispose();
             throw;
+        }
+    }
+
+    private static async ValueTask<int> ReadDownloadAsync(Stream input, Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await input.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+        }
+        catch (IOException)
+        {
+            // Only the network stream is read here. Staging writes and reads have separate failure semantics.
+            throw new PackageNetworkException();
         }
     }
 

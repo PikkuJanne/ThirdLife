@@ -71,6 +71,8 @@ public enum JournalResult
     AuthorizationDeclined,
     TrustMismatch,
     PreconditionChanged,
+    NetworkUnavailable,
+    TimedOut,
 }
 
 public enum JournalCheckpoint
@@ -84,6 +86,7 @@ public enum JournalCheckpoint
     BrokerApproval,
     BrokerDispatchIntent,
     BrokerPreDispatchFailure,
+    PackagePreDispatchFailure,
 }
 
 public sealed record JournalApproval

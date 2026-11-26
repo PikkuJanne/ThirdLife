@@ -367,6 +367,17 @@ dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-r
   --filter "FullyQualifiedName~KilledNoOpApplicationReopensTheSameJobAndReconcilesWithoutDispatch"
 ```
 
+The TL-0405 Extended scenario terminates an owned WPF test process during a held
+package apply. It confirms the journaled intent before termination, reopens the
+same isolated SQLite job through WPF, and exercises read-only registration review.
+The fixture makes no network or Windows Installer calls. Run it on the unelevated
+active Windows 11 machine.
+
+```powershell
+dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore `
+  --filter "FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.KilledPackageApplicationReopensTheSameJobForReviewWithoutDispatch"
+```
+
 TL-0116 adds an independently invokable, unelevated Windows desktop scenario. From the
 verified Release checkout, run:
 
