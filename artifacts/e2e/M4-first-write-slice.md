@@ -219,6 +219,57 @@ deterministic package and recovery cases. A malformed Install plan digest was
 refused by parameter binding before guest admission.
 Quick passed again in 102.991 s after tightening the app-retention guard.
 
+## 26 November 2026 consent follow-through and recovery
+
+The operator reported choosing Yes in the guest for the existing Windows
+Installer prompt. PowerShell Direct observed no remaining consent process or
+console installer client. Windows Installer events 1040 and 1042 matched the
+bound MSI path and recorded the transaction's start and end. The available
+product events and the client-exit audit supplied no installation return code.
+The independent Windows Installer query found the exact machine package absent.
+The durable journal retained one approval, one dispatch intent and a
+`RequiresReview` result with `TimedOut` on that same attempt.
+
+The package backend had removed its own temporary installer artifact. A
+one-shot limited interactive task closed the retained WPF process normally
+after matching its stage, executable digest, PID, start time and session.
+The cleanup inspected the registered session-zero Windows Installer service
+separately from console clients and left the service alone. It removed the
+exact completed runner task and stage in 12.190 s.
+
+Before restarting, `eng/run-m4-package-desktop.ps1 -Reopen -ExpectedRecovery
+RequiresReview` passed in 86.727 s using the original reviewed Release
+artifacts from `20247fb`. The ordinary app rechecked package registration,
+kept the job in review, and generated a workshop report that agreed with the
+saved plan and journal. Installation verification and handover remained
+unavailable. A read-only check after reopening took 4.197 s. It found an
+unchanged journal, zero app, consent and console installer processes and zero
+runner stages. The reopened bundle SHA-256 was
+`0789091e554e1aff90ef369f27931d45a3fda6252aea37032072c3a96b2c3ec7`.
+
+The first `Restart-Computer` request produced no shutdown event or boot change
+within 180 s. The alternate Windows restart checked that the guest was idle,
+that the earlier boot was still current and that no prior shutdown had been
+initiated. The bound guest then ran `shutdown.exe /r /t 0` without forced app
+closure. PowerShell Direct observed changed Windows boot time after 51.897 s.
+The System log had one planned guest restart initiation in that interval.
+
+After startup, the native MSI probe ran by PowerShell Direct and again found
+the exact package absent. The read-only journal fingerprint matched the
+pre-restart journal. The single approval, dispatch and timed-out review result
+survived without another action entry. No app, console installer, consent or
+runner stage remained. A bounded 3.430 s read of the protected report store
+found one matching pre-restart report. It retained the exact plan, machine
+scope and timeout, with no verification result. The new Basic console was
+signed out. Post-restart WPF report observation depends on the existing guest
+account signing in.
+
+Quick with locked restore passed in 159.474 s in the isolated host worktree
+while the guest checks were running. The Release build took 31.90 s and the
+Quick WPF selection took 61 s. The warm Quick repeat passed in 115.046 s with
+1,233 .NET tests and eight governance regressions. The bundle and repository
+validators passed again after the evidence update.
+
 ## Native procedure
 
 Use the exact VM and clean checkpoint IDs from the reviewed profile. Retain the
