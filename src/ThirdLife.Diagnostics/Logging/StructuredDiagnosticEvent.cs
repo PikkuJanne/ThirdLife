@@ -243,6 +243,16 @@ internal static class DiagnosticEventCatalog
         IReadOnlyList<DiagnosticEventField> fields)
     {
         var result = GetValue<DiagnosticResultCode>(fields, DiagnosticEventFieldName.ResultCode);
+        if (eventCode == DiagnosticEventCode.PackageOutcome)
+        {
+            if (!PackageDiagnostic.IsRegisteredEnvelope(component, phase, severity, result, fields))
+            {
+                throw InvalidEnvelope();
+            }
+
+            return;
+        }
+
         var limitation = TryGetValue<DiagnosticLimitationCode>(fields, DiagnosticEventFieldName.LimitationCode);
         var operationEnvelopeValid = eventCode is DiagnosticEventCode.UnhandledException or
             DiagnosticEventCode.RetentionCleanup ||
@@ -390,6 +400,7 @@ internal static class DiagnosticEventCatalog
         DiagnosticEventCode.DiagnosticRejected => SafeMessageKey.DiagnosticRejected,
         DiagnosticEventCode.UnhandledException => SafeMessageKey.UnexpectedFailure,
         DiagnosticEventCode.RetentionCleanup => SafeMessageKey.RetentionCleanup,
+        DiagnosticEventCode.PackageOutcome => SafeMessageKey.PackageOutcome,
         _ => throw new ArgumentOutOfRangeException(nameof(eventCode), eventCode, "The event code is not defined."),
     };
 
@@ -450,6 +461,15 @@ internal static class DiagnosticEventCatalog
                 [
                     DiagnosticEventFieldName.ResultCode,
                     DiagnosticEventFieldName.BoundedCount,
+                    DiagnosticEventFieldName.LimitationCode,
+                ]),
+            DiagnosticEventCode.PackageOutcome => Contract(
+                [DiagnosticEventFieldName.OperationType, DiagnosticEventFieldName.ResultCode, DiagnosticEventFieldName.Retryable],
+                [
+                    DiagnosticEventFieldName.OperationType,
+                    DiagnosticEventFieldName.ResultCode,
+                    DiagnosticEventFieldName.SanitizedErrorCategory,
+                    DiagnosticEventFieldName.Retryable,
                     DiagnosticEventFieldName.LimitationCode,
                 ]),
             _ => throw new ArgumentOutOfRangeException(nameof(eventCode), eventCode, "The event code is not defined."),

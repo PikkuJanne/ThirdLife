@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
+using ThirdLife.Diagnostics.Logging;
 
 namespace ThirdLife.Diagnostics.Redaction;
 
@@ -108,10 +109,14 @@ internal sealed class SupportValue
 
 internal sealed class SupportField
 {
-    public SupportField(SupportFieldName name, SupportValue value)
+    public SupportField(SupportFieldName name, SupportValue value) : this(value, name)
+    {
+        SupportFieldCatalog.Validate(name, value);
+    }
+
+    private SupportField(SupportValue value, SupportFieldName name)
     {
         ArgumentNullException.ThrowIfNull(value);
-        SupportFieldCatalog.Validate(name, value);
         Name = name;
         Value = value;
     }
@@ -119,6 +124,36 @@ internal sealed class SupportField
     public SupportFieldName Name { get; }
 
     public SupportValue Value { get; }
+
+    internal static IEnumerable<SupportField> FromPackageDiagnostic(StructuredDiagnosticEvent diagnosticEvent)
+    {
+        ArgumentNullException.ThrowIfNull(diagnosticEvent);
+        if (diagnosticEvent.EventCode != DiagnosticEventCode.PackageOutcome)
+        {
+            throw new ArgumentException("A registered package outcome is required.", nameof(diagnosticEvent));
+        }
+
+        // The event factory verifies the package contract. Rebuild only the allowed support fields
+        // from registered wire values so local correlations, payloads and build metadata stay local.
+        yield return new SupportField(SupportValue.Code(DiagnosticWireNames.Component(diagnosticEvent.Component)), SupportFieldName.ComponentId);
+        foreach (var field in diagnosticEvent.Fields)
+        {
+            yield return field.Name switch
+            {
+                DiagnosticEventFieldName.OperationType => new SupportField(
+                    SupportValue.Code(DiagnosticWireNames.Operation((DiagnosticOperationType)field.Value)), SupportFieldName.OperationType),
+                DiagnosticEventFieldName.ResultCode => new SupportField(
+                    SupportValue.Code(DiagnosticWireNames.Result((DiagnosticResultCode)field.Value)), SupportFieldName.ResultCode),
+                DiagnosticEventFieldName.SanitizedErrorCategory => new SupportField(
+                    SupportValue.Code(DiagnosticWireNames.ErrorCategory((DiagnosticErrorCategory)field.Value)), SupportFieldName.SanitizedErrorCategory),
+                DiagnosticEventFieldName.Retryable => new SupportField(SupportValue.Boolean((bool)field.Value), SupportFieldName.Retryable),
+                DiagnosticEventFieldName.LimitationCode => new SupportField(
+                    SupportValue.Code(DiagnosticWireNames.Limitation((DiagnosticLimitationCode)field.Value)), SupportFieldName.LimitationCode),
+                _ => throw new DiagnosticContractException(
+                    "support_package_field_unregistered", "The package support field is not registered."),
+            };
+        }
+    }
 }
 
 public sealed class SupportProjection

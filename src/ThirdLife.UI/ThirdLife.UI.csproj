@@ -28,6 +28,7 @@
     <ProjectReference Include="..\ThirdLife.Broker.Protocol\ThirdLife.Broker.Protocol.csproj" />
     <ProjectReference Include="..\ThirdLife.Catalog\ThirdLife.Catalog.csproj" />
     <ProjectReference Include="..\ThirdLife.Core\ThirdLife.Core.csproj" />
+    <ProjectReference Include="..\ThirdLife.Diagnostics\ThirdLife.Diagnostics.csproj" />
     <ProjectReference Include="..\ThirdLife.Inventory\ThirdLife.Inventory.csproj" />
     <ProjectReference Include="..\ThirdLife.Packages\ThirdLife.Packages.csproj" />
     <ProjectReference Include="..\ThirdLife.Persistence\ThirdLife.Persistence.csproj" />

@@ -4,6 +4,15 @@ namespace ThirdLife.Packages.Tests;
 
 public sealed class WindowsInstallerPackageRuntimeTests
 {
+    [Theory]
+    [InlineData(740, PackageInstallStatus.ElevationUnavailable)]
+    [InlineData(1223, PackageInstallStatus.AuthorizationDeclined)]
+    [InlineData(5, PackageInstallStatus.ReviewRequired)]
+    public void InstallerStartErrorUsesKnownNativeCode(int error, PackageInstallStatus expected)
+    {
+        Assert.Equal(expected, WindowsInstallerPackageRuntime.ClassifyInstallerStartFailure(error));
+    }
+
     [Fact]
     [Trait("Category", "Extended")]
     public async Task InterruptedInstallerStreamRemovesPartialStagingAndReportsNetworkLoss()

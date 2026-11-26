@@ -50,5 +50,10 @@ TL-0406 independently confirmed exact machine-wide Notepad++ registration and
 launched the reviewed installed executable in isolation on the active machine.
 The probe cleaned up its process and temporary files. WPF fixtures retained
 distinct applied and verified results through job reopen and report generation.
-TL-0407 can classify the backend and verification failures for operator guidance.
 [Package verification evidence](artifacts/evidence/TL-0406/report.md)
+
+TL-0407 records typed package failure codes and guidance in the app and preserves
+saved attempt results through job reopen and workshop reporting. Protected local
+logs and the support projection omit raw backend details. Next, TL-0408 can use
+these outcomes to reconcile the job after restart or process loss.
+[Package diagnostics evidence](artifacts/evidence/TL-0407/report.md)

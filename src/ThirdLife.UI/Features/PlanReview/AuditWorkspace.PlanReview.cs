@@ -295,6 +295,7 @@ internal sealed partial class AuditWorkspace
         PlanReviewDecision = null;
         _packageApproval = null;
         _packageResolution = null;
+        _packageDiagnosticUnavailable = false;
         ClearBrokerPlan(clearSelection);
         _planReviewChanges = null;
         if (clearSelection)

@@ -162,6 +162,17 @@ dotnet test tests/ThirdLife.Packages.Tests/ThirdLife.Packages.Tests.csproj -c Re
 `artifacts/evidence/TL-0406/report.md` records the results,
 the separate installed-package probe, and their limits.
 
+### TL-0407 malformed package diagnostics
+
+Run on the active Windows machine after locked restore. The Extended case injects
+an oversized exception message with synthetic personal values and malformed Unicode
+during package staging. It checks the WPF outcome, saved journal and workshop report,
+and the exact local diagnostic and support projection. The installer remains idle.
+
+```powershell
+dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter 'FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.PackageDiagnosticsDiscardOversizedMalformedBackendDetails' -- 'RunConfiguration.TreatNoTestsAsError=true'
+```
+
 ## 8. Result record and current state
 
 Every later result records identity/build/tier/command, active reference profile and hosted/constraint settings, fixture hash/provenance, actor/time, checkpoint/injection point, bounds, exact result/evidence class, integrity inspection, recovery/cleanup/residue, artifacts, defects, focused rerun, and limitation. Artifacts are bounded, sanitized, repository-relative or durable references—never raw logs or unrestricted local paths.

@@ -88,20 +88,17 @@ public sealed class PilotPackageService
         {
             return new(PackageResolutionStatus.TrustMismatch, observation);
         }
-        catch (OperationCanceledException)
+        catch (Exception error) when (error is OperationCanceledException or TimeoutException)
         {
             return new(cancellationToken.IsCancellationRequested
                 ? PackageResolutionStatus.Cancelled : PackageResolutionStatus.TimedOut, observation);
         }
-        catch (Exception error) when (PackageFailure.IsNetwork(error))
+        catch (Exception error) when (PackageFailure.IsNetwork(error) || PackageFailure.IsUnavailable(error))
         {
             var status = cancellationToken.IsCancellationRequested ? PackageResolutionStatus.Cancelled :
-                deadline.IsCancellationRequested ? PackageResolutionStatus.TimedOut : PackageResolutionStatus.NetworkUnavailable;
+                deadline.IsCancellationRequested ? PackageResolutionStatus.TimedOut :
+                PackageFailure.IsNetwork(error) ? PackageResolutionStatus.NetworkUnavailable : PackageResolutionStatus.DownloadUnavailable;
             return new(status, observation);
-        }
-        catch (Exception error) when (PackageFailure.IsUnavailable(error))
-        {
-            return new(PackageResolutionStatus.Unavailable, observation);
         }
     }
 
@@ -144,19 +141,36 @@ public sealed class PilotPackageService
             {
                 artifact = await runtime.AcquireAsync(preparationDeadline.Token).ConfigureAwait(false);
             }
-            catch (Exception error) when (PackageFailure.IsNetwork(error))
+            catch (Exception error) when (error is OperationCanceledException or TimeoutException)
             {
-                preparationDeadline.Token.ThrowIfCancellationRequested();
-                return new(PackageInstallStatus.NetworkUnavailable);
+                return new(cancellationToken.IsCancellationRequested
+                    ? PackageInstallStatus.CancelledBeforeDispatch : PackageInstallStatus.DownloadTimedOut);
             }
-            preparationDeadline.Token.ThrowIfCancellationRequested();
+            catch (Exception error) when (PackageFailure.IsNetwork(error) || PackageFailure.IsUnavailable(error))
+            {
+                var status = cancellationToken.IsCancellationRequested ? PackageInstallStatus.CancelledBeforeDispatch :
+                    preparationDeadline.IsCancellationRequested ? PackageInstallStatus.DownloadTimedOut :
+                    PackageFailure.IsNetwork(error) ? PackageInstallStatus.NetworkUnavailable : PackageInstallStatus.DownloadUnavailable;
+                return new(status);
+            }
+
+            if (preparationDeadline.IsCancellationRequested)
+            {
+                return new(cancellationToken.IsCancellationRequested
+                    ? PackageInstallStatus.CancelledBeforeDispatch : PackageInstallStatus.DownloadTimedOut);
+            }
 
             if (GetInstallObservationResult() is { } changed)
             {
                 return changed;
             }
 
-            preparationDeadline.Token.ThrowIfCancellationRequested();
+            if (preparationDeadline.IsCancellationRequested)
+            {
+                return new(cancellationToken.IsCancellationRequested
+                    ? PackageInstallStatus.CancelledBeforeDispatch : PackageInstallStatus.DownloadTimedOut);
+            }
+
             using var installDeadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             installDeadline.CancelAfter(installTimeout);
             var operation = DispatchAsync(artifact, authorizeDispatch, dispatch,
@@ -315,6 +329,7 @@ public enum PackageResolutionStatus
     Cancelled,
     TimedOut,
     NetworkUnavailable,
+    DownloadUnavailable,
 }
 
 public sealed record PackageInstallResult(PackageInstallStatus Status);
@@ -335,6 +350,9 @@ public enum PackageInstallStatus
     ReviewRequired,
     CancelledBeforeDispatch,
     NetworkUnavailable,
+    DownloadUnavailable,
+    DownloadTimedOut,
+    ElevationUnavailable,
 }
 
 public sealed record PackageInstallProgress(Guid ActionId, Guid CorrelationId, PackageInstallStage Stage);

@@ -6,6 +6,9 @@ namespace ThirdLife.Packages.Tests;
 
 public sealed class PilotPackageServiceTests
 {
+    private const string UntrustedBackendDetail = "fixture-user C:\\Users\\fixture-user\\Documents\\private.msi " +
+        "FixtureWifi 192.0.2.14 serial FIXTURE-000123 https://packages.example.invalid/private?token=fixture-secret " +
+        "\0\r\n\u202E\uD800";
     private static readonly PilotPackageIdentity Identity = PilotPackageService.Identity;
     private static readonly Guid Correlation = Guid.NewGuid();
 
@@ -169,14 +172,14 @@ public sealed class PilotPackageServiceTests
     }
 
     [Theory]
-    [InlineData(HttpRequestError.NameResolutionError, PackageInstallStatus.NetworkUnavailable)]
-    [InlineData(HttpRequestError.ConnectionError, PackageInstallStatus.NetworkUnavailable)]
-    [InlineData(HttpRequestError.ResponseEnded, PackageInstallStatus.NetworkUnavailable)]
-    [InlineData(HttpRequestError.InvalidResponse, PackageInstallStatus.Unavailable)]
-    public async Task AcquisitionClassifiesConnectionFailureWithoutBackendText(HttpRequestError error,
-        PackageInstallStatus expected)
+    [InlineData(HttpRequestError.NameResolutionError, PackageResolutionStatus.NetworkUnavailable, PackageInstallStatus.NetworkUnavailable)]
+    [InlineData(HttpRequestError.ConnectionError, PackageResolutionStatus.NetworkUnavailable, PackageInstallStatus.NetworkUnavailable)]
+    [InlineData(HttpRequestError.ResponseEnded, PackageResolutionStatus.NetworkUnavailable, PackageInstallStatus.NetworkUnavailable)]
+    [InlineData(HttpRequestError.InvalidResponse, PackageResolutionStatus.DownloadUnavailable, PackageInstallStatus.DownloadUnavailable)]
+    public async Task AcquisitionClassifiesSourceFailuresWithoutBackendText(HttpRequestError error,
+        PackageResolutionStatus expectedResolution, PackageInstallStatus expectedInstall)
     {
-        var runtime = new FakeRuntime { AcquisitionError = new HttpRequestException(error, "synthetic private detail") };
+        var runtime = new FakeRuntime { AcquisitionError = new HttpRequestException(error, UntrustedBackendDetail) };
         var service = new PilotPackageService(runtime);
         var progress = new RecordingProgress();
 
@@ -184,17 +187,71 @@ public sealed class PilotPackageServiceTests
         var result = await service.InstallAsync(Request(), Identity.InstallerSha256, Correlation, Authorize, progress,
             CancellationToken.None);
 
-        Assert.Equal(expected, result.Status);
-        Assert.Equal(expected == PackageInstallStatus.NetworkUnavailable
-            ? PackageResolutionStatus.NetworkUnavailable : PackageResolutionStatus.Unavailable, resolution.Status);
-        Assert.DoesNotContain("synthetic private detail", result.ToString(), StringComparison.Ordinal);
+        Assert.Equal(new PackageInstallResult(expectedInstall), result);
+        Assert.Equal(new PackageResolution(expectedResolution, new(PackageObservationStatus.Absent)), resolution);
+        Assert.DoesNotContain("fixture-user", result.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("fixture-user", resolution.ToString(), StringComparison.Ordinal);
         Assert.Equal(PackageInstallStage.Resolving, Assert.Single(progress.Updates).Stage);
+        Assert.Equal(0, runtime.Dispatches);
+    }
+
+    [Fact]
+    public async Task StagingUnavailableAndInstallerFailureStayInTheirOwnPhases()
+    {
+        var stagingUnavailable = new FakeRuntime { AcquisitionError = new IOException(UntrustedBackendDetail) };
+        var service = new PilotPackageService(stagingUnavailable);
+        var resolution = await service.ResolveAsync(CancellationToken.None);
+        var staging = await service.InstallAsync(Request(), Identity.InstallerSha256, Correlation, Authorize, null, CancellationToken.None);
+
+        Assert.Equal(new PackageResolution(PackageResolutionStatus.DownloadUnavailable, new(PackageObservationStatus.Absent)), resolution);
+        Assert.Equal(new PackageInstallResult(PackageInstallStatus.DownloadUnavailable), staging);
+        Assert.Equal(0, stagingUnavailable.Dispatches);
+
+        var installerUnavailable = new FakeRuntime { Apply = () => Task.FromException<PackageInstallResult>(new IOException(UntrustedBackendDetail)) };
+        service = new PilotPackageService(installerUnavailable);
+        var apply = await service.InstallAsync(Request(), Identity.InstallerSha256, Correlation, Authorize, null, CancellationToken.None);
+
+        Assert.Equal(new PackageInstallResult(PackageInstallStatus.ReviewRequired), apply);
+        Assert.Equal(1, installerUnavailable.Dispatches);
+        Assert.True(installerUnavailable.Artifact.Disposed);
+    }
+
+    [Fact]
+    public async Task PreparationDeadlineAndExplicitCancellationPreventDispatch()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var runtime = new FakeRuntime
+        {
+            Acquire = async token =>
+            {
+                entered.TrySetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                return new FakeArtifact();
+            },
+        };
+        var service = new PilotPackageService(runtime, preparationTimeout: TimeSpan.Zero);
+
+        Assert.Equal(PackageResolutionStatus.TimedOut,
+            (await service.ResolveAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5))).Status);
+        Assert.Equal(PackageInstallStatus.DownloadTimedOut,
+            (await service.InstallAsync(Request(), Identity.InstallerSha256, Correlation, Authorize, null,
+                CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5))).Status);
+
+        entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        service = new PilotPackageService(runtime);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var pending = service.InstallAsync(Request(), Identity.InstallerSha256, Correlation, Authorize, null, cancellation.Token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await cancellation.CancelAsync();
+
+        Assert.Equal(PackageInstallStatus.CancelledBeforeDispatch, (await pending.WaitAsync(TimeSpan.FromSeconds(5))).Status);
         Assert.Equal(0, runtime.Dispatches);
     }
 
     [Theory]
     [InlineData(PackageInstallStatus.Applied)]
     [InlineData(PackageInstallStatus.AuthorizationDeclined)]
+    [InlineData(PackageInstallStatus.ElevationUnavailable)]
     [InlineData(PackageInstallStatus.RestartRequired)]
     [InlineData(PackageInstallStatus.Cancelled)]
     [InlineData(PackageInstallStatus.Failed)]
@@ -402,6 +459,7 @@ public sealed class PilotPackageServiceTests
         public FakeArtifact Artifact { get; } = new();
         public Exception? AcquisitionError { get; init; }
         public Action<FakeRuntime>? OnAcquisition { get; init; }
+        public Func<CancellationToken, Task<IPackageArtifact>>? Acquire { get; init; }
         public Func<Task<PackageInstallResult>> Apply { get; init; } = () =>
             Task.FromResult(new PackageInstallResult(PackageInstallStatus.Applied));
         public PackageObservation Observation { get; set; } = new(PackageObservationStatus.Absent);
@@ -420,7 +478,8 @@ public sealed class PilotPackageServiceTests
         {
             Acquisitions++;
             OnAcquisition?.Invoke(this);
-            return AcquisitionError is { } error ? Task.FromException<IPackageArtifact>(error) : Task.FromResult<IPackageArtifact>(Artifact);
+            return Acquire?.Invoke(cancellationToken) ?? (AcquisitionError is { } error
+                ? Task.FromException<IPackageArtifact>(error) : Task.FromResult<IPackageArtifact>(Artifact));
         }
 
         public Task<PackageInstallResult> ApplyAsync(IPackageArtifact artifact, CancellationToken cancellationToken)
