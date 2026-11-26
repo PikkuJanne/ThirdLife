@@ -1,9 +1,9 @@
 # Audit workspace and package setup
 
-The unelevated six-stage shell exposes **Go to audit controls**. The workspace
-creates a durable job with generated job and device codes. Copy the displayed job code to
-reopen it. Opening or closing the view leaves existing evidence intact. The job store opens
-on the first create or open action.
+**Jobs** starts the unelevated TRACE workflow. Create a job or open one by
+its code. The stable workshop header shows a selectable copy of the code.
+Closing the job preserves saved evidence. The store opens on the first create
+or open action.
 
 ## Intake and assessment
 
@@ -45,7 +45,8 @@ gate was created through another entry point.
 
 ## Manual checks
 
-The compiled guide describes safe applicable checks, pass/fail criteria and cleanup.
+In **Inspect**, choose **Hardware checks** and select a check. The compiled
+guide describes its procedure, pass and fail criteria, and cleanup.
 Manually record one of **Pass**, **Fail**, **Not run**, and **Not available**. An unavailable
 result requires an applicable reason. Use a brief workshop observation without personal
 data. Detected devices alone cannot pass any manual check. The guide preserves the operator,
@@ -91,7 +92,7 @@ continue to govern device acceptance, finalization and handover.
    Windows Installer applies the approved machine-wide operation. Respond to any
    Windows consent prompt only with actual authority for that action. The ThirdLife
    window stays unelevated.
-4. Review the saved setup journal. ThirdLife independently queries Windows Installer's
+4. Open **Verify** to review the saved setup journal. ThirdLife independently queries Windows Installer's
    machine registration for the exact product and version. The report distinguishes
    verified installation from failure, restart pending, cancellation and review.
    Close and reopen the job by its code, then generate a workshop report from the saved
@@ -113,7 +114,7 @@ qualification. Pilot and public exposure retain their separate decisions.
 
 ## Workshop report
 
-Use **Go to workshop report** from an open job, then **Generate workshop report**.
+Open **Handover** for the current job, then choose **Generate workshop report**.
 Generation rereads the durable job and writes a deterministic UTF-8 text report.
 The report distinguishes collected findings, unknowns, unrun providers, manual
 results and the latest assessment outcome. Earlier findings retain their own

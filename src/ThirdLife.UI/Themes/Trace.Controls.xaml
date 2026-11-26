@@ -1,0 +1,684 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <Style x:Key="Trace.FocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-4" CornerRadius="{DynamicResource Trace.RadiusControl}"
+                            BorderThickness="{DynamicResource Trace.FocusRingThickness}"
+                            BorderBrush="{DynamicResource Trace.FocusRingBrush}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="Trace.MetaText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextSecondaryBrush}" />
+        <Setter Property="FontSize" Value="{DynamicResource Trace.TypeSecondary}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Trace.SelectionTextBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Trace.TitleText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="FontSize" Value="{DynamicResource Trace.TypeTitle}" />
+        <Setter Property="FontWeight" Value="{DynamicResource Trace.WeightBold}" />
+        <Setter Property="AutomationProperties.HeadingLevel" Value="Level2" />
+    </Style>
+    <Style x:Key="Trace.SectionText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="FontSize" Value="{DynamicResource Trace.TypeSection}" />
+        <Setter Property="FontWeight" Value="{DynamicResource Trace.WeightSemibold}" />
+        <Setter Property="AutomationProperties.HeadingLevel" Value="Level3" />
+    </Style>
+    <Style x:Key="Trace.ErrorText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="Foreground" Value="{DynamicResource Trace.StatusErrorBrush}" />
+    </Style>
+    <Style x:Key="Trace.AttentionText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="Foreground" Value="{DynamicResource Trace.StatusAttentionBrush}" />
+    </Style>
+
+    <Style x:Key="Trace.EvidencePanel" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Trace.BgSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.ActionOutlineBrush}" />
+        <Setter Property="BorderThickness" Value="0,3,0,0" />
+        <Setter Property="Padding" Value="{DynamicResource Trace.Inset16}" />
+    </Style>
+    <Style x:Key="Trace.ActionArea" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Trace.BgSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderPassiveBrush}" />
+        <Setter Property="BorderThickness" Value="0,1,0,0" />
+        <Setter Property="Padding" Value="{DynamicResource Trace.Inset16}" />
+    </Style>
+
+    <Style x:Key="Trace.ButtonBase" TargetType="Button">
+        <Setter Property="MinHeight" Value="{DynamicResource Trace.ControlMinHeight}" />
+        <Setter Property="Padding" Value="{DynamicResource Trace.ControlPadding}" />
+        <Setter Property="Margin" Value="0,4,0,4" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="BorderThickness" Value="{DynamicResource Trace.ControlStrokeThickness}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Trace.FocusVisual}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border CornerRadius="{DynamicResource Trace.RadiusControl}"
+                            Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True">
+                            <ContentPresenter.Resources>
+                                <DataTemplate DataType="{x:Type system:String}">
+                                    <AccessText Text="{Binding}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="Button" BasedOn="{StaticResource Trace.ButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Trace.BgSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderControlBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgRaisedBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.ActionOutlineBrush}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgSelectionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource Trace.SelectionTextBrush}" />
+            </Trigger>
+            <Trigger Property="IsDefaulted" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.ActionOutlineBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgDisabledBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderDisabledBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource Trace.TextDisabledBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Trace.PrimaryButton" TargetType="Button" BasedOn="{StaticResource Trace.ButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Trace.ActionFillBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.ActionFillBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.ActionTextBrush}" />
+        <Setter Property="FontWeight" Value="{DynamicResource Trace.WeightSemibold}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.ActionFillHoverBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.ActionFillHoverBrush}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.ActionFillPressedBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.ActionFillPressedBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgDisabledBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderDisabledBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource Trace.TextDisabledBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="Label">
+        <Setter Property="Padding" Value="0,8,0,4" />
+        <Setter Property="FontWeight" Value="{DynamicResource Trace.WeightSemibold}" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Label">
+                    <ContentPresenter Margin="{TemplateBinding Padding}" RecognizesAccessKey="True">
+                        <ContentPresenter.Resources>
+                            <DataTemplate DataType="{x:Type system:String}">
+                                <AccessText Text="{Binding}" TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ContentPresenter.Resources>
+                    </ContentPresenter>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="TextBox">
+        <Setter Property="MinHeight" Value="{DynamicResource Trace.ControlMinHeight}" />
+        <Setter Property="Padding" Value="{DynamicResource Trace.ControlPadding}" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="Background" Value="{DynamicResource Trace.BgSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderControlBrush}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource Trace.ControlStrokeThickness}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource Trace.BgSelectionBrush}" />
+        <Setter Property="SelectionTextBrush" Value="{DynamicResource Trace.SelectionTextBrush}" />
+        <Setter Property="SelectionOpacity" Value="1" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Trace.FocusVisual}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border CornerRadius="{DynamicResource Trace.RadiusControl}" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      IsTabStop="False" Margin="{TemplateBinding Padding}"
+                                      HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
+                                      VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.ActionOutlineBrush}" />
+            </Trigger>
+            <Trigger Property="IsReadOnly" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgCanvasBrush}" />
+            </Trigger>
+            <Trigger Property="Validation.HasError" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.StatusErrorBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource Trace.TextDisabledBrush}" />
+                <Setter Property="Background" Value="{DynamicResource Trace.BgDisabledBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderDisabledBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="CheckBox">
+        <Setter Property="MinHeight" Value="{DynamicResource Trace.ControlMinHeight}" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Trace.FocusVisual}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="Box" Width="20" Height="20" VerticalAlignment="Center"
+                                BorderThickness="{DynamicResource Trace.ControlStrokeThickness}"
+                                BorderBrush="{DynamicResource Trace.BorderControlBrush}"
+                                CornerRadius="{DynamicResource Trace.RadiusControl}"
+                                Background="{DynamicResource Trace.BgSurfaceBrush}">
+                            <Grid>
+                                <Path x:Name="Check" Data="M 4,9 L 7,12 L 13,5" StrokeThickness="2"
+                                      Stroke="{DynamicResource Trace.ActionTextBrush}" Visibility="Collapsed" />
+                                <Border x:Name="Mixed" Width="10" Height="2"
+                                        Background="{DynamicResource Trace.ActionTextBrush}" Visibility="Collapsed" />
+                            </Grid>
+                        </Border>
+                        <ContentPresenter Grid.Column="1" Margin="8,4,0,4" VerticalAlignment="Center"
+                                          RecognizesAccessKey="True">
+                            <ContentPresenter.Resources>
+                                <DataTemplate DataType="{x:Type system:String}">
+                                    <AccessText Text="{Binding}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Trace.ActionOutlineBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Trace.BgRaisedBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Trace.ActionFillBrush}" />
+                            <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="{x:Null}">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Trace.ActionFillBrush}" />
+                            <Setter TargetName="Mixed" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource Trace.TextDisabledBrush}" />
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Trace.BgDisabledBrush}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Trace.BorderDisabledBrush}" />
+                            <Setter TargetName="Check" Property="Stroke" Value="{DynamicResource Trace.TextDisabledBrush}" />
+                            <Setter TargetName="Mixed" Property="Background" Value="{DynamicResource Trace.TextDisabledBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ComboBox">
+        <Setter Property="MinHeight" Value="{DynamicResource Trace.ControlMinHeight}" />
+        <Setter Property="Padding" Value="{DynamicResource Trace.ControlPadding}" />
+        <Setter Property="Background" Value="{DynamicResource Trace.BgSurfaceBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderControlBrush}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource Trace.ControlStrokeThickness}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Trace.FocusVisual}" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <ToggleButton Focusable="False" ClickMode="Press"
+                                      AutomationProperties.Name="Show options"
+                                      IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border Background="Transparent" />
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <Border IsHitTestVisible="False" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource Trace.RadiusControl}" />
+                        <Grid Margin="{TemplateBinding Padding}" IsHitTestVisible="False">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter x:Name="SelectionContent" VerticalAlignment="Center"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}">
+                                <ContentPresenter.Resources>
+                                    <DataTemplate DataType="{x:Type system:String}">
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                                    </DataTemplate>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                            <Path Grid.Column="1" Data="M 0,0 L 5,5 L 10,0" Margin="8,0,0,0" VerticalAlignment="Center"
+                                  Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5" />
+                        </Grid>
+                        <TextBox x:Name="PART_EditableTextBox" Margin="0,0,32,0"
+                                 IsReadOnly="{TemplateBinding IsReadOnly}" Visibility="Collapsed" />
+                        <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True"
+                               IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                               Focusable="False" PopupAnimation="None">
+                            <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                    MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}" Padding="4"
+                                    CornerRadius="{DynamicResource Trace.RadiusFloating}"
+                                    BorderBrush="{DynamicResource Trace.BorderControlBrush}" BorderThickness="1"
+                                    Background="{DynamicResource Trace.BgSurfaceBrush}">
+                                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                                              CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}">
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="SelectionContent" Property="Visibility" Value="Collapsed" />
+                            <Setter Property="IsTabStop" Value="False" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.ActionOutlineBrush}" />
+            </Trigger>
+            <Trigger Property="IsDropDownOpen" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgRaisedBrush}" />
+            </Trigger>
+            <Trigger Property="Validation.HasError" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.StatusErrorBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource Trace.TextDisabledBrush}" />
+                <Setter Property="Background" Value="{DynamicResource Trace.BgDisabledBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderDisabledBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="ComboBoxItem">
+        <Setter Property="MinHeight" Value="{DynamicResource Trace.ControlMinHeight}" />
+        <Setter Property="Padding" Value="{DynamicResource Trace.ControlPadding}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="{DynamicResource Trace.BgSurfaceBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Trace.FocusVisual}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Trace.RadiusControl}">
+                        <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}">
+                            <ContentPresenter.Resources>
+                                <DataTemplate DataType="{x:Type system:String}">
+                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgSelectionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource Trace.SelectionTextBrush}" />
+            </Trigger>
+            <Trigger Property="IsHighlighted" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.ActionFillBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource Trace.ActionTextBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgDisabledBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource Trace.TextDisabledBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="ListBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderPassiveBrush}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource Trace.PassiveRuleThickness}" />
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBox">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                        <ScrollViewer Focusable="False" Padding="{TemplateBinding Padding}"
+                                      CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}"
+                                      HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+                                      VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
+                            <ItemsPresenter />
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ListBoxItem">
+        <Setter Property="MinHeight" Value="{DynamicResource Trace.ControlMinHeight}" />
+        <Setter Property="Padding" Value="{DynamicResource Trace.ControlPadding}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderPassiveBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Trace.FocusVisual}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                        <Grid>
+                            <Border x:Name="SelectionBar" HorizontalAlignment="Left"
+                                    Width="{DynamicResource Trace.SelectionBarWidth}" Visibility="Collapsed"
+                                    Background="{DynamicResource Trace.SelectionIndicatorBrush}" />
+                            <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="SelectionBar" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgRaisedBrush}" />
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgSelectionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource Trace.SelectionTextBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgDisabledBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource Trace.TextDisabledBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Trace.StageItem" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Margin" Value="4,0,4,4" />
+    </Style>
+    <Style x:Key="Trace.FindingRow" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="AutomationProperties.Name" Value="{Binding DisplayName}" />
+        <Setter Property="AutomationProperties.ItemStatus" Value="{Binding Evidence}" />
+    </Style>
+
+    <Style TargetType="GroupBox">
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderPassiveBrush}" />
+        <Setter Property="Padding" Value="0,12,0,0" />
+        <Setter Property="Margin" Value="0,0,0,16" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Trace.FocusVisual}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="GroupBox">
+                    <StackPanel>
+                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+                            <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"
+                                              TextElement.FontSize="{DynamicResource Trace.TypeSection}"
+                                              TextElement.FontWeight="{DynamicResource Trace.WeightSemibold}" />
+                        </Border>
+                        <ContentPresenter Margin="{TemplateBinding Padding}" />
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="Expander">
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Expander">
+                    <StackPanel>
+                        <ToggleButton x:Name="ExpanderToggle" Content="{TemplateBinding Header}"
+                                      ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                      ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"
+                                      IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                      HorizontalContentAlignment="Left" MinHeight="{DynamicResource Trace.ControlMinHeight}"
+                                      Foreground="{TemplateBinding Foreground}" FocusVisualStyle="{StaticResource Trace.FocusVisual}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="HeaderBorder" Background="{DynamicResource Trace.BgSurfaceBrush}"
+                                            BorderBrush="{DynamicResource Trace.BorderControlBrush}" BorderThickness="1"
+                                            CornerRadius="{DynamicResource Trace.RadiusControl}" Padding="12,8">
+                                        <DockPanel>
+                                            <Path x:Name="Chevron" Data="M 0,0 L 5,5 L 0,10" StrokeThickness="1.5"
+                                                  Stroke="{TemplateBinding Foreground}" VerticalAlignment="Center" Margin="0,0,12,0"
+                                                  RenderTransformOrigin="0.5,0.5" />
+                                            <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True">
+                                                <ContentPresenter.Resources>
+                                                    <DataTemplate DataType="{x:Type system:String}">
+                                                        <AccessText Text="{Binding}" TextWrapping="Wrap" />
+                                                    </DataTemplate>
+                                                </ContentPresenter.Resources>
+                                            </ContentPresenter>
+                                        </DockPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="Chevron" Property="RenderTransform">
+                                                <Setter.Value>
+                                                    <RotateTransform Angle="90" />
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource Trace.BgRaisedBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource Trace.ActionOutlineBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource Trace.BorderDisabledBrush}" />
+                                            <Setter TargetName="Chevron" Property="Stroke" Value="{DynamicResource Trace.TextDisabledBrush}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource Trace.TextDisabledBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <ContentPresenter x:Name="ExpandSite" Margin="0,8,0,0" Visibility="Collapsed" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="True">
+                            <Setter TargetName="ExpandSite" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="DatePicker">
+        <Setter Property="MinHeight" Value="{DynamicResource Trace.ControlMinHeight}" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="Background" Value="{DynamicResource Trace.BgSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderControlBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Trace.FocusVisual}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DatePicker">
+                    <Grid x:Name="PART_Root">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <DatePickerTextBox x:Name="PART_TextBox" VerticalContentAlignment="Center" Padding="12,8"
+                                           Foreground="{TemplateBinding Foreground}" Background="{TemplateBinding Background}"
+                                           BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                                           FocusVisualStyle="{StaticResource Trace.FocusVisual}" />
+                        <Button x:Name="PART_Button" Grid.Column="1" Margin="4,0,0,0"
+                                AutomationProperties.Name="Open calendar">
+                            <Path Data="M 0,2 L 14,2 14,14 0,14 Z M 0,6 L 14,6 M 4,0 L 4,4 M 10,0 L 10,4"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.5" />
+                        </Button>
+                        <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Bottom" PopupAnimation="None"
+                               PlacementTarget="{Binding ElementName=PART_TextBox}" Focusable="False" StaysOpen="False" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Validation.HasError" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.StatusErrorBrush}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource Trace.TextDisabledBrush}" />
+                <Setter Property="Background" Value="{DynamicResource Trace.BgDisabledBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderDisabledBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="ProgressBar">
+        <Setter Property="MinHeight" Value="8" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.ActionFillBrush}" />
+        <Setter Property="Background" Value="{DynamicResource Trace.BgRaisedBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderControlBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" CornerRadius="{DynamicResource Trace.RadiusControl}" ClipToBounds="True">
+                        <Grid>
+                            <Border x:Name="PART_Track" />
+                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{TemplateBinding Foreground}" />
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsIndeterminate" Value="True">
+                            <Setter TargetName="PART_Indicator" Property="Background" Value="{DynamicResource Trace.BorderControlBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="TabControl">
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="Background" Value="{DynamicResource Trace.BgCanvasBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Trace.BorderPassiveBrush}" />
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="Local" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid KeyboardNavigation.TabNavigation="Local">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Border BorderThickness="0,0,0,1" BorderBrush="{TemplateBinding BorderBrush}">
+                            <TabPanel x:Name="HeaderPanel" IsItemsHost="True" Margin="4" KeyboardNavigation.TabIndex="1" />
+                        </Border>
+                        <Border Grid.Row="1" Background="{TemplateBinding Background}" Padding="0,12,0,0">
+                            <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent"
+                                              KeyboardNavigation.TabIndex="2" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="TabItem">
+        <Setter Property="MinHeight" Value="{DynamicResource Trace.ControlMinHeight}" />
+        <Setter Property="Padding" Value="{DynamicResource Trace.ControlPadding}" />
+        <Setter Property="Foreground" Value="{DynamicResource Trace.TextPrimaryBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Trace.FocusVisual}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="0,0,0,3" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True">
+                            <ContentPresenter.Resources>
+                                <DataTemplate DataType="{x:Type system:String}">
+                                    <AccessText Text="{Binding}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgRaisedBrush}" />
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Trace.BgSelectionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource Trace.SelectionTextBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Trace.SelectionIndicatorBrush}" />
+                <Setter Property="FontWeight" Value="{DynamicResource Trace.WeightSemibold}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource Trace.TextDisabledBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+</ResourceDictionary>

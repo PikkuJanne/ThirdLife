@@ -1,6 +1,7 @@
 using System.Windows;
 using ThirdLife.Inventory.Windows;
 using ThirdLife.UI.Shell;
+using ThirdLife.UI.Themes;
 
 namespace ThirdLife.UI;
 
@@ -12,12 +13,13 @@ public partial class App : Application
         var refusal = StartupSafety.OpenShell(
             WindowsPlatform.CheckCurrent(), StartupSafety.CheckCurrentProcess(), () =>
             {
-                MainWindow = new MainWindow(new ShellViewModel(), AuditWorkspace.CreateLive());
+                MainWindow = new MainWindow(AuditWorkspace.CreateLive(), persistAppearance: true);
                 MainWindow.Show();
             });
         if (refusal is not null)
         {
-            MessageBox.Show(refusal, "ThirdLife Setup Core", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            TraceNotice.ShowMessage("ThirdLife Setup Core", refusal);
             Shutdown(1);
         }
     }

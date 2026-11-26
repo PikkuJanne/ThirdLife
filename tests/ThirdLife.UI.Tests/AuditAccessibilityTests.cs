@@ -27,27 +27,28 @@ public sealed class AuditAccessibilityTests
         var workspace = disk.OpenWorkspace([provider]);
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow(new ShellViewModel(), workspace) { Width = 640, Height = 420 };
+            var window = new MainWindow(workspace) { Width = 640, Height = 420 };
             try
             {
                 ShellTestHost.Show(window);
-                var entry = ShellTestHost.Element<Button>(window, "OpenAuditWorkspaceButton");
-                Assert.True(entry.Focus());
-                Assert.NotEmpty(ShellTestHost.ButtonPeer(entry).GetName());
-                ShellTestHost.Invoke(window, "OpenAuditWorkspaceButton");
-
                 var view = Named<FrameworkElement>(window, "AuditView");
                 Assert.True(view.IsVisible);
-                Assert.Same(Named<GroupBox>(view, "JobRegion"), Keyboard.FocusedElement);
                 var create = Named<Button>(view, "CreateJobButton");
+                Assert.Same(create, Keyboard.FocusedElement);
                 var jobIdInput = Named<TextBox>(view, "JobIdInput");
                 var open = Named<Button>(view, "OpenJobButton");
                 Assert.True(create.Focus());
                 Assert.Equal("Create job", ShellTestHost.ButtonPeer(create).GetName());
                 NextIs(window, jobIdInput);
                 Assert.Equal("Job identifier to open", AutomationProperties.GetName(jobIdInput));
-                jobIdInput.Text = "job-fixture-lookup";
+                jobIdInput.Text = "/";
                 NextIs(window, open);
+                Invoke(window, open);
+                PumpUntil(window, () => workspace.OperationError.Length != 0);
+                Assert.Equal("/", jobIdInput.Text);
+                var error = Named<TextBlock>(view, "OperationErrorMessage");
+                Assert.True(error.IsVisible);
+                Assert.Equal(AutomationLiveSetting.Polite, new TextBlockAutomationPeer(error).GetLiveSetting());
 
                 var start = Named<Button>(view, "StartAssessmentButton");
                 Assert.False(ShellTestHost.ButtonPeer(start).IsEnabled());
@@ -72,7 +73,9 @@ public sealed class AuditAccessibilityTests
                 Named<DatePicker>(view, "SanitizationDate").SelectedDate = new DateTime(2026, 10, 1);
                 Named<TextBox>(view, "SanitizationMediaId").Text = "fixture-media";
                 Named<CheckBox>(view, "ExternalRecordConfirmed").IsChecked = true;
-                Invoke(window, Named<Button>(view, "RecordSanitizationButton"));
+                var saveIntake = Named<Button>(view, "RecordSanitizationButton");
+                Assert.True(saveIntake.Focus());
+                Invoke(window, saveIntake);
                 PumpUntil(window, () => workspace.CanAssess);
                 Assert.True(start.IsEnabled);
                 Assert.True(start.Focus());
@@ -81,17 +84,20 @@ public sealed class AuditAccessibilityTests
                 PumpUntil(window, () => workspace.Assessment is not null && workspace.CanEditJob);
                 var assessment = new TextBlockAutomationPeer(Named<TextBlock>(view, "AssessmentMessage"));
                 Assert.Equal(AutomationLiveSetting.Polite, assessment.GetLiveSetting());
-                Assert.Contains("readiness", assessment.GetName(), StringComparison.OrdinalIgnoreCase);
+                Assert.Contains("Assessment complete", assessment.GetName(), StringComparison.OrdinalIgnoreCase);
                 Assert.Equal(1, provider.InvocationCount);
 
+                Named<TabItem>(view, "HardwareChecksTab").IsSelected = true;
+                ShellTestHost.Drain(window);
                 var manualCheck = Named<ComboBox>(view, "ManualCheck");
-                manualCheck.SelectedItem = Assert.Single(ManualTestCatalog.Cases, static item => item.Id == "MHT-002");
+                manualCheck.SelectedValue = "MHT-002";
                 Assert.True(manualCheck.Focus());
                 var manualOutcome = Named<ComboBox>(view, "ManualOutcome");
                 Assert.False(Named<ComboBoxItem>(view, "ManualPassOption").IsEnabled);
                 Assert.False(Named<ComboBoxItem>(view, "ManualFailOption").IsEnabled);
                 MoveNext(window);
                 Assert.IsType<ToggleButton>(Keyboard.FocusedElement);
+                NextIs(window, Named<TextBox>(view, "ManualOperatorCode"));
                 NextIs(window, manualOutcome);
                 manualOutcome.SelectedValue = HumanTestResult.NotAvailable;
                 var reason = Named<ComboBox>(view, "ManualUnavailableReason");
@@ -109,8 +115,9 @@ public sealed class AuditAccessibilityTests
                     () => Named<TextBlock>(view, "ManualInputError").Text);
                 Assert.Equal(HumanTestResult.NotAvailable, Assert.Single(workspace.Job!.HumanTests).TestResult);
 
-                Invoke(window, Named<Button>(view, "ReturnFromAuditButton"));
-                Assert.Same(window.FindName("IntakeButton"), Keyboard.FocusedElement);
+                ShellTestHost.Invoke(window, "JobsButton");
+                Assert.Same(create, Keyboard.FocusedElement);
+                Assert.NotNull(workspace.Job);
             }
             finally { CloseWindow(window); }
         });
@@ -147,6 +154,8 @@ public sealed class AuditAccessibilityTests
             {
                 ShellTestHost.Show(window);
                 var view = Named<FrameworkElement>(window, "AuditView");
+                window.ShowStage(ShellStage.Inspect);
+                ShellTestHost.Drain(window);
                 Invoke(window, Named<Button>(view, "GoToSanitizationButton"));
                 var complete = Named<Button>(view, "CompleteSavedSanitizationButton");
                 Assert.Same(complete, Keyboard.FocusedElement);
@@ -176,22 +185,25 @@ public sealed class AuditAccessibilityTests
             await workspace.RecordSanitizationAsync(VerifiedSample());
             ShellTestHost.Run(() =>
             {
-                var model = new ShellViewModel();
-                var window = new MainWindow(model, workspace) { Width = 640, Height = 420 };
+                var window = new MainWindow(workspace) { Width = 640, Height = 420 };
                 try
                 {
                     ShellTestHost.Show(window);
                     var view = Named<FrameworkElement>(window, "AuditView");
+                    window.ShowStage(ShellStage.Inspect);
+                    ShellTestHost.Drain(window);
                     var start = Named<Button>(view, "StartAssessmentButton");
                     Invoke(window, start);
                     PumpUntil(window, () => entered.Task.IsCompleted && workspace.CanCancel);
 
-                    ShellTestHost.Invoke(window, "InspectButton");
-                    Assert.Equal(ShellStage.Inspect, model.SelectedStage);
-                    Assert.True(workspace.IsAssessmentRunning);
-                    ShellTestHost.Invoke(window, "OpenAuditWorkspaceButton");
+                    window.ShowStage(ShellStage.Handover);
                     var cancel = Named<Button>(view, "CancelAssessmentButton");
-                    Assert.Same(cancel, Keyboard.FocusedElement);
+                    Assert.False(cancel.IsVisible);
+                    Assert.True(workspace.IsAssessmentRunning);
+                    window.ShowStage(ShellStage.Inspect);
+                    ShellTestHost.Drain(window);
+                    Assert.True(cancel.IsVisible);
+                    Assert.True(cancel.Focus());
                     var cancelPeer = ShellTestHost.ButtonPeer(cancel);
                     Assert.Equal("Cancel assessment", cancelPeer.GetName());
                     Assert.True(cancelPeer.IsKeyboardFocusable());

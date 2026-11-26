@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
@@ -5,285 +6,221 @@ using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
+using ThirdLife.UI.Features.ManualTests;
 using ThirdLife.UI.Shell;
+using ThirdLife.UI.Themes;
+using static ThirdLife.UI.Tests.AuditAccessibilityTests;
 
 namespace ThirdLife.UI.Tests;
 
 [Collection(ShellWindowChecks.Name)]
 public sealed class ShellAccessibilityTests
 {
-    private static readonly string[] AvailableStageButtons = ["IntakeButton", "InspectButton"];
-    private static readonly string[] LaterStageCriteria = ["DecideCriteria", "PrepareCriteria", "VerifyCriteria", "HandoverCriteria"];
-    private static readonly string[] LongTextTargets = ["RequirementsText", "EvidenceText", "PlanText", "PrepareCriteria"];
-
     [Fact]
-    public void AutomationNavigationChangesReviewAndExposesCurrentStageWithoutLosingFocus()
+    public void StageSelectionExposesAllSixDestinationsWithoutStartingAnyJobWork()
     {
+        using var fixture = new M1AuditFixture();
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow();
+            var workspace = fixture.CreateWorkspace();
+            var window = new MainWindow(workspace);
             try
             {
                 ShellTestHost.Show(window);
-                var intake = ShellTestHost.Element<Button>(window, "IntakeButton");
-                var inspect = ShellTestHost.Element<Button>(window, "InspectButton");
-                Assert.Same(intake, FocusManager.GetFocusedElement(window));
-                Assert.True(inspect.Focus());
-                ShellTestHost.Invoke(window, "InspectButton");
-                Assert.Same(inspect, Keyboard.FocusedElement);
-                Assert.Equal("Inspect", ShellTestHost.Element<TextBlock>(window, "StageHeading").Text);
-                Assert.Contains("no assessment has been run", AutomationProperties.GetHelpText(ShellTestHost.Element<GroupBox>(window, "StageReview")), StringComparison.Ordinal);
-                Assert.Equal("Current review stage", ShellTestHost.ButtonPeer(inspect).GetItemStatus());
-                Assert.Equal("Available for review", ShellTestHost.ButtonPeer(intake).GetItemStatus());
-                var status = ShellTestHost.Element<TextBlock>(window, "StatusAnnouncement");
-                var peer = new TextBlockAutomationPeer(status);
-                Assert.Equal(status.Text, peer.GetName());
-                Assert.Contains("Inspect selected", peer.GetName(), StringComparison.Ordinal);
-                Assert.Equal(AutomationLiveSetting.Polite, peer.GetLiveSetting());
-                ShellTestHost.Invoke(window, "IntakeButton");
-                Assert.Equal("Intake", ShellTestHost.Element<TextBlock>(window, "StageHeading").Text);
-            }
-            finally { window.Close(); }
-        });
-    }
+                var audit = Named<AuditWorkspaceView>(window, "AuditView");
+                var jobs = Named<FrameworkElement>(audit, "JobRegion");
+                var create = Named<Button>(audit, "CreateJobButton");
+                Assert.True(jobs.IsVisible);
+                Assert.Same(create, Keyboard.FocusedElement);
+                var stageList = Named<ListBox>(window, "StageList");
+                var stageListPeer = new ListBoxAutomationPeer(stageList);
+                Assert.NotNull(stageListPeer.GetPattern(PatternInterface.Selection));
+                Assert.Equal(6, stageList.Items.Count);
+                var stageItems = stageList.Items.Cast<ListBoxItem>().ToArray();
+                var navigation = new TextBlockAutomationPeer(Named<TextBlock>(window, "NavigationStatus"));
+                Assert.Equal(AutomationLiveSetting.Polite, navigation.GetLiveSetting());
 
-    [Fact]
-    public void KeyboardTraversalReachesReviewRegionsAndSkipsUnavailableStages()
-    {
-        ShellTestHost.Run(() =>
-        {
-            var window = new MainWindow();
-            try
-            {
-                ShellTestHost.Show(window);
-                Assert.True(ShellTestHost.Element<Button>(window, "SkipToReviewButton").Focus());
-                NextIs(window, "WorkflowStages");
-                NextIs(window, "IntakeButton");
-                NextIs(window, "InspectButton");
-                NextIs(window, "StageReview");
-                NextIs(window, "RequirementsRegion");
-                NextIs(window, "EvidenceRegion");
-                NextIs(window, "PlanRegion");
-                MoveNext(window);
-                Assert.True(ShellTestHost.Element<Expander>(window, "EvidenceDetails").IsKeyboardFocusWithin);
-                NextIs(window, "ActivityRegion");
-                NextIs(window, "BatterySafetyRegion");
-                NextIs(window, "ReturnToStagesButton");
-                NextIs(window, "SkipToReviewButton");
-            }
-            finally { window.Close(); }
-        });
-    }
-
-    [Fact]
-    public void SkipAndReturnRestoreContextForBothReviewStages()
-    {
-        ShellTestHost.Run(() =>
-        {
-            var window = new MainWindow { Width = 480, Height = 320 };
-            try
-            {
-                ShellTestHost.Show(window);
-                foreach (var stageButton in AvailableStageButtons)
+                foreach (ShellStage stage in Enum.GetValues<ShellStage>())
                 {
-                    ShellTestHost.Invoke(window, stageButton);
-                    ShellTestHost.Invoke(window, "SkipToReviewButton");
-                    Assert.Same(window.FindName("StageReview"), Keyboard.FocusedElement);
-                    ShellTestHost.Invoke(window, "ReturnToStagesButton");
-                    Assert.Same(window.FindName(stageButton), Keyboard.FocusedElement);
-                }
-            }
-            finally { window.Close(); }
-        });
-    }
-
-    [Fact]
-    public void KeyboardPagingCanExposeUnavailableStageCriteriaInSmallViewport()
-    {
-        ShellTestHost.Run(() =>
-        {
-            var window = new MainWindow { Width = 480, Height = 320 };
-            try
-            {
-                ShellTestHost.Show(window);
-                var region = ShellTestHost.Element<GroupBox>(window, "WorkflowStages");
-                var scroll = ShellTestHost.Element<ScrollViewer>(window, "ShellScroll");
-                Assert.True(region.Focus());
-                scroll.ScrollToTop();
-                ShellTestHost.Drain(window);
-                var source = PresentationSource.FromVisual(region);
-                Assert.NotNull(source);
-                var visibleCriteria = new HashSet<string>(StringComparer.Ordinal);
-                var coveredText = new Dictionary<string, double>(StringComparer.Ordinal);
-                for (var page = 0; page < 12 && visibleCriteria.Count < 4; page++)
-                {
-                    foreach (var name in LaterStageCriteria)
+                    var item = Named<ListBoxItem>(window, stage + "Stage");
+                    var peer = new ListBoxItemAutomationPeer(item, stageListPeer);
+                    Assert.Equal(stage.ToString(), peer.GetName());
+                    Assert.Equal("Stage" + stage, peer.GetAutomationId());
+                    var selection = Assert.IsAssignableFrom<ISelectionItemProvider>(peer.GetPattern(PatternInterface.SelectionItem));
+                    Assert.True(item.Focus());
+                    selection.Select();
+                    ShellTestHost.Drain(window);
+                    Assert.True(selection.IsSelected);
+                    Assert.Same(item, Keyboard.FocusedElement);
+                    Assert.NotNull(item.FocusVisualStyle);
+                    Assert.Equal($"{stage} opened.", navigation.GetName());
+                    Assert.Single(stageItems, item => item.IsSelected);
+                    Assert.False(jobs.IsVisible);
+                    foreach (ShellStage stageSurface in Enum.GetValues<ShellStage>())
                     {
-                        var criteria = ShellTestHost.Element<TextBlock>(window, name);
-                        var bounds = criteria.TransformToAncestor(scroll).TransformBounds(new Rect(criteria.RenderSize));
-                        var start = Math.Max(0, scroll.Padding.Top - bounds.Top);
-                        var end = Math.Min(bounds.Height, scroll.ActualHeight - scroll.Padding.Bottom - bounds.Top);
-                        if (end > start)
-                        {
-                            coveredText.TryGetValue(name, out var previousEnd);
-                            Assert.True(start <= previousEnd + 1, "Keyboard paging skipped part of the criteria text.");
-                            coveredText[name] = Math.Max(previousEnd, end);
-                            if (end >= bounds.Height - 1) { visibleCriteria.Add(name); }
-                        }
+                        Assert.Equal(stageSurface == stage, Named<FrameworkElement>(audit, stageSurface + "Surface").IsVisible);
                     }
-                    var args = new KeyEventArgs(Keyboard.PrimaryDevice, source, Environment.TickCount, Key.PageDown)
-                    { RoutedEvent = Keyboard.KeyDownEvent };
-                    region.RaiseEvent(args);
-                    ShellTestHost.Drain(window);
+                    Assert.Null(workspace.Job);
+                    Assert.Null(workspace.Assessment);
+                    Assert.False(workspace.HasPlanReview);
+                    Assert.False(workspace.IsBusy);
                 }
-                Assert.Equal(4, visibleCriteria.Count);
-                Assert.True(scroll.VerticalOffset > 0);
-                var previousOffset = scroll.VerticalOffset;
-                region.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, source, Environment.TickCount, Key.PageUp)
-                { RoutedEvent = Keyboard.KeyDownEvent });
-                ShellTestHost.Drain(window);
-                Assert.True(scroll.VerticalOffset < previousOffset);
-            }
-            finally { window.Close(); }
-        });
-    }
 
-    [Theory]
-    [InlineData("Decide")]
-    [InlineData("Prepare")]
-    [InlineData("Verify")]
-    [InlineData("Handover")]
-    public void UnavailableStagesRejectAutomationAndKeepRequirementsExposed(string stage)
-    {
-        ShellTestHost.Run(() =>
-        {
-            var window = new MainWindow();
-            try
-            {
-                ShellTestHost.Show(window);
-                var button = ShellTestHost.Element<Button>(window, stage + "Button");
-                var peer = ShellTestHost.ButtonPeer(button);
-                var criteria = ShellTestHost.Element<TextBlock>(window, stage + "Criteria");
-                Assert.Contains("unavailable", peer.GetName(), StringComparison.Ordinal);
-                Assert.False(peer.IsEnabled());
-                Assert.False(peer.IsKeyboardFocusable());
-                var invoke = Assert.IsAssignableFrom<IInvokeProvider>(peer.GetPattern(PatternInterface.Invoke));
-                Assert.Throws<ElementNotEnabledException>(invoke.Invoke);
-                Assert.True(criteria.IsVisible);
-                Assert.Contains("Required:", new TextBlockAutomationPeer(criteria).GetName(), StringComparison.Ordinal);
-                Assert.True(criteria.ActualHeight > 0);
-                Assert.Equal("Intake", ShellTestHost.Element<TextBlock>(window, "StageHeading").Text);
+                Invoke(window, Named<Button>(window, "JobsButton"));
+                Assert.True(jobs.IsVisible);
+                Assert.Null(stageList.SelectedItem);
+                Assert.Same(create, Keyboard.FocusedElement);
             }
-            finally { window.Close(); }
+            finally { CloseWindow(window); }
         });
     }
 
     [Fact]
-    public void ActivityFixturesUpdateLiveTextProgressAndRecoveryWithoutClaimingReadiness()
+    public void LargeTextAndSimulatedDoubleScaleReflowTheMinimumWidthAndPreserveAccess()
     {
+        using var fixture = new M1AuditFixture();
         ShellTestHost.Run(() =>
         {
-            var model = new ShellViewModel();
-            var window = new MainWindow(model);
+            var window = new MainWindow(fixture.CreateWorkspace()) { Width = 320, Height = 300 };
             try
             {
                 ShellTestHost.Show(window);
-                var text = ShellTestHost.Element<TextBlock>(window, "ActivityAnnouncement");
-                var progress = ShellTestHost.Element<ProgressBar>(window, "ActivityProgress");
-                var peer = new TextBlockAutomationPeer(text);
-                Assert.Equal(AutomationLiveSetting.Polite, peer.GetLiveSetting());
-                Assert.Equal("No operation is running.", peer.GetName());
-                Assert.Equal(Visibility.Collapsed, progress.Visibility);
-                model.SetActivity(ShellActivity.Running);
+                var scroller = Named<ScrollViewer>(window, "ShellScroll");
+                var audit = Named<AuditWorkspaceView>(window, "AuditView");
+                var workspace = Named<StackPanel>(window, "WorkspaceColumn");
+                Assert.Equal(0, Grid.GetColumn(workspace));
+                Assert.Equal(1, Grid.GetRow(workspace));
+
+                window.Width = 660;
+                window.Height = 600;
+                var content = Assert.IsAssignableFrom<FrameworkElement>(scroller.Content);
+                content.LayoutTransform = new ScaleTransform(2, 2);
+                var openJob = Named<Button>(audit, "OpenJobButton");
+                openJob.Content = "Den gespeicherten Werkstattauftrag anhand des vorhandenen Auftragskennzeichens öffnen";
+                openJob.FontSize = 22;
+
                 ShellTestHost.Drain(window);
-                Assert.True(progress.IsIndeterminate);
-                Assert.True(progress.IsVisible);
-                Assert.Contains("not yet available", peer.GetName(), StringComparison.Ordinal);
-                model.SetActivity(ShellActivity.Running, 2, 4);
+                Assert.Equal(0, Grid.GetColumn(workspace));
+                Assert.Equal(1, Grid.GetRow(workspace));
+                Assert.Equal(0, scroller.ScrollableWidth);
+                Assert.True(openJob.ActualHeight > 40);
+                Assert.True(openJob.Focus());
+                openJob.BringIntoView();
                 ShellTestHost.Drain(window);
-                Assert.False(progress.IsIndeterminate);
-                var progressPeer = Assert.IsType<ProgressBarAutomationPeer>(UIElementAutomationPeer.CreatePeerForElement(progress));
-                var range = Assert.IsAssignableFrom<IRangeValueProvider>(progressPeer.GetPattern(PatternInterface.RangeValue));
-                Assert.Equal(2, range.Value);
-                Assert.Equal(4, range.Maximum);
-                Assert.True(range.IsReadOnly);
-                Assert.Contains("2 of 4", peer.GetName(), StringComparison.Ordinal);
-                foreach (var fixture in new[]
-                {
-                    (ShellActivity.Cancelling, "Waiting", Visibility.Visible),
-                    (ShellActivity.Cancelled, "partial evidence", Visibility.Collapsed),
-                    (ShellActivity.Completed, "readiness has not been verified", Visibility.Collapsed),
-                    (ShellActivity.Failed, "before retrying", Visibility.Collapsed),
-                    (ShellActivity.RequiresReview, "Human review required", Visibility.Collapsed),
-                })
-                {
-                    model.SetActivity(fixture.Item1, 4, 4);
-                    ShellTestHost.Drain(window);
-                    Assert.Equal(fixture.Item3, progress.Visibility);
-                    Assert.Contains(fixture.Item2, peer.GetName(), StringComparison.Ordinal);
-                }
-                Assert.Contains("unknown", ShellTestHost.Element<TextBlock>(window, "StatusAnnouncement").Text, StringComparison.Ordinal);
+                Assert.True(scroller.VerticalOffset > 0);
+                var bounds = openJob.TransformToAncestor(scroller).TransformBounds(new Rect(openJob.RenderSize));
+                Assert.InRange(bounds.Left, 0, scroller.ActualWidth);
+                Assert.InRange(bounds.Right, 0, scroller.ActualWidth);
+                Assert.InRange(bounds.Bottom, 0, scroller.ActualHeight);
+                Assert.Same(openJob, Keyboard.FocusedElement);
             }
-            finally { window.Close(); }
-            model.SetActivity(ShellActivity.Idle);
-            ShellTestHost.Drain(window);
+            finally { CloseWindow(window); }
         });
     }
 
     [Fact]
-    public void LargeTextAtDoubleScaleReflowsColumnsAndKeepsFinalControlReachable()
+    public void AppearanceUpdatesActiveControlsAndIsolatedHighContrastUsesSystemColors()
     {
+        using var fixture = new M1AuditFixture();
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow();
+            var window = new MainWindow(fixture.CreateWorkspace());
             try
             {
                 ShellTestHost.Show(window);
-                var review = ShellTestHost.Element<StackPanel>(window, "ReviewContent");
-                Assert.Equal(1, Grid.GetColumn(review));
-                Assert.Equal(0, Grid.GetRow(review));
-                window.Width = 480;
-                window.Height = 320;
-                ShellTestHost.Element<StackPanel>(window, "ShellContent").LayoutTransform = new ScaleTransform(2, 2);
-                foreach (var name in LongTextTargets)
+                var audit = Named<AuditWorkspaceView>(window, "AuditView");
+                var create = Named<Button>(audit, "CreateJobButton");
+                var jobCode = Named<TextBox>(audit, "JobIdInput");
+                var appearance = Named<ComboBox>(window, "AppearanceChoice");
+                jobCode.Text = "retained-test-code";
+
+                Color initialCanvas = SystemParameters.HighContrast ? SystemColors.WindowColor : Color.FromRgb(11, 14, 17);
+                Color initialAction = SystemParameters.HighContrast ? SystemColors.HighlightColor : Color.FromRgb(196, 243, 107);
+                Assert.Equal(initialCanvas, BrushColor(window.Background));
+                Assert.Equal(initialAction, BrushColor(create.Background));
+
+                var appearancePeer = new ComboBoxAutomationPeer(appearance);
+                var dropdown = Assert.IsAssignableFrom<IExpandCollapseProvider>(appearancePeer.GetPattern(PatternInterface.ExpandCollapse));
+                dropdown.Expand();
+                ShellTestHost.Drain(window);
+                Assert.True(appearance.IsDropDownOpen);
+                dropdown.Collapse();
+                appearance.SelectedIndex = 1;
+                ShellTestHost.Drain(window);
+                Color lightCanvas = SystemParameters.HighContrast ? SystemColors.WindowColor : Color.FromRgb(244, 246, 240);
+                Color lightAction = SystemParameters.HighContrast ? SystemColors.HighlightColor : Color.FromRgb(49, 77, 18);
+                Assert.Equal(lightCanvas, BrushColor(window.Background));
+                Assert.Equal(lightAction, BrushColor(create.Background));
+                Assert.Equal("retained-test-code", jobCode.Text);
+
+                // Exercise the real system-color resource bindings without changing the desktop's preference.
+                var contrast = new ResourceDictionary
                 {
-                    var text = ShellTestHost.Element<TextBlock>(window, name);
-                    text.Text = string.Join(' ', Enumerable.Repeat(text.Text, 4));
-                    text.FontSize = 22;
-                }
+                    Source = new Uri("/ThirdLife.UI;component/Themes/Trace.HighContrast.xaml", UriKind.Relative),
+                };
+                window.Resources.MergedDictionaries.Add(contrast);
                 ShellTestHost.Drain(window);
-                var scroll = ShellTestHost.Element<ScrollViewer>(window, "ShellScroll");
-                Assert.Equal(0, Grid.GetColumn(review));
-                Assert.Equal(1, Grid.GetRow(review));
-                Assert.True(scroll.ExtentHeight > scroll.ViewportHeight);
-                Assert.InRange(scroll.ExtentWidth, 0, scroll.ViewportWidth + 1);
-                Assert.Equal(0, scroll.ScrollableWidth);
-                scroll.ScrollToBottom();
+                Assert.Equal(SystemColors.WindowColor, BrushColor(window.Background));
+                Assert.Equal(SystemColors.HighlightColor, BrushColor(create.Background));
+                Assert.Equal(SystemColors.HighlightTextColor, BrushColor(create.Foreground));
+                Assert.Equal(SystemColors.WindowTextColor, BrushColor(jobCode.BorderBrush));
+                window.ShowStage(ShellStage.Verify);
                 ShellTestHost.Drain(window);
-                Assert.InRange(Math.Abs(scroll.VerticalOffset - scroll.ScrollableHeight), 0, 1);
-                var returnButton = ShellTestHost.Element<Button>(window, "ReturnToStagesButton");
-                var bounds = returnButton.TransformToAncestor(scroll).TransformBounds(new Rect(returnButton.RenderSize));
-                Assert.InRange(bounds.Left, 0, scroll.ActualWidth);
-                Assert.InRange(bounds.Right, 0, scroll.ActualWidth);
-                Assert.InRange(bounds.Bottom, 0, scroll.ActualHeight);
-                Assert.True(returnButton.Focus());
-                ShellTestHost.Invoke(window, "ReturnToStagesButton");
-                Assert.Same(window.FindName("IntakeButton"), Keyboard.FocusedElement);
+                var verify = Named<ListBoxItem>(window, "VerifyStage");
+                Assert.Equal(SystemColors.HighlightColor, BrushColor(verify.Background));
+                Assert.Equal(SystemColors.HighlightTextColor, BrushColor(verify.Foreground));
+                Assert.NotNull(verify.FocusVisualStyle);
             }
-            finally { window.Close(); }
+            finally { CloseWindow(window); }
         });
     }
 
-    private static void NextIs(Window window, string elementName)
-    {
-        MoveNext(window);
-        Assert.Same(window.FindName(elementName), Keyboard.FocusedElement);
-    }
 
-    private static void MoveNext(Window window)
+    [Fact]
+    public void NoticeUsesTheOwnersThemeAndReturnsKeyboardFocusOnDismissal()
     {
-        var focused = Assert.IsAssignableFrom<FrameworkElement>(Keyboard.FocusedElement);
-        Assert.True(focused.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)));
-        ShellTestHost.Drain(window);
+        using var fixture = new M1AuditFixture();
+        ShellTestHost.Run(() =>
+        {
+            var window = new MainWindow(fixture.CreateWorkspace());
+            try
+            {
+                ShellTestHost.Show(window);
+                var audit = Named<AuditWorkspaceView>(window, "AuditView");
+                var initiatingControl = Named<Button>(audit, "CreateJobButton");
+                Assert.True(initiatingControl.Focus());
+
+                ExceptionDispatchInfo? failure = null;
+                TraceNotice? notice = null;
+                window.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() =>
+                {
+                    try
+                    {
+                        notice = Assert.Single(window.OwnedWindows.Cast<Window>().OfType<TraceNotice>());
+                        var close = Named<Button>(notice, "DismissButton");
+                        Assert.Same(close, Keyboard.FocusedElement);
+                        Assert.Equal(BrushColor(window.Background), BrushColor(notice.Background));
+                        Assert.Equal("Review required", new TextBlockAutomationPeer(Named<TextBlock>(notice, "Heading")).GetName());
+                        Assert.True(close.IsDefault);
+                        Assert.True(close.IsCancel);
+                        Invoke(notice, close);
+                    }
+                    catch (Exception error)
+                    {
+                        failure = ExceptionDispatchInfo.Capture(error);
+                        notice?.Close();
+                    }
+                }));
+                TraceNotice.ShowMessage("Review required", "Review the saved job.", window);
+                failure?.Throw();
+                Assert.NotNull(notice);
+                Assert.False(notice.IsVisible);
+                ShellTestHost.Drain(window);
+                Assert.Same(initiatingControl, Keyboard.FocusedElement);
+            }
+            finally { CloseWindow(window); }
+        });
     }
+    private static Color BrushColor(Brush brush) => Assert.IsType<SolidColorBrush>(brush).Color;
 }

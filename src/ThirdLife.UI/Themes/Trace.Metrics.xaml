@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ThirdLife TRACE 1.0 design tokens.
+     Logical reference units; WPF DIPs, native font metrics and user scaling remain authoritative. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    <!-- Font fallbacks only. Prefer the live SystemFonts key for ordinary text; see README. -->
+    <FontFamily x:Key="Trace.UiFontFamilyFallback">Segoe UI</FontFamily>
+    <FontFamily x:Key="Trace.MonoFontFamily">Consolas</FontFamily>
+    <sys:Double x:Key="Trace.TypeSecondary">12</sys:Double>
+    <sys:Double x:Key="Trace.TypeUi">14</sys:Double>
+    <sys:Double x:Key="Trace.TypeBody">16</sys:Double>
+    <sys:Double x:Key="Trace.TypeSection">16</sys:Double>
+    <sys:Double x:Key="Trace.TypeTitle">24</sys:Double>
+    <sys:Double x:Key="Trace.TypeDisplay">32</sys:Double>
+    <FontWeight x:Key="Trace.WeightRegular">Normal</FontWeight>
+    <FontWeight x:Key="Trace.WeightMedium">Medium</FontWeight>
+    <FontWeight x:Key="Trace.WeightSemibold">SemiBold</FontWeight>
+    <FontWeight x:Key="Trace.WeightBold">Bold</FontWeight>
+    <!-- Multipliers are reference data, not WPF LineHeight values. -->
+    <sys:Double x:Key="Trace.LineHeightUiMultiplier">1.45</sys:Double>
+    <sys:Double x:Key="Trace.LineHeightReadingMultiplier">1.6</sys:Double>
+    <sys:Double x:Key="Trace.LineHeightHeadingMultiplier">1.2</sys:Double>
+    <sys:Double x:Key="Trace.Space4">4</sys:Double>
+    <Thickness x:Key="Trace.Inset4">4</Thickness>
+    <sys:Double x:Key="Trace.Space8">8</sys:Double>
+    <Thickness x:Key="Trace.Inset8">8</Thickness>
+    <sys:Double x:Key="Trace.Space12">12</sys:Double>
+    <Thickness x:Key="Trace.Inset12">12</Thickness>
+    <sys:Double x:Key="Trace.Space16">16</sys:Double>
+    <Thickness x:Key="Trace.Inset16">16</Thickness>
+    <sys:Double x:Key="Trace.Space24">24</sys:Double>
+    <Thickness x:Key="Trace.Inset24">24</Thickness>
+    <sys:Double x:Key="Trace.Space32">32</sys:Double>
+    <Thickness x:Key="Trace.Inset32">32</Thickness>
+    <sys:Double x:Key="Trace.Space48">48</sys:Double>
+    <Thickness x:Key="Trace.Inset48">48</Thickness>
+    <sys:Double x:Key="Trace.Space64">64</sys:Double>
+    <Thickness x:Key="Trace.Inset64">64</Thickness>
+    <CornerRadius x:Key="Trace.RadiusSquare">0</CornerRadius>
+    <CornerRadius x:Key="Trace.RadiusControl">3</CornerRadius>
+    <CornerRadius x:Key="Trace.RadiusFloating">6</CornerRadius>
+    <sys:Double x:Key="Trace.PassiveRuleWidth">1</sys:Double>
+    <Thickness x:Key="Trace.PassiveRuleThickness">1</Thickness>
+    <sys:Double x:Key="Trace.ControlStrokeWidth">1</sys:Double>
+    <Thickness x:Key="Trace.ControlStrokeThickness">1</Thickness>
+    <sys:Double x:Key="Trace.SelectionBarWidth">3</sys:Double>
+    <Thickness x:Key="Trace.SelectionBarThickness">3</Thickness>
+    <sys:Double x:Key="Trace.FocusRingWidth">2</sys:Double>
+    <Thickness x:Key="Trace.FocusRingThickness">2</Thickness>
+    <sys:Double x:Key="Trace.FocusGapWidth">2</sys:Double>
+    <Thickness x:Key="Trace.FocusGapThickness">2</Thickness>
+    <sys:Double x:Key="Trace.ControlMinCompact">32</sys:Double>
+    <Thickness x:Key="Trace.ControlPaddingCompact">8,4</Thickness>
+    <sys:Double x:Key="Trace.ControlMinComfortable">40</sys:Double>
+    <Thickness x:Key="Trace.ControlPaddingComfortable">12,8</Thickness>
+    <sys:Double x:Key="Trace.ControlMinCoarse">44</sys:Double>
+    <!-- Reference defaults. Existing app density handling can replace these two keys. -->
+    <sys:Double x:Key="Trace.ControlMinHeight">40</sys:Double>
+    <Thickness x:Key="Trace.ControlPadding">12,8</Thickness>
+    <!-- Millisecond data only; existing app motion handling must honor reduced motion. -->
+    <sys:Double x:Key="Trace.MotionFastMilliseconds">120</sys:Double>
+    <sys:Double x:Key="Trace.MotionStandardMilliseconds">180</sys:Double>
+    <sys:Double x:Key="Trace.MotionDeliberateMilliseconds">240</sys:Double>
+    <sys:Double x:Key="Trace.MotionReducedMilliseconds">0</sys:Double>
+</ResourceDictionary>

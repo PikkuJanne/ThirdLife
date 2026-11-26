@@ -272,11 +272,12 @@ public sealed class AuditReportTests
     {
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow(new ShellViewModel(), workspace) { Width = 640, Height = 420 };
+            var window = new MainWindow(workspace) { Width = 640, Height = 420 };
             try
             {
                 ShellTestHost.Show(window);
-                ShellTestHost.Invoke(window, "OpenAuditWorkspaceButton");
+                window.ShowStage(ShellStage.Handover);
+                ShellTestHost.Drain(window);
                 observe(window, Named<FrameworkElement>(window, "AuditView"));
             }
             finally { CloseWindow(window); }

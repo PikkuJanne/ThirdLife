@@ -354,15 +354,14 @@ public sealed partial class PlanReviewTests
     private static void InPlanReview(AuditWorkspace workspace, Action<MainWindow, PlanReviewView> check) =>
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow(new ShellViewModel(), workspace) { Width = 640, Height = 420 };
+            var window = new MainWindow(workspace) { Width = 640, Height = 420 };
             try
             {
                 ShellTestHost.Show(window);
-                ShellTestHost.Invoke(window, "PrepareButton");
+                window.ShowStage(ShellStage.Prepare);
                 var audit = Named<FrameworkElement>(window, "AuditView");
                 var panel = Named<PlanReviewView>(audit, "PlanReviewPanel");
                 Assert.True(panel.IsVisible);
-                Assert.Same(Named<GroupBox>(panel, "PlanReviewRegion"), Keyboard.FocusedElement);
                 check(window, panel);
             }
             finally { CloseWindow(window); }
@@ -389,7 +388,7 @@ public sealed partial class PlanReviewTests
             ShellTestHost.Drain(window);
             planHash = Approve(window, panel, workspace).PlanSha256;
 
-            var execution = Named<BrokerExecutionView>(panel, "BrokerExecutionPanel");
+            var execution = Named<BrokerExecutionView>(Named<FrameworkElement>(window, "AuditView"), "BrokerExecutionPanel");
             var status = Named<TextBlock>(execution, "ExecutionStatus");
             Assert.Equal(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(status));
             Assert.Contains("unavailable", status.Text, StringComparison.Ordinal);
@@ -440,7 +439,7 @@ public sealed partial class PlanReviewTests
         {
             SelectProfile(window, panel, workspace, "basic");
             Build(window, panel, workspace);
-            var execution = Named<BrokerExecutionView>(panel, "BrokerExecutionPanel");
+            var execution = Named<BrokerExecutionView>(Named<FrameworkElement>(window, "AuditView"), "BrokerExecutionPanel");
             var run = Named<Button>(execution, "RunBrokerButton");
             var status = Named<TextBlock>(execution, "ExecutionStatus");
             Assert.False(run.IsEnabled);

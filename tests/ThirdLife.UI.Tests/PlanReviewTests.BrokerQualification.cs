@@ -139,7 +139,7 @@ public sealed partial class PlanReviewTests
                 ShellTestHost.Drain(window);
                 Assert.Contains(expected.Key.PlanSha256, Named<TextBox>(panel, "PlanDetailsText").Text, StringComparison.Ordinal);
                 Assert.False(Named<Button>(panel, "ApprovePlanReviewButton").IsEnabled);
-                var execution = Named<BrokerExecutionView>(panel, "BrokerExecutionPanel");
+                var execution = Named<BrokerExecutionView>(Named<FrameworkElement>(window, "AuditView"), "BrokerExecutionPanel");
                 Assert.False(Named<Button>(execution, "RunBrokerButton").IsEnabled);
                 Record(new("CandidateReady", scenarioCode, PlanSha256: expected.Key.PlanSha256,
                     ImpactSha256: expected.Key.ImpactSha256, ActionCount: expected.Actions.Length,
@@ -174,7 +174,7 @@ public sealed partial class PlanReviewTests
                 reopened.BuildPlanReviewAsync().GetAwaiter().GetResult();
             }
 
-            InQualificationWindow(reopened, (_, panel) =>
+            InQualificationWindow(reopened, (window, _) =>
             {
                 Assert.False(reopened.CanRunBrokerExecution);
                 Assert.False(reopened.CanCheckBrokerRecovery);
@@ -186,7 +186,7 @@ public sealed partial class PlanReviewTests
                 }
                 else
                 {
-                    var execution = Named<BrokerExecutionView>(panel, "BrokerExecutionPanel");
+                    var execution = Named<BrokerExecutionView>(Named<FrameworkElement>(window, "AuditView"), "BrokerExecutionPanel");
                     var history = Named<TextBox>(execution, "SavedBrokerHistory");
                     Assert.True(history.IsVisible && history.IsReadOnly);
                     Assert.Contains(expected.Key.PlanSha256, history.Text, StringComparison.Ordinal);
@@ -254,7 +254,7 @@ public sealed partial class PlanReviewTests
 
     private static void InQualificationWindow(AuditWorkspace workspace, Action<MainWindow, PlanReviewView> check)
     {
-        var window = new MainWindow(new ShellViewModel(), workspace)
+        var window = new MainWindow(workspace)
         {
             Title = "ThirdLife TL-0313 no-op qualification",
             WindowState = WindowState.Maximized,
@@ -262,7 +262,8 @@ public sealed partial class PlanReviewTests
         try
         {
             ShellTestHost.Show(window);
-            ShellTestHost.Invoke(window, "PrepareButton");
+            window.ShowStage(ShellStage.Prepare);
+            ShellTestHost.Drain(window);
             var panel = Named<PlanReviewView>(Named<FrameworkElement>(window, "AuditView"), "PlanReviewPanel");
             Assert.True(panel.IsVisible);
             check(window, panel);

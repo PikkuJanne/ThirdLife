@@ -37,11 +37,7 @@ public sealed class M1AuditJourneyTests
             {
                 ShellTestHost.Show(window);
                 Assert.Null(workspace.Job);
-                Assert.True(ShellTestHost.Element<Button>(window, "OpenAuditWorkspaceButton").Focus());
-                ShellTestHost.Invoke(window, "OpenAuditWorkspaceButton");
-
                 var view = Named<FrameworkElement>(window, "AuditView");
-                Assert.Same(Named<GroupBox>(view, "JobRegion"), Keyboard.FocusedElement);
                 Assert.True(Named<TextBlock>(view, "FixtureNotice").IsVisible);
                 var assessmentStart = Named<Button>(view, "StartAssessmentButton");
                 var goToSanitization = Named<Button>(view, "GoToSanitizationButton");
@@ -56,6 +52,8 @@ public sealed class M1AuditJourneyTests
                 Assert.Equal(job.Job.JobId.Value, Named<TextBox>(view, "CurrentJobId").Text);
                 Assert.False(assessmentStart.IsEnabled);
                 Assert.Same(Named<CheckBox>(view, "ExternalRecordConfirmed"), Keyboard.FocusedElement);
+                window.ShowStage(ShellStage.Inspect);
+                ShellTestHost.Drain(window);
                 Assert.True(goToSanitization.Focus());
                 Invoke(window, goToSanitization);
                 Assert.Same(Named<CheckBox>(view, "ExternalRecordConfirmed"), Keyboard.FocusedElement);
@@ -81,6 +79,8 @@ public sealed class M1AuditJourneyTests
                 Assert.Equal(AutomationLiveSetting.Polite, assessmentMessage.GetLiveSetting());
                 Assert.Contains("needs review", assessmentMessage.GetName(), StringComparison.OrdinalIgnoreCase);
 
+                Named<TabItem>(view, "HardwareChecksTab").IsSelected = true;
+                ShellTestHost.Drain(window);
                 SaveUnavailableManualSample(window, view);
                 PumpUntil(window, () => workspace.Job?.HumanTests.Count == 1 && !workspace.IsBusy,
                     () => Named<TextBlock>(view, "ManualInputError").Text);
@@ -107,6 +107,8 @@ public sealed class M1AuditJourneyTests
                 Assert.Equal(intake, Assert.Single(workspace.Job!.SanitizationEvidence));
                 Assert.Equal(manual, Assert.Single(workspace.Job.HumanTests));
 
+                window.ShowStage(ShellStage.Handover);
+                ShellTestHost.Drain(window);
                 result = GenerateAndOpenReport(window, view, workspace, job.Job.JobId, assessment.AssessmentId);
             }
             finally { CloseWindow(window); }
@@ -216,14 +218,16 @@ public sealed class M1AuditJourneyTests
         Assert.Contains(findings, static item =>
             item.Name == "test.unavailable.value" && item.Value == "Not available" &&
             item.Evidence.Contains("Synthetic fixture", StringComparison.Ordinal));
-        Assert.Contains(findings, static item => item.Provider == "fixture-failed" && item.Value == "Failed");
+        Assert.Contains(findings, static item =>
+            item.Provider == "fixture-failed" && item.Value == "Failed" &&
+            item.DisplayName == "Collection · fixture failed");
     }
 
     private static void SaveUnavailableManualSample(Window window, FrameworkElement view)
     {
         var check = Named<ComboBox>(view, "ManualCheck");
         Assert.True(check.Focus());
-        Assert.Equal(M1AuditFixture.KeyboardCase, Assert.IsType<ManualTestCase>(check.SelectedItem).Id);
+        Assert.Equal(M1AuditFixture.KeyboardCase, Assert.IsType<string>(check.SelectedValue));
         Assert.False(Named<ComboBoxItem>(view, "ManualPassOption").IsEnabled);
         Assert.False(Named<ComboBoxItem>(view, "ManualFailOption").IsEnabled);
         var outcome = Named<ComboBox>(view, "ManualOutcome");

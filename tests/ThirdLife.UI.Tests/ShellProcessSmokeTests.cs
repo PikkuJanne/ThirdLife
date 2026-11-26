@@ -44,14 +44,14 @@ public sealed class ShellProcessSmokeTests(ITestOutputHelper output)
                 try
                 {
                     if (sender is AutomationElement element &&
-                        element.Current.Name == "Inspect selected. No job is open. Device readiness is unknown.")
+                        element.Current.Name == "Inspect opened.")
                     { announced.Set(); }
                 }
                 catch (ElementNotAvailableException) { }
             };
             Automation.AddAutomationEventHandler(AutomationElementIdentifiers.LiveRegionChangedEvent,
                 window, TreeScope.Descendants, handler);
-            ((InvokePattern)inspect.GetCurrentPattern(InvokePattern.Pattern)).Invoke();
+            ((SelectionItemPattern)inspect.GetCurrentPattern(SelectionItemPattern.Pattern)).Select();
             Assert.True(announced.Wait(TimeSpan.FromSeconds(5)),
                 "The external UI Automation listener did not receive the changed navigation status.");
             process.Refresh();

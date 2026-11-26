@@ -140,16 +140,18 @@ public sealed partial class PackageSetupTests
         await using var reopened = OpenWorkspace(disk, reports, new PilotPackageService(runtime));
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow(new ShellViewModel(), reopened);
+            var window = new MainWindow(reopened);
             try
             {
                 ShellTestHost.Show(window);
                 var audit = Named<FrameworkElement>(window, "AuditView");
-                var panel = Named<PlanReviewView>(audit, "PlanReviewPanel");
+                var panel = Named<PackageVerificationView>(audit, "PackageVerificationPanel");
                 var status = Named<TextBlock>(panel, "PackageRecoveryMessage");
                 var cancel = Named<Button>(panel, "CancelPackageRecoveryButton");
                 Named<TextBox>(audit, "JobIdInput").Text = jobId.Value;
                 Invoke(window, Named<Button>(audit, "OpenJobButton"));
+                PumpUntil(window, () => reopened.Job is not null && runtime.Probes == 1);
+                window.ShowStage(ShellStage.Verify);
                 PumpUntil(window, () => runtime.Probes == 1 && cancel.IsVisible && cancel.IsEnabled);
                 var buttonPeer = ShellTestHost.ButtonPeer(cancel);
                 Assert.Equal("Cancel package verification", buttonPeer.GetName());
@@ -216,7 +218,7 @@ public sealed partial class PackageSetupTests
         await using (var accessible = OpenRestartWorkspace(observer))
         {
             await accessible.OpenJobAsync(jobId.Value);
-            InPackageRecoveryWindow(accessible, (_, panel) =>
+            InPackageVerificationWindow(accessible, (_, panel) =>
             {
                 var message = Named<TextBlock>(panel, "PackageRecoveryMessage");
                 var peer = new TextBlockAutomationPeer(message);

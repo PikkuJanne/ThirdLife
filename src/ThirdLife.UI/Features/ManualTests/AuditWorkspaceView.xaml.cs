@@ -19,17 +19,24 @@ public partial class AuditWorkspaceView : UserControl
     private DispatcherOperation? _announcement;
     private string? _displayedJob;
     private string? _lastStatus;
+    private string? _lastOperationError;
     private string? _lastAssessmentStatus;
     private string? _lastReportStatus;
     private bool _sanitizationDateInvalid;
     private ManualTestProgressItem? _displayedManualItem;
+    private readonly ManualCheckOption[] _manualOptions;
 
-    internal event EventHandler? ReturnToStagesRequested;
+    private ShellStage? _shownStage;
+    private bool? _wideEvidence;
+    private readonly HashSet<TextBlock> _pendingAnnouncements = [];
+
+    internal event EventHandler<ShellStage?>? StageRequested;
 
     public AuditWorkspaceView()
     {
+        _manualOptions = ManualTestCatalog.Cases.Select(static check => new ManualCheckOption(check)).ToArray();
         InitializeComponent();
-        ManualCheck.ItemsSource = ManualTestCatalog.Cases;
+        ManualCheck.ItemsSource = _manualOptions;
     }
 
     private AuditWorkspace Workspace =>
@@ -39,7 +46,8 @@ public partial class AuditWorkspaceView : UserControl
     {
         _workspace = workspace;
         DataContext = workspace;
-        _lastStatus = workspace.Status;
+        _lastStatus = workspace.JobEntryStatus;
+        _lastOperationError = workspace.OperationError;
         _lastAssessmentStatus = workspace.AssessmentStatus;
         _lastReportStatus = workspace.ReportStatus;
         FixtureNotice.Visibility = VisibleWhen(workspace.IsFixtureScenario);
@@ -65,46 +73,83 @@ public partial class AuditWorkspaceView : UserControl
             _workspace.PropertyChanged -= WorkspaceChanged;
         }
 
+        _workspace = null;
         _announcement?.Abort();
+        _pendingAnnouncements.Clear();
     }
 
-    internal void FocusWorkspace()
+    internal void ShowStage(ShellStage? stage)
     {
-        FrameworkElement target = Workspace.IsAssessmentRunning
-            ? Workspace.CanCancel ? CancelAssessmentButton : AssessmentMessage
-            : JobRegion;
-        target.Focus();
-        target.BringIntoView();
+        _shownStage = stage;
+        JobRegion.Visibility = VisibleWhen(stage is null);
+        IntakeSurface.Visibility = VisibleWhen(stage == ShellStage.Intake);
+        InspectSurface.Visibility = VisibleWhen(stage == ShellStage.Inspect);
+        DecideSurface.Visibility = VisibleWhen(stage == ShellStage.Decide);
+        PrepareSurface.Visibility = VisibleWhen(stage == ShellStage.Prepare);
+        VerifySurface.Visibility = VisibleWhen(stage == ShellStage.Verify);
+        HandoverSurface.Visibility = VisibleWhen(stage == ShellStage.Handover);
     }
 
-    internal void FocusPlanReview() => PlanReviewPanel.FocusReview();
+    internal void FocusJobs() => FocusAndReveal(CreateJobButton.IsEnabled ? CreateJobButton : JobRegion);
 
     private async void CreateJob(object sender, RoutedEventArgs e)
     {
         string previousJob = Workspace.JobId;
-        if (JobRegion.IsKeyboardFocusWithin)
-        {
-            JobRegion.Focus();
-        }
-
+        JobRegion.Focus();
         await Workspace.CreateJobAsync();
-        if (JobRegion.IsKeyboardFocused && Workspace.CanEditJob && Workspace.JobId != previousJob)
+        if (_shownStage is null && Workspace.JobId.Length != 0 && Workspace.JobId != previousJob)
         {
+            StageRequested?.Invoke(this, ShellStage.Intake);
             FocusSanitization();
+        }
+        else if (_shownStage is null)
+        {
+            FocusAndReveal(AuditStatus);
         }
     }
 
-    private async void OpenJob(object sender, RoutedEventArgs e) => await Workspace.OpenJobAsync(JobIdInput.Text.Trim());
+    private async void OpenJob(object sender, RoutedEventArgs e)
+    {
+        string requested = JobIdInput.Text.Trim();
+        JobRegion.Focus();
+        await Workspace.OpenJobAsync(requested);
+        if (_shownStage is null && string.Equals(Workspace.JobId, requested, StringComparison.Ordinal) && requested.Length != 0)
+        {
+            var destination = Workspace.Assessment is not null || Workspace.CanAssess ? ShellStage.Inspect : ShellStage.Intake;
+            StageRequested?.Invoke(this, destination);
+            if (destination == ShellStage.Intake)
+            {
+                FocusSanitization();
+            }
+            else
+            {
+                FocusAndReveal(AssessmentMessage);
+            }
+        }
+        else if (_shownStage is null)
+        {
+            FocusAndReveal(JobIdInput);
+        }
+    }
 
     private void CloseJob(object sender, RoutedEventArgs e)
     {
         Workspace.CloseJob();
-        JobIdInput.Focus();
+        StageRequested?.Invoke(this, null);
+        FocusAndReveal(JobIdInput);
     }
 
-    private void RequestStageReturn(object sender, RoutedEventArgs e) => ReturnToStagesRequested?.Invoke(this, EventArgs.Empty);
+    private void GoToSanitization(object sender, RoutedEventArgs e)
+    {
+        StageRequested?.Invoke(this, ShellStage.Intake);
+        FocusSanitization();
+    }
 
-    private void GoToSanitization(object sender, RoutedEventArgs e) => FocusSanitization();
+    private void GoToDisposition(object sender, RoutedEventArgs e)
+    {
+        StageRequested?.Invoke(this, ShellStage.Decide);
+        FocusAndReveal(PolicyDispositionPanel);
+    }
 
     private void FocusSanitization()
     {
@@ -118,14 +163,56 @@ public partial class AuditWorkspaceView : UserControl
             target = ExternalRecordConfirmed.IsChecked == true ? RecordSanitizationButton : ExternalRecordConfirmed;
         }
 
+        FocusAndReveal(target.IsEnabled ? target : SanitizationRegion);
+    }
+
+    private static void FocusAndReveal(FrameworkElement target)
+    {
         target.Focus();
         target.BringIntoView();
     }
 
-    private void GoToWorkshopReport(object sender, RoutedEventArgs e)
+    private void ResizeFindings(object sender, SizeChangedEventArgs e)
     {
-        GenerateReportButton.Focus();
-        GenerateReportButton.BringIntoView();
+        bool wide = e.NewSize.Width >= 680;
+        if (_wideEvidence == wide) { return; }
+        _wideEvidence = wide;
+        EvidenceColumn.Width = new GridLength(wide ? 288 : 0);
+        Grid.SetColumn(EvidenceInspector, wide ? 1 : 0);
+        Grid.SetRow(EvidenceInspector, wide ? 0 : 1);
+        EvidenceInspector.Margin = wide ? new Thickness(24, 0, 0, 0) : new Thickness(0, 16, 0, 0);
+    }
+
+    private void FindingSelected(object sender, SelectionChangedEventArgs e)
+    {
+        var finding = AssessmentObservations.SelectedItem as AssessmentFinding;
+        EvidenceInspector.Visibility = VisibleWhen(finding is not null);
+        ShowEvidenceButton.IsEnabled = finding is not null;
+        BatterySafety.Visibility = VisibleWhen(finding?.Provider.Contains("battery", StringComparison.Ordinal) == true);
+    }
+
+    private void CloseEvidence(object sender, RoutedEventArgs e)
+    {
+        if (AssessmentObservations.SelectedItem is { } selected)
+        {
+            AssessmentObservations.ScrollIntoView(selected);
+            AssessmentObservations.UpdateLayout();
+            if (AssessmentObservations.ItemContainerGenerator.ContainerFromItem(selected) is ListBoxItem item)
+            {
+                FocusAndReveal(item);
+            }
+        }
+
+        EvidenceInspector.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowSelectedEvidence(object sender, RoutedEventArgs e)
+    {
+        if (AssessmentObservations.SelectedItem is AssessmentFinding)
+        {
+            EvidenceInspector.Visibility = Visibility.Visible;
+            FocusAndReveal(BackToFindings);
+        }
     }
 
     private async void GenerateWorkshopReport(object sender, RoutedEventArgs e)
@@ -169,13 +256,22 @@ public partial class AuditWorkspaceView : UserControl
         if (SanitizationResult.SelectedValue is not SanitizationState state)
         {
             SetError(SanitizationInputError, "Choose the external outcome before saving.");
+            FocusAndReveal(SanitizationResult);
             return;
         }
 
         bool needsExternalRecord = state != SanitizationState.Unknown;
+        if (needsExternalRecord && string.IsNullOrWhiteSpace(OperatorIdInput.Text))
+        {
+            SetError(SanitizationInputError, "Enter a workshop operator code.");
+            FocusAndReveal(OperatorIdInput);
+            return;
+        }
+
         if (needsExternalRecord && (_sanitizationDateInvalid || SanitizationDate.SelectedDate is null))
         {
             SetError(SanitizationInputError, "Choose a valid date for the external result.");
+            FocusAndReveal(SanitizationDate);
             return;
         }
 
@@ -184,12 +280,14 @@ public partial class AuditWorkspaceView : UserControl
             SetError(SanitizationInputError, Workspace.IsFixtureScenario
                 ? "Select Use this synthetic intake record before saving."
                 : "Confirm ownership and the external record before saving this outcome.");
+            FocusAndReveal(ExternalRecordConfirmed);
             return;
         }
 
         if (UsesMethod(state) && SanitizationMethod.SelectedIndex < 0)
         {
             SetError(SanitizationInputError, "Choose the method shown in the external record.");
+            FocusAndReveal(SanitizationMethod);
             return;
         }
 
@@ -201,7 +299,6 @@ public partial class AuditWorkspaceView : UserControl
             tracksMedia ? SanitizationMediaId.Text.Trim() : "",
             needsExternalRecord && ExternalRecordConfirmed.IsChecked == true,
             UsesMethod(state) ? SanitizationMethod.SelectedValue as string ?? "" : "");
-        ExternalRecordConfirmed.IsChecked = false;
         await SaveSanitization(() => Workspace.RecordSanitizationAsync(input));
     }
 
@@ -215,12 +312,27 @@ public partial class AuditWorkspaceView : UserControl
             SanitizationRegion.Focus();
         }
 
+        var previous = LatestSanitization()?.Metadata.EvidenceId;
         await save();
-        SanitizationInputError.Text = Workspace.Status;
+        bool committed = LatestSanitization()?.Metadata.EvidenceId != previous;
+        if (committed)
+        {
+            ExternalRecordConfirmed.IsChecked = false;
+        }
+
+        if (_shownStage != ShellStage.Intake) { return; }
         if (SanitizationRegion.IsKeyboardFocused && Workspace.CanAssess)
         {
-            StartAssessmentButton.Focus();
-            StartAssessmentButton.BringIntoView();
+            StageRequested?.Invoke(this, ShellStage.Inspect);
+            FocusAndReveal(StartAssessmentButton);
+        }
+        else if (Workspace.CanCompleteSavedSanitization)
+        {
+            FocusAndReveal(CompleteSavedSanitizationButton);
+        }
+        else if (!committed && !Workspace.CanAssess && Workspace.OperationError.Length == 0)
+        {
+            SetError(SanitizationInputError, Workspace.Status);
         }
     }
 
@@ -267,7 +379,7 @@ public partial class AuditWorkspaceView : UserControl
     private async void SaveManualResult(object sender, RoutedEventArgs e)
     {
         SetError(ManualInputError, "");
-        if (ManualCheck.SelectedItem is not ManualTestCase selected ||
+        if (ManualCheck.SelectedItem is not ManualCheckOption selected ||
             ManualOutcome.SelectedValue is not HumanTestResult outcome)
         {
             SetError(ManualInputError, "Choose a manual check and the result you observed.");
@@ -283,7 +395,7 @@ public partial class AuditWorkspaceView : UserControl
 
         var previous = SelectedManualProgress()?.Latest?.HumanTestId;
         await Workspace.RecordManualAsync(
-            selected.Id,
+            selected.Case.Id,
             outcome,
             OperatorIdInput.Text.Trim(),
             ManualNotes.Text.Trim(),
@@ -292,20 +404,19 @@ public partial class AuditWorkspaceView : UserControl
         {
             ManualOutcome.SelectedIndex = -1;
             ManualNotes.Clear();
+            Announce(ManualCurrentResult);
         }
-
-        ManualInputError.Text = Workspace.Status;
     }
 
     private void SelectNextManualCheck(object sender, RoutedEventArgs e)
     {
-        ManualCheck.SelectedItem = Workspace.ManualProgress?.NextCase;
+        ManualCheck.SelectedValue = Workspace.ManualProgress?.NextCase?.Id;
         ManualCheck.Focus();
     }
 
     private void ManualCheckChanged(object sender, SelectionChangedEventArgs e)
     {
-        var selected = ManualCheck.SelectedItem as ManualTestCase;
+        var selected = (ManualCheck.SelectedItem as ManualCheckOption)?.Case;
         ManualInstructions.Visibility = VisibleWhen(selected is not null);
         ManualUnavailableReason.ItemsSource = selected?.UnavailableReasons.Select(static value =>
             new UnavailableChoice(value, UnavailableLabel(value))).ToArray();
@@ -332,23 +443,17 @@ public partial class AuditWorkspaceView : UserControl
         RefreshWorkspace();
 
         var assessmentChanged = _lastAssessmentStatus != Workspace.AssessmentStatus;
-        var statusChanged = _lastStatus != Workspace.Status;
+        var statusChanged = _lastStatus != Workspace.JobEntryStatus;
+        var errorChanged = _lastOperationError != Workspace.OperationError;
         var reportChanged = _lastReportStatus != Workspace.ReportStatus;
         _lastAssessmentStatus = Workspace.AssessmentStatus;
-        _lastStatus = Workspace.Status;
+        _lastStatus = Workspace.JobEntryStatus;
+        _lastOperationError = Workspace.OperationError;
         _lastReportStatus = Workspace.ReportStatus;
-        if (assessmentChanged && (!statusChanged || Workspace.Status == Workspace.AssessmentStatus || Workspace.IsAssessmentRunning))
-        {
-            Announce(AssessmentMessage);
-        }
-        else if (statusChanged)
-        {
-            Announce(AuditStatus);
-        }
-        else if (reportChanged)
-        {
-            Announce(ReportMessage);
-        }
+        if (assessmentChanged) { Announce(AssessmentMessage); }
+        if (statusChanged && Workspace.OperationError.Length == 0) { Announce(AuditStatus); }
+        if (errorChanged) { Announce(OperationErrorMessage); }
+        if (reportChanged) { Announce(ReportMessage); }
     }
 
     private void RefreshWorkspace()
@@ -356,9 +461,29 @@ public partial class AuditWorkspaceView : UserControl
         RefreshJob();
         RefreshActionAvailability();
         RefreshManualProgress();
-        var saved = Workspace.Job?.SanitizationEvidence is { Count: > 0 } entries ? entries[^1] : null;
+        JobHeader.Visibility = VisibleWhen(Workspace.Job is not null);
+        OperationErrorRegion.Visibility = VisibleWhen(Workspace.OperationError.Length != 0);
+        AuditStatus.Visibility = VisibleWhen(Workspace.OperationError.Length == 0);
+        JobIdentity.Content = Workspace.Assessment?.Observations.FirstOrDefault(observation =>
+            observation.EvidenceKey.Value == "device.model" && observation.Value?.Kind == EvidenceValueKind.Text)
+            ?.Value?.StringValue ?? "Workshop job";
+        JobState.Text = Workspace.Job?.IsArchived == true ? "Archived job · read-only"
+            : Workspace.IsBusy ? "Job operation in progress" : "Job opened";
+        BrokerExecutionPanel.Visibility = VisibleWhen(Workspace.IncludeBrokerQualification && Workspace.ShowsBrokerExecution);
+        ReportArtifactDetails.Text = Workspace.ReportArtifact is { } artifact
+            ? $"Saved workshop artifact: {artifact.FileName}"
+            : "No workshop report is available for preview in this session.";
+        var snapshot = Workspace.Assessment;
+        FindingsSummary.Text = snapshot is null
+            ? ""
+            : string.Create(CultureInfo.CurrentCulture,
+                $"{snapshot.Observations.Count} saved observations · {snapshot.Providers.Count(provider => provider.Outcome is null)} providers not run");
+        var saved = LatestSanitization();
         SavedSanitization.Text = saved is null ? "No external result is saved for this job." : DescribeSanitization(saved);
     }
+
+    private SanitizationEvidence? LatestSanitization() =>
+        Workspace.Job?.SanitizationEvidence is { Count: > 0 } entries ? entries[^1] : null;
 
     private void RefreshJob()
     {
@@ -373,27 +498,36 @@ public partial class AuditWorkspaceView : UserControl
             JobIdInput.Text = _displayedJob;
         }
 
+        InspectionTabs.SelectedItem = DeviceFindingsTab;
+        AssessmentObservations.SelectedIndex = -1;
         SanitizationResult.SelectedIndex = -1;
         SanitizationMethod.SelectedIndex = -1;
+        OperatorIdInput.Clear();
         SanitizationDate.SelectedDate = null;
         SanitizationMediaId.Clear();
         ExternalRecordConfirmed.IsChecked = false;
         _sanitizationDateInvalid = false;
         SanitizationInputError.Text = "";
         ManualInputError.Text = "";
-        ManualCheck.SelectedItem = _displayedJob is null
+        ManualCheck.SelectedValue = _displayedJob is null
             ? null
-            : Workspace.ManualProgress?.NextCase ?? ManualTestCatalog.Cases[0];
+            : (Workspace.ManualProgress?.NextCase ?? ManualTestCatalog.Cases[0]).Id;
     }
 
     private ManualTestProgressItem? SelectedManualProgress() =>
-        ManualCheck.SelectedItem is ManualTestCase selected
-            ? _workspace?.ManualProgress?.Items.FirstOrDefault(item => item.Case.Id == selected.Id)
+        ManualCheck.SelectedItem is ManualCheckOption selected
+            ? _workspace?.ManualProgress?.Items.FirstOrDefault(item => item.Case.Id == selected.Case.Id)
             : null;
 
     private void RefreshManualProgress()
     {
         var progress = _workspace?.ManualProgress;
+        foreach (var option in _manualOptions)
+        {
+            var latest = progress?.Items.FirstOrDefault(item => item.Case.Id == option.Case.Id)?.Latest;
+            option.Update(latest?.TestResult);
+        }
+
         string next = progress?.NextCase is { } candidate
             ? $"Next unfinished check: {candidate.Title}."
             : progress is null ? "Open a job to see saved progress." : "Each check has a recorded outcome.";
@@ -449,10 +583,34 @@ public partial class AuditWorkspaceView : UserControl
         JobIdInput.IsEnabled = available;
         OpenJobButton.IsEnabled = available;
         GoToSanitizationButton.Visibility = VisibleWhen(Workspace.CanEditJob && !Workspace.CanAssess);
+        AssessmentGateMessage.Visibility = VisibleWhen(!Workspace.IsBusy && !Workspace.CanAssess);
+        CancelAssessmentButton.Visibility = VisibleWhen(Workspace.IsAssessmentRunning);
+        bool hasAssessment = Workspace.Assessment is not null;
+        ReviewDispositionButton.Visibility = VisibleWhen(hasAssessment);
+        SetPrimaryAction(StartAssessmentButton, !hasAssessment);
+        SetPrimaryAction(ReviewDispositionButton, hasAssessment);
+        SetPrimaryAction(GenerateReportButton, Workspace.ReportArtifact is null);
+        SetPrimaryAction(OpenReportButton, Workspace.ReportArtifact is not null);
+        ShowEvidenceButton.IsEnabled = AssessmentObservations.SelectedItem is not null;
+        SanitizationFields.Visibility = VisibleWhen(Workspace.Job?.IsArchived != true &&
+            !Workspace.CanCompleteSavedSanitization);
         CompleteSavedSanitizationButton.Visibility = VisibleWhen(Workspace.CanCompleteSavedSanitization);
         AuditAssessmentProgress.Visibility = VisibleWhen(Workspace.IsAssessmentRunning);
         CancelReportButton.Visibility = VisibleWhen(Workspace.CanCancelReport);
         WorkshopReportPreview.Visibility = VisibleWhen(Workspace.ReportPreview.Length != 0);
+    }
+
+    private static void SetPrimaryAction(Button button, bool primary)
+    {
+        var style = primary ? button.TryFindResource("Trace.PrimaryButton") : null;
+        if (style is Style primaryStyle)
+        {
+            button.Style = primaryStyle;
+        }
+        else
+        {
+            button.ClearValue(StyleProperty);
+        }
     }
 
     private void SetError(TextBlock region, string text)
@@ -466,11 +624,18 @@ public partial class AuditWorkspaceView : UserControl
 
     private void Announce(TextBlock region)
     {
-        _announcement?.Abort();
-        _announcement = Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
+        if (!region.IsVisible) { return; }
+        _pendingAnnouncements.Add(region);
+        _announcement ??= Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
         {
-            var peer = UIElementAutomationPeer.FromElement(region) ?? UIElementAutomationPeer.CreatePeerForElement(region);
-            peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+            _announcement = null;
+            foreach (var pending in _pendingAnnouncements.Where(text => text.IsVisible))
+            {
+                var peer = UIElementAutomationPeer.FromElement(pending) ?? UIElementAutomationPeer.CreatePeerForElement(pending);
+                peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+            }
+
+            _pendingAnnouncements.Clear();
         }));
     }
 
@@ -503,6 +668,23 @@ public partial class AuditWorkspaceView : UserControl
         ManualTestUnavailableReason.PermissionDenied => "Permission denied",
         _ => throw new ArgumentOutOfRangeException(nameof(reason)),
     };
+
+    private sealed class ManualCheckOption(ManualTestCase testCase) : INotifyPropertyChanged
+    {
+        private HumanTestResult? _lastResult;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public ManualTestCase Case { get; } = testCase;
+        public string Label => $"{Case.Title} · {(_lastResult is { } result ? OutcomeLabel(result) : "No result saved")}";
+
+        public void Update(HumanTestResult? result)
+        {
+            if (_lastResult == result) { return; }
+            _lastResult = result;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
+        }
+    }
 
     private sealed record UnavailableChoice(ManualTestUnavailableReason Value, string Label);
 }

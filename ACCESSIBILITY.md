@@ -31,14 +31,13 @@ The complete **Intake → Inspect → Decide → Prepare → Verify → Handover
 
 Use standard WPF controls where practical. Custom controls require explicit UI Automation peers, keyboard behavior, and focused regression tests.
 
-The TL-0113 [review shell](docs/ui/accessible-shell.md) exposes Intake and Inspect,
-three named review regions, textual unavailable-stage criteria and the battery warning.
-Standard controls retain native keyboard focus and automation peers. Navigation and typed
-activity updates use polite live regions; fixtures exercise progress without collecting
-device evidence. The [completed shell observations](artifacts/evidence/TL-0113/human-walkthrough.md)
-retain their coverage and provenance for applicable A11Y-001–A11Y-007 cases. TL-0116 owns
-technical checks of the real integrated audit route, including manual capture and new or
-changed controls. The M1 record states the exact limits of this evidence.
+TRACE exposes Jobs and all six workflow destinations through native WPF controls.
+It places blockers, progress, cancellation and
+recovery beside their affected operations. Assessment evidence and hardware checks retain
+the physical battery warning in context. TL-0413 records technical verification for the
+changed interface. The earlier TL-0113 keyboard, Narrator and display observations and the
+TL-0116 integrated audit checks retain the scope of their original builds.
+[TRACE operator shell](docs/ui/accessible-shell.md), [TL-0113 observations](artifacts/evidence/TL-0113/human-walkthrough.md)
 
 ## 3. Recipient-controlled accessibility setup
 

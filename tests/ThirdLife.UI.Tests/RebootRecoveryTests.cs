@@ -9,6 +9,7 @@ using ThirdLife.Actions.Recovery;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.UI.Features.ManualTests;
+using ThirdLife.UI.Features.PlanReview;
 using ThirdLife.UI.Features.Recovery;
 using ThirdLife.UI.Shell;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
@@ -49,12 +50,13 @@ public sealed class RebootRecoveryTests
 
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow(new ShellViewModel(), workspace) { Width = 640, Height = 420 };
+            var window = new MainWindow(workspace) { Width = 640, Height = 420 };
             try
             {
                 ShellTestHost.Show(window);
                 var audit = Named<AuditWorkspaceView>(window, "AuditView");
-                var recovery = Assert.Single(Assert.IsType<StackPanel>(audit.Content).Children.OfType<RebootRecoveryView>());
+                var verification = Named<PackageVerificationView>(audit, "PackageVerificationPanel");
+                var recovery = Named<RebootRecoveryView>(verification, "RebootRecoveryPanel");
                 var selector = Named<ComboBox>(recovery, "RecoveryChoice");
                 var resume = Named<Button>(recovery, "ResumeButton");
                 var abandon = Named<Button>(recovery, "AbandonButton");
@@ -63,9 +65,11 @@ public sealed class RebootRecoveryTests
                 Assert.Null(openedStore);
 
                 OpenJob(window, audit, workspace, job.JobId);
+                window.ShowStage(ShellStage.Verify);
                 var store = Assert.IsType<RecoveryFixtureStore>(openedStore);
                 var savedJob = Assert.IsType<StoredJob>(workspace.Job);
-                Assert.True(selector.IsVisible);
+                PumpUntil(window, () => selector.IsVisible, () =>
+                    $"Verify visible: {verification.IsVisible}. Recovery choices: {workspace.RebootRecoveryChoices.Count}. {workspace.RebootRecoveryStatus}");
                 Assert.Equal("Saved restart checkpoint", new ComboBoxAutomationPeer(selector).GetName());
                 Assert.Equal("Resume for review", ShellTestHost.ButtonPeer(resume).GetName());
                 Assert.Equal("Abandon resume", ShellTestHost.ButtonPeer(abandon).GetName());
@@ -92,8 +96,8 @@ public sealed class RebootRecoveryTests
                 Assert.True(abandon.IsEnabled);
                 Assert.Equal(0, store.DecisionCount);
 
-                var inspect = Named<Button>(window, "InspectButton");
-                Assert.True(inspect.Focus());
+                var verify = Named<ListBoxItem>(window, "VerifyStage");
+                Assert.True(verify.Focus());
                 Invoke(window, disposition == RebootDisposition.Resume ? resume : abandon);
                 PumpUntil(window, () => !workspace.IsBusy && store.DecisionCount == 1 && status.Text.Length > 0,
                     () => workspace.RebootRecoveryStatus);
@@ -103,15 +107,17 @@ public sealed class RebootRecoveryTests
                 Assert.Contains(disposition == RebootDisposition.Resume ? "Resume recorded" : "Resume abandoned",
                     status.Text, StringComparison.Ordinal);
                 Assert.Equal(status.Text, new TextBlockAutomationPeer(status).GetName());
-                Assert.Same(inspect, Keyboard.FocusedElement);
+                Assert.Same(verify, Keyboard.FocusedElement);
                 Assert.False(resume.IsEnabled);
                 Assert.False(abandon.IsEnabled);
                 Assert.Equal(savedJob.Checkpoints, workspace.Job!.Checkpoints);
                 Assert.Equal(savedJob.Observations, workspace.Job.Observations);
 
+                Invoke(window, Named<Button>(window, "JobsButton"));
                 Invoke(window, Named<Button>(audit, "CloseJobButton"));
                 Assert.Null(workspace.Job);
                 OpenJob(window, audit, workspace, job.JobId);
+                window.ShowStage(ShellStage.Verify);
                 Assert.Equal(1, store.DecisionCount);
                 Assert.Equal(0, provider.InvocationCount);
                 Assert.Contains(disposition == RebootDisposition.Resume ? "Resume recorded" : "Resume abandoned",

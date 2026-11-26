@@ -3,6 +3,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using ThirdLife.UI.Features.ManualTests;
+using ThirdLife.UI.Shell;
+using static ThirdLife.UI.Tests.AuditAccessibilityTests;
 
 namespace ThirdLife.UI.Tests;
 
@@ -14,14 +16,15 @@ public sealed class WheelScrollingTests
     [InlineData(true)]
     public void FractionalWheelPulsesMoveTheShellByACombinedDetent(bool drainBetweenPulses)
     {
+        using var fixture = new M1AuditFixture();
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow { Width = 500, Height = 320 };
+            var window = new MainWindow(fixture.CreateWorkspace()) { Width = 500, Height = 320 };
             try
             {
                 ShellTestHost.Show(window);
                 var scroller = ShellTestHost.Element<ScrollViewer>(window, "ShellScroll");
-                var source = ShellTestHost.Element<TextBlock>(window, "StageHeading");
+                var source = ShellTestHost.Element<ListBoxItem>(window, "IntakeStage");
 
                 Reset(window, scroller);
                 SendWheel(source, -120);
@@ -53,21 +56,23 @@ public sealed class WheelScrollingTests
             }
             finally
             {
-                window.Close();
+                CloseWindow(window);
             }
         });
     }
 
     [Fact]
-    public void WheelOverAnUnfocusedIntakeChoiceScrollsTheShellProportionally()
+    public async Task WheelOverAnUnfocusedIntakeChoiceScrollsTheShellProportionally()
     {
+        using var fixture = new M1AuditFixture();
+        var workspace = fixture.CreateWorkspace();
+        await workspace.CreateJobAsync();
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow { Width = 500, Height = 320 };
+            var window = new MainWindow(workspace) { Width = 500, Height = 320 };
             try
             {
                 var auditView = ShellTestHost.Element<AuditWorkspaceView>(window, "AuditView");
-                auditView.Visibility = Visibility.Visible;
                 var choice = Assert.IsType<ComboBox>(auditView.FindName("SanitizationResult"));
                 choice.SelectedIndex = 1;
                 ShellTestHost.Show(window);
@@ -96,7 +101,7 @@ public sealed class WheelScrollingTests
             }
             finally
             {
-                window.Close();
+                CloseWindow(window);
             }
         });
     }
@@ -104,23 +109,19 @@ public sealed class WheelScrollingTests
     [Fact]
     public void WheelOverEvidenceMovesOnlyThePixelScrolledList()
     {
+        using var fixture = new M1AuditFixture();
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow { Width = 500, Height = 320 };
+            var window = new MainWindow(fixture.CreateWorkspace()) { Width = 500, Height = 320 };
             try
             {
                 var auditView = ShellTestHost.Element<AuditWorkspaceView>(window, "AuditView");
-                auditView.Visibility = Visibility.Visible;
                 var list = Assert.IsType<ListBox>(auditView.FindName("AssessmentObservations"));
-                list.ItemsSource = Enumerable.Range(0, 60).Select(index => new
-                {
-                    Name = $"Finding {index}",
-                    Value = "A bounded example finding",
-                    Evidence = "Synthetic fixture",
-                    Provider = "Example provider",
-                }).ToArray();
-                Assert.IsType<Expander>(list.Parent).IsExpanded = true;
+                list.ItemsSource = Enumerable.Range(0, 60).Select(index => new AssessmentFinding(
+                    $"finding-{index}", "A bounded example finding", "Synthetic fixture", "Example provider",
+                    $"Finding {index}", "Fixture time", "Fixture evidence")).ToArray();
                 ShellTestHost.Show(window);
+                window.ShowStage(ShellStage.Inspect);
                 list.BringIntoView();
                 ShellTestHost.Drain(window);
                 var outer = ShellTestHost.Element<ScrollViewer>(window, "ShellScroll");
@@ -149,7 +150,7 @@ public sealed class WheelScrollingTests
             }
             finally
             {
-                window.Close();
+                CloseWindow(window);
             }
         });
     }
@@ -157,17 +158,19 @@ public sealed class WheelScrollingTests
     [Fact]
     public void WheelOverReportMovesItsReadingPaneWithinOnePulse()
     {
+        using var fixture = new M1AuditFixture();
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow { Width = 500, Height = 320 };
+            var window = new MainWindow(fixture.CreateWorkspace()) { Width = 500, Height = 320 };
             try
             {
                 var auditView = ShellTestHost.Element<AuditWorkspaceView>(window, "AuditView");
-                auditView.Visibility = Visibility.Visible;
                 var preview = Assert.IsType<TextBox>(auditView.FindName("WorkshopReportPreview"));
                 preview.Visibility = Visibility.Visible;
                 preview.Text = string.Join(Environment.NewLine, Enumerable.Repeat("Synthetic report line for scroll testing.", 80));
                 ShellTestHost.Show(window);
+                window.ShowStage(ShellStage.Handover);
+                ShellTestHost.Drain(window);
                 preview.BringIntoView();
                 ShellTestHost.Drain(window);
                 var outer = ShellTestHost.Element<ScrollViewer>(window, "ShellScroll");
@@ -182,7 +185,7 @@ public sealed class WheelScrollingTests
             }
             finally
             {
-                window.Close();
+                CloseWindow(window);
             }
         });
     }

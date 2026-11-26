@@ -26,7 +26,9 @@ public partial class RebootRecoveryView : UserControl
 
         var hadFocus = button.IsKeyboardFocused;
         await workspace.DecideRebootRecoveryAsync(disposition);
-        if (hadFocus && DecisionStatus.IsVisible && (IsKeyboardFocusWithin || Keyboard.FocusedElement is null))
+        var focused = Keyboard.FocusedElement;
+        if (hadFocus && DecisionStatus.IsVisible && (IsKeyboardFocusWithin || focused is null ||
+            focused is ScrollViewer ancestor && ancestor.IsAncestorOf(this)))
         {
             DecisionStatus.Focus();
             DecisionStatus.BringIntoView();

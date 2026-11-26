@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using ThirdLife.Core.ManualTests;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Persistence;
@@ -42,7 +41,7 @@ internal sealed class M1AuditFixture : IDisposable
 
     internal MainWindow CreateWindow(AuditWorkspace workspace, bool prefillInputs = false)
     {
-        var window = new MainWindow(new ShellViewModel(), workspace)
+        var window = new MainWindow(workspace)
         {
             Title = WindowTitle,
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
@@ -71,8 +70,7 @@ internal sealed class M1AuditFixture : IDisposable
             Assert.IsType<DatePicker>(audit.FindName("SanitizationDate")).SelectedDate = FixtureDate.ToDateTime(TimeOnly.MinValue);
             Assert.IsType<TextBox>(audit.FindName("SanitizationMediaId")).Text = MediaCode;
             Assert.IsType<CheckBox>(audit.FindName("ExternalRecordConfirmed")).IsChecked = false;
-            var keyboard = ManualTestCatalog.Cases.Single(test => test.Id == KeyboardCase);
-            Assert.IsType<ComboBox>(audit.FindName("ManualCheck")).SelectedItem = keyboard;
+            Assert.IsType<ComboBox>(audit.FindName("ManualCheck")).SelectedValue = KeyboardCase;
             Assert.IsType<TextBox>(audit.FindName("ManualNotes")).Text = ManualNote;
         }
     }

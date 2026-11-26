@@ -79,7 +79,7 @@ public sealed partial class PackageSetupTests
         await reopened.OpenJobAsync(jobId.Value);
         var inspections = runtime.Inspections;
         reopened.SelectedPlanProfile = Assert.Single(reopened.PlanProfiles, option => !option.Profile.SyntheticData);
-        InPackageRecoveryWindow(reopened, (window, panel) =>
+        InPackagePreparationWindow(reopened, (window, panel) =>
         {
             Invoke(window, Named<Button>(panel, "BuildPlanReviewButton"));
             PumpUntil(window, () => !reopened.IsBusy && reopened.HasPlanReview);
@@ -116,7 +116,7 @@ public sealed partial class PackageSetupTests
             approved = await ReadRecoveryHistoryAsync(disk, jobId);
             var acquisitions = runtime.Acquisitions;
             runtime.Installed = true;
-            InPackageRecoveryWindow(workspace, (window, panel) =>
+            InPackagePreparationWindow(workspace, (window, panel) =>
             {
                 Invoke(window, Named<Button>(panel, "InstallPackageButton"));
                 PumpUntil(window, () => !workspace.IsBusy && runtime.ProbeCalls == 1,
@@ -239,7 +239,7 @@ public sealed partial class PackageSetupTests
         clock.Current = Now.AddSeconds(5);
         await using var reopened = OpenWorkspace(disk, reports, service, clock);
         await reopened.OpenJobAsync(jobId.Value);
-        InPackageRecoveryWindow(reopened, (window, panel) =>
+        InPackageVerificationWindow(reopened, (window, panel) =>
         {
             var retry = Named<Button>(panel, "RetryPackageButton");
             Assert.True(retry.IsVisible && retry.IsEnabled);
