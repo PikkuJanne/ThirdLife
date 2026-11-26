@@ -5187,7 +5187,7 @@ tasks:
   workstream: integration
   kind: test
   priority: P0
-  status: backlog
+  status: blocked
   size: L
   executor: codex
   environment: windows
@@ -5235,7 +5235,53 @@ tasks:
   - Run the TL-0408 native procedure for safely observable exact installer-client interruption and an actual Windows restart.
     Reopen the same durable job after restart even when the installer completes without requesting it. Record fresh verification
     and retain unobserved native restart-required behavior as an explicit evidence limit for TL-0411 if it does not occur.
-  evidence: []
+  evidence:
+  - task: TL-0410
+    summary: The clean baseline passed Quick and the focused package and reboot recovery WPF selection.
+    command_or_review: eng/verify.ps1 -Tier Targeted -Restore with PackageSetupTests and RebootRecoveryTests
+    tier: targeted
+    result: passed
+    environment: Unelevated active Windows 11 Pro 26H2 build 26300.9974, native x64, with a clean worktree
+    date: '2026-11-26'
+    duration: 175.114 s
+    reference: artifacts/e2e/M4-first-write-slice.md, production source d61c49e
+    limitation: Deterministic baseline before the TL-0410 harness and evidence changes.
+  - task: TL-0410
+    summary: Six targeted fixture selections passed for interrupted network transfer, modeled decline and restart, missing
+      registration, and a reopened workshop report.
+    command_or_review: eng/run-m4-package-fixtures.ps1, Targeted selections
+    tier: targeted
+    result: passed
+    environment: Unelevated active Windows 11 Pro 26H2, native x64, with isolated SQLite and fixture adapters
+    date: '2026-11-26'
+    duration: 1.897 to 6.142 s per selection
+    reference: artifacts/e2e/M4-first-write-slice.md, production source d61c49e
+    limitation: The recipient draft is a fixture artifact. An actual package UAC decline and Windows restart remain unobserved.
+  - task: TL-0410
+    summary: Four extended fixture selections passed for owned application and backend loss and checkpoint transaction faults.
+    command_or_review: eng/run-m4-package-fixtures.ps1, FI-004, FI-005 and FI-012
+    tier: extended
+    result: passed
+    environment: Unelevated active Windows 11 Pro 26H2, native x64, with isolated SQLite and owned fixture processes
+    date: '2026-11-26'
+    duration: 2.732 to 5.922 s per selection
+    reference: artifacts/e2e/M4-first-write-slice.md, production source d61c49e
+    limitation: The exact guest installer-client interruption and actual Windows restart remain unobserved.
+  - task: TL-0410
+    summary: The dedicated guest had no exact or related package registration and the unelevated normal application displayed
+      the closed intake gate.
+    command_or_review: eng/run-m4-package-preflight.ps1 -CheckPackageSource and eng/run-m4-package-desktop.ps1 -Inspect
+    tier: targeted
+    result: passed
+    environment: Same-machine dedicated Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest in the Basic console
+    date: '2026-11-26'
+    duration: 4.278 s for preflight and 7.738 s for desktop observation
+    reference: artifacts/e2e/M4-first-write-slice.md, production source d61c49e
+    limitation: Admission and startup only. External sanitization evidence, exact package plan, scoped authority, live
+      dispatch and successful restoration remain outstanding.
+  blocked_reason: A truthful attributable no-donor-storage intake statement for the admitted guest is required to evaluate the
+    live policy and display the exact plan. Then record scoped authority for the guest plan, each planned interruption or
+    restart, and checkpoint restoration, with an actual Windows choice if it prompts.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.
