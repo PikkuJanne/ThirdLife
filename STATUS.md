@@ -24,7 +24,8 @@ qualification and the TL-0314 privilege decision.
 [Guest qualification](artifacts/evidence/TL-0317/report.md)
 [Application orchestration](artifacts/evidence/TL-0313/report.md)
 
-TL-0501 is the next M5 implementation task. Start by validating dependency
-and phase ordering against a bounded plan and recovering per-action state
-from its saved journal. `TASKS.yaml` records the existing execution and release
-prerequisites.
+TL-0501 is in progress. Its first checkpoint validates phase and dependency
+ordering and reconstructs confirmed, pending and interrupted action state
+from the exact saved journal. Next bind the graph to the reviewed plan and
+its durable approval before integrating multi-action dispatch.
+[Scheduling checkpoint](artifacts/evidence/TL-0501/report.md)

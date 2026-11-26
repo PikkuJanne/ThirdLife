@@ -369,10 +369,10 @@ public sealed class PlanResolverTests
         return PlanResolver.Resolve(job, reviewedPolicy, profile, catalog, observations, [], AsOfUtc);
     }
 
-    internal static ProposedPlan CreateSyntheticPlan(bool archived = false)
+    internal static ProposedPlan CreateSyntheticPlan(bool archived = false, bool includeVideoCalling = false)
     {
         var observations = ReadyObservations();
-        return Resolve(Store(observations, archived), observations);
+        return Resolve(Store(observations, archived), observations, selected: includeVideoCalling ? ["video_calling"] : []);
     }
 
     private static PolicyDocument MakeEffectivePolicy(string expiresUtc)
