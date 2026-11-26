@@ -5187,7 +5187,7 @@ tasks:
   workstream: integration
   kind: test
   priority: P0
-  status: blocked
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -5488,8 +5488,32 @@ tasks:
     duration: 144.830 s preview, 106.321 s in the desktop case and 3.714 s independent journal check
     reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and installer-client interruption preview bundle
     limitation: Preview stops before plan approval and dispatch. The client stop needs separate authority and an observed, attributable active installer phase.
-  blocked_reason: The separate installer-client interruption plan awaits permission to stop the exact verified client in an
-    observable transaction phase and the applicable supervised Windows Yes.
+  - task: TL-0410
+    summary: After the operator-reported Yes, the exact authorized installer client was stopped once in its observed live transaction.
+      The same held handle verified exit. The app retained one correlated dispatch and Failed / OperationFailed, while a fresh MSI
+      query confirmed exact registration. The same job reopened with matching report and no handover or redispatch.
+    command_or_review: Bound Install, durable dispatch and native MSI event observation, exact held-handle stop and exit,
+      independent MSI and SQLite checks, and same-job unelevated failure report
+    tier: extended
+    result: passed
+    environment: Same Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 61.579 s observer window through stop and exit, 49.181 s Install wrapper, 4.339 s MSI events,
+      16.056 s same-job app and report check and 3.000 s journal comparison
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and native installer-client interruption bundle
+    limitation: The shared service remained active after the client exited, and the exact MSI transaction ended. Fresh registration
+      came from independent MSI inspection. The failed job retained no launch verification.
+  - task: TL-0410
+    summary: The standing-authorized final restore applied the exact clean checkpoint after retaining the complete host case evidence.
+      Re-admission confirmed absence of MSI registration, the prior job store and reports, installer, consent and app processes, and runner residue.
+    command_or_review: Bound Restore-VMSnapshot and same-guest start, supported package preflight and independent residue verification
+    tier: extended
+    result: passed
+    environment: Same Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 7.772 s apply and start, 24.575 s re-admission and MSI preflight and 31.380 s residue inspection
+    reference: artifacts/e2e/M4-first-write-slice.md, final verified checkpoint restore
+    limitation: The restored guest remains available at the clean desktop. The M4 gate retains native restart-required and recipient draft limits.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.
@@ -5502,10 +5526,12 @@ tasks:
   - kind: capability
     scope: Admitted disposable Windows 11 native x64 guest with a clean restoration point, verified candidate, reviewed exact
       package route and a bounded package interruption and restart procedure.
+    evidence: artifacts/e2e/M4-first-write-slice.md, bound guest admission and verified native interruption, restart and final restore
   - kind: authorization
     scope: Attributable authority for the exact reviewed package plan and guest target, any applicable Windows consent, and
       the planned installer-client interruption. Verify the applicable scoped grant before saving approval for each plan.
     authority: operator
+    evidence: artifacts/e2e/M4-first-write-slice.md, observed native UAC decline and scoped installer-client interruption on 2026-11-26
   - kind: authorization
     scope: Standing operator authority to dispatch the exact reviewed Notepad++ vendor x64 MSI machine-wide on the bound ThirdLife-W11 guest.
       Verify package identity, version, digest and route, and save the exact plan approval for each run.

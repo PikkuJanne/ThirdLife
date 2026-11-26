@@ -557,6 +557,71 @@ The preview used the reviewed Release artifacts from `20247fb` and the
 Install-capable driver. The bundle SHA-256 was
 `87b8e4d1e2fe70dc5b03d8825ab354f87c23917071055dd6b1f23f43848e9116`.
 
+## 26 November 2026 supervised native installer-client interruption
+
+The operator gave separate authority to stop the exact client once and
+reported choosing Yes at the bound Windows prompt. The first observer was
+cancelled before dispatch after a Windows PowerShell compatibility check.
+A direct check confirmed no other observer or installer was active before
+the corrected observer armed. The exact package approval was saved through
+the ordinary unelevated app using the standing installer grant.
+
+The bounded observer matched the one durable dispatch, the app-owned
+console client, the exact installer arguments, the pinned MSI digest and
+the matching consent process. It bound the native system installer image
+and creation time to a single process handle. After consent cleared it
+observed the matching MSI transaction start and explicit client identity,
+with the same handle still live. It issued one stop through that handle
+and confirmed its exit. The observer reached the terminal checkpoint in
+61.579 s from arming. The exit code of 1067 was set by the test intervention.
+
+The app saved one exact approval and one correlated dispatch ending in
+`Failed / OperationFailed`. The Install wrapper returned after 49.181 s
+and retained its stage for case review. A separate 4.339 s Windows event
+check found the exact transaction start and end and confirmed no console
+installer client remained. The registered session-zero Windows Installer
+service continued independently. A fresh MSI query found the exact requested
+machine-wide registration present after the client exited.
+
+The same unelevated app closed and reopened the existing job through its
+ordinary controls. In 16.056 s the saved failure and matching workshop report
+were visible, install and handover were disabled, and the app exited normally.
+The reopened job retained its failure. Fresh package registration came from
+the independent MSI query. Independent launch verification was absent from
+this job. The 3.000 s read-only journal comparison matched the earlier
+fingerprint and found one approval and one dispatch. The exact restricted
+workshop report was retained locally in a protected copy after a 3.819 s
+transfer.
+
+The Install bundle SHA-256 was
+`bc7608af939d7ebb8e728e737bd7a983236c5190bb43bab397a65141ad3f1221`.
+It used the reviewed Release artifacts from `20247fb` and the Install-capable
+driver SHA-256
+`702107c26f9679280ec79572e016281f74ddf4ea263c3dfe7392291f38a2d755`.
+
+## 26 November 2026 final guest disposition
+
+After preserving the interruption report and journal evidence on the host,
+the standing grant covered applying the exact clean checkpoint and starting
+the same quiescent guest. Apply and start took 7.772 s. Re-admission and MSI
+preflight took 24.575 s and confirmed absent registration and an idle
+Windows Installer. A separate 31.380 s guest check found no prior job store,
+workshop reports, app, installer or consent processes, runner tasks or
+staging. The clean Basic-console desktop was available.
+
+TL-0410 has observed evidence for the scoped live install and independent
+verification, actual restart and same-job report continuity, native UAC
+decline, exact installer-client interruption and final cleanup. The retained
+FI-002 and FI-008 fixture checks cover network loss and reported installer
+success with missing or wrong registration. The recipient draft evidence
+remains fixture-scoped. TL-0411 owns the M4 gate and carries the unobserved
+native restart-required result and the existing perception limits.
+
+Host Quick passed at base `aea651e` in 165.075 s with 1,233 .NET tests and
+eight governance regressions. The run exceeded the 120 s target. It included
+a 28.08 s build and a 62 s WPF selection during final guest verification.
+Bundle and repository validation passed on the completion evidence.
+
 ## Native procedure
 
 Use the exact VM and clean checkpoint IDs from the reviewed profile. Retain the

@@ -67,12 +67,9 @@ installation. Eligible failures retain linked attempts and a durable three-start
 limit. Expired approvals or changed resolutions require fresh review.
 [Package retry evidence](artifacts/evidence/TL-0409/report.md)
 
-TL-0410 installed and independently verified the reviewed Notepad++ package
-in the supervised guest. After an orderly restart the app reopened the same
-verified job and generated a matching workshop report. The journal retained
-one dispatch and a fresh MSI query confirmed exact machine-wide registration.
-The operator reported No at the native Windows prompt. The installer recorded
-cancellation, and the same job reopened in review with one dispatch and absent
-MSI registration. After the clean restore, the app previewed the separate
-installer-client interruption plan. The client stop awaits scoped authority.
+TL-0410 completed the first live package write slice. The verified installation
+and its report survived an orderly restart. Native UAC decline and exact
+installer-client interruption preserved one dispatch per job and withheld
+handover. Independent MSI checks and the final clean checkpoint restore passed.
+TL-0411 retains the M4 gate.
 [M4 slice evidence](artifacts/e2e/M4-first-write-slice.md)
