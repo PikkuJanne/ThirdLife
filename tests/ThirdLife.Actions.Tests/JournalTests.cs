@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
+using ThirdLife.Core;
 using ThirdLife.Core.Evidence;
 
 namespace ThirdLife.Actions.Tests;
@@ -197,6 +198,9 @@ public sealed class JournalTests
     [Theory]
     [InlineData(JournalResult.NetworkUnavailable, JournalCheckpoint.PackagePreDispatchFailure, true)]
     [InlineData(JournalResult.Cancelled, JournalCheckpoint.PackagePreDispatchFailure, true)]
+    [InlineData(JournalResult.BackendUnavailable, JournalCheckpoint.PackagePreDispatchFailure, true)]
+    [InlineData(JournalResult.BackendUnavailable, JournalCheckpoint.None, false)]
+    [InlineData(JournalResult.PackageDispatchAuthorizationChanged, JournalCheckpoint.PackagePreDispatchFailure, true)]
     [InlineData(JournalResult.OperationFailed, JournalCheckpoint.None, false)]
     [InlineData(JournalResult.OperationFailed, JournalCheckpoint.PackagePreDispatchFailure, false)]
     public void PackageRetryRequiresFreshApprovalAndARecordedFailureBeforeDispatch(
@@ -221,6 +225,46 @@ public sealed class JournalTests
             JournalStateMachine.CanAppend(plan, approval, started, failed));
         Assert.Equal(canRetry, JournalStateMachine.CanAppend(plan, renewed, failed, retry));
         Assert.False(JournalStateMachine.CanAppend(plan, approval, failed, replay));
+    }
+
+    [Fact]
+    public void PackageRetryIntentRequiresTheExactApprovalAndNewCorrelation()
+    {
+        var proposal = PlanResolverTests.CreateReviewedPlan();
+        var plan = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+        var actionId = Assert.Single(plan.Actions).ActionId;
+        var approval = Approval(plan);
+        var failed = Entry(plan, actionId, PreviousEntryId, JournalState.Started, JournalState.Failed,
+            JournalActor.PackageBackend, JournalResult.NetworkUnavailable, JournalCheckpoint.PackagePreDispatchFailure);
+        var retry = new JournalEntry(CandidateEntryId, plan.Key, actionId, approval.ApprovalId,
+            JournalState.Failed, JournalState.Started, JournalActor.Coordinator, Approver, Guid.NewGuid(),
+            ApprovalTime.AddMinutes(3), JournalResult.None, JournalCheckpoint.PackageRetryDispatchIntent,
+            priorAttemptEntryId: failed.EntryId);
+        var sharedCorrelation = new JournalEntry(Guid.NewGuid(), plan.Key, actionId, approval.ApprovalId,
+            JournalState.Failed, JournalState.Started, JournalActor.Coordinator, Approver, failed.CorrelationId,
+            ApprovalTime.AddMinutes(3), JournalResult.None, JournalCheckpoint.PackageRetryDispatchIntent,
+            priorAttemptEntryId: failed.EntryId);
+        var changed = new JournalApproval(Guid.NewGuid(), plan.Key, Approver, Guid.NewGuid(), ApprovalTime);
+
+        Assert.True(JournalStateMachine.CanAppend(plan, approval, failed, retry));
+        Assert.False(JournalStateMachine.CanAppend(plan, null, failed, retry));
+        Assert.False(JournalStateMachine.CanAppend(plan, changed, failed, retry));
+        Assert.False(JournalStateMachine.CanAppend(plan, approval, failed, sharedCorrelation));
+    }
+
+    [Fact]
+    public void LegacyPackageJournalPayloadStillRoundTripsWithoutARetryLink()
+    {
+        var proposal = PlanResolverTests.CreateReviewedPlan();
+        var plan = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+        var actionId = Assert.Single(plan.Actions).ActionId;
+        var start = Entry(plan, actionId, CandidateEntryId, JournalState.Approved, JournalState.Started,
+            JournalActor.Coordinator, JournalResult.None, JournalCheckpoint.PackageDispatchIntent);
+        var options = DomainJson.CreateStrictOptions();
+        var json = JsonSerializer.Serialize(start, options);
+
+        Assert.DoesNotContain("PriorAttemptEntryId", json, StringComparison.Ordinal);
+        Assert.Equal(start, JsonSerializer.Deserialize<JournalEntry>(json, options));
     }
 
     [Fact]

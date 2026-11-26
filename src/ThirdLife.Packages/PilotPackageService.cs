@@ -247,7 +247,10 @@ public sealed class PilotPackageService
                     }
 
                     // Cancelling observation never sends a termination request to Windows Installer.
-                    return await runtime.ApplyAsync(artifact, CancellationToken.None).ConfigureAwait(false);
+                    var result = await runtime.ApplyAsync(artifact, CancellationToken.None).ConfigureAwait(false);
+                    // These statuses certify that the service never entered the apply boundary.
+                    return result.Status is PackageInstallStatus.Unavailable or PackageInstallStatus.PreconditionChanged
+                        ? new PackageInstallResult(PackageInstallStatus.ReviewRequired) : result;
                 }, dispatchToken)
                     .ConfigureAwait(false);
             }

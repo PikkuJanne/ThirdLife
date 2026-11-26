@@ -28,6 +28,11 @@ public static class JournalStateMachine
             return false;
         }
 
+        if (candidate.Checkpoint == JournalCheckpoint.PackageRetryDispatchIntent)
+        {
+            return CanStartPackageRetry(plan, action, previous, candidate);
+        }
+
         if (candidate.State != JournalState.Approved &&
             candidate.PriorState is JournalState.Started or JournalState.Applied or JournalState.Failed or JournalState.RequiresReview &&
             (candidate.CorrelationId != previous?.CorrelationId || candidate.ApprovalId != previous?.ApprovalId))
@@ -70,11 +75,7 @@ public static class JournalStateMachine
                 ((candidate.Checkpoint == JournalCheckpoint.BrokerApproval &&
                     previous?.Checkpoint == JournalCheckpoint.BrokerPreDispatchFailure && IsBrokerNoOp(action)) ||
                     (candidate.Checkpoint == JournalCheckpoint.PackagePlanApproval &&
-                        previous is
-                        {
-                            Checkpoint: JournalCheckpoint.PackagePreDispatchFailure, Actor: JournalActor.PackageBackend,
-                            Result: JournalResult.NetworkUnavailable or JournalResult.Cancelled
-                        } && IsMachinePackage(action))),
+                        PackageRetryPolicy.IsRetryableFailure(previous) && IsMachinePackage(action))),
             (JournalState.Approved, JournalState.Started) =>
                 candidate.Actor == JournalActor.Coordinator && candidate.Result == JournalResult.None &&
                 ((candidate.Checkpoint == JournalCheckpoint.DispatchIntent && previous?.Checkpoint is not
@@ -91,24 +92,22 @@ public static class JournalStateMachine
                 (candidate.Checkpoint == JournalCheckpoint.None ||
                     (candidate.Checkpoint == JournalCheckpoint.RestartRequired && action.Definition.Reboot == ActionReboot.MayRequire) ||
                     (candidate.Checkpoint == JournalCheckpoint.PackageLaunchPendingVerification &&
-                        IsMachinePackage(action) && previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent)),
+                        IsMachinePackage(action) && IsPackageDispatchIntent(previous))),
             (JournalState.Started, JournalState.Failed) =>
                 (IsExecutionActor(candidate, previous) && candidate.Checkpoint == JournalCheckpoint.None &&
                     (candidate.Result == JournalResult.OperationFailed ||
                         (candidate.Actor == JournalActor.PackageBackend && candidate.Result is JournalResult.BackendUnavailable or
                             JournalResult.AuthorizationDeclined or JournalResult.TrustMismatch or JournalResult.PreconditionChanged))) ||
-                (IsMachinePackage(action) && previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent &&
+                (IsMachinePackage(action) && IsPackageDispatchIntent(previous) &&
                     candidate.Actor == JournalActor.PackageBackend && candidate.Checkpoint == JournalCheckpoint.None &&
                     candidate.Result is JournalResult.PackageDownloadUnavailable or JournalResult.PackageElevationUnavailable) ||
-                (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent && IsMachinePackage(action) &&
-                    candidate.Actor == JournalActor.PackageBackend && candidate.Checkpoint == JournalCheckpoint.PackagePreDispatchFailure &&
-                    candidate.Result is JournalResult.NetworkUnavailable or JournalResult.Cancelled) ||
+                (IsPackageDispatchIntent(previous) && IsMachinePackage(action) && PackageRetryPolicy.IsRetryableFailure(candidate)) ||
                 (previous?.Checkpoint == JournalCheckpoint.BrokerDispatchIntent && IsBrokerNoOp(action) &&
                     candidate.Actor == JournalActor.Coordinator && candidate.Checkpoint == JournalCheckpoint.BrokerPreDispatchFailure &&
                     candidate.Result is JournalResult.AuthorizationDeclined or JournalResult.BackendUnavailable or JournalResult.Cancelled),
             (JournalState.Started, JournalState.RequiresReview) =>
                 ((candidate.Actor is JournalActor.Coordinator or JournalActor.Broker && IsInterruption(candidate)) ||
-                    (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent && IsMachinePackage(action) && candidate.Actor == JournalActor.PackageBackend &&
+                    (IsPackageDispatchIntent(previous) && IsMachinePackage(action) && candidate.Actor == JournalActor.PackageBackend &&
                         candidate.Result is JournalResult.Interrupted or JournalResult.Cancelled or JournalResult.TimedOut or
                             JournalResult.PackageDownloadTimedOut &&
                         candidate.Checkpoint == JournalCheckpoint.Reconcile) ||
@@ -139,6 +138,19 @@ public static class JournalStateMachine
         };
     }
 
+    private static bool CanStartPackageRetry(JournalPlanSnapshot plan, JournalAction action, JournalEntry? previous,
+        JournalEntry candidate) =>
+        plan is { SyntheticData: false, Actions.Length: 1 } &&
+        action.Request is InstallPackageActionRequest { Scope: ActionScope.Machine, Architecture: ActionArchitecture.X64 } &&
+        candidate is { State: JournalState.Started, Actor: JournalActor.Coordinator, Result: JournalResult.None, Verification: null } &&
+        previous is not null && candidate.CorrelationId != previous.CorrelationId && candidate.ApprovalId == previous.ApprovalId &&
+        ((previous is { State: JournalState.Approved, Checkpoint: JournalCheckpoint.PackagePlanApproval }) ||
+            (PackageRetryPolicy.IsRetryableFailure(previous) && previous.Result != JournalResult.PackageDispatchAuthorizationChanged &&
+                candidate.PriorAttemptEntryId == previous.EntryId));
+
+    private static bool IsPackageDispatchIntent(JournalEntry? entry) =>
+        entry is not null && PackageRetryPolicy.IsDispatchIntent(entry.Checkpoint);
+
     private static bool IsApproval(JournalEntry entry, JournalApproval approval) =>
         entry.Actor == JournalActor.Operator && entry.ActorId == approval.ActorId &&
         entry.CorrelationId == approval.CorrelationId && entry.Result == JournalResult.None;
@@ -157,7 +169,7 @@ public static class JournalStateMachine
         JournalResult.PackageProbeExecutableUntrusted or JournalResult.PackageProbeLaunchFailed;
 
     private static bool IsExecutionActor(JournalEntry entry, JournalEntry? previous) =>
-        entry.Actor == (previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent ? JournalActor.PackageBackend : JournalActor.Broker);
+        entry.Actor == (IsPackageDispatchIntent(previous) ? JournalActor.PackageBackend : JournalActor.Broker);
 
     private static bool IsMachinePackage(JournalAction action) =>
         action.Request is InstallPackageActionRequest { Scope: ActionScope.Machine };

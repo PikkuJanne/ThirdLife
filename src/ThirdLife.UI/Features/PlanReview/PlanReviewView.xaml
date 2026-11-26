@@ -90,6 +90,13 @@
                VerticalScrollBarVisibility="Auto" Margin="0,6,0,0"
                Visibility="{Binding HasPackageHistory, Converter={StaticResource PlanReviewVisibility}}"
                AutomationProperties.Name="Saved machine-wide setup journal" />
+      <TextBlock x:Name="PackageRetryMessage" Text="{Binding PackageRetryStatusText, NotifyOnTargetUpdated=True}"
+                 Visibility="{Binding HasPackageRetryStatus, Converter={StaticResource PlanReviewVisibility}}"
+                 TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                 AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
+      <Button x:Name="RetryPackageButton" Content="Retry saved package"
+              Visibility="{Binding ShowPackageRetry, Converter={StaticResource PlanReviewVisibility}}"
+              IsEnabled="{Binding CanRetryPackage}" Click="RetryPackage" Margin="0,4,0,4" HorizontalAlignment="Left" />
       <StackPanel Visibility="{Binding ShowsPackageRecovery, Converter={StaticResource PlanReviewVisibility}}">
         <Button x:Name="CheckPackageRecoveryButton" Content="Check installed package state"
                 Visibility="{Binding OffersPackageRecoveryCheck, Converter={StaticResource PlanReviewVisibility}}"

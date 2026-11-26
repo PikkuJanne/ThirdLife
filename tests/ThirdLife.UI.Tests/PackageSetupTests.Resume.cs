@@ -211,6 +211,7 @@ public sealed partial class PackageSetupTests
         Assert.Equal(0, observer.Probes);
         Assert.Empty(reopened.RebootRecoveryChoices);
         Assert.False(reopened.CanInstallPackage);
+        Assert.False(reopened.CanRetryPackage);
         Assert.Equal(prior.Entries.AsEnumerable(), (await ReadRecoveryHistoryAsync(disk, jobId)).Entries.AsEnumerable());
         await using (var accessible = OpenRestartWorkspace(observer))
         {
@@ -237,6 +238,7 @@ public sealed partial class PackageSetupTests
         var history = await ReadRecoveryHistoryAsync(disk, jobId);
         Assert.Equal(prior.Entries.AsEnumerable(), history.Entries.Take(prior.Entries.Length));
         Assert.False(reopened.CanInstallPackage);
+        Assert.False(reopened.CanRetryPackage);
         if (expireCheckpoint)
         {
             Assert.Contains("expir", reopened.PackageRecoveryStatus, StringComparison.OrdinalIgnoreCase);

@@ -334,6 +334,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _closing = true;
         CancelAssessment();
         CancelReport();
+        StopPackageRetryRefresh();
         StopWaitingForPackageOnClose();
         CancelBrokerExecution();
         try
