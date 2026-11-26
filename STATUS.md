@@ -24,7 +24,7 @@ qualification and the TL-0314 privilege decision.
 [Guest qualification](artifacts/evidence/TL-0317/report.md)
 [Application orchestration](artifacts/evidence/TL-0313/report.md)
 
-TL-0501 binds the action graph to durable approval and resumes serial
-synthetic no-op execution from SQLite. Live multi-action work requires a
-second qualified action route and schedule-aware verification and recovery.
+TL-0501 completed dependency-aware scheduling for approved package and no-op
+actions with per-action SQLite recovery. The live multi-action qualification
+and exact approval remain prerequisites at the M5 technical gate, TL-0511.
 [Scheduling and execution evidence](artifacts/evidence/TL-0501/report.md)
