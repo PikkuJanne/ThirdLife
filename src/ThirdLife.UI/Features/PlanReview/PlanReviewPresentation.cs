@@ -75,9 +75,16 @@ internal static class PlanReviewPresentation
                 : "Installation changes this computer for all users and may prompt for Windows consent. Device readiness needs a separate assessment.");
             details.AppendLine(CultureInfo.CurrentCulture, $"Estimated download {Total(impact.Download)}");
             details.AppendLine(CultureInfo.CurrentCulture, $"Estimated installation {Total(impact.Installation)}");
-            foreach (var row in impact.Actions)
+            if (plan.Schedule.IsEmpty)
             {
-                AppendAction(details, row, WorkshopPackageProfile.IncludesLaunchProbe(plan));
+                foreach (var row in impact.Actions)
+                {
+                    AppendAction(details, row, WorkshopPackageProfile.IncludesLaunchProbe(plan));
+                }
+            }
+            else
+            {
+                AppendSchedule(details, plan, impact);
             }
         }
 
@@ -104,6 +111,20 @@ internal static class PlanReviewPresentation
             $"{(package.Scope == ActionScope.Machine ? "All users" : "Current user")} · {package.SourceId}";
         return new PlanReviewSnapshot(plan, impact, title, details.ToString(), identity, scope,
             package is null ? [] : PackageImpact(impact.Actions[0], WorkshopPackageProfile.IncludesLaunchProbe(plan)));
+    }
+
+    private static void AppendSchedule(StringBuilder details, ProposedPlan plan, PlanImpact impact)
+    {
+        var rows = impact.Actions.ToDictionary(row => row.ActionId);
+        details.AppendLine("Actions run one at a time. Later phases wait for verification of every earlier phase.");
+        foreach (var step in plan.Schedule)
+        {
+            AppendAction(details, rows[step.ActionId], WorkshopPackageProfile.IncludesLaunchProbe(plan));
+            details.AppendLine(CultureInfo.CurrentCulture, $"Phase {step.Phase}");
+            var dependencies = step.Dependencies.IsEmpty ? "None" :
+                string.Join(", ", step.Dependencies.Select(id => CapabilityName(rows[id].CapabilityId)));
+            details.AppendLine(CultureInfo.CurrentCulture, $"Requires verified actions {dependencies}");
+        }
     }
 
     private static PlanReviewItem[] PackageImpact(ActionImpact impact, bool includesLaunchProbe) =>

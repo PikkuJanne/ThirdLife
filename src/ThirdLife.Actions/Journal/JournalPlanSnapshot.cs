@@ -46,7 +46,8 @@ public sealed class JournalPlanSnapshot
         bool isCurrentPolicyPlan,
         string catalogSha256,
         string profileSha256,
-        bool syntheticData)
+        bool syntheticData,
+        ActionSchedule? schedule)
     {
         Key = key;
         GateDecisionId = gateDecisionId;
@@ -58,6 +59,7 @@ public sealed class JournalPlanSnapshot
         CatalogSha256 = catalogSha256;
         ProfileSha256 = profileSha256;
         SyntheticData = syntheticData;
+        Schedule = schedule;
     }
 
     public JournalPlanKey Key { get; }
@@ -69,6 +71,9 @@ public sealed class JournalPlanSnapshot
     public string CatalogSha256 { get; }
     public string ProfileSha256 { get; }
     public bool SyntheticData { get; }
+
+    /// <summary>The graph bound to this exact plan digest, when the plan used the scheduled contract.</summary>
+    public ActionSchedule? Schedule { get; }
 
     /// <summary>Indicates the plan was written using the current policy plan contract.</summary>
     /// <remarks>The contract version alone does not establish live readiness or dispatch authority.</remarks>
@@ -116,12 +121,13 @@ public sealed class JournalPlanSnapshot
 
         try
         {
-            var (gate, actions, current, catalog, profile, synthetic) = JournalPlanEncoding.ReadPlan(key, ownedPlan);
+            var (gate, actions, current, catalog, profile, synthetic, schedule) = JournalPlanEncoding.ReadPlan(key, ownedPlan);
             JournalPlanEncoding.RequireValidImpact(key, actions, ownedImpact);
             return new JournalPlanSnapshot(key, gate, ownedPlan, ownedImpact, actions, hasPlanningProvenance, current,
-                catalog, profile, synthetic);
+                catalog, profile, synthetic, schedule);
         }
-        catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException or FormatException)
+        catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException or
+            FormatException or KeyNotFoundException)
         {
             // Reader failures may contain untrusted data.
             throw new JsonException(InvalidSnapshot);

@@ -412,6 +412,90 @@ public sealed partial class PlanReviewTests
     }
 
     [Fact]
+    public async Task ScheduledReviewResumesTheSavedActionBeforeSendingAnyRemainingNoOps()
+    {
+        using var disk = new AuditTestStore();
+        var clock = new FixtureClock();
+        var verifier = new FixtureNoOpVerifier();
+        var backend = new FixtureBrokerBackend(async (_, batch, authorize, _, token) =>
+        {
+            Assert.True(await authorize(token));
+            var action = Assert.Single(batch.Actions);
+            return new NoOpBrokerBatchResult(NoOpBrokerBatchStatus.Finished,
+                [new(batch.CorrelationId, action.ActionId, NoOpBrokerActionStatus.Applied)]);
+        });
+        var workspace = OpenBrokerWorkspace(disk, clock, backend, verifier);
+        string jobId;
+        JournalPlanKey key;
+        Guid firstAction;
+        int actionCount;
+        await using (workspace)
+        {
+            await PrepareAssessmentAsync(workspace);
+            jobId = workspace.JobId;
+            InPlanReview(workspace, (window, panel) =>
+            {
+                SelectProfile(window, panel, workspace, "basic");
+                Build(window, panel, workspace);
+                Assert.Contains("Actions run one at a time", workspace.PlanReviewDetails, StringComparison.Ordinal);
+                Assert.Contains("Phase 1", workspace.PlanReviewDetails, StringComparison.Ordinal);
+                var proposal = workspace.PlanReview!.Plan;
+                var steps = proposal.Schedule;
+                Assert.True(steps.Length > 1);
+                var withDependency = proposal.WithSchedule([steps[0], steps[1] with { Phase = 2, Dependencies = [steps[0].ActionId] },
+                    .. steps[2..]]);
+                var details = PlanReviewPresentation.Describe(withDependency).Details;
+                Assert.Contains("Phase 2", details, StringComparison.Ordinal);
+                Assert.Contains($"Requires verified actions {PlanReviewPresentation.CapabilityName(proposal.Actions[0].CapabilityId)}",
+                    details, StringComparison.Ordinal);
+                workspace.BrokerOperatorCode = "fixture-operator";
+                _ = Approve(window, panel, workspace);
+                var execution = Named<BrokerExecutionView>(Named<FrameworkElement>(window, "AuditView"), "BrokerExecutionPanel");
+                Invoke(window, Named<Button>(execution, "RunBrokerButton"));
+                PumpUntil(window, () => !workspace.IsBusy && workspace.BrokerHistoryText.Contains("verification is pending", StringComparison.Ordinal),
+                    () => workspace.BrokerExecutionStatus);
+            });
+            await using var store = await disk.OpenSqliteAsync();
+            var history = Assert.Single(await store.LoadJobJournalsAsync(workspace.Job!.Job.JobId));
+            key = history.Plan.Key;
+            var restoredSchedule = Assert.IsType<ActionSchedule>(history.Plan.Schedule);
+            firstAction = restoredSchedule.Steps[0].ActionId;
+            actionCount = restoredSchedule.Steps.Length;
+            Assert.Equal(JournalState.Applied, history.StateOf(firstAction));
+            Assert.Equal(1, backend.Calls);
+            Assert.Equal(firstAction, Assert.Single(verifier.ObservedActions));
+        }
+
+        verifier.CanConfirm = true;
+        await using var reopened = OpenBrokerWorkspace(disk, clock, backend, verifier);
+        await reopened.OpenJobAsync(jobId);
+        InPlanReview(reopened, (window, panel) =>
+        {
+            SelectProfile(window, panel, reopened, "basic");
+            Build(window, panel, reopened);
+            Assert.Equal(key.PlanSha256, reopened.PlanReviewDecision?.PlanSha256);
+            var execution = Named<BrokerExecutionView>(Named<FrameworkElement>(window, "AuditView"), "BrokerExecutionPanel");
+            var run = Named<Button>(execution, "RunBrokerButton");
+            Assert.True(run.IsEnabled);
+            Invoke(window, run);
+            PumpUntil(window, () => !reopened.IsBusy && reopened.BrokerExecutionStatus.Contains("saved independent verification", StringComparison.Ordinal),
+                () => reopened.BrokerExecutionStatus);
+            Assert.False(run.IsEnabled);
+            Assert.False(reopened.ShowsPlanDecision);
+            Assert.False(reopened.CanDeclinePlanReview);
+        });
+
+        await using var reopenedStore = await disk.OpenSqliteAsync();
+        var finished = await reopenedStore.LoadJournalAsync(key);
+        Assert.NotNull(finished);
+        Assert.Single(finished.Approvals);
+        Assert.Equal(actionCount, backend.Calls);
+        Assert.Equal(2, verifier.ObservedActions.Count(id => id == firstAction));
+        Assert.Single(finished.Entries, entry => entry.ActionId == firstAction && entry.State == JournalState.Started);
+        Assert.All(finished.Plan.Actions, action => Assert.Equal(JournalState.Verified, finished.StateOf(action.ActionId)));
+    }
+
+    [Fact]
     public async Task DeclinedConsentCanBeReapprovedAndCancelledFromTheNoOpView()
     {
         using var disk = new AuditTestStore();
@@ -517,9 +601,22 @@ public sealed partial class PlanReviewTests
     }
 
     private static AuditWorkspace OpenBrokerWorkspace(AuditTestStore disk, FixtureClock clock,
-        INoOpBrokerBackend? backend = null) =>
+        INoOpBrokerBackend? backend = null, INoOpPostconditionVerifier? verifier = null) =>
         new(async token => await disk.OpenSqliteAsync(token).ConfigureAwait(false), [new PlanFactsProvider()], clock,
-            fixturePlanPolicy: static _ => ReadyPolicy, fixtureBrokerCoordinator: journal => new(journal, backend, clock));
+            fixturePlanPolicy: static _ => ReadyPolicy, fixtureBrokerCoordinator: journal => new(journal, backend, clock, verifier));
+
+    private sealed class FixtureNoOpVerifier : INoOpPostconditionVerifier
+    {
+        public bool CanConfirm { get; set; }
+        public List<Guid> ObservedActions { get; } = [];
+
+        public Task<bool> ObserveNoMachineChangeAsync(NoOpVerificationTarget target, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ObservedActions.Add(target.Action.ActionId);
+            return Task.FromResult(CanConfirm);
+        }
+    }
 
     private sealed class FixtureBrokerBackend(Func<int, NoOpExecutionBatch, Func<CancellationToken, Task<bool>>,
         IProgress<NoOpExecutionProgress>?, CancellationToken, Task<NoOpBrokerBatchResult>> run) : INoOpBrokerBackend

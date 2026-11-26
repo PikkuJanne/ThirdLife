@@ -24,9 +24,23 @@ public sealed partial class SqliteJobStore
         {
             _layout.ValidateJobDirectory(first.Plan.JobId);
             var plan = await RequireJournalPlanAsync(connection, transaction, first.Plan, token).ConfigureAwait(false);
-            RequireBrokerPlan(plan, entries, wholePlan: true);
+            RequireBrokerPlan(plan, entries, wholePlan: plan.Schedule is null);
             var recordedApproval = await ReadApprovalAsync(connection, transaction, first.Plan, approval.ApprovalId, token).ConfigureAwait(false);
             var recordedEntries = await AreBrokerEntriesRecordedAsync(connection, transaction, entries, token).ConfigureAwait(false);
+            if (plan.Schedule is { } schedule)
+            {
+                var history = await ReadJournalHistoryAsync(transaction, plan, token).ConfigureAwait(false);
+                var expected = recordedApproval is null
+                    ? schedule.Steps.Select(step => step.ActionId).Where(id => JournalStateMachine.CanApproveBrokerAction(
+                        history.Entries.LastOrDefault(entry => entry.ActionId == id)))
+                    : history.Entries.Where(entry => entry.ApprovalId == approval.ApprovalId &&
+                        entry.Checkpoint == JournalCheckpoint.BrokerApproval).Select(entry => entry.ActionId);
+                if (!expected.SequenceEqual(entries.Select(entry => entry.ActionId)))
+                {
+                    throw new JobStoreConflictException();
+                }
+            }
+
             if (recordedApproval is not null || recordedEntries)
             {
                 if (recordedApproval != approval || !recordedEntries)
@@ -61,7 +75,12 @@ public sealed partial class SqliteJobStore
         {
             _layout.ValidateJobDirectory(first.Plan.JobId);
             var plan = await RequireJournalPlanAsync(connection, transaction, first.Plan, token).ConfigureAwait(false);
-            RequireBrokerPlan(plan, entries, wholePlan: isDispatch);
+            RequireBrokerPlan(plan, entries, wholePlan: isDispatch && plan.Schedule is null);
+            if (plan.Schedule is not null && entries.Length != 1)
+            {
+                throw new JobStoreConflictException();
+            }
+
             if (await AreBrokerEntriesRecordedAsync(connection, transaction, entries, token).ConfigureAwait(false))
             {
                 return;
@@ -80,6 +99,16 @@ public sealed partial class SqliteJobStore
                 if (await HasUnreconciledJournalActionAsync(connection, transaction, first.Plan, token).ConfigureAwait(false))
                 {
                     throw new JobStoreConflictException();
+                }
+
+                if (plan.Schedule is { } schedule)
+                {
+                    var history = await ReadJournalHistoryAsync(transaction, plan, token).ConfigureAwait(false);
+                    if (schedule.Project(history).NextForReview != first.ActionId || history.Entries.Any(entry =>
+                        entry.Checkpoint == JournalCheckpoint.BrokerDispatchIntent && entry.CorrelationId == first.CorrelationId))
+                    {
+                        throw new JobStoreConflictException();
+                    }
                 }
             }
 
@@ -113,6 +142,8 @@ public sealed partial class SqliteJobStore
     {
         if (plan.Actions.Length > IBrokerExecutionJournal.MaximumBatchActions ||
             plan.Actions.Any(action => action.Request is not NoOpActionRequest || action.Definition.Availability != ActionAvailability.BrokerNoOp) ||
+            (plan.Schedule is not null && (!plan.SyntheticData ||
+                plan.Actions.Any(action => action.Definition.Verification != ActionVerification.NoMachineChange))) ||
             (wholePlan && !plan.Actions.Select(action => action.ActionId).SequenceEqual(entries.Select(entry => entry.ActionId))))
         {
             throw new JobStoreConflictException();

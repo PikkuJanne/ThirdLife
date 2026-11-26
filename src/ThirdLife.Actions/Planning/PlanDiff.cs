@@ -63,6 +63,11 @@ public static class PlanDiff
             changes.Add(new(PlanChangeKind.ActionOrder, "The order of the preparation actions changed."));
         }
 
+        if (!ActionSchedule.SameSteps(approved.Schedule, current.Schedule))
+        {
+            changes.Add(new(PlanChangeKind.ActionSchedule, "The preparation phases, dependencies or scheduled actions changed."));
+        }
+
         // The digest covers pinned content and exceptions as well as the named comparison fields.
         if (changes.Count == 0 && approved.ContentSha256 != current.ContentSha256)
         {
@@ -164,4 +169,5 @@ public enum PlanChangeKind
     Impact,
     Rollback,
     Network,
+    ActionSchedule,
 }

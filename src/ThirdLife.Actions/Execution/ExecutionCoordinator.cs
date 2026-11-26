@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
+using ThirdLife.Actions.Planning;
 using ThirdLife.Core.Evidence;
 
 namespace ThirdLife.Actions.Execution;
@@ -17,19 +18,25 @@ public enum NoOpExecutionStatus
     RequiresReview,
 }
 
-/// <summary>Coordinates the reviewed no-op batch through the durable unelevated journal.</summary>
+/// <summary>Coordinates reviewed no-op actions through the durable unelevated journal.</summary>
 public sealed class ExecutionCoordinator(IBrokerExecutionJournal journal, INoOpBrokerBackend? backend = null,
-    TimeProvider? timeProvider = null)
+    TimeProvider? timeProvider = null, INoOpPostconditionVerifier? verifier = null)
 {
     public static readonly TimeSpan MaximumDispatchLifetime = TimeSpan.FromMinutes(2);
     private static readonly OperatorId Coordinator = new("thirdlife-no-op-coordinator");
     private static readonly OperatorId Broker = new("thirdlife-no-op-broker");
+    private static readonly OperatorId Verifier = new("thirdlife-no-op-verifier");
     private readonly IBrokerExecutionJournal _journal = journal ?? throw new ArgumentNullException(nameof(journal));
     private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
 
     public bool CanDispatch => backend is not null;
 
-    public static bool IsBrokerPlan(JournalPlanSnapshot plan) => plan.IsCurrentPolicyPlan &&
+    public bool HasScheduledVerification => verifier is not null;
+
+    public bool CanDispatchPlan(JournalPlanSnapshot plan) => CanDispatch && IsBrokerPlan(plan) &&
+        (plan.Schedule is null || HasScheduledVerification);
+
+    public static bool IsBrokerPlan(JournalPlanSnapshot plan) => plan.IsCurrentPolicyPlan && plan.SyntheticData &&
         plan.Actions.Length is > 0 and <= IBrokerExecutionJournal.MaximumBatchActions && plan.Actions.All(action => action is
         {
             Request: NoOpActionRequest,
@@ -50,9 +57,15 @@ public sealed class ExecutionCoordinator(IBrokerExecutionJournal journal, INoOpB
         var history = await _journal.LoadJournalAsync(plan.Key, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("The saved no-op plan is unavailable.");
         var approval = new JournalApproval(Guid.NewGuid(), plan.Key, operatorId, Guid.NewGuid(), _time.GetUtcNow());
-        var entries = plan.Actions.Select(action => new JournalEntry(Guid.NewGuid(), plan.Key, action.ActionId, approval.ApprovalId,
-            history.StateOf(action.ActionId), JournalState.Approved, JournalActor.Operator, operatorId, approval.CorrelationId,
+        var actionIds = history.Plan.Schedule is { } schedule
+            ? schedule.Steps.Select(step => step.ActionId)
+                .Where(id => JournalStateMachine.CanApproveBrokerAction(LatestEntry(history, id)))
+            : plan.Actions.Select(action => action.ActionId);
+        var entries = actionIds.Select(id => new JournalEntry(Guid.NewGuid(), plan.Key, id, approval.ApprovalId,
+            history.StateOf(id), JournalState.Approved, JournalActor.Operator, operatorId, approval.CorrelationId,
             approval.OccurredAtUtc, JournalResult.None, JournalCheckpoint.BrokerApproval)).ToImmutableArray();
+        if (entries.IsEmpty) { throw new InvalidOperationException("The saved plan has no actions eligible for approval."); }
+
         await _journal.RecordBrokerApprovalAsync(approval, entries, cancellationToken).ConfigureAwait(false);
         return approval;
     }
@@ -76,6 +89,15 @@ public sealed class ExecutionCoordinator(IBrokerExecutionJournal journal, INoOpB
             return NoOpExecutionStatus.ApprovalRequired;
         }
 
+        if (history.Plan.Schedule is { } schedule)
+        {
+            if (verifier is null) { return NoOpExecutionStatus.Unavailable; }
+            if (validateCurrentPlan is null) { return NoOpExecutionStatus.ApprovalRequired; }
+
+            return await ExecuteScheduleAsync(history, schedule, approvalId, verifier, progress, validateCurrentPlan, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         var lastEntries = LatestEntries(history);
         if (lastEntries.Any(entry => entry?.State != JournalState.Approved)) { return NoOpExecutionStatus.AlreadyStarted; }
         if (lastEntries.Any(entry => entry is not { Checkpoint: JournalCheckpoint.BrokerApproval } || entry.ApprovalId != approvalId))
@@ -83,10 +105,117 @@ public sealed class ExecutionCoordinator(IBrokerExecutionJournal journal, INoOpB
             return NoOpExecutionStatus.ApprovalRequired;
         }
 
+        var actions = history.Plan.Actions.Select(action => (NoOpActionRequest)action.Request).ToImmutableArray();
+        return await ExecuteBatchAsync(plan, approvalId, actions, progress, validateCurrentPlan, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<NoOpExecutionStatus> ExecuteScheduleAsync(JournalHistory initial, ActionSchedule schedule,
+        Guid approvalId, INoOpPostconditionVerifier postconditionVerifier, IProgress<NoOpExecutionProgress>? progress,
+        Func<CancellationToken, Task<bool>> validateCurrentPlan, CancellationToken cancellationToken)
+    {
+        JournalHistory? history = initial;
+        try
+        {
+            // Each action can add at most one dispatch and one independent observation in this run.
+            for (var transition = 0; transition <= schedule.Steps.Length * 2; transition++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (history?.ActiveApproval?.ApprovalId != approvalId)
+                {
+                    return NoOpExecutionStatus.ApprovalRequired;
+                }
+
+                var projection = schedule.Project(history);
+                if (projection.RequiresFreshApproval)
+                {
+                    return NoOpExecutionStatus.ApprovalRequired;
+                }
+
+                if (projection.RequiresRecovery)
+                {
+                    var unresolved = projection.Actions.Where(action =>
+                        action.State is JournalState.Started or JournalState.Applied or JournalState.RequiresReview).ToArray();
+                    if (unresolved is not [{ State: JournalState.Applied } pending] ||
+                        !await VerifyAppliedAsync(history, pending.ActionId, approvalId, postconditionVerifier, cancellationToken)
+                            .ConfigureAwait(false))
+                    {
+                        return NoOpExecutionStatus.RequiresReview;
+                    }
+                }
+                else
+                {
+                    if (projection.NextForReview is not { } actionId)
+                    {
+                        return projection.Actions.All(action => action.State == JournalState.Verified) ? NoOpExecutionStatus.Completed :
+                            projection.Actions.Any(action => action.State == JournalState.Failed) ? NoOpExecutionStatus.Failed :
+                            NoOpExecutionStatus.ApprovalRequired;
+                    }
+
+                    if (LatestEntry(history, actionId) is not { Checkpoint: JournalCheckpoint.BrokerApproval } ||
+                        !await validateCurrentPlan(cancellationToken).ConfigureAwait(false))
+                    {
+                        return NoOpExecutionStatus.ApprovalRequired;
+                    }
+
+                    var request = (NoOpActionRequest)history.Plan.Actions.Single(action => action.ActionId == actionId).Request;
+                    var status = await ExecuteBatchAsync(history.Plan.Key, approvalId, [request], progress, validateCurrentPlan,
+                        cancellationToken).ConfigureAwait(false);
+                    if (status is not (NoOpExecutionStatus.Completed or NoOpExecutionStatus.Failed))
+                    {
+                        return status;
+                    }
+                }
+
+                history = await _journal.LoadJournalAsync(schedule.PlanKey, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return NoOpExecutionStatus.Cancelled;
+        }
+
+        return NoOpExecutionStatus.RequiresReview;
+    }
+
+    private async Task<bool> VerifyAppliedAsync(JournalHistory history, Guid actionId, Guid approvalId,
+        INoOpPostconditionVerifier postconditionVerifier, CancellationToken cancellationToken)
+    {
+        if (LatestEntry(history, actionId) is not
+            {
+                State: JournalState.Applied, Actor: JournalActor.Broker,
+                Result: JournalResult.BackendApplied, Checkpoint: JournalCheckpoint.None
+            } applied || applied.ApprovalId != approvalId)
+        {
+            return false;
+        }
+
+        var action = history.Plan.Actions.Single(item => item.ActionId == actionId);
+        var target = new NoOpVerificationTarget(history.Plan.Key, approvalId, applied.CorrelationId, (NoOpActionRequest)action.Request);
+        if (!await postconditionVerifier.ObserveNoMachineChangeAsync(target, cancellationToken).ConfigureAwait(false))
+        {
+            return false;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var observedAt = _time.GetUtcNow();
+        if (observedAt < applied.OccurredAtUtc) { return false; }
+
+        var entry = new JournalEntry(Guid.NewGuid(), applied.Plan, applied.ActionId, approvalId, JournalState.Applied,
+            JournalState.Verified, JournalActor.Verifier, Verifier, applied.CorrelationId, observedAt, JournalResult.VerificationPassed,
+            verification: ActionVerification.NoMachineChange);
+        await _journal.AppendBrokerBatchAsync([entry], CancellationToken.None).ConfigureAwait(false);
+        return true;
+    }
+
+    private async Task<NoOpExecutionStatus> ExecuteBatchAsync(JournalPlanKey plan, Guid approvalId,
+        ImmutableArray<NoOpActionRequest> actions, IProgress<NoOpExecutionProgress>? progress,
+        Func<CancellationToken, Task<bool>>? validateCurrentPlan, CancellationToken cancellationToken)
+    {
+        if (backend is null) { return NoOpExecutionStatus.Unavailable; }
+
         var correlation = Guid.NewGuid();
         var startedAt = _time.GetUtcNow();
-        var batch = new NoOpExecutionBatch(plan, approvalId, correlation, startedAt + MaximumDispatchLifetime,
-            history.Plan.Actions.Select(action => (NoOpActionRequest)action.Request).ToImmutableArray());
+        var batch = new NoOpExecutionBatch(plan, approvalId, correlation, startedAt + MaximumDispatchLifetime, actions);
         var starts = batch.Actions.Select(action => new JournalEntry(Guid.NewGuid(), plan, action.ActionId, approvalId,
             JournalState.Approved, JournalState.Started, JournalActor.Coordinator, Coordinator, correlation, startedAt,
             JournalResult.None, JournalCheckpoint.BrokerDispatchIntent)).ToImmutableArray();
@@ -104,7 +233,8 @@ public sealed class ExecutionCoordinator(IBrokerExecutionJournal journal, INoOpB
             var latest = await _journal.LoadJournalAsync(plan, token).ConfigureAwait(false);
             var now = _time.GetUtcNow();
             return latest?.ActiveApproval?.ApprovalId == approvalId &&
-                LatestEntries(latest).SequenceEqual(starts) && !token.IsCancellationRequested &&
+                batch.Actions.Select(action => LatestEntry(latest, action.ActionId)).SequenceEqual(starts) &&
+                !cancellationToken.IsCancellationRequested && !token.IsCancellationRequested &&
                 now >= startedAt && now < batch.ExpiresAtUtc && Interlocked.CompareExchange(ref dispatchGranted, 1, 0) == 0;
         }
 
@@ -151,7 +281,10 @@ public sealed class ExecutionCoordinator(IBrokerExecutionJournal journal, INoOpB
     }
 
     private static IEnumerable<JournalEntry?> LatestEntries(JournalHistory history) => history.Plan.Actions.Select(action =>
-        history.Entries.LastOrDefault(entry => entry.ActionId == action.ActionId));
+        LatestEntry(history, action.ActionId));
+
+    private static JournalEntry? LatestEntry(JournalHistory history, Guid actionId) =>
+        history.Entries.LastOrDefault(entry => entry.ActionId == actionId);
 
     private static (NoOpExecutionStatus Status, JournalResult[] Outcomes) DescribeOutcome(NoOpExecutionBatch batch,
         NoOpBrokerBatchResult result, bool permitted)

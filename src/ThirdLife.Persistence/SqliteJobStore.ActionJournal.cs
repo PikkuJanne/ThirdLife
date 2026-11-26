@@ -65,6 +65,12 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
         await ExecuteWriteAsync(async (connection, transaction, token) =>
         {
             _layout.ValidateJobDirectory(approval.Plan.JobId);
+            var plan = await RequireJournalPlanAsync(connection, transaction, approval.Plan, token).ConfigureAwait(false);
+            if (plan.Schedule is not null)
+            {
+                throw new JobStoreConflictException();
+            }
+
             var existing = await ReadApprovalAsync(connection, transaction, approval.Plan, approval.ApprovalId, token).ConfigureAwait(false);
             if (existing is not null)
             {
@@ -72,7 +78,6 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
                 return;
             }
 
-            var plan = await RequireJournalPlanAsync(connection, transaction, approval.Plan, token).ConfigureAwait(false);
             await InsertJournalApprovalAsync(connection, transaction, plan, approval, token).ConfigureAwait(false);
             outcome = JournalWriteResult.Recorded;
         }, cancellationToken).ConfigureAwait(false);
@@ -94,6 +99,12 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
         await ExecuteWriteAsync(async (connection, transaction, token) =>
         {
             _layout.ValidateJobDirectory(entry.Plan.JobId);
+            var plan = await RequireJournalPlanAsync(connection, transaction, entry.Plan, token).ConfigureAwait(false);
+            if (plan.Schedule is not null)
+            {
+                throw new JobStoreConflictException();
+            }
+
             var existing = await ReadJournalEntryByIdAsync(connection, transaction, entry, token).ConfigureAwait(false);
             if (existing is not null)
             {
@@ -102,7 +113,6 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
                 return;
             }
 
-            var plan = await RequireJournalPlanAsync(connection, transaction, entry.Plan, token).ConfigureAwait(false);
             var previous = await ReadLatestActionEntryAsync(connection, transaction, entry, token).ConfigureAwait(false);
             if (previous?.Checkpoint == JournalCheckpoint.BrokerApproval || (IsBrokerOutcome(entry) &&
                 await HasMatchingBrokerDispatchAsync(connection, transaction, entry, previous, token).ConfigureAwait(false)))

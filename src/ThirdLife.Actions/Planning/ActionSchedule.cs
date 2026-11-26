@@ -3,13 +3,12 @@ using ThirdLife.Actions.Journal;
 
 namespace ThirdLife.Actions.Planning;
 
-/// <summary>Validates and orders the actions of an exact plan snapshot for review.</summary>
-/// <remarks>The schedule itself is outside the current approval contract and confers no authority to dispatch.</remarks>
+/// <summary>Orders the actions of an exact plan snapshot and projects their saved progress.</summary>
 public sealed class ActionSchedule
 {
     private const int MaximumPhase = 4;
 
-    private ActionSchedule(JournalPlanKey planKey, ImmutableArray<ScheduledAction> steps)
+    internal ActionSchedule(JournalPlanKey planKey, ImmutableArray<ScheduledAction> steps)
     {
         PlanKey = planKey;
         Steps = steps;
@@ -21,8 +20,25 @@ public sealed class ActionSchedule
     public static ActionSchedule Create(JournalPlanSnapshot plan, IEnumerable<ScheduledAction> steps)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        var ordered = Order(plan.Actions.Select(action => action.ActionId), steps);
+        if (plan.Schedule is { } bound)
+        {
+            if (!SameSteps(ordered, bound.Steps))
+            {
+                throw new ArgumentException("The schedule differs from the exact saved plan.", nameof(steps));
+            }
+
+            return bound;
+        }
+
+        return new ActionSchedule(plan.Key, ordered);
+    }
+
+    internal static ImmutableArray<ScheduledAction> Order(IEnumerable<Guid> actionIds, IEnumerable<ScheduledAction> steps)
+    {
         ArgumentNullException.ThrowIfNull(steps);
-        var planOrder = plan.Actions.Select((action, index) => (action.ActionId, index))
+        var reviewedOrder = actionIds.ToImmutableArray();
+        var planOrder = reviewedOrder.Select((actionId, index) => (ActionId: actionId, index))
             .ToDictionary(action => action.ActionId, action => action.index);
         var byAction = new Dictionary<Guid, ScheduledAction>();
         foreach (var step in steps)
@@ -56,7 +72,7 @@ public sealed class ActionSchedule
         }
 
         // Preserve the reviewed plan order for actions whose dependencies allow either order.
-        var remaining = plan.Actions.Select(action => byAction[action.ActionId]).OrderBy(step => step.Phase).ToList();
+        var remaining = reviewedOrder.Select(id => byAction[id]).OrderBy(step => step.Phase).ToList();
         var ordered = ImmutableArray.CreateBuilder<ScheduledAction>(remaining.Count);
         var placed = new HashSet<Guid>();
         while (remaining.Count > 0)
@@ -73,14 +89,19 @@ public sealed class ActionSchedule
             remaining.RemoveAt(index);
         }
 
-        return new ActionSchedule(plan.Key, ordered.MoveToImmutable());
+        return ordered.MoveToImmutable();
     }
+
+    internal static bool SameSteps(ImmutableArray<ScheduledAction> left, ImmutableArray<ScheduledAction> right) =>
+        left.Length == right.Length && left.Zip(right).All(pair => pair.First.ActionId == pair.Second.ActionId &&
+            pair.First.Phase == pair.Second.Phase && pair.First.Dependencies.SequenceEqual(pair.Second.Dependencies));
 
     /// <summary>Projects the latest committed state of each step in this exact saved plan.</summary>
     public ActionScheduleProjection Project(JournalHistory history)
     {
         ArgumentNullException.ThrowIfNull(history);
-        if (history.Plan.Key != PlanKey)
+        if (history.Plan.Key != PlanKey ||
+            (history.Plan.Schedule is { } bound && !SameSteps(Steps, bound.Steps)))
         {
             throw new ArgumentException("The journal belongs to a different plan or impact snapshot.", nameof(history));
         }
@@ -93,6 +114,9 @@ public sealed class ActionSchedule
 
         var requiresRecovery = latest.Values.Any(entry =>
             entry.State is JournalState.Started or JournalState.Applied or JournalState.RequiresReview);
+        var approval = history.ActiveApproval;
+        var requiresFreshApproval = history.Plan.Schedule is not null && approval is not null && latest.Values.Any(entry =>
+            entry.Checkpoint == JournalCheckpoint.BrokerPreDispatchFailure && entry.ApprovalId == approval.ApprovalId);
         var progress = ImmutableArray.CreateBuilder<ScheduledActionProgress>(Steps.Length);
         Guid? nextForReview = null;
         foreach (var step in Steps)
@@ -102,16 +126,16 @@ public sealed class ActionSchedule
             var earlierPhasePending = Steps.Any(previous => previous.Phase < step.Phase && !IsVerified(previous.ActionId));
             progress.Add(new ScheduledActionProgress(step.ActionId, entry?.State ?? JournalState.Planned,
                 entry?.Checkpoint ?? JournalCheckpoint.None, entry?.Result ?? JournalResult.None, pending, earlierPhasePending));
-            if (nextForReview is null && history.Plan.IsCurrentPolicyPlan && !requiresRecovery &&
+            if (nextForReview is null && history.Plan.IsCurrentPolicyPlan && !requiresRecovery && !requiresFreshApproval &&
                 pending.IsEmpty && !earlierPhasePending &&
-                entry is { State: JournalState.Approved } && history.ActiveApproval is { } approval &&
+                entry is { State: JournalState.Approved } && approval is not null &&
                 approval.ApprovalId == entry.ApprovalId)
             {
                 nextForReview = step.ActionId;
             }
         }
 
-        return new ActionScheduleProjection(progress.MoveToImmutable(), nextForReview, requiresRecovery);
+        return new ActionScheduleProjection(progress.MoveToImmutable(), nextForReview, requiresRecovery, requiresFreshApproval);
 
         bool IsVerified(Guid id) => latest.GetValueOrDefault(id)?.State == JournalState.Verified;
     }
@@ -125,4 +149,6 @@ public sealed record ScheduledActionProgress(Guid ActionId, JournalState State, 
 /// <param name="Actions">Durable progress in schedule order.</param>
 /// <param name="NextForReview">The first dependency-ready action matching the saved active approval. Backend and job-wide admission still apply.</param>
 /// <param name="RequiresRecovery">The journal contains a started, applied or review-required action.</param>
-public sealed record ActionScheduleProjection(ImmutableArray<ScheduledActionProgress> Actions, Guid? NextForReview, bool RequiresRecovery);
+/// <param name="RequiresFreshApproval">The current approval has a recorded failure before dispatch.</param>
+public sealed record ActionScheduleProjection(ImmutableArray<ScheduledActionProgress> Actions, Guid? NextForReview, bool RequiresRecovery,
+    bool RequiresFreshApproval);
