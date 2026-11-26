@@ -52,4 +52,4 @@ inactive Windows desktop with local settings, a fresh empty instance, and no ses
 restore or plugin loading. The launch uses the approved installed bytes in isolation
 from the normal editor configuration. The Windows job contains the process and
 provides bounded teardown. The verifier confirms cleanup or records it as unconfirmed.
-See [TL-0406 evidence](../../artifacts/evidence/TL-0406/report.md) for scope and limits.
+See `artifacts/evidence/TL-0406/report.md` for scope and limits.

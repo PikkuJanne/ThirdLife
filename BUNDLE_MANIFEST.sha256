@@ -28,7 +28,7 @@ ead7ac7b9cfdc11131f03841d4d672f4aab32f84f0b6670a55c17003a610435b  docs/adr/0003-
 e40b9119acdf2a606b39e1c0b283b777527a5c573a04c28cfaac93fb72160d33  docs/adr/0006-report-privacy-classes.md
 dbf733e196697ba21fb6d0d515d4c982b463e8024d2b636fd8e05c87ce6fbd3d  docs/adr/0007-standalone-late-binding-boundary.md
 6539dd0780422de44d1cb1a796c0f13cc27c1874c73271336cb1ea1e1d8c3858  docs/adr/0008-minimal-release-interface-envelope.md
-383ff89dc3f16923c553bdee19a932c917402607f43ed5faace22f34f573c1e2  docs/adr/0009-winget-backend.md
+853dff314b3fbfcac7bebfaf93c994349f5ff44e43c303b7a495c57a50f73d88  docs/adr/0009-winget-backend.md
 2face2b0f2247440e47335e90c93433b6b96f09ec966a5fea14be138ef3bdd60  docs/amendments/2026-08-22-adr-0009-reservation.md
 84d1b7fe541546aa6da08478a7a367cfb3ff06bce6998e7a49f956c9083b2b63  docs/amendments/2026-09-12-repository-stabilization.md
 d90857d9b6ad06f526ae6ac6ef9a11ca93d5c4a9280f2f648dd89376d73a0ddd  docs/amendments/2026-11-24-minimal-human-testing.md

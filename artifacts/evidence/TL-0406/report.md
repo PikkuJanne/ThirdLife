@@ -2,7 +2,8 @@
 
 **Date** 2026-11-26  
 **Base** `b37e10782d6d72cc36e97441c63a713b69f47f33` (`origin/main`, PR #48)  
-**Environment** Active Codex machine, Windows 11 Pro client build 26300, native x64,
+**Tested source** `efe204cd364365b6d8f4d59e7935afde36e8d421`  
+**Environment** Active Codex machine, Windows 11 Pro 26H2 build 26300.9974, native x64,
 unelevated, pinned .NET SDK 10.0.400 and Python 3.14.7.
 
 ## Approved package workflow
@@ -56,12 +57,26 @@ workspace, and the pending saved checkpoint reports the missing cleanup confirma
 The baseline at `b37e107` passed all 26 deterministic package tests and all 11 selected
 WPF package tests. A concurrent baseline build first hit a shared SourceLink output file
 lock. Serialized builds passed with the same source and test filters.
+The first Full run exposed a relative evidence link in the ADR. The isolated ADR fixture
+copies only governed documents. All 27 ADR contract tests passed after switching to a
+repository-relative evidence reference.
 
 The first active-machine launch reached `CleanupUnconfirmed` after the editor created two
 additional local XML files and an empty plugin directory. The owned residue was removed.
 The focused rerun included those exact startup artifacts in cleanup and passed. It observed
 exact registration before and after the probe, an enabled editor window on the inactive
 desktop, and no change in editor process or private staging-directory count.
+
+| Check | Result |
+| --- | --- |
+| `eng/verify.ps1 -Tier Targeted`, with Actions, Packages, UI, Persistence and Reports test projects | Passed in 141.728 s. Quick and the selected deterministic projects passed 1,586 .NET tests plus eight governance tests. |
+| `JournalTests` standalone | 45 passed. Covers the legacy registration result and the new verifier-only transition after the package launch checkpoint. |
+| WPF `PackageSetupTests` without Extended | 18 passed, including accessible plan disclosure, durable applied state before launch, review after failed verification, and saved report continuity. |
+
+The standalone active probe is `VerifyPreviouslyInstalledReviewedPackageWithIsolatedLaunch`
+in `tests/ThirdLife.Packages.Tests/PilotPackageServiceTests.cs`. The
+[failure-injection register](../../../docs/testing/failure-injection.md#tl-0406-package-verification-fixtures)
+lists the independent FI-008 and FI-009 invocations.
 
 The live case uses the previously authorized TL-0412 installation. It exercises the shipped
 verification adapter and the reviewed installed bytes with isolated settings. The composed
