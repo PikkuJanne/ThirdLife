@@ -1,0 +1,98 @@
+{
+  "task": "TL-0410",
+  "source_head": "a637198615ca674a8ca8a2fcde0e62edd4ca3d7f",
+  "started_utc": "2026-11-26T17:38:21.7295091Z",
+  "scope": "Deterministic fixtures using existing Release binaries. Consent decline and restart are modeled.",
+  "checks": [
+    {
+      "scenario": "NetworkStream",
+      "failure_id": "FI-002",
+      "tier": "targeted",
+      "filter": "FullyQualifiedName=ThirdLife.Packages.Tests.WindowsInstallerPackageRuntimeTests.InterruptedInstallerStreamRemovesPartialStagingAndReportsNetworkLoss",
+      "result": "passed",
+      "exit_code": 0,
+      "elapsed_ms": 2249
+    },
+    {
+      "scenario": "NetworkRecovery",
+      "failure_id": "FI-002",
+      "tier": "targeted",
+      "filter": "FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.NetworkLossKeepsResolvedPlanAndApprovalWithoutStoringBackendDetail",
+      "result": "passed",
+      "exit_code": 0,
+      "elapsed_ms": 5302
+    },
+    {
+      "scenario": "AuthorizationDeclined",
+      "failure_id": "FI-006",
+      "tier": "targeted",
+      "filter": "FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.PackageVerificationWaitsForCompletedApply",
+      "result": "passed",
+      "exit_code": 0,
+      "elapsed_ms": 5306
+    },
+    {
+      "scenario": "MissingRegistration",
+      "failure_id": "FI-008",
+      "tier": "targeted",
+      "filter": "FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.BackendSuccessCannotVerifyMissingOrWrongPackage",
+      "result": "passed",
+      "exit_code": 0,
+      "elapsed_ms": 4457
+    },
+    {
+      "scenario": "WorkshopReport",
+      "failure_id": "package_journey",
+      "tier": "targeted",
+      "filter": "FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.PackagePlanUsesDurableApprovalAndReportsTheReopenedJournal",
+      "result": "passed",
+      "exit_code": 0,
+      "elapsed_ms": 8323
+    },
+    {
+      "scenario": "ApplicationLossDuringApply",
+      "failure_id": "FI-004",
+      "tier": "extended",
+      "filter": "FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.KilledPackageApplicationReopensTheSameJobForReviewWithoutDispatch",
+      "result": "passed",
+      "exit_code": 0,
+      "elapsed_ms": 10157
+    },
+    {
+      "scenario": "ApplicationLossAfterApply",
+      "failure_id": "FI-004",
+      "tier": "extended",
+      "filter": "FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.KilledPackageApplicationReopensTheAppliedAttemptAndVerifiesWithoutDispatch",
+      "result": "passed",
+      "exit_code": 0,
+      "elapsed_ms": 8363
+    },
+    {
+      "scenario": "OwnedBackendLoss",
+      "failure_id": "FI-005",
+      "tier": "extended",
+      "filter": "FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.TerminatedOwnedPackageBackendLeavesTheReopenedAttemptInReview",
+      "result": "passed",
+      "exit_code": 0,
+      "elapsed_ms": 5371
+    },
+    {
+      "scenario": "ModeledBoot",
+      "failure_id": "restart_model",
+      "tier": "targeted",
+      "filter": "FullyQualifiedName=ThirdLife.UI.Tests.PackageSetupTests.RestartRequiredWaitsForWindowsBootEvidenceThenVerifiesTheSavedAttempt",
+      "result": "passed",
+      "exit_code": 0,
+      "elapsed_ms": 6762
+    },
+    {
+      "scenario": "CheckpointCommit",
+      "failure_id": "FI-012",
+      "tier": "extended",
+      "filter": "FullyQualifiedName=ThirdLife.Persistence.Tests.RebootCheckpointStoreTests.PackageRebootVerificationAndTokenConsumeCommitTogether",
+      "result": "passed",
+      "exit_code": 0,
+      "elapsed_ms": 3666
+    }
+  ]
+}
