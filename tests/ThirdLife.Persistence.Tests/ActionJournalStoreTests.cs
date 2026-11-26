@@ -220,6 +220,102 @@ public sealed class ActionJournalStoreTests
     }
 
     [Fact]
+    public async Task ActionScheduleProjectsSavedDependenciesAndRecoveryAfterReopen()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        JournalPlanSnapshot plan;
+        JournalApproval approval;
+        ScheduledAction[] steps;
+        Guid first;
+        Guid second;
+        Guid later;
+        await using (var store = await OpenAsync(workspace))
+        {
+            var (job, intake) = await CreateJobAsync(store);
+            plan = CreateSnapshot(job, intake, "0.1.0-candidate.1", actionCount: 3);
+            first = plan.Actions[0].ActionId;
+            second = plan.Actions[1].ActionId;
+            later = plan.Actions[2].ActionId;
+            steps = [new(later, 3, []), new(second, 2, [first]), new(first, 1, [])];
+            _ = ActionSchedule.Create(plan, steps);
+            Assert.Equal(JournalWriteResult.Recorded, await store.SaveJournalPlanAsync(plan));
+            approval = new JournalApproval(ApprovalId, plan.Key, Approver, CorrelationId, Now.AddMinutes(-1));
+            Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalApprovalAsync(approval));
+            foreach (var action in plan.Actions)
+            {
+                Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(
+                    Entry(plan, Guid.NewGuid(), JournalState.Planned, JournalState.Approved, JournalActor.Operator,
+                        JournalResult.None, Now, actionId: action.ActionId)));
+            }
+
+            Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(Start(plan)));
+            Assert.Equal(JournalWriteResult.Recorded, await store.AppendJournalEntryAsync(
+                Entry(plan, AppliedEntryId, JournalState.Started, JournalState.Applied, JournalActor.Broker,
+                    JournalResult.BackendApplied, Now.AddMinutes(2))));
+        }
+
+        await using (var reopened = await OpenAsync(workspace))
+        {
+            var saved = Assert.IsType<JournalHistory>(await reopened.LoadJournalAsync(plan.Key));
+            var schedule = ActionSchedule.Create(saved.Plan, steps);
+            Assert.Equal(plan.Key, schedule.PlanKey);
+            Assert.Equal(plan.Key, saved.Plan.Key);
+            Assert.Equal(plan.CanonicalPlan.ToArray(), saved.Plan.CanonicalPlan.ToArray());
+            Assert.Equal(plan.CanonicalImpact.ToArray(), saved.Plan.CanonicalImpact.ToArray());
+            Assert.Equal(approval, saved.ActiveApproval);
+
+            var pending = schedule.Project(saved);
+            Assert.True(pending.RequiresRecovery);
+            Assert.Null(pending.NextForReview);
+            Assert.Equal(JournalState.Applied, pending.Actions.Single(action => action.ActionId == first).State);
+            Assert.Equal(first, Assert.Single(pending.Actions.Single(action => action.ActionId == second).PendingDependencies));
+            Assert.True(pending.Actions.Single(action => action.ActionId == later).EarlierPhasePending);
+
+            Assert.Equal(JournalWriteResult.Recorded, await reopened.AppendJournalEntryAsync(
+                Entry(plan, VerifiedEntryId, JournalState.Applied, JournalState.Verified, JournalActor.Verifier,
+                    JournalResult.VerificationPassed, Now.AddMinutes(3), verification: ActionVerification.NoMachineChange)));
+            var ready = schedule.Project(Assert.IsType<JournalHistory>(await reopened.LoadJournalAsync(plan.Key)));
+            Assert.False(ready.RequiresRecovery);
+            Assert.Equal(second, ready.NextForReview);
+            Assert.Empty(ready.Actions.Single(action => action.ActionId == second).PendingDependencies);
+
+            Assert.Equal(JournalWriteResult.Recorded, await reopened.AppendJournalEntryAsync(
+                Entry(plan, Guid.NewGuid(), JournalState.Approved, JournalState.Started, JournalActor.Coordinator,
+                    JournalResult.None, Now.AddMinutes(4), JournalCheckpoint.DispatchIntent, actionId: second)));
+            Assert.Equal(JournalWriteResult.Recorded, await reopened.AppendJournalEntryAsync(
+                Entry(plan, Guid.NewGuid(), JournalState.Started, JournalState.RequiresReview, JournalActor.Coordinator,
+                    JournalResult.Interrupted, Now.AddMinutes(5), JournalCheckpoint.Reconcile, actionId: second)));
+        }
+
+        await using var recovered = await OpenAsync(workspace);
+        var durable = Assert.IsType<JournalHistory>(await recovered.LoadJournalAsync(plan.Key));
+        Assert.Equal(approval, durable.ActiveApproval);
+        var projection = ActionSchedule.Create(durable.Plan, steps).Project(durable);
+        Assert.True(projection.RequiresRecovery);
+        Assert.Null(projection.NextForReview);
+        Assert.Collection(projection.Actions,
+            verified =>
+            {
+                Assert.Equal(first, verified.ActionId);
+                Assert.Equal(JournalState.Verified, verified.State);
+                Assert.Equal(JournalResult.VerificationPassed, verified.Result);
+            },
+            interrupted =>
+            {
+                Assert.Equal(second, interrupted.ActionId);
+                Assert.Equal(JournalState.RequiresReview, interrupted.State);
+                Assert.Equal(JournalCheckpoint.Reconcile, interrupted.Checkpoint);
+                Assert.Equal(JournalResult.Interrupted, interrupted.Result);
+            },
+            waiting =>
+            {
+                Assert.Equal(later, waiting.ActionId);
+                Assert.Equal(JournalState.Approved, waiting.State);
+                Assert.True(waiting.EarlierPhasePending);
+            });
+    }
+
+    [Fact]
     public async Task ReopenedLegacyPlanRetainsApprovalHistoryWithoutNewDispatchAuthority()
     {
         using var workspace = new PersistenceTestWorkspace();
@@ -397,8 +493,9 @@ public sealed class ActionJournalStoreTests
         JournalResult result,
         DateTimeOffset time,
         JournalCheckpoint checkpoint = JournalCheckpoint.None,
-        ActionVerification? verification = null) =>
-        new(id, plan.Key, plan.Actions[0].Request.ActionId, ApprovalId, prior, next, actor,
+        ActionVerification? verification = null,
+        Guid? actionId = null) =>
+        new(id, plan.Key, actionId ?? plan.Actions[0].ActionId, ApprovalId, prior, next, actor,
             actor == JournalActor.Operator ? Approver : new OperatorId("actor-" + actor.ToString().ToLowerInvariant()),
             CorrelationId, time, result, checkpoint, verification);
 
