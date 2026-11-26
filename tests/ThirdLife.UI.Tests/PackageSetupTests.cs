@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Core.Evidence;
@@ -27,19 +28,45 @@ public sealed partial class PackageSetupTests
         var option = Assert.IsType<PlanProfileOption>(WorkshopPackageProfile.Load(Now));
         var entry = Assert.Single(option.Catalog.Applications);
         Assert.False(option.Profile.SyntheticData);
+        Assert.Equal("0.2.0", option.Profile.Version);
+        Assert.Equal("0.2.0", option.Catalog.Version);
         Assert.Equal(PilotPackageService.Identity.InstallerSha256, entry.Package.InstallerSha256);
         Assert.Null(WorkshopPackageProfile.Load(Now.AddMonths(2)));
     }
 
     [Theory]
-    [InlineData(PackageInstallStatus.Applied, true, JournalState.Verified, "Independent verification confirmed")]
-    [InlineData(PackageInstallStatus.Applied, false, JournalState.RequiresReview, "could not confirm")]
-    [InlineData(PackageInstallStatus.AuthorizationDeclined, false, JournalState.Failed, "consent was declined")]
-    public async Task PackagePlanUsesDurableApprovalAndReportsTheReopenedJournal(
-        PackageInstallStatus installerResult, bool register, JournalState expectedState, string expectedReport)
+    [InlineData(PackageVerificationStatus.Passed, JournalResult.PackageLaunchVerified, "passed the launch check")]
+    [InlineData(PackageVerificationStatus.ExecutableMissing, JournalResult.PackageProbeUnavailable, "could not be started")]
+    [InlineData(PackageVerificationStatus.ExitedEarly, JournalResult.PackageProbeExitedEarly, "closed before the launch check completed")]
+    [InlineData(PackageVerificationStatus.TimedOut, JournalResult.PackageProbeTimedOut, "launch check reached its time limit")]
+    [InlineData(PackageVerificationStatus.Cancelled, JournalResult.PackageProbeCancelled, "verification was cancelled")]
+    [InlineData(PackageVerificationStatus.CleanupUnconfirmed, JournalResult.PackageProbeCleanupUnconfirmed, "Cleanup of the launch check could not be confirmed")]
+    public Task PackagePlanUsesDurableApprovalAndReportsTheReopenedJournal(
+        PackageVerificationStatus probeStatus, JournalResult expectedResult, string expectedReport) =>
+        CheckPackageJournalAsync(new FixtureInstaller(PackageInstallStatus.Applied, register: true) { ProbeStatus = probeStatus },
+            probeStatus == PackageVerificationStatus.Passed ? JournalState.Verified : JournalState.RequiresReview,
+            expectedResult, expectedReport, probeCalls: 1);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("8.9.9.0")]
+    public Task BackendSuccessCannotVerifyMissingOrWrongPackage(string? registeredVersion) =>
+        CheckPackageJournalAsync(new FixtureInstaller(PackageInstallStatus.Applied, register: registeredVersion is not null)
+        { RegisteredVersion = registeredVersion },
+            JournalState.RequiresReview, JournalResult.VerificationUnconfirmed, "could not confirm", probeCalls: 0);
+
+    [Theory]
+    [InlineData(PackageInstallStatus.AuthorizationDeclined, JournalState.Failed, JournalResult.AuthorizationDeclined, "consent was declined")]
+    [InlineData(PackageInstallStatus.RestartRequired, JournalState.Applied, JournalResult.BackendApplied, "a restart is required")]
+    public Task PackageVerificationWaitsForCompletedApply(
+        PackageInstallStatus installerResult, JournalState expectedState, JournalResult expectedResult, string expectedReport) =>
+        CheckPackageJournalAsync(new FixtureInstaller(installerResult, register: true),
+            expectedState, expectedResult, expectedReport, probeCalls: 0);
+
+    private static async Task CheckPackageJournalAsync(
+        FixtureInstaller runtime, JournalState expectedState, JournalResult expectedResult, string expectedReport, int probeCalls)
     {
         using var disk = new AuditTestStore();
-        var runtime = new FixtureInstaller(installerResult, register);
         var service = new PilotPackageService(runtime);
         var reports = new WorkshopReportStore(Path.Combine(disk.Root, "reports"));
         string jobId;
@@ -47,6 +74,19 @@ public sealed partial class PackageSetupTests
         {
             await workspace.CreateJobAsync();
             jobId = workspace.JobId;
+            var storedJobId = workspace.Job!.Job.JobId;
+            runtime.Probing = async () =>
+            {
+                await using var check = await disk.OpenSqliteAsync();
+                var durable = Assert.Single(await check.LoadJobJournalsAsync(storedJobId));
+                Assert.Equal(new[] { JournalState.Approved, JournalState.Started, JournalState.Applied },
+                    durable.Entries.Select(entry => entry.State));
+                Assert.Equal(JournalCheckpoint.PackageLaunchPendingVerification, durable.Entries[^1].Checkpoint);
+                await using var observer = OpenWorkspace(disk, reports, service);
+                await observer.OpenJobAsync(storedJobId.Value);
+                Assert.Contains("cleanup of any temporary launch check files have not been confirmed", observer.PackageHistoryText);
+                Assert.False(observer.CanInstallPackage);
+            };
             await workspace.RecordSanitizationAsync(new SanitizationInput(SanitizationState.NoDonorStorage,
                 "fixture-operator", DateOnly.FromDateTime(Now.UtcDateTime), "", ConfirmedExternalRecord: true));
             await workspace.StartAssessmentAsync();
@@ -55,6 +95,7 @@ public sealed partial class PackageSetupTests
             Assert.Equal(0, runtime.InstallCalls);
             await workspace.BuildPlanReviewAsync();
             Assert.Null(workspace.PlanReview?.Plan.BlockedReason);
+            Assert.Contains("launch the application with no documents", workspace.PlanReviewDetails);
             Assert.False(workspace.CanApprovePlanReview);
             workspace.PackageOperatorCode = "fixture-operator";
             Assert.True(workspace.CanApprovePlanReview, workspace.PackageSourceStatus);
@@ -64,6 +105,13 @@ public sealed partial class PackageSetupTests
             Assert.Equal(1, runtime.InstallCalls);
             Assert.False(workspace.CanInstallPackage);
             Assert.Contains(expectedReport, workspace.PackageHistoryText);
+            if (expectedState == JournalState.RequiresReview)
+            {
+                Assert.True(workspace.CanCheckPackageRecovery);
+                await workspace.CheckPackageRecoveryAsync();
+                Assert.False(workspace.CanInstallPackage);
+                Assert.Contains(expectedReport, workspace.PackageHistoryText);
+            }
             workspace.CloseJob();
             Assert.Empty(workspace.PackageHistoryText);
         }
@@ -79,11 +127,20 @@ public sealed partial class PackageSetupTests
         Assert.Contains(expectedReport, reopened.ReportPreview);
         Assert.DoesNotContain("fixture-operator", reopened.ReportPreview.Split("Machine-wide setup journal")[1]);
         Assert.Equal(1, runtime.InstallCalls);
+        Assert.Equal(probeCalls, runtime.ProbeCalls);
         await using var check = await disk.OpenSqliteAsync();
         var history = Assert.Single(await check.LoadJobJournalsAsync(reopened.Job!.Job.JobId));
         Assert.Equal(expectedState, history.StateOf(history.Plan.Actions[0].ActionId));
         Assert.Equal(JournalCheckpoint.PackageDispatchIntent, history.Entries[1].Checkpoint);
         Assert.Equal(JournalActor.PackageBackend, history.Entries[2].Actor);
+        var last = history.Entries[^1];
+        Assert.Equal(expectedResult, last.Result);
+        if (expectedState is JournalState.Verified or JournalState.RequiresReview)
+        {
+            Assert.Equal(JournalActor.Verifier, last.Actor);
+            Assert.Equal(history.Entries[2].ApprovalId, last.ApprovalId);
+            Assert.Equal(history.Entries[2].CorrelationId, last.CorrelationId);
+        }
     }
 
     [Fact]
@@ -106,6 +163,10 @@ public sealed partial class PackageSetupTests
                 ShellTestHost.Show(window);
                 ShellTestHost.Invoke(window, "PrepareButton");
                 var panel = Named<PlanReviewView>(Named<FrameworkElement>(window, "AuditView"), "PlanReviewPanel");
+                var verification = Named<TextBlock>(panel, "PackageVerificationNotice");
+                Assert.True(verification.IsVisible && verification.Focusable);
+                Assert.Contains("briefly starts Notepad++ with no documents", new TextBlockAutomationPeer(verification).GetName(),
+                    StringComparison.Ordinal);
                 var code = Named<TextBox>(panel, "PackageOperator");
                 Assert.True(code.Focusable && code.IsTabStop);
                 var apply = Named<Button>(panel, "InstallPackageButton");
@@ -219,10 +280,14 @@ public sealed partial class PackageSetupTests
     {
         private bool _registered;
         public int InstallCalls { get; private set; }
+        public int ProbeCalls { get; private set; }
         public Action? Acquiring { get; set; }
+        public Func<Task>? Probing { get; set; }
+        public PackageVerificationStatus ProbeStatus { get; init; } = PackageVerificationStatus.Passed;
+        public string? RegisteredVersion { get; init; } = PilotPackageService.Identity.ExactVersion;
 
         public PackageObservation Inspect() => _registered
-            ? new(PackageObservationStatus.Installed, PilotPackageService.Identity.ExactVersion)
+            ? new(PackageObservationStatus.Installed, RegisteredVersion)
             : new(PackageObservationStatus.Absent);
 
         public Task<IPackageArtifact> AcquireAsync(CancellationToken cancellationToken)
@@ -236,6 +301,17 @@ public sealed partial class PackageSetupTests
             InstallCalls++;
             _registered = register;
             return Task.FromResult(new PackageInstallResult(result));
+        }
+
+        public async Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken)
+        {
+            ProbeCalls++;
+            if (Probing is { } probe)
+            {
+                await probe();
+            }
+
+            return ProbeStatus;
         }
     }
 

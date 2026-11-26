@@ -30,6 +30,34 @@ public sealed class PilotPackageService
 
     public PackageObservation Inspect() => runtime.Inspect();
 
+    public async Task<PackageVerificationStatus> VerifyInstalledAsync(InstallPackageActionRequest request,
+        string approvedInstallerSha256, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!MatchesApproval(request, approvedInstallerSha256))
+        {
+            return PackageVerificationStatus.PackageMismatch;
+        }
+
+        try
+        {
+            var observation = await Task.Run(Inspect, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return observation.Status switch
+            {
+                PackageObservationStatus.Installed when observation.ExactVersion == request.ExactVersion =>
+                    await runtime.ProbeAsync(cancellationToken).ConfigureAwait(false),
+                PackageObservationStatus.Absent => PackageVerificationStatus.PackageAbsent,
+                PackageObservationStatus.Unavailable => PackageVerificationStatus.PackageUnavailable,
+                _ => PackageVerificationStatus.PackageMismatch,
+            };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return PackageVerificationStatus.Cancelled;
+        }
+    }
+
     public async Task<PackageResolution> ResolveAsync(CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -260,6 +288,21 @@ public enum PackageObservationStatus
     Unavailable,
 }
 
+public enum PackageVerificationStatus
+{
+    Passed = 1,
+    PackageAbsent,
+    PackageMismatch,
+    PackageUnavailable,
+    ExecutableMissing,
+    ExecutableUntrusted,
+    LaunchFailed,
+    ExitedEarly,
+    TimedOut,
+    Cancelled,
+    CleanupUnconfirmed,
+}
+
 public sealed record PackageResolution(PackageResolutionStatus Status, PackageObservation Observation);
 
 public enum PackageResolutionStatus
@@ -307,6 +350,7 @@ internal interface IPilotPackageRuntime
     PackageObservation Inspect();
     Task<IPackageArtifact> AcquireAsync(CancellationToken cancellationToken);
     Task<PackageInstallResult> ApplyAsync(IPackageArtifact artifact, CancellationToken cancellationToken);
+    Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken);
 }
 
 internal interface IPackageArtifact : IDisposable;

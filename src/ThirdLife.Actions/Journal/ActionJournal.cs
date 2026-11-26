@@ -73,6 +73,12 @@ public enum JournalResult
     PreconditionChanged,
     NetworkUnavailable,
     TimedOut,
+    PackageLaunchVerified,
+    PackageProbeUnavailable,
+    PackageProbeExitedEarly,
+    PackageProbeTimedOut,
+    PackageProbeCancelled,
+    PackageProbeCleanupUnconfirmed,
 }
 
 public enum JournalCheckpoint
@@ -87,6 +93,7 @@ public enum JournalCheckpoint
     BrokerDispatchIntent,
     BrokerPreDispatchFailure,
     PackagePreDispatchFailure,
+    PackageLaunchPendingVerification,
 }
 
 public sealed record JournalApproval

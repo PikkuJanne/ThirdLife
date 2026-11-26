@@ -254,5 +254,8 @@ public sealed partial class PackageSetupTests
             Volatile.Write(ref _applyEntered, 1);
             return _heldApply.Task;
         }
+
+        public Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Interrupted installation cannot reach the probe.");
     }
 }

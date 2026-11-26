@@ -36,3 +36,20 @@ The Microsoft-owned installer handles machine changes and may show ordinary Wind
 The Microsoft.WinGet.Client module and the WinGet COM API remain candidates for additional package functionality. The structured WinGet APIs support exact catalog and scope matching, but this route needs the exact reviewed bytes and documented installer properties. WinGet CLI selection by source, version, machine scope, architecture and installer type also resolves mutable source metadata and does not accept a caller-supplied reviewed installer digest for the selected tuple. Windows Installer handles the signed vendor package directly after the adapter's artifact check. No CLI display output is used. No live mutation comparison of WinGet clients was performed. [WinGet package selection](https://learn.microsoft.com/windows/package-manager/winget/install) · [WinGet COM contract](https://github.com/microsoft/winget-cli/blob/master/src/Microsoft.Management.Deployment/PackageManager.idl)
 
 On 2026-11-25 the active Windows 11 Pro client (native x64, build 26300) and Windows Installer `5.0.26100.9711` reported the target package absent before and after an opt-in production adapter resolution. The adapter returned Ready after the signed MSI passed verification. This observation covered acquisition and initial state. The app's install, independent postcondition and reopened report require their own runtime transaction evidence.
+
+## TL-0406 verification extension
+
+The original install and registration evidence retains its scope. The revised reviewed
+profile discloses an automatic, empty launch check before approval. After a durable
+Windows Installer `Applied` result, the verifier checks the exact machine ProductCode,
+PackageCode, version, publisher and assignment. It obtains the executable and two
+startup XML files from the fixed machine installation directory. The compiled lengths
+and digests come from members of the same signed, pinned MSI.
+
+The verifier stages only those checked files and a local-settings marker in an
+access-restricted temporary directory. It starts the copied image unelevated on an
+inactive Windows desktop with local settings, a fresh empty instance, and no session
+restore or plugin loading. The launch uses the approved installed bytes in isolation
+from the normal editor configuration. The Windows job contains the process and
+provides bounded teardown. The verifier confirms cleanup or records it as unconfirmed.
+See [TL-0406 evidence](../../artifacts/evidence/TL-0406/report.md) for scope and limits.

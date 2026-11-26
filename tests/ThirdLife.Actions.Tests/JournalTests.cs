@@ -139,6 +139,48 @@ public sealed class JournalTests
         Assert.False(JournalStateMachine.CanAppend(plan, Approval(plan), applied, verified));
     }
 
+    [Theory]
+    [InlineData(JournalCheckpoint.None, JournalResult.VerificationPassed, true)]
+    [InlineData(JournalCheckpoint.None, JournalResult.PackageLaunchVerified, false)]
+    [InlineData(JournalCheckpoint.PackageLaunchPendingVerification, JournalResult.VerificationPassed, false)]
+    [InlineData(JournalCheckpoint.PackageLaunchPendingVerification, JournalResult.PackageLaunchVerified, true)]
+    [InlineData(JournalCheckpoint.RestartRequired, JournalResult.PackageLaunchVerified, false)]
+    public void PackageLaunchJournalKeepsPriorRegistrationOnlyEvidenceDistinct(
+        JournalCheckpoint appliedCheckpoint, JournalResult result, bool canVerify)
+    {
+        var proposal = PlanResolverTests.CreateReviewedPlan();
+        var plan = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+        var actionId = Assert.Single(plan.Actions).ActionId;
+        var approval = Approval(plan);
+        var started = Entry(plan, actionId, Guid.NewGuid(), JournalState.Approved, JournalState.Started,
+            JournalActor.Coordinator, JournalResult.None, JournalCheckpoint.PackageDispatchIntent, occurredAt: ApprovalTime.AddMinutes(1));
+        var applied = Entry(plan, actionId, PreviousEntryId, JournalState.Started, JournalState.Applied,
+            JournalActor.PackageBackend, JournalResult.BackendApplied, appliedCheckpoint);
+        var verified = Entry(plan, actionId, CandidateEntryId, JournalState.Applied, JournalState.Verified,
+            JournalActor.Verifier, result, verification: ActionVerification.ExactPackageIdentity);
+
+        Assert.True(JournalStateMachine.CanAppend(plan, approval, started, applied));
+        Assert.Equal(canVerify, JournalStateMachine.CanAppend(plan, approval, applied, verified));
+    }
+
+    [Fact]
+    public void ProbeCleanupRequiresReviewAndCannotBeRecordedForAnUnrelatedApply()
+    {
+        var proposal = PlanResolverTests.CreateReviewedPlan();
+        var plan = JournalPlanSnapshot.Create(proposal, ImpactEstimator.Estimate(proposal));
+        var actionId = Assert.Single(plan.Actions).ActionId;
+        var approval = Approval(plan);
+        var applied = Entry(plan, actionId, PreviousEntryId, JournalState.Started, JournalState.Applied,
+            JournalActor.PackageBackend, JournalResult.BackendApplied, JournalCheckpoint.PackageLaunchPendingVerification);
+        var legacyApplied = Entry(plan, actionId, PreviousEntryId, JournalState.Started, JournalState.Applied,
+            JournalActor.PackageBackend, JournalResult.BackendApplied);
+        var unconfirmed = Entry(plan, actionId, CandidateEntryId, JournalState.Applied, JournalState.RequiresReview,
+            JournalActor.Verifier, JournalResult.PackageProbeCleanupUnconfirmed, JournalCheckpoint.Reconcile);
+
+        Assert.True(JournalStateMachine.CanAppend(plan, approval, applied, unconfirmed));
+        Assert.False(JournalStateMachine.CanAppend(plan, approval, legacyApplied, unconfirmed));
+    }
+
     [Fact]
     public void InterruptedPackageCannotUseNoOpReconciliation()
     {

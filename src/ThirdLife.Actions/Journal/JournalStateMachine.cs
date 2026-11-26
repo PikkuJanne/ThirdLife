@@ -77,7 +77,9 @@ public static class JournalStateMachine
             (JournalState.Started, JournalState.Applied) =>
                 IsExecutionActor(candidate, previous) && candidate.Result == JournalResult.BackendApplied &&
                 (candidate.Checkpoint == JournalCheckpoint.None ||
-                    (candidate.Checkpoint == JournalCheckpoint.RestartRequired && action.Definition.Reboot == ActionReboot.MayRequire)),
+                    (candidate.Checkpoint == JournalCheckpoint.RestartRequired && action.Definition.Reboot == ActionReboot.MayRequire) ||
+                    (candidate.Checkpoint == JournalCheckpoint.PackageLaunchPendingVerification &&
+                        IsMachinePackage(action) && previous?.Checkpoint == JournalCheckpoint.PackageDispatchIntent)),
             (JournalState.Started, JournalState.Failed) =>
                 (IsExecutionActor(candidate, previous) && candidate.Checkpoint == JournalCheckpoint.None &&
                     (candidate.Result == JournalResult.OperationFailed ||
@@ -98,13 +100,19 @@ public static class JournalStateMachine
                         candidate.Actor == JournalActor.Coordinator && candidate.Result == JournalResult.Cancelled &&
                         candidate.Checkpoint == JournalCheckpoint.Reconcile)),
             (JournalState.Applied, JournalState.Verified) =>
-                candidate.Actor == JournalActor.Verifier && candidate.Result == JournalResult.VerificationPassed &&
+                candidate.Actor == JournalActor.Verifier &&
+                candidate.Result == (previous?.Checkpoint == JournalCheckpoint.PackageLaunchPendingVerification && IsMachinePackage(action)
+                    ? JournalResult.PackageLaunchVerified : JournalResult.VerificationPassed) &&
                 candidate.Verification == action.Definition.Verification && candidate.Checkpoint == JournalCheckpoint.None &&
                 previous?.Checkpoint != JournalCheckpoint.RestartRequired,
             (JournalState.Applied, JournalState.RequiresReview) =>
                 (candidate.Actor is JournalActor.Coordinator or JournalActor.Verifier && IsInterruption(candidate)) ||
                 (candidate.Actor == JournalActor.Verifier && action.Request is InstallPackageActionRequest &&
-                    candidate.Result == JournalResult.VerificationUnconfirmed && candidate.Checkpoint == JournalCheckpoint.Reconcile),
+                    candidate.Checkpoint == JournalCheckpoint.Reconcile &&
+                    (candidate.Result == JournalResult.VerificationUnconfirmed ||
+                        (IsMachinePackage(action) && previous?.Checkpoint == JournalCheckpoint.PackageLaunchPendingVerification &&
+                            candidate.Result is JournalResult.PackageProbeUnavailable or JournalResult.PackageProbeExitedEarly or
+                                JournalResult.PackageProbeTimedOut or JournalResult.PackageProbeCancelled or JournalResult.PackageProbeCleanupUnconfirmed))),
             (JournalState.RequiresReview, JournalState.Failed) =>
                 candidate.Actor == JournalActor.Verifier && candidate.Result == JournalResult.NoChangeConfirmed &&
                 candidate.Checkpoint == JournalCheckpoint.None && candidate.Verification == ActionVerification.NoMachineChange &&

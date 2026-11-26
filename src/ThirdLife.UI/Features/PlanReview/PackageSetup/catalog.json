@@ -1,14 +1,14 @@
 {
   "schema_version": "thirdlife.catalog.v1",
   "catalog_id": "workshop-package-setup",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "status": "reviewed",
   "synthetic_data": false,
   "classification": "PUBLIC_REFERENCE",
   "applications": [
     {
       "id": "generic.plain-text-editor",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "capability_id": "document_editing",
       "entry_status": "reviewed",
       "production_eligible": true,
