@@ -102,16 +102,16 @@
             <TextBlock x:Name="PackageVerificationNotice"
                        Text="After installation, ThirdLife checks the exact version for all users. It briefly starts the package application with no documents and closes the instance it started. Reopening the job can continue an interrupted check."
                        TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True" />
-            <Label Content="Workshop operator code for this approval" Target="{Binding ElementName=PackageOperator}" />
+            <Label Content="Workshop operator code" Target="{Binding ElementName=PackageOperator}" />
             <TextBox x:Name="PackageOperator" MaxLength="64"
                      Text="{Binding PackageOperatorCode, UpdateSourceTrigger=PropertyChanged}"
-                     IsEnabled="{Binding CanEditPackageOperator}" AutomationProperties.Name="Workshop operator code for this approval" />
+                     IsEnabled="{Binding CanEditPackageOperator}" AutomationProperties.Name="Workshop operator code" />
           </StackPanel>
-          <StackPanel Visibility="{Binding HasBrokerPlan, Converter={StaticResource PlanReviewVisibility}}">
-            <Label Content="Workshop operator code for this approval" Target="{Binding ElementName=BrokerOperator}" />
+          <StackPanel Visibility="{Binding ShowsBrokerOperator, Converter={StaticResource PlanReviewVisibility}}">
+            <Label Content="Workshop operator code" Target="{Binding ElementName=BrokerOperator}" />
             <TextBox x:Name="BrokerOperator" MaxLength="64"
                      Text="{Binding BrokerOperatorCode, UpdateSourceTrigger=PropertyChanged}"
-                     IsEnabled="{Binding CanEditBrokerOperator}" AutomationProperties.Name="Workshop operator code for this approval" />
+                     IsEnabled="{Binding CanEditBrokerOperator}" AutomationProperties.Name="Workshop operator code" />
           </StackPanel>
           <WrapPanel Margin="0,8,0,0"
                      Visibility="{Binding ShowsPlanDecision, Converter={StaticResource PlanReviewVisibility}}">
@@ -124,6 +124,19 @@
                   Style="{DynamicResource Trace.PrimaryButton}" HorizontalAlignment="Left" Margin="0,8,0,0"
                   Visibility="{Binding ShowsPackageInstall, Converter={StaticResource PlanReviewVisibility}}"
                   IsEnabled="{Binding CanInstallPackage}" Click="InstallPackage" />
+          <ItemsControl x:Name="ActionSkipItems" ItemsSource="{Binding ActionSkipChoices}"
+                        Visibility="{Binding ShowsActionSkipChoices, Converter={StaticResource PlanReviewVisibility}}"
+                        IsEnabled="{Binding CanSkipApprovedAction}" AutomationProperties.Name="Skip approved actions">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Margin="0,8,0,0">
+                  <TextBlock Text="{Binding Consequence}" TextWrapping="Wrap" />
+                  <Button Content="{Binding Label}" Click="SkipApprovedAction" HorizontalAlignment="Left"
+                          AutomationProperties.HelpText="{Binding Consequence}" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </StackPanel>
       </Border>
     </StackPanel>

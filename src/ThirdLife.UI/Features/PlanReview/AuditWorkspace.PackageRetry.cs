@@ -103,17 +103,28 @@ internal sealed partial class AuditWorkspace
             {
                 ClearPlanReview();
                 await CheckPackageAsync();
+                await LoadDisplayedActionDecisionAsync(displayed);
                 PresentPlan(displayed);
-                _planReviewStatus = key == expected.Plan
-                    ? "Review and approve the package plan again before retrying."
-                    : "The approved resolution changed. Review and approve the current package plan before retrying.";
+                if (PlanReviewDecision is not { Outcome: PlanReviewOutcome.Declined })
+                {
+                    _planReviewStatus = key == expected.Plan
+                        ? "Review and approve the package plan again before retrying."
+                        : "The approved resolution changed. Review and approve the current package plan before retrying.";
+                }
                 return;
             }
 
             _packageApproval = null;
             _packageCancellation = new CancellationTokenSource();
-            await StartPackageAttemptAsync(journal, service, approval, displayed, current, request, previous, eligibility,
-                _packageCancellation.Token);
+            try
+            {
+                await StartPackageAttemptAsync(journal, service, approval, displayed, current, request, previous, eligibility,
+                    _packageCancellation.Token);
+            }
+            finally
+            {
+                await RefreshActionDecisionsAsync(expected.Plan.JobId);
+            }
         });
     }
 

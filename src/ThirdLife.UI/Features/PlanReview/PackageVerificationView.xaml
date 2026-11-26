@@ -9,8 +9,24 @@
     <TextBlock x:Name="VerificationHeading" Text="Review recorded outcomes" Style="{DynamicResource Trace.TitleText}"
                Focusable="True" KeyboardNavigation.IsTabStop="False"
                AutomationProperties.HeadingLevel="Level1" TextWrapping="Wrap" />
-    <TextBlock Text="Review the saved installer outcome and independent checks."
+    <TextBlock Text="Review saved preparation outcomes and independent checks."
                Style="{DynamicResource Trace.MetaText}" TextWrapping="Wrap" Margin="0,4,0,16" />
+    <Border Style="{DynamicResource Trace.EvidencePanel}" Margin="0,0,0,16"
+            Visibility="{Binding HasPreparationDisposition, Converter={StaticResource VerifyVisibility}}">
+      <StackPanel>
+        <TextBlock Text="Preparation action disposition" Style="{DynamicResource Trace.SectionText}"
+                   TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
+        <TextBlock x:Name="PreparationDispositionMessage"
+                   Text="{Binding PreparationDispositionStatus, NotifyOnTargetUpdated=True}" TextWrapping="Wrap"
+                   Focusable="True" KeyboardNavigation.IsTabStop="True" Margin="0,4,0,0"
+                   AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
+        <TextBox x:Name="PreparationOutcomeDetails" Text="{Binding PreparationOutcomes, Mode=OneWay}" TextWrapping="Wrap" IsReadOnly="True"
+                 IsReadOnlyCaretVisible="True" AcceptsReturn="True" MaxHeight="220" Margin="0,8,0,0"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                 Visibility="{Binding HasPreparationOutcomes, Converter={StaticResource VerifyVisibility}}"
+                 AutomationProperties.Name="Preparation action outcomes" />
+      </StackPanel>
+    </Border>
     <Border Style="{DynamicResource Trace.EvidencePanel}"
             Visibility="{Binding ShowsVerifyEmptyState, Converter={StaticResource VerifyVisibility}}">
       <StackPanel>

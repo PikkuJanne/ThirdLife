@@ -24,7 +24,7 @@ internal sealed partial class AuditWorkspace
     public bool HasBrokerPlan => _brokerPlan is not null;
     public bool HasBrokerHistory => !_brokerHistories.IsEmpty;
     public bool ShowsBrokerExecution => HasBrokerPlan || HasBrokerHistory;
-    public bool CanEditBrokerOperator => CanEditJob && HasBrokerPlan && PlanReviewDecision is null;
+    public bool CanEditBrokerOperator => CanEditJob && ShowsBrokerOperator && (PlanReviewDecision is null || ShowsActionSkipChoices);
     public bool CanRunBrokerExecution => CanEditJob && CanDispatchBrokerPlan &&
         _brokerApproval is not null && PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } &&
         (_brokerPlan?.Schedule is null || ApprovedScheduleProgress is { } projection && CanResumeScheduledPlan(projection));
@@ -130,6 +130,7 @@ internal sealed partial class AuditWorkspace
                 PlanReviewDecision = null;
                 await LoadBrokerHistoryAsync(approval.Plan.JobId, reconcile: false);
                 RestoreScheduledApproval();
+                await RefreshActionDecisionsAsync(approval.Plan.JobId);
             }
         });
     }
@@ -147,6 +148,8 @@ internal sealed partial class AuditWorkspace
     public Task CheckBrokerRecoveryAsync() => !CanCheckBrokerRecovery ? Task.CompletedTask : RunAsync(async () =>
     {
         await LoadBrokerHistoryAsync(Job!.Job.JobId, reconcile: true);
+        ClearReport();
+        await RefreshActionDecisionsAsync(Job.Job.JobId);
         _brokerActivity = _brokerHistories.Any(history => history.Plan.Actions.Any(action =>
             history.StateOf(action.ActionId) == JournalState.Started))
             ? "The broker could still be active. Check recovery again after its dispatch window expires."
@@ -194,7 +197,8 @@ internal sealed partial class AuditWorkspace
             return;
         }
 
-        if (!CanResumeScheduledPlan(projection) && !projection.Actions.All(action => action.State == JournalState.Verified))
+        if (!CanResumeScheduledPlan(projection) &&
+            !projection.Actions.All(action => action.State is JournalState.Verified or JournalState.Skipped))
         {
             return;
         }
@@ -210,6 +214,8 @@ internal sealed partial class AuditWorkspace
         ? "Approval recorded for this synthetic plan. Device readiness still requires verification."
         : ApprovedScheduleProgress is { } projection && projection.Actions.All(action => action.State == JournalState.Verified)
             ? "All scheduled actions have saved independent verification."
+            : ApprovedScheduleProgress is { } settled && settled.Actions.All(action => action.State is JournalState.Verified or JournalState.Skipped)
+            ? "The scheduled actions have saved verification or skip outcomes. Review those outcomes in Verify."
             : CanDispatchBrokerPlan
             ? "Approval saved for this exact test plan. Select Run approved no-op to continue."
             : "Approval saved for this exact test plan. Broker execution is unavailable in this build.";
@@ -272,6 +278,7 @@ internal sealed partial class AuditWorkspace
                 (JournalState.Started, _) => "Started. Waiting for a final result or recovery.",
                 (JournalState.Applied, _) => "Broker reported completion. Independent verification is pending.",
                 (JournalState.Verified, _) => "Independent verification recorded.",
+                (JournalState.Skipped, _) => "Operator chose to skip this action.",
                 (JournalState.Failed, JournalResult.AuthorizationDeclined) => "Windows consent declined. No action was sent. Review and approve again to retry.",
                 (JournalState.Failed, JournalResult.BackendUnavailable) => "Broker unavailable. No action was sent.",
                 (JournalState.Failed, JournalResult.Cancelled) => "Cancelled before dispatch. No action was sent.",
@@ -296,6 +303,7 @@ internal sealed partial class AuditWorkspace
         NoOpExecutionStatus.Cancelled => "Cancellation finished. Check the saved outcome for each action.",
         NoOpExecutionStatus.Completed when scheduled => "All scheduled actions have saved independent verification.",
         NoOpExecutionStatus.Completed => "The broker returned results. Check the saved outcome for each action.",
+        NoOpExecutionStatus.CompletedWithOmissions => "Essential actions have saved verification. Review the recorded optional outcomes.",
         NoOpExecutionStatus.Failed => "The broker reported a failure. Check the saved outcome for each action.",
         NoOpExecutionStatus.RequiresReview when scheduled => "Check the saved actions for pending verification or recovery.",
         NoOpExecutionStatus.RequiresReview => "The broker stopped before confirming the outcome. Check the saved execution history.",

@@ -37,7 +37,7 @@ internal sealed partial class AuditWorkspace
     public IReadOnlyList<PackageJournalItem> PackageJournal { get; private set; } = [];
     public bool IsPackageOperationRunning => _packageCancellation is not null;
     public bool ShowsPackageOperationStatus => IsPackageProfile || IsPackageOperationRunning;
-    public bool ShowsVerifyEmptyState => !HasPackageHistory && !HasRebootRecovery && !HasBrokerHistory;
+    public bool ShowsVerifyEmptyState => !HasPackageHistory && !HasRebootRecovery && !HasBrokerHistory && !HasPreparationDisposition;
     public bool ShowsPackageInstallActivity => IsPackageOperationRunning && !ShowsPackageRecoveryCancellation;
     public bool ShowsPackageVerificationPlanStatus => HasPackageHistory && IsPackageProfile && PlanReviewStatus != LatestPackageOutcome;
     public bool ShowsPackageVerificationActions => ShowsPackageRecovery || HasPackageRetryStatus ||
@@ -48,7 +48,7 @@ internal sealed partial class AuditWorkspace
     public bool OffersPackageRecoveryCheck => _canInspectSavedPackage && CanUsePackageRecovery;
     public bool CanCheckPackageRecovery => CanCloseJob && OffersPackageRecoveryCheck;
     public string PackageRecoveryStatus { get; private set; } = string.Empty;
-    public bool CanEditPackageOperator => CanEditJob && PlanReviewDecision is null;
+    public bool CanEditPackageOperator => CanEditJob && (PlanReviewDecision is null || ShowsActionSkipChoices);
     public bool CanInstallPackage => CanEditJob && !_packageNeedsReview && _packageService is not null &&
         PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } && _packageApproval is not null &&
         _packageResolution?.Status == PackageResolutionStatus.Ready && CanStartPackagePlan;
@@ -100,7 +100,7 @@ internal sealed partial class AuditWorkspace
 
     private bool CanApprovePackagePlan => IsPackageProfile && !_packageNeedsReview && _store is IPackageScheduleJournal &&
         _packageResolution?.Status == PackageResolutionStatus.Ready && !string.IsNullOrWhiteSpace(_packageOperatorCode) &&
-        CanStartPackagePlan;
+        CanStartPackagePlan && _displayedActionDecisionHistory?.Entries.LastOrDefault()?.State != JournalState.Skipped;
 
     private async Task CheckPackageAsync()
     {
@@ -203,6 +203,10 @@ internal sealed partial class AuditWorkspace
             {
                 _planReviewStatus = "Cancellation finished. Check the saved outcome before continuing.";
                 await LoadPackageHistoryAsync(approval.Plan.JobId);
+            }
+            finally
+            {
+                await RefreshActionDecisionsAsync(approval.Plan.JobId);
             }
         });
     }
@@ -602,9 +606,6 @@ internal sealed partial class AuditWorkspace
         WorkshopPackageOutcome.DetectionAbsent or WorkshopPackageOutcome.DetectionMismatch or WorkshopPackageOutcome.DetectionUnavailable or
         WorkshopPackageOutcome.ProbeExecutableMissing or WorkshopPackageOutcome.ProbeExecutableUntrusted or WorkshopPackageOutcome.ProbeLaunchFailed;
 
-    private async Task<IReadOnlyList<WorkshopPackageRecord>> ReadPackageRecordsAsync(JobId jobId, CancellationToken cancellationToken) =>
-        ReadPackageRecords(await LoadPackageJournalsAsync(jobId, cancellationToken), includeEarlierAttempts: true);
-
     private static WorkshopPackageRecord[] ReadPackageRecords(IReadOnlyList<JournalHistory> histories, bool includeEarlierAttempts)
     {
         var packages = new List<WorkshopPackageRecord>();
@@ -649,7 +650,8 @@ internal sealed partial class AuditWorkspace
         return history.Plan.Actions.Select(action => action.Request).OfType<InstallPackageActionRequest>()
             .FirstOrDefault(request => request.Scope == ActionScope.Machine &&
                 request.SourceId == identity.SourceId && request.PackageId == identity.PackageId && request.Publisher == identity.Publisher &&
-                history.Entries.Any(entry => entry.ActionId == request.ActionId && entry.Checkpoint == JournalCheckpoint.PackagePlanApproval));
+                history.Entries.Any(entry => entry.ActionId == request.ActionId &&
+                    (entry.Checkpoint == JournalCheckpoint.PackagePlanApproval || entry.State == JournalState.Skipped)));
     }
 
     private static WorkshopPackageOutcome ReportOutcome(JournalState state, JournalResult result, JournalCheckpoint checkpoint) =>
@@ -664,6 +666,7 @@ internal sealed partial class AuditWorkspace
                 WorkshopPackageOutcome.ExistingTargetVerified,
             (JournalState.Verified, JournalResult.PackageLaunchVerified, _) => WorkshopPackageOutcome.LaunchVerified,
             (JournalState.Verified, _, _) => WorkshopPackageOutcome.Verified,
+            (JournalState.Skipped, _, _) => WorkshopPackageOutcome.Skipped,
             (JournalState.RolledBack, _, _) => WorkshopPackageOutcome.RolledBack,
             (_, JournalResult.Cancelled, JournalCheckpoint.PackagePreDispatchFailure) => WorkshopPackageOutcome.CancelledBeforeDispatch,
             (_, JournalResult.Cancelled, _) => WorkshopPackageOutcome.Cancelled,

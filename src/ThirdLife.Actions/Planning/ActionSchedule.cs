@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using ThirdLife.Actions.Journal;
+using ThirdLife.Catalog.Profiles;
 
 namespace ThirdLife.Actions.Planning;
 
@@ -121,12 +122,14 @@ public sealed class ActionSchedule
                 entry is { Checkpoint: JournalCheckpoint.PackagePreDispatchFailure, Result: JournalResult.PackageDispatchAuthorizationChanged } or
                 { State: JournalState.Failed, Actor: JournalActor.PackageBackend, Result: JournalResult.AuthorizationDeclined }));
         var progress = ImmutableArray.CreateBuilder<ScheduledActionProgress>(Steps.Length);
+        var optionalActions = history.Plan.Actions.Where(action => action.Intent == CapabilityIntent.Optional)
+            .ToDictionary(action => action.ActionId);
         Guid? nextForReview = null;
         foreach (var step in Steps)
         {
             var entry = latest.GetValueOrDefault(step.ActionId);
             var pending = step.Dependencies.Where(id => !IsVerified(id)).ToImmutableArray();
-            var earlierPhasePending = Steps.Any(previous => previous.Phase < step.Phase && !IsVerified(previous.ActionId));
+            var earlierPhasePending = Steps.Any(previous => previous.Phase < step.Phase && !PhaseActionResolved(previous.ActionId));
             progress.Add(new ScheduledActionProgress(step.ActionId, entry?.State ?? JournalState.Planned,
                 entry?.Checkpoint ?? JournalCheckpoint.None, entry?.Result ?? JournalResult.None, pending, earlierPhasePending));
             if (nextForReview is null && history.Plan.IsCurrentPolicyPlan && !requiresRecovery && !requiresFreshApproval &&
@@ -141,6 +144,10 @@ public sealed class ActionSchedule
         return new ActionScheduleProjection(progress.MoveToImmutable(), nextForReview, requiresRecovery, requiresFreshApproval);
 
         bool IsVerified(Guid id) => latest.GetValueOrDefault(id)?.State == JournalState.Verified;
+
+        bool PhaseActionResolved(Guid id) => IsVerified(id) ||
+            (optionalActions.TryGetValue(id, out var action) && latest.TryGetValue(id, out var entry) &&
+                PreparationDisposition.IsSettledOmission(action, entry));
     }
 
     /// <summary>Checks the graph prerequisites and active approval for a selected failed package step.</summary>

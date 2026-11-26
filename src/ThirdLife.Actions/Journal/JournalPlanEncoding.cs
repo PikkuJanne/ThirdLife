@@ -25,8 +25,8 @@ internal static partial class JournalPlanEncoding
         value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
 
     public static (SanitizationGateDecisionId Gate, ImmutableArray<JournalAction> Actions, bool IsCurrentPolicyPlan,
-        string CatalogSha256, string ProfileSha256, bool SyntheticData, ActionSchedule? Schedule) ReadPlan(
-        JournalPlanKey key, byte[] bytes)
+        string CatalogSha256, string ProfileSha256, string PolicySha256, string EvidenceSha256, bool SyntheticData,
+        ActionSchedule? Schedule) ReadPlan(JournalPlanKey key, byte[] bytes)
     {
         using var document = Open(bytes);
         var root = document.RootElement;
@@ -51,10 +51,11 @@ internal static partial class JournalPlanEncoding
                 "synthetic_data", "active_capability_ids"]);
         var catalog = ReadString(subject.GetProperty("catalog_sha256"));
         var profile = ReadString(subject.GetProperty("profile_sha256"));
+        var policy = ReadString(subject.GetProperty("policy_sha256"));
+        var evidence = ReadString(subject.GetProperty("evidence_sha256"));
         if (!subject.GetProperty("job_id").ValueEquals(key.JobId.Value) ||
             !IsDigest(profile) || !IsDigest(catalog) ||
-            !IsDigest(ReadString(subject.GetProperty("policy_sha256"))) ||
-            !IsDigest(ReadString(subject.GetProperty("evidence_sha256"))))
+            !IsDigest(policy) || !IsDigest(evidence))
         {
             throw new JsonException();
         }
@@ -64,7 +65,7 @@ internal static partial class JournalPlanEncoding
         var capabilities = ReadActiveCapabilities(subject.GetProperty("active_capability_ids"));
         var actions = ReadActions(root.GetProperty("actions"), capabilities, synthetic);
         var schedule = hasSchedule ? ReadSchedule(key, actions, root.GetProperty("schedule")) : null;
-        return (gate, actions, schemaVersion != PlanIdentity.LegacyVersion, catalog, profile, synthetic, schedule);
+        return (gate, actions, schemaVersion != PlanIdentity.LegacyVersion, catalog, profile, policy, evidence, synthetic, schedule);
     }
 
     private static ActionSchedule ReadSchedule(JournalPlanKey key, ImmutableArray<JournalAction> actions, JsonElement value)
@@ -268,7 +269,7 @@ internal static partial class JournalPlanEncoding
             var capability = ReadString(item.GetProperty("capability_id"));
             var intent = (CapabilityIntent)ReadInt(item.GetProperty("intent"));
             var entryId = ReadToken(item.GetProperty("catalog_entry_id"), EntryIdPattern(), 128);
-            _ = ReadToken(item.GetProperty("reason_code"), ReasonCodePattern(), 64);
+            var reason = ReadToken(item.GetProperty("reason_code"), ReasonCodePattern(), 64);
             _ = ReadToken(item.GetProperty("catalog_entry_version"), VersionPattern(), 64);
             if (!capabilities.Remove(capability) || !entryIds.Add(entryId) ||
                 entryId.StartsWith("generic.synthetic.", StringComparison.Ordinal) != synthetic ||
@@ -289,7 +290,7 @@ internal static partial class JournalPlanEncoding
 
             var definition = ActionRegistry.Describe(request);
             RequireDefinition(item.GetProperty("definition"), definition);
-            result.Add(new JournalAction(request, definition));
+            result.Add(new JournalAction(request, definition, capability, reason, intent));
             lastIntent = intent;
             lastCapability = capability;
         }

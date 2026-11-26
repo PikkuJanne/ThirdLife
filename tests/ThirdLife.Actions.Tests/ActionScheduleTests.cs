@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
+using ThirdLife.Catalog.Profiles;
 using ThirdLife.Core.Evidence;
 
 namespace ThirdLife.Actions.Tests;
@@ -197,6 +198,43 @@ public sealed class ActionScheduleTests
         Assert.Equal(JournalState.Planned, projection.Actions[1].State);
         Assert.Equal(ids[0], Assert.Single(projection.Actions[1].PendingDependencies));
         Assert.Equal(JournalState.Approved, projection.Actions[2].State);
+    }
+
+    [Theory]
+    [InlineData(CapabilityIntent.Optional, JournalState.Skipped)]
+    [InlineData(CapabilityIntent.Optional, JournalState.Failed)]
+    [InlineData(CapabilityIntent.Essential, JournalState.Skipped)]
+    [InlineData(CapabilityIntent.Essential, JournalState.Failed)]
+    public void OnlyOptionalTerminalOmissionsClearAPhaseBarrier(CapabilityIntent intent, JournalState outcome)
+    {
+        var plan = Snapshot();
+        var omitted = plan.Actions.First(action => action.Intent == intent).ActionId;
+        var remainder = plan.Actions.Where(action => action.ActionId != omitted).ToArray();
+        var independent = remainder[0].ActionId;
+        var dependent = remainder[1].ActionId;
+        var schedule = ActionSchedule.Create(plan,
+        [
+            new(omitted, 1, []),
+            new(independent, 2, []),
+            new(dependent, 2, [omitted]),
+            new(remainder[2].ActionId, 2, []),
+        ]);
+        var approval = Approve(plan);
+        var entries = ApproveActions(plan, approval);
+        entries = outcome == JournalState.Skipped
+            ? entries.Add(Entry(plan, approval, omitted, JournalState.Approved, outcome, JournalActor.Operator,
+                JournalResult.Declined, atMinutes: 1))
+            : entries.Add(Start(plan, approval, omitted)).Add(Entry(plan, approval, omitted, JournalState.Started, outcome,
+                JournalActor.Broker, JournalResult.OperationFailed, atMinutes: 2));
+        var reopened = JournalPlanSnapshot.Restore(plan.Key, plan.CanonicalPlan.ToArray(), plan.CanonicalImpact.ToArray());
+
+        var progress = schedule.Project(new JournalHistory(reopened, [approval], entries, approval));
+
+        Assert.Equal(intent == CapabilityIntent.Optional ? independent : (Guid?)null, progress.NextForReview);
+        Assert.Equal(intent == CapabilityIntent.Essential, progress.Actions.Single(action => action.ActionId == independent).EarlierPhasePending);
+        Assert.Equal(omitted, Assert.Single(progress.Actions.Single(action => action.ActionId == dependent).PendingDependencies));
+        Assert.Equal(outcome, progress.Actions.Single(action => action.ActionId == omitted).State);
+        Assert.False(progress.RequiresRecovery);
     }
 
     [Fact]

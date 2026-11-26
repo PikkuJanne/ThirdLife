@@ -209,7 +209,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         }
 
         var alreadyOpen = Job?.Job.JobId == id;
-        await ApplyJobAsync(stored);
+        await ApplyJobAsync(stored, refreshPreparation: false);
         if (alreadyOpen)
         {
             var previousPackageHistory = PackageHistoryText;
@@ -223,6 +223,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         }
 
         await ReconcileSavedPackageAsync(id);
+        await RefreshPreparationDispositionAsync(id, invalidateReport: false);
         Status = "Job opened. The committed records are shown below.";
     });
 
@@ -237,6 +238,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ClearPlanReview(clearSelection: true);
         ClearPackageHistory();
         ClearBrokerHistory();
+        ClearPreparationDisposition();
         ClearRebootRecovery();
         ClearRepairs();
         ClearPolicyView();
@@ -382,10 +384,14 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             var assessment = await Task.Run(() => AssessmentOrchestrator.ReadLatest(stored), cancellationToken);
             var summary = SummarizeAssessment(assessment);
             var policy = await FindSavedPolicyAsync(jobId, assessment, cancellationToken);
-            var packages = await ReadPackageRecordsAsync(jobId, cancellationToken);
+            var journals = await ReadPreparationJournalsAsync(jobId, cancellationToken);
+            var now = _timeProvider.GetUtcNow();
             var artifact = await Task.Run(() =>
             {
-                var content = WorkshopReportRenderer.RenderWithPackageRecords(stored, summary, policy, packages, cancellationToken);
+                var packages = ReadPackageRecords(journals, includeEarlierAttempts: true);
+                var preparation = ProjectPreparationRecords(stored, assessment, journals, now, cancellationToken);
+                var content = WorkshopReportRenderer.RenderWithPackageRecords(stored, summary, policy, packages,
+                    preparation, cancellationToken);
                 return _reportStore!.Write(jobId, content, cancellationToken);
             }, cancellationToken);
             ReportArtifact = artifact;
@@ -599,7 +605,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             verification, SanitizationGate.WorkshopIntakePolicyVersion);
     }
 
-    private async Task ApplyJobAsync(StoredJob job, AssessmentSnapshot? currentRun = null)
+    private async Task ApplyJobAsync(StoredJob job, AssessmentSnapshot? currentRun = null, bool refreshPreparation = true)
     {
         var (manual, snapshot, separateOrigin, repairHistory) = await Task.Run(() =>
             (ManualTestService.GetProgress(job), currentRun ?? AssessmentOrchestrator.ReadLatest(job),
@@ -610,6 +616,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         {
             ClearBrokerHistory();
             ClearPackageHistory();
+            ClearPreparationDisposition();
             ClearReport();
             ClearRepairs();
             ClearRebootRecovery();
@@ -626,6 +633,11 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         {
             await LoadPackageHistoryAsync(job.Job.JobId);
             await LoadBrokerHistoryAsync(job.Job.JobId, reconcile: true);
+        }
+
+        if (refreshPreparation)
+        {
+            await LoadPreparationDispositionAsync(job, snapshot);
         }
     }
 
