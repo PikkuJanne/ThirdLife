@@ -52,8 +52,14 @@ The probe cleaned up its process and temporary files. WPF fixtures retained
 distinct applied and verified results through job reopen and report generation.
 [Package verification evidence](artifacts/evidence/TL-0406/report.md)
 
-TL-0407 records typed package failure codes and guidance in the app and preserves
-saved attempt results through job reopen and workshop reporting. Protected local
-logs and the support projection omit raw backend details. Next, TL-0408 can use
-these outcomes to reconcile the job after restart or process loss.
+TL-0407 records typed package failure codes in the app, durable journal and
+workshop report. Protected logs and support omit raw backend details.
 [Package diagnostics evidence](artifacts/evidence/TL-0407/report.md)
+
+TL-0408 completed package recovery implementation. Reopening the saved job
+continues independent verification after an applied result and rechecks
+registration for ambiguous attempts. The protected restart checkpoint permits
+verification after confirmed boot evidence. TL-0409 can implement bounded
+idempotency and retry. TL-0410 retains native installer interruption and actual
+Windows restart qualification.
+[Package recovery evidence](artifacts/evidence/TL-0408/report.md)

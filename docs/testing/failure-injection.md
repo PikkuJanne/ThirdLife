@@ -219,13 +219,16 @@ package plan and verified candidate.
    and wait for a safe inspection state within the run bound.
 3. For restart recovery, wait for Windows Installer to finish and inspect its
    recorded result. When it reports restart required, confirm the durable
-   restart checkpoint before an orderly guest restart. Record the changed boot
-   evidence and reopen the original job as the same user. If the package returns
-   without requiring a restart, record that outcome and leave the native
-   restart-required result unobserved.
+   restart checkpoint before restarting. After an applied outcome, use an
+   orderly guest restart, record the changed boot evidence and reopen the
+   original job as the same user. If Windows Installer completed without
+   requesting a restart, the same run verifies warm-reboot continuity and
+   leaves the native restart-required result unobserved.
 4. In each case, reopen the same job and check the saved action, approval,
    correlation, displayed recovery reason and fresh package observation. Verify
    that recovery launches no installer and keeps an ambiguous result in review.
+   For an already verified attempt, independently recheck package registration
+   after the restart and compare it with the preserved verification.
    Confirm that a verified result has independent exact machine-wide registration
    and the approved launch result. Confirm that the report matches the journal.
 5. Verify process and temporary-file cleanup, save bounded evidence, and restore
