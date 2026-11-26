@@ -4,17 +4,21 @@ param(
     [Parameter(Mandatory, ParameterSetName = 'Inspect')][switch] $Inspect,
     [Parameter(Mandatory, ParameterSetName = 'Preview')][switch] $Preview,
     [Parameter(Mandatory, ParameterSetName = 'ResumePreview')][switch] $ResumePreview,
+    [Parameter(Mandatory, ParameterSetName = 'Install')][switch] $Install,
     [Parameter(Mandatory, ParameterSetName = 'Reopen')][switch] $Reopen,
     [Parameter(Mandatory, ParameterSetName = 'Preview')]
     [Parameter(ParameterSetName = 'ResumePreview')]
+    [Parameter(Mandatory, ParameterSetName = 'Install')]
     [ValidatePattern('\A[A-Za-z0-9_.-]{1,64}\z')][string] $OperatorCode,
     [Parameter(Mandatory, ParameterSetName = 'Preview')]
     [Parameter(ParameterSetName = 'ResumePreview')]
     [ValidatePattern('\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z')][string] $VerifiedNoDonorStorageOn,
     [Parameter(Mandatory, ParameterSetName = 'ResumePreview')]
     [Parameter(Mandatory, ParameterSetName = 'Reopen')]
+    [Parameter(Mandatory, ParameterSetName = 'Install')]
     [ValidatePattern('\Ajob-[0-9a-f]{32}\z')][string] $Job,
     [Parameter(Mandatory, ParameterSetName = 'Reopen')]
+    [Parameter(Mandatory, ParameterSetName = 'Install')]
     [ValidatePattern('\A[0-9a-f]{64}\z')][string] $ExpectedPlanSha256,
     [Parameter(Mandatory, ParameterSetName = 'Reopen')]
     [ValidateSet('Verified', 'RequiresReview')][string] $ExpectedRecovery,
@@ -50,6 +54,14 @@ if ((Get-FileHash -LiteralPath $exe).Hash -ine $AppHostSha256 -or
 }
 if (Get-Process -Name 'ThirdLife.UI' -ErrorAction SilentlyContinue) {
     throw 'Close the previous application session before opening the candidate.'
+}
+$installResultPath = $null
+if ($Install) {
+    $installResultPath = Join-Path (Split-Path -Parent (Split-Path -Parent $root)) 'result.json'
+    if ($env:THIRDLIFE_INSTALL_RESULT_PATH -ine $installResultPath -or
+        -not [IO.File]::Exists($installResultPath)) {
+        throw 'Run installation through the bound guest desktop stage.'
+    }
 }
 $resumeWithIntake = $ResumePreview -and [bool]$OperatorCode -and [bool]$VerifiedNoDonorStorageOn
 if ($ResumePreview -and ([bool]$OperatorCode -xor [bool]$VerifiedNoDonorStorageOn)) {
@@ -198,6 +210,8 @@ function Read-Plan() {
 
 $stopwatch = [Diagnostics.Stopwatch]::StartNew()
 $process = Start-Process -FilePath $exe -WorkingDirectory $root -WindowStyle Normal -PassThru
+$installInvoked = $false
+$installSettled = $false
 $result = [ordered]@{
     scenario = $PSCmdlet.ParameterSetName
     candidate_apphost_sha256 = $AppHostSha256
@@ -227,7 +241,7 @@ try {
         $result.local_job = $Job
         $result.last_checkpoint = 'job_created'
     }
-    elseif ($ResumePreview -or $Reopen) {
+    elseif ($ResumePreview -or $Reopen -or $Install) {
         Set-Value 'JobIdInput' $Job
         Invoke-Button 'OpenJobButton'
         $null = Wait-Observation {
@@ -285,7 +299,7 @@ try {
         }
     }
 
-    if ($Preview -or $ResumePreview) {
+    if ($Preview -or $ResumePreview -or $Install) {
         $null = Wait-Observation { (Find-Control 'PrepareButton').Current.IsEnabled } 'eligible preparation' 180
         Invoke-Button 'PrepareButton'
         Select-Option 'PlanProfileSelector' 'Plain-text editor (machine-wide setup)'
@@ -299,6 +313,53 @@ try {
             throw 'The unapproved plan exposed installation or handover.'
         }
         $result.last_checkpoint = 'exact_plan_displayed_without_approval'
+        if ($Install) {
+            if ($result.plan_sha256 -cne $ExpectedPlanSha256 -or (Read-Value 'SavedPackageHistory')) {
+                throw 'The displayed plan or prior package history does not permit this first installation.'
+            }
+            Set-Value 'PackageOperator' $OperatorCode
+            if ((Read-Value 'PackageOperator') -cne $OperatorCode) {
+                throw 'The application did not retain the authorized operator code.'
+            }
+            Invoke-Button 'ApprovePlanReviewButton'
+            $installControl = Wait-Observation {
+                $control = Find-Control 'InstallPackageButton'
+                if ($control -and $control.Current.IsEnabled) { $control }
+            } 'durable approval for the exact plan'
+            if ((Read-Plan) -cne $ExpectedPlanSha256) { throw 'The plan changed after approval.' }
+            $result.last_checkpoint = 'install_invocation_pending'
+            $result.result = 'in_progress'
+            $result | ConvertTo-Json -Compress | Set-Content -LiteralPath $installResultPath -Encoding UTF8
+            $result.result = 'failed'
+            $installInvoked = $true
+            $installControl.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
+            $result.last_checkpoint = 'install_invoked_once'
+            $outcome = Wait-Observation {
+                if ((Find-Control 'OpenJobButton').Current.IsEnabled) {
+                    $status = (Find-Control 'PlanStatusMessage').Current.Name
+                    $history = Read-Value 'SavedPackageHistory'
+                    if ($history -and $status -and $history.Contains($status) -and
+                        $status -cne 'Approved. No installation start was recorded.') {
+                        $status
+                    }
+                }
+            } 'terminal package outcome' 600
+            if ((Find-Control 'HandoverButton').Current.IsEnabled) { throw 'Unexpected handover availability.' }
+            switch -Exact ($outcome) {
+                'Independent verification confirmed the requested version is installed machine-wide and passed the launch check.' {
+                    $result.last_checkpoint = 'machine_package_verified'
+                }
+                'The installer reported that a restart is required. Save open work before restarting through Windows. Independent verification remains pending.' {
+                    $recovery = Find-Control 'PackageRecoveryMessage'
+                    if (-not $recovery -or $recovery.Current.Name -notlike 'Save your work, use Restart in Windows*') {
+                        throw 'No usable restart checkpoint was displayed.'
+                    }
+                    $result.last_checkpoint = 'durable_package_restart_required'
+                }
+                default { throw 'The package attempt did not reach an accepted terminal state.' }
+            }
+            $installSettled = $true
+        }
     }
     elseif ($Reopen) {
         $null = Wait-Observation {
@@ -344,13 +405,13 @@ catch {
 }
 finally {
     $closed = $process.HasExited
-    if (-not $closed) {
+    if (-not $closed -and (-not $installInvoked -or $installSettled)) {
         $null = $process.CloseMainWindow()
         $closed = $process.WaitForExit(10000)
     }
     $result.application_closed_normally = $closed
-    if (-not $closed) {
-        # This driver never dispatches an installer. Close only its owned WPF process.
+    if (-not $closed -and -not $Install) {
+        # Read-only scenarios can stop their own UI process after a failed close.
         $process.Kill()
         $closed = $process.WaitForExit(10000)
     }
