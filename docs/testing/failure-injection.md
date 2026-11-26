@@ -211,6 +211,12 @@ standing restart authorization recorded in `artifacts/e2e/M4-first-write-slice.m
 Confirm the recorded VM identity and quiescence for each restart. Package
 execution, Windows consent and interruption have their own authority.
 
+For the reviewed pinned Notepad++ vendor MSI on the bound `ThirdLife-W11`
+guest, use the standing installer authorization in
+`artifacts/e2e/M4-first-write-slice.md`. Verify the exact route, target and
+displayed plan, then save approval in the ordinary app for that plan. Keep
+the Windows consent decision and any installer-client interruption separate.
+
 For checkpoint restoration, use the separate standing operator grant in
 `artifacts/e2e/M4-first-write-slice.md`. Confirm the recorded identity of the
 same guest and its exact `Clean-Windows11-ThirdLife` checkpoint. Preserve the

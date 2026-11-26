@@ -5455,8 +5455,41 @@ tasks:
     duration: 141.693 s preview, 97.542 s in the desktop case and 4.412 s independent journal check
     reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and native UAC-decline preview bundle
     limitation: This preview stops before approval and dispatch. The native Windows choice and terminal outcome remain pending.
-  blocked_reason: The displayed native UAC-decline plan awaits exact dispatch authorization and a supervised Windows No.
-    Attributable installer-client interruption requires a separate plan and scoped authority.
+  - task: TL-0410
+    summary: The operator reported No at the bound native Windows prompt and the installer recorded cancellation. The same job reopened
+      in RequiresReview and generated a matching report. The journal retained one correlated dispatch and MSI registration was absent.
+    command_or_review: Bound Install, native client and prompt observation, independent MSI and journal checks, and Reopen RequiresReview
+    tier: extended
+    result: passed
+    environment: Same Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 49.822 s install observation, 7.552 s normal close, 42.528 s reopen and 1.163 s journal comparison
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and native consent cancellation bundles
+    limitation: No is the operator's report. The independently observed application outcome was RequiresReview / Cancelled.
+  - task: TL-0410
+    summary: After the cancellation report and journal proof were retained, the standing-authorized restore reset the guest
+      and removed the retained runner. Re-admission and residue checks confirmed the clean, package-absent baseline.
+    command_or_review: Bound Restore-VMSnapshot and guest start, supported package preflight and residue inspection
+    tier: extended
+    result: passed
+    environment: Same Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 6.575 s apply and start, 25.071 s re-admission and 10.206 s residue inspection
+    reference: artifacts/e2e/M4-first-write-slice.md, post-cancellation checkpoint restore
+    limitation: This clean baseline precedes the separate installer-client interruption case.
+  - task: TL-0410
+    summary: The app previewed a new native installer-client interruption plan on the restored package-absent guest. The exact
+      saved job had zero approvals and zero action journal entries, and the app and runner closed normally.
+    command_or_review: Bound unelevated Preview and independent read-only SQLite job and journal check
+    tier: extended
+    result: passed
+    environment: Same Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 144.830 s preview, 106.321 s in the desktop case and 3.714 s independent journal check
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and installer-client interruption preview bundle
+    limitation: Preview stops before plan approval and dispatch. The client stop needs separate authority and an observed, attributable active installer phase.
+  blocked_reason: The separate installer-client interruption plan awaits permission to stop the exact verified client in an
+    observable transaction phase and the applicable supervised Windows Yes.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.
@@ -5470,9 +5503,14 @@ tasks:
     scope: Admitted disposable Windows 11 native x64 guest with a clean restoration point, verified candidate, reviewed exact
       package route and a bounded package interruption and restart procedure.
   - kind: authorization
-    scope: Attributable authority for the exact saved package plan and guest target, any applicable Windows consent, and the
-      planned installer-client interruption.
+    scope: Attributable authority for the exact reviewed package plan and guest target, any applicable Windows consent, and
+      the planned installer-client interruption. Verify the applicable scoped grant before saving approval for each plan.
     authority: operator
+  - kind: authorization
+    scope: Standing operator authority to dispatch the exact reviewed Notepad++ vendor x64 MSI machine-wide on the bound ThirdLife-W11 guest.
+      Verify package identity, version, digest and route, and save the exact plan approval for each run.
+    authority: operator
+    evidence: artifacts/e2e/M4-first-write-slice.md, standing guest installer authorization recorded 2026-11-26
   - kind: authorization
     scope: Standing operator authority for orderly, task-related Windows restarts of the bound ThirdLife-W11 guest, with
       identity and quiescence verified before each restart.
