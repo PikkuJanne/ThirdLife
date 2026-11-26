@@ -5345,9 +5345,31 @@ tasks:
     duration: 639.265 s install wrapper, 4.882 s package and boot check, and 3.430 s journal check
     reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and recorded guest dispatch artifact digests
     limitation: One live console installer client and consent process remain. No applied result, independent verification or restart was observed.
-  blocked_reason: The single authorized guest attempt timed out and remains in review with the installer and Windows consent active.
-    Resolve the existing Windows choice in the Basic console, observe client exit and re-observe the exact saved job and package
-    before any retry or separately authorized orderly restart. Native interruption and checkpoint restoration need their own scoped authority.
+  - task: TL-0410
+    summary: Following the reported Windows Yes, the exact package was still absent. The bound MSI transaction ended, the runner
+      closed normally, and the same job reopened in review with a matching workshop report and unchanged journal.
+    command_or_review: Bound Windows Installer events, independent MSI probe, normal retained-runner cleanup, Reopen RequiresReview and SQLite comparison
+    tier: targeted
+    result: passed
+    environment: Windows 11 Pro 26H2 build 26300.9974 native x64 Hyper-V guest on the active Codex machine, unelevated app
+    date: '2026-11-26'
+    duration: 12.190 s normal close and cleanup, 86.727 s reopen wrapper, and 4.197 s independent journal read
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb and reviewed reopen bundle
+    limitation: The operator reported Yes. The available Windows log and audit events supplied no installation return code.
+  - task: TL-0410
+    summary: One authorized orderly guest restart changed the observed boot. Independent MSI registration was still absent and the
+      original approval, dispatch, timed-out review journal and saved report survived with no redispatch.
+    command_or_review: Bound guest shutdown.exe /r /t 0, Windows restart event, PowerShell Direct boot and MSI query, SQLite and protected report read
+    tier: extended
+    result: passed
+    environment: Same Windows 11 Pro 26H2 native x64 guest on the active Codex machine
+    date: '2026-11-26'
+    duration: 51.897 s through changed boot, 3.657 s for the post-boot journal read and 3.430 s for the persisted report read
+    reference: artifacts/e2e/M4-first-write-slice.md, production source 20247fb
+    limitation: Continuity of the ambiguous attempt only. The guest returned signed out, so the post-boot WPF report was unobserved.
+  blocked_reason: The approved attempt ended without exact package registration and remains in review. Basic-console sign-in is
+    needed for post-restart WPF reopening. A subsequent supervised installation requires its own exact plan and approval. Native
+    interruption and checkpoint restoration retain separate scoped authorization.
   notes:
   - Retain plan approval and any Windows consent. TL-0412 supplies actual installation and continuity evidence. TL-0411 governs
     the later write-capable release claim.
