@@ -18,3 +18,24 @@ This audit establishes the private candidate scope. The frozen stable
 artifact, actual installed window, cross-schema recovery, rights and
 distribution decisions remain at their respective requirements.
 The standalone and Team B transition decision remains at TL-0710.
+
+## Private 0.3.7 candidate
+
+The native read-only database review of the 0.3.7 MSI at source
+8440ae0cd7e6797a8c348ce5094396d30e443595 verified the same 15 declared
+tables, four fixed property assignments and 19 per-user registry
+rows. The embedded cabinet SHA-256 was
+9c1f0beacdcb83de9d43cead8eca71ab6a81bf5488bc183ad570f045f3d41bc8.
+Each extracted member matched the independently reproduced ZIP.
+Windows returned NotSigned for this exact MSI. The integrated
+package verifier also refused a different reviewed version against
+the correct installer bytes and receipt.
+[Exact 0.3.7 preflight](../TL-0708/reviewed-msi-preflight.md)
+
+The application change reads a receipt belonging to the currently
+opened job and verifies the exact file beneath the registered local
+report folder. The WPF case opened the saved copy after reopening
+the archived job and refused altered bytes. It invoked no inventory
+provider. The 0.3.7 unpacked app opened normally on the active host.
+The 0.3.6 installed lifecycle keeps its separate artifact identity.
+[Archived report](../TL-0703/reopen-archived-report.md)
