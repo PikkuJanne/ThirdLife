@@ -212,6 +212,10 @@ internal sealed partial class AuditWorkspace
         {
             _updateHistoryUnavailable = true;
         }
+        finally
+        {
+            await LoadProfileVerificationAsync(jobId);
+        }
     }
 
     private static string DescribeUpdate(WindowsUpdateCandidate update)

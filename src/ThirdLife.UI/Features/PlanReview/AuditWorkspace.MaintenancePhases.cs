@@ -77,6 +77,8 @@ internal sealed partial class AuditWorkspace
                 MaintenancePhase.Packages => "Package phase. In Prepare, select the reviewed package profile and build its plan to check the current approval. Install and verify the package, then check and continue.",
                 MaintenancePhase.PostPackageChecks => "Post-package checks. Check and continue to compare the installed version with the approved action and save the final restart checkpoint.",
                 MaintenancePhase.FinalRestart => "Final restart required. Save your work, use Restart in Windows and reopen this job. Check and continue to confirm the new boot and recheck Windows and the installed package.",
+                MaintenancePhase.FinalVerification when _profileVerification is { IsCurrent: true } =>
+                    "Final restart confirmed. Review the saved profile verification results in Verify.",
                 MaintenancePhase.FinalVerification => "Final restart confirmed. The job is awaiting independent final verification. Whole-device readiness is still unverified.",
                 _ => throw new InvalidOperationException(),
             };

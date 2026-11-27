@@ -36,6 +36,7 @@ public sealed partial class SqliteJobStore : IJobStore
     private readonly Func<ulong?> _readBootUptime;
     private readonly Func<uint?> _readBootSession;
     private readonly bool _supportsMaintenance;
+    private readonly bool _supportsProfileVerification;
     private bool _disposed;
 
     private SqliteJobStore(
@@ -60,6 +61,7 @@ public sealed partial class SqliteJobStore : IJobStore
         _readBootUptime = readBootUptime;
         _readBootSession = readBootSession;
         _supportsMaintenance = schemaVersion >= 12;
+        _supportsProfileVerification = schemaVersion >= 13;
         _jsonOptions = DomainJson.CreateStrictOptions();
     }
 

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <IsTestProject>true</IsTestProject>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -21,6 +21,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ThirdLife.Verification\ThirdLife.Verification.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\fixtures\catalog\catalog.json" Link="catalog.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ThirdLife.UI\Features\Disposition\CommunityLaptopCandidate\basic.json"
+          Link="basic.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ThirdLife.UI\Features\Disposition\CommunityLaptopCandidate\job-seeker.json"
+          Link="job-seeker.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\ThirdLife.UI\Features\Disposition\CommunityLaptopCandidate\community-laptop-policy.json"
+          Link="community-laptop-policy.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

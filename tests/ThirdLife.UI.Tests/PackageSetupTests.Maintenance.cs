@@ -11,6 +11,7 @@ using ThirdLife.Persistence;
 using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Features.PlanReview;
 using ThirdLife.UI.Shell;
+using ThirdLife.Verification;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
 using static ThirdLife.UI.Tests.AuditWorkflowTests;
 
@@ -115,6 +116,8 @@ public sealed partial class PackageSetupTests
         await using var final = Open();
         await final.OpenJobAsync(jobId);
         Assert.Contains("Final restart required", final.MaintenancePhaseStatus);
+        const string ExactVersions = "Resolved version 8.9.9.1. Installed version 8.9.9.1.";
+        const string DowngradedVersions = "Resolved version 8.9.9.1. Installed version 8.9.9.0.";
         ShellTestHost.Run(() =>
         {
             var window = new MainWindow(final);
@@ -133,19 +136,55 @@ public sealed partial class PackageSetupTests
                 Assert.Equal(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(message));
                 Assert.Contains("awaiting independent final verification", message.Text);
                 Assert.False(advance.IsVisible);
+
+                var run = Named<Button>(panel, "RunProfileVerificationButton");
+                var status = Named<TextBlock>(panel, "ProfileVerificationMessage");
+                var evidence = Named<TextBox>(panel, "ProfileVerificationEvidence");
+                var beforeFinalCheck = agent.Scans;
+                Assert.True(run.IsVisible && run.IsEnabled && run.Focus());
+                Invoke(window, run);
+                PumpUntil(window, () => !final.IsBusy && final.HasProfileVerificationDetails,
+                    () => final.OperationError + final.ProfileVerificationStatus);
+                Assert.Equal(beforeFinalCheck + 1, agent.Scans);
+                Assert.True(status.IsVisible && status.Focusable);
+                Assert.Equal(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(status));
+                Assert.Contains("an unmet or unresolved requirement", status.Text);
+                Assert.True(evidence.IsVisible && evidence.IsReadOnly && evidence.Focusable);
+                Assert.Contains(ExactVersions, evidence.Text);
             }
             finally { CloseWindow(window); }
         });
 
         await using var reporter = Open();
         await reporter.OpenJobAsync(jobId);
-        await CheckReportAsync(reporter, "Independent final verification is pending");
-        Assert.Equal(1, runtime.InstallCalls);
-        Assert.Equal(1, runtime.ProbeCalls);
+        Assert.Contains(ExactVersions, reporter.ProfileVerificationDetails);
+        await CheckReportAsync(reporter, "Review the separate final profile verification results");
+        Assert.Contains(ExactVersions, reporter.ReportPreview);
         await using var store = await OpenStore(default);
         var savedFinal = await store.LoadMaintenanceAsync(final.Job!.Job.JobId);
         Assert.Equal(MaintenancePhase.FinalVerification, savedFinal!.Phase);
         Assert.Equal(approval, savedFinal.ApprovalId);
+        var beforeChange = await store.LoadProfileVerificationAsync(savedFinal.Plan.JobId);
+        Assert.NotNull(beforeChange);
+        Assert.True(beforeChange.IsCurrent);
+        Assert.Equal(ProfileVerificationState.Passed, Assert.Single(beforeChange.Record.Result.Capabilities).State);
+
+        runtime.RegisteredVersion = "8.9.9.0";
+        await reporter.RunProfileVerificationAsync();
+        Assert.Contains(DowngradedVersions, reporter.ProfileVerificationDetails);
+        Assert.Null(reporter.ReportArtifact);
+        await CheckReportAsync(reporter, "Review the separate final profile verification results");
+        Assert.Contains(DowngradedVersions, reporter.ReportPreview);
+        var changed = await store.LoadProfileVerificationAsync(savedFinal.Plan.JobId);
+        Assert.NotNull(changed);
+        Assert.True(changed.IsCurrent);
+        Assert.Equal(savedFinal, changed.Record.Checkpoint);
+        Assert.NotEqual(beforeChange.Record.ScanId, changed.Record.ScanId);
+        var changedCapability = Assert.Single(changed.Record.Result.Capabilities);
+        Assert.Equal(ProfileVerificationState.Failed, changedCapability.State);
+        Assert.Equal("8.9.9.0", changedCapability.ObservedVersion);
+        Assert.Equal(1, runtime.InstallCalls);
+        Assert.Equal(1, runtime.ProbeCalls);
 
         static async Task CheckReportAsync(AuditWorkspace workspace, string phase)
         {

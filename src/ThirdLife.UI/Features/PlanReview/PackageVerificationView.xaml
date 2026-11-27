@@ -25,6 +25,27 @@
             IsEnabled="{Binding CanCancelWindowsUpdate}" Click="CancelMaintenanceCheck"
             HorizontalAlignment="Left" Margin="0,0,0,12" />
     <Border Style="{DynamicResource Trace.EvidencePanel}" Margin="0,0,0,16"
+            Visibility="{Binding ShowsProfileVerification, Converter={StaticResource VerifyVisibility}}">
+      <StackPanel>
+        <TextBlock Text="Final profile verification" Style="{DynamicResource Trace.SectionText}"
+                   AutomationProperties.HeadingLevel="Level2" TextWrapping="Wrap" />
+        <TextBlock x:Name="ProfileVerificationMessage" Text="{Binding ProfileVerificationStatus, NotifyOnTargetUpdated=True}"
+                   Focusable="True" KeyboardNavigation.IsTabStop="True" TextWrapping="Wrap" Margin="0,4,0,0"
+                   AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
+        <Button x:Name="RunProfileVerificationButton" Content="Run final profile checks" HorizontalAlignment="Left"
+                IsEnabled="{Binding CanRunProfileVerification}" Click="RunProfileVerification" Margin="0,8,0,0"
+                AutomationProperties.HelpText="Read the current Windows, hardware and installed package state and save the result on this job." />
+        <Button x:Name="CancelProfileVerificationButton" Content="Cancel final profile checks" HorizontalAlignment="Left"
+                Visibility="{Binding IsProfileVerificationRunning, Converter={StaticResource VerifyVisibility}}"
+                IsEnabled="{Binding CanCancelProfileVerification}" Click="CancelProfileVerification" Margin="0,8,0,0" />
+        <TextBox x:Name="ProfileVerificationEvidence" Text="{Binding ProfileVerificationDetails, Mode=OneWay}"
+                 TextWrapping="Wrap" IsReadOnly="True" IsReadOnlyCaretVisible="True" AcceptsReturn="True"
+                 MaxHeight="220" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                 Visibility="{Binding HasProfileVerificationDetails, Converter={StaticResource VerifyVisibility}}"
+                 AutomationProperties.Name="Final profile verification results" />
+      </StackPanel>
+    </Border>
+    <Border Style="{DynamicResource Trace.EvidencePanel}" Margin="0,0,0,16"
             Visibility="{Binding HasWindowsUpdateHistory, Converter={StaticResource VerifyVisibility}}">
       <StackPanel>
         <TextBlock Text="Saved Windows Update result" Style="{DynamicResource Trace.SectionText}"

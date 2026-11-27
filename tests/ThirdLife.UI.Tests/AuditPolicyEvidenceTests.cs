@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.ManualTests;
 using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
@@ -61,6 +62,51 @@ public sealed class AuditPolicyEvidenceTests
         Assert.DoesNotContain(projected, fact => fact.EvidenceKey.Value is "ownership.lock_state" or
             "storage.system.health_state" or "processor.windows_11_eligibility" or "function.network");
         Assert.Equal(projected.Count, projected.Select(fact => fact.Metadata.EvidenceId).Distinct().Count());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FinalProjectionChecksFreshCallerFreeSpaceAndPreservesAttributedGuidedReview(bool staleObservation)
+    {
+        using var disk = new AuditTestStore();
+        const string volumeSource = "storage.kernel32.system_volume";
+        var capacity = NormalizedEvidence.Observed(new("storage.system_volume.caller_capacity_bytes"),
+            EvidenceValue.FromInteger(137_438_953_472), sourceReference: volumeSource);
+        var initialFree = NormalizedEvidence.Observed(new("storage.system_volume.caller_free_bytes"),
+            EvidenceValue.FromInteger(34_359_738_368), sourceReference: volumeSource);
+        var lowFree = NormalizedEvidence.Observed(new("storage.system_volume.caller_free_bytes"),
+            EvidenceValue.FromInteger(17_179_869_184), sourceReference: volumeSource);
+        var diskHealth = EnumFact("storage.physical_disk.reported_health", "healthy", "storage.msft.physical_disk.00");
+        await using var workspace = OpenLive(disk, new ProjectionProvider("windows-storage", [capacity, initialFree, diskHealth]));
+        await AssessAsync(workspace);
+        await workspace.RecordManualAsync(ManualTestCatalog.AdministratorReview, HumanTestResult.Pass,
+            "policy-test-operator", string.Empty, reason: null);
+        var job = Assert.IsType<StoredJob>(workspace.Job);
+        var original = Assert.IsType<AssessmentSnapshot>(workspace.Assessment);
+        var review = Assert.Single(job.HumanTests);
+        Assert.DoesNotContain(AuditPolicyEvidence.Create(job, original, SampleTime), fact => fact.EvidenceKey.Value == "storage.system.free_bytes");
+
+        await using var store = await disk.OpenSqliteAsync();
+        var verifier = new AssessmentOrchestrator(store,
+            [new ProjectionProvider("windows-storage", [capacity, lowFree, diskHealth])],
+            staleObservation ? new ClockWithRegressedObservation() : new FixedClock());
+        var fresh = await verifier.VerifyAsync(job.Job.JobId, original.GateDecisionId);
+        var projected = AuditPolicyEvidence.CreateForFinalVerification(job, fresh, original, SampleTime);
+
+        var freeSpace = Fact(projected, "storage.system.free_bytes");
+        Assert.Same(Fact(fresh.Observations, "storage.system_volume.caller_free_bytes").Metadata, freeSpace.Metadata);
+        Assert.Equal(17_179_869_184, freeSpace.Value!.IntegerValue);
+        Assert.Equal(staleObservation ? "provider_value_stale" : null, freeSpace.LimitationCode);
+        Assert.NotEqual(Fact(original.Observations, "storage.system_volume.caller_free_bytes").Metadata.EvidenceId, freeSpace.Metadata.EvidenceId);
+        Assert.Same(review.Metadata, Fact(projected, "security.administrator_review").Metadata);
+        Assert.DoesNotContain(projected, fact => fact.EvidenceKey.Value is "storage.system.health_state" or "storage.system.capacity_bytes");
+        Assert.Throws<InvalidOperationException>(() => AuditPolicyEvidence.CreateForFinalVerification(job, original, original, SampleTime));
+
+        var candidate = WorkshopPolicyCandidate.ForDeviceClass(PolicyDeviceClass.Laptop)!;
+        var evaluation = PolicyEvaluator.Evaluate(candidate.Document, projected, activeCapabilityIds: null);
+        Assert.Equal(staleObservation ? PolicyRuleState.Unavailable : PolicyRuleState.Unmet,
+            evaluation.Outcomes.Single(outcome => outcome.Rule.Requirement.RequirementId.Value == "POL-STORAGE-002").State);
     }
 
     [Theory]
@@ -424,7 +470,12 @@ public sealed class AuditPolicyEvidenceTests
             ProviderNetworkUse.None, origin, [ProviderOperatingSystem.Windows11],
             new ProviderFailureDefinition(new EvidenceKey("test." + id + ".failure"), "fixture." + id + ".failure"),
             facts.Select(fact => new ProviderEvidenceDefinition(fact.EvidenceKey, fact.Value!.Kind,
-                fact.EvidenceKey.Value == "security.last_successful_sync_utc" ? timeUnit : null, fact.SourceReference!)));
+                fact.EvidenceKey.Value switch
+                {
+                    "security.last_successful_sync_utc" => timeUnit,
+                    "storage.system_volume.caller_free_bytes" or "storage.system_volume.caller_capacity_bytes" => "bytes",
+                    _ => null,
+                }, fact.SourceReference!)));
 
         public ValueTask<ProviderReadResult> ObserveAsync(CancellationToken cancellationToken = default)
         {
@@ -437,5 +488,12 @@ public sealed class AuditPolicyEvidenceTests
     {
         public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
         public override DateTimeOffset GetUtcNow() => SampleTime;
+    }
+
+    private sealed class ClockWithRegressedObservation : TimeProvider
+    {
+        private int _reads;
+
+        public override DateTimeOffset GetUtcNow() => Interlocked.Increment(ref _reads) == 2 ? SampleTime.AddSeconds(-1) : SampleTime;
     }
 }

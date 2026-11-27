@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.HumanConfirmation;
@@ -17,13 +18,35 @@ internal static class AuditPolicyEvidence
     private const string SystemProvider = "windows-system-inventory";
     private const string FirmwareProvider = "windows-firmware-security";
     private const string BatteryProvider = "windows-battery-report";
+    private static readonly EvidenceKey SystemFreeSpace = new("storage.system.free_bytes");
     private const string Missing = "provider_value_missing";
     private const string Malformed = "provider_value_malformed";
     private const string Conflict = "provider_values_conflict";
     private const string Stale = "provider_value_stale";
 
     public static IReadOnlyList<Observation> Create(
-        StoredJob job, AssessmentSnapshot assessment, DateTimeOffset evaluatedAtUtc)
+        StoredJob job, AssessmentSnapshot assessment, DateTimeOffset evaluatedAtUtc) =>
+        CreateCore(job, assessment, evaluatedAtUtc, originalAssessment: null);
+
+    public static IReadOnlyList<Observation> CreateForFinalVerification(StoredJob job, AssessmentSnapshot verification,
+        AssessmentSnapshot originalAssessment, DateTimeOffset evaluatedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(verification);
+        ArgumentNullException.ThrowIfNull(originalAssessment);
+        if (verification.AssessmentId == originalAssessment.AssessmentId || verification.JobId != originalAssessment.JobId ||
+            verification.GateDecisionId != originalAssessment.GateDecisionId ||
+            originalAssessment.Outcome is not (AssessmentOutcome.Completed or AssessmentOutcome.RequiresReview) ||
+            originalAssessment.FinishedAtUtc is not { } originalFinish || originalFinish > verification.StartedAtUtc ||
+            verification.FinishedAtUtc is not { } verificationFinish || verificationFinish < verification.StartedAtUtc)
+        {
+            throw new InvalidOperationException("Final verification requires a separate provider run under the reviewed intake.");
+        }
+
+        return CreateCore(job, verification, evaluatedAtUtc, originalAssessment);
+    }
+
+    private static ReadOnlyCollection<Observation> CreateCore(StoredJob job, AssessmentSnapshot assessment,
+        DateTimeOffset evaluatedAtUtc, AssessmentSnapshot? originalAssessment)
     {
         ArgumentNullException.ThrowIfNull(job);
         ArgumentNullException.ThrowIfNull(assessment);
@@ -45,7 +68,9 @@ internal static class AuditPolicyEvidence
         var projected = new List<Observation> { ProjectSanitization(intake) };
         foreach (var fact in assessment.Observations)
         {
-            if (Project(fact, familyIssue, lifecycleIssue, architectureIssue, evaluatedAtUtc) is { } selected)
+            var selected = originalAssessment is null ? null : ProjectVerificationStorage(fact);
+            selected ??= Project(fact, familyIssue, lifecycleIssue, architectureIssue, evaluatedAtUtc);
+            if (selected is not null)
             {
                 if ((fact.EvidenceKey.Value == "operating_system.release" && observations.Contains("os.family")) ||
                     (fact.EvidenceKey.Value == "operating_system.support_state" && observations.Contains("os.support_target")))
@@ -59,11 +84,18 @@ internal static class AuditPolicyEvidence
                     selected = WithLimit(selected, selected.EvidenceKey, Conflict);
                 }
 
+                if (originalAssessment is not null && (selected.Metadata.CollectedAtUtc < assessment.StartedAtUtc ||
+                    selected.Metadata.CollectedAtUtc > assessment.FinishedAtUtc))
+                {
+                    selected = WithLimit(selected, selected.EvidenceKey, Stale);
+                }
+
                 projected.Add(selected);
             }
         }
 
-        projected.AddRange(HumanConfirmationProjection.FromJob(job, assessment.AssessmentId.Value)
+        // Guided evidence keeps its own original attribution. Its observation is distinct from the fresh automated reads.
+        projected.AddRange(HumanConfirmationProjection.FromJob(job, (originalAssessment ?? assessment).AssessmentId.Value)
             .Select(fact => fact.Metadata.CollectedAtUtc > evaluatedAtUtc ? WithLimit(fact, fact.EvidenceKey, Conflict) : fact));
         var repeated = projected.GroupBy(fact => fact.EvidenceKey)
             .Where(group => group.Skip(1).Any())
@@ -88,6 +120,20 @@ internal static class AuditPolicyEvidence
         return new Observation(intake.Metadata, new EvidenceKey("sanitization.state"), EvidenceValue.FromEnum(token), unit: null,
             limitationCode: null,
             intake.Metadata.EvidenceClassification == EvidenceClassification.HumanConfirmed ? intake.OperatorId : null);
+    }
+
+    private static Observation? ProjectVerificationStorage(Observation fact)
+    {
+        // The volume source measures caller-available bytes. It does not establish a Windows disk's capacity or health.
+        if (fact.EvidenceKey.Value != "storage.system_volume.caller_free_bytes" ||
+            !IsOwned(fact, "windows-storage", "storage.kernel32.system_volume"))
+        {
+            return null;
+        }
+
+        var valid = fact.Value is null || (fact.Metadata.EvidenceClassification == EvidenceClassification.Observed &&
+            fact.Unit == "bytes" && fact.Value is { Kind: EvidenceValueKind.WholeNumber, IntegerValue: >= 0 });
+        return WithLimit(fact, SystemFreeSpace, valid ? null : Malformed);
     }
 
     private static Observation? Project(Observation fact, string? familyIssue, string? lifecycleIssue,

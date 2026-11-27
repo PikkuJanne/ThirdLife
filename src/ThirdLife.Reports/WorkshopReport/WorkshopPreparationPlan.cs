@@ -46,7 +46,8 @@ public enum WorkshopMaintenancePhase
 
 public enum WorkshopMaintenanceIssue { PackageMismatch, PackageUnavailable }
 
-public sealed record WorkshopMaintenanceCheckpoint(WorkshopMaintenancePhase Phase, WorkshopMaintenanceIssue? LastIssue);
+public sealed record WorkshopMaintenanceCheckpoint(WorkshopMaintenancePhase Phase, WorkshopMaintenanceIssue? LastIssue,
+    bool HasCurrentProfileVerification = false);
 
 public sealed record WorkshopPreparationPlan(
     JobId JobId,
@@ -88,6 +89,8 @@ public static partial class WorkshopReportRenderer
             WorkshopMaintenancePhase.Packages => "The full maintenance schedule is at the package phase.",
             WorkshopMaintenancePhase.PostPackageChecks => "Post-package checks are pending before the final restart.",
             WorkshopMaintenancePhase.FinalRestart => "The final restart checkpoint is saved. A later boot and fresh system checks still require confirmation.",
+            WorkshopMaintenancePhase.FinalVerification when checkpoint.HasCurrentProfileVerification =>
+                "The final restart was confirmed. Review the separate final profile verification results.",
             WorkshopMaintenancePhase.FinalVerification => "The final restart was confirmed. Independent final verification is pending.",
             WorkshopMaintenancePhase.Unconfirmed => "The saved maintenance phase could not be confirmed for this plan.",
             _ => throw new ArgumentOutOfRangeException(nameof(checkpoint)),

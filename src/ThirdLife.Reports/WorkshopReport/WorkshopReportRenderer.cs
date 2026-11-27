@@ -27,6 +27,7 @@ public static partial class WorkshopReportRenderer
         StoredPolicyDecision? savedDecision,
         IReadOnlyList<WorkshopPackageRecord>? packages = null,
         IReadOnlyList<WorkshopPreparationPlan>? preparation = null,
+        WorkshopProfileVerification? profileVerification = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);
@@ -113,6 +114,11 @@ public static partial class WorkshopReportRenderer
         if (preparation is { Count: > 0 })
         {
             WritePreparationRecords(report, job.Job.JobId, preparation, cancellationToken);
+        }
+
+        if (profileVerification is not null)
+        {
+            WriteProfileVerification(report, job.Job.JobId, profileVerification, cancellationToken);
         }
 
         return report.ToString();

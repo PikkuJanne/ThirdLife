@@ -35,6 +35,7 @@
     <ProjectReference Include="..\ThirdLife.Persistence\ThirdLife.Persistence.csproj" />
     <ProjectReference Include="..\ThirdLife.Policy\ThirdLife.Policy.csproj" />
     <ProjectReference Include="..\ThirdLife.Reports\ThirdLife.Reports.csproj" />
+    <ProjectReference Include="..\ThirdLife.Verification\ThirdLife.Verification.csproj" />
   </ItemGroup>
 
 </Project>

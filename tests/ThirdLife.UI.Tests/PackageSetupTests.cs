@@ -344,7 +344,7 @@ public sealed partial class PackageSetupTests
         public Action? Acquiring { get; set; }
         public Func<Task>? Probing { get; set; }
         public PackageVerificationStatus ProbeStatus { get; init; } = PackageVerificationStatus.Passed;
-        public string? RegisteredVersion { get; init; } = PilotPackageService.Identity.ExactVersion;
+        public string? RegisteredVersion { get; set; } = PilotPackageService.Identity.ExactVersion;
         public bool RegistrationUnavailable { get; set; }
 
         public PackageObservation Inspect() => _registered

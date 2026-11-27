@@ -1,9 +1,13 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
 using ThirdLife.Core.Sanitization;
+using ThirdLife.Core.WindowsUpdates;
+using ThirdLife.Policy.Evaluation;
 using ThirdLife.Reports.WorkshopReport;
+using ThirdLife.Verification;
 
 namespace ThirdLife.Reports.Tests;
 
@@ -188,6 +192,57 @@ public sealed class WorkshopReportRendererTests
         Assert.DoesNotContain("installer.log", report);
         Assert.Throws<ArgumentException>(() => WorkshopReportRenderer.RenderWithPackageRecords(Stored(), null, null,
             [], [plan with { JobId = new JobId("unrelated-job") }]));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void FinalProfileReportSeparatesExactVersionsFromDeviceAcceptance(bool matchingVersion)
+    {
+        var actionId = Guid.Parse("b7a0303f-70d8-46c0-9628-aafdcbf7d5f8");
+        var capability = new ProfileCapabilityResult("document_editing", true,
+            matchingVersion ? ProfileVerificationState.Passed : ProfileVerificationState.Failed,
+            "8.9.9.1", matchingVersion ? "8.9.9.1" : "8.9.9.0", actionId,
+            matchingVersion ? ProfilePackageStatus.ExactVersion : ProfilePackageStatus.Mismatch);
+        var finding = new ProfilePolicyFinding(new("POL-SEC-001"),
+            matchingVersion ? PolicyRuleState.Met : PolicyRuleState.Unavailable,
+            matchingVersion ? PolicyRuleReason.ConditionMet : PolicyRuleReason.EvidenceStale, true);
+        var result = new ProfileVerificationResult(SampleTime, SampleTime.AddSeconds(1), false,
+            new string('a', 64), new string('b', 64),
+            Enum.GetValues<ProfileCheckKind>().Select(kind => new ProfileVerificationCheck(kind, ProfileVerificationState.Passed,
+                kind is not (ProfileCheckKind.SystemVolumeCapacity or ProfileCheckKind.PhysicalStorageEvidence or
+                    ProfileCheckKind.AudioOutput or ProfileCheckKind.Camera or ProfileCheckKind.Microphone)))
+                .ToImmutableArray(),
+            [capability], [finding], 26300, 24_000_000_000, 64_000_000_000, 0, 0, WindowsUpdateDisposition.Current,
+            updateRecoveryPending: false);
+        var verification = new WorkshopProfileVerification(SampleJob.JobId, result, true);
+
+        var report = WorkshopReportRenderer.RenderWithPackageRecords(Stored(), null, null, [], null, verification);
+
+        Assert.Contains("Independent final profile verification", report);
+        Assert.Contains($"Resolved version 8.9.9.1. Installed version {capability.ObservedVersion}.", report);
+        Assert.Contains($"Reviewed action {actionId:D}", report);
+        Assert.Contains("Windows build 26300", report);
+        Assert.Contains("0 applicable, nonhidden offers", report);
+        Assert.Contains("System volume free space 24000000000 bytes", report);
+        Assert.Contains("System volume capacity 64000000000 bytes", report);
+        if (matchingVersion)
+        {
+            Assert.Contains("Cold-boot verification and finalization are still required for handover", report);
+        }
+        else
+        {
+            Assert.Contains("an unmet or unresolved requirement", report);
+            Assert.Contains("The installed package did not match the approved version or scope", report);
+            Assert.Contains("POL-SEC-001. Evidence was too old for this pass. Blocks profile verification.", report);
+        }
+
+        var historical = WorkshopReportRenderer.RenderWithPackageRecords(Stored(), null, null, [], null,
+            verification with { IsCurrent = false });
+        Assert.Contains("saved final profile verification is historical", historical);
+        Assert.DoesNotContain("final profile checks passed", historical);
+        Assert.Throws<ArgumentException>(() => WorkshopReportRenderer.RenderWithPackageRecords(Stored(), null, null,
+            [], null, verification with { JobId = new JobId("unrelated-job") }));
     }
 
     private static StoredJob Stored(

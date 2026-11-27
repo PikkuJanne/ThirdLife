@@ -237,6 +237,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         }
 
         var alreadyOpen = Job?.Job.JobId == id;
+        _profileVerificationFeedback = string.Empty;
         await ApplyJobAsync(stored, refreshPreparation: false);
         if (alreadyOpen)
         {
@@ -269,6 +270,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ClearWindowsUpdateHistory();
         ClearBrokerHistory();
         ClearPreparationDisposition();
+        ClearProfileVerification();
         ClearRebootRecovery();
         ClearRepairs();
         ClearPolicyView();
@@ -384,6 +386,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _closing = true;
         CancelAssessment();
         CancelWindowsUpdate();
+        CancelProfileVerification();
         CancelReport();
         StopPackageRetryRefresh();
         StopWaitingForPackageOnClose();
@@ -421,13 +424,14 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             var policy = await FindSavedPolicyAsync(jobId, assessment, cancellationToken);
             var journals = await ReadPreparationJournalsAsync(jobId, cancellationToken);
             var checkpoint = await ReadMaintenanceForReportAsync(jobId, cancellationToken);
+            var verification = await ReadProfileVerificationForReportAsync(jobId, cancellationToken);
             var now = _timeProvider.GetUtcNow();
             var artifact = await Task.Run(() =>
             {
                 var packages = ReadPackageRecords(journals, includeEarlierAttempts: true);
-                var preparation = ProjectPreparationRecords(stored, assessment, journals, checkpoint, now, cancellationToken);
+                var preparation = ProjectPreparationRecords(stored, assessment, journals, checkpoint, verification, now, cancellationToken);
                 var content = WorkshopReportRenderer.RenderWithPackageRecords(stored, summary, policy, packages,
-                    preparation, cancellationToken);
+                    preparation, ProjectProfileVerification(verification), cancellationToken);
                 return _reportStore!.Write(jobId, content, cancellationToken);
             }, cancellationToken);
             ReportArtifact = artifact;
@@ -541,6 +545,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             _assessmentCancellation = null;
             _updateCancellation?.Dispose();
             _updateCancellation = null;
+            _profileVerificationCancellation?.Dispose();
+            _profileVerificationCancellation = null;
             _reportCancellation?.Dispose();
             _reportCancellation = null;
             _packageCancellation?.Dispose();
@@ -660,6 +666,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             ClearPackageHistory();
             ClearWindowsUpdateHistory();
             ClearPreparationDisposition();
+            ClearProfileVerification();
             ClearReport();
             ClearRepairs();
             ClearRebootRecovery();

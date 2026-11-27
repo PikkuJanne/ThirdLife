@@ -48,7 +48,7 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
                 return state == "5" && version == PilotPackageService.Identity.ExactVersion && publisher == InstalledPublisher &&
                     string.Equals(package, PackageCode, StringComparison.OrdinalIgnoreCase) && assignment == "1"
                     ? new(PackageObservationStatus.Installed, version)
-                    : new(PackageObservationStatus.Conflict);
+                    : new(PackageObservationStatus.Conflict, state == "5" && assignment == "1" && IsVersion(version) ? version : null);
             }
 
             if (status != WindowsInstallerNative.UnknownProduct)
@@ -65,6 +65,9 @@ internal sealed class WindowsInstallerPackageRuntime : IPilotPackageRuntime
             return new(PackageObservationStatus.Unavailable);
         }
     }
+
+    private static bool IsVersion(string? value) =>
+        value is { Length: > 0 and <= 32 } && value.Split('.').All(part => part.Length > 0 && part.All(char.IsAsciiDigit));
 
     public Task<PackageVerificationStatus> ProbeAsync(CancellationToken cancellationToken) =>
         Task.Run(() => WindowsPackageLaunchProbe.Run(cancellationToken), cancellationToken);

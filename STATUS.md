@@ -53,12 +53,14 @@ job and approval survived two orderly restarts and reached the independent
 verification handoff with controlled package and update results.
 [Maintenance evidence](artifacts/evidence/TL-0505/report.md)
 
-TL-0506 is complete at engineering scope. The laptop candidate evaluates
-firewall, antivirus, Defender, UAC, recent time synchronization, restart and
-two assessment-bound operator reviews. The active host's time status reported
-an error, so recent synchronization stayed unresolved. TL-0507 is ready to
-implement fresh post-maintenance verification of the complete machine profile.
-[Security evidence](artifacts/evidence/TL-0506/report.md)
+TL-0507 is complete at engineering scope. Verify runs an independent
+post-maintenance pass and reopens the result with exact installed versions,
+profile capabilities and unresolved machine requirements. The controlled
+application test detected a version downgrade under the same approval.
+The native host scan returned four offers outside the servicing scope.
+Whole-device acceptance remains open. TL-0509 is ready to implement
+the cold-boot checkpoint and post-boot re-verification.
+[Profile verification evidence](artifacts/evidence/TL-0507/report.md)
 
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B
 exit remain at TL-0710. [Decision and graph review](docs/reviews/2026-11-27-single-guest-continuation.md)

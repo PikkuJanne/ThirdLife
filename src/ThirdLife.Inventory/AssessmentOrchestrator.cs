@@ -9,7 +9,7 @@ using ThirdLife.Inventory.Providers;
 
 namespace ThirdLife.Inventory;
 
-/// <summary>Runs a fixed read-only roster and commits each complete provider attempt independently.</summary>
+/// <summary>Runs a fixed read-only roster for journaled assessments and detached verification.</summary>
 public sealed class AssessmentOrchestrator
 {
     public const int MaximumProviders = 16;
@@ -71,17 +71,25 @@ public sealed class AssessmentOrchestrator
     }
 
     public Task<AssessmentSnapshot> AssessAsync(JobId jobId, CancellationToken cancellationToken = default) =>
-        AssessCoreAsync(jobId, repairId: null, cancellationToken);
+        AssessCoreAsync(jobId, repairId: null, verificationGateId: null, cancellationToken);
 
     public Task<AssessmentSnapshot> RetestAsync(
         JobId jobId, EvidenceId repairId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(repairId);
-        return AssessCoreAsync(jobId, repairId, cancellationToken);
+        return AssessCoreAsync(jobId, repairId, verificationGateId: null, cancellationToken);
+    }
+
+    /// <summary>Collects fresh provider evidence under the exact intake gate without writing the Inspect journal.</summary>
+    public Task<AssessmentSnapshot> VerifyAsync(JobId jobId, SanitizationGateDecisionId expectedGateId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedGateId);
+        return AssessCoreAsync(jobId, repairId: null, verificationGateId: expectedGateId, cancellationToken);
     }
 
     private async Task<AssessmentSnapshot> AssessCoreAsync(
-        JobId jobId, EvidenceId? repairId, CancellationToken cancellationToken)
+        JobId jobId, EvidenceId? repairId, SanitizationGateDecisionId? verificationGateId, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(jobId);
         cancellationToken.ThrowIfCancellationRequested();
@@ -100,7 +108,7 @@ public sealed class AssessmentOrchestrator
 
             var storedJob = await ReadJobAsync(jobId, assessmentId, cancellationToken).ConfigureAwait(false);
             var access = SanitizationGate.Inspect(storedJob);
-            if (!access.AllowsAssessment)
+            if (!access.AllowsAssessment || (verificationGateId is not null && access.Decision?.DecisionId != verificationGateId))
             { throw new AssessmentException("assessment_gate_blocked", null); }
             if (_hasLiveProviders && (storedJob.SanitizationEvidence.Any(static item =>
                 item.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) ||
@@ -112,12 +120,20 @@ public sealed class AssessmentOrchestrator
             assessmentId = AssessmentId.New();
             var gateId = access.Decision!.DecisionId;
             var startedAtUtc = _timeProvider.GetUtcNow();
-            var start = AssessmentJournal.CreateStart(jobId, assessmentId, gateId,
-                _providers.Select(static provider => provider.Descriptor.ProviderId).ToArray(), startedAtUtc);
-            Observation[] startBatch = repairId is null
-                ? [start]
-                : [start, CreateRetestStartMarker(storedJob, repairId, assessmentId, gateId, startedAtUtc)];
-            await CommitAsync(jobId, assessmentId, gateId, startBatch, cancellationToken).ConfigureAwait(false);
+            Dictionary<ProviderId, ProviderRunResult>? detached = null;
+            if (verificationGateId is null)
+            {
+                var start = AssessmentJournal.CreateStart(jobId, assessmentId, gateId,
+                    _providers.Select(static provider => provider.Descriptor.ProviderId).ToArray(), startedAtUtc);
+                Observation[] startBatch = repairId is null
+                    ? [start]
+                    : [start, CreateRetestStartMarker(storedJob, repairId, assessmentId, gateId, startedAtUtc)];
+                await CommitAsync(jobId, assessmentId, gateId, startBatch, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                detached = new(_providers.Length);
+            }
 
             var active = new List<PendingProvider>();
             var nextProvider = 0;
@@ -132,10 +148,9 @@ public sealed class AssessmentOrchestrator
                 {
                     try
                     {
-                        await _store.RequireSanitizationGateAsync(jobId, gateId, runCancellation.Token).ConfigureAwait(false);
+                        await RequireGateAsync(jobId, assessmentId, gateId, runCancellation.Token).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException) when (runCancellation.IsCancellationRequested) { break; }
-                    catch (Exception) { throw new AssessmentException("assessment_gate_unverified", assessmentId); }
 
                     LatchCleanupFailure(calls.Select(static call => call.Operation).OfType<Task<ProviderReadResult>>());
                     if (Volatile.Read(ref _cleanupBlocked) != 0) { stopScheduling = true; break; }
@@ -163,13 +178,34 @@ public sealed class AssessmentOrchestrator
                 // A timed-out native call still occupies a real worker. Do not refill that slot
                 // or queue more work while its cleanup is outstanding.
                 if (pending.Provider.Operation is { IsCompleted: false }) { stopScheduling = true; }
-                var marker = AssessmentJournal.CreateProvider(assessmentId, result, _timeProvider.GetUtcNow());
-                await CommitAsync(jobId, assessmentId, gateId, result.Observations.Append(marker),
-                    CancellationToken.None).ConfigureAwait(false);
+                if (detached is null)
+                {
+                    var marker = AssessmentJournal.CreateProvider(assessmentId, result, _timeProvider.GetUtcNow());
+                    await CommitAsync(jobId, assessmentId, gateId, result.Observations.Append(marker),
+                        CancellationToken.None).ConfigureAwait(false);
+                }
+                else
+                {
+                    detached.Add(result.ProviderId, result);
+                }
             }
 
             var outcome = cancellationToken.IsCancellationRequested ? AssessmentOutcome.Cancelled :
                 requiresReview || nextProvider < _providers.Length ? AssessmentOutcome.RequiresReview : AssessmentOutcome.Completed;
+            if (detached is not null)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await RequireGateAsync(jobId, assessmentId, gateId, cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                return new AssessmentSnapshot(assessmentId, jobId, gateId, startedAtUtc, _timeProvider.GetUtcNow(), outcome,
+                    _providers.Select(provider =>
+                    {
+                        var providerId = provider.Descriptor.ProviderId;
+                        var result = detached.GetValueOrDefault(providerId);
+                        return new AssessmentProviderSnapshot(providerId, result?.Outcome, result?.Observations ?? []);
+                    }));
+            }
+
             var finish = AssessmentJournal.CreateFinish(assessmentId, outcome, _timeProvider.GetUtcNow());
             await CommitAsync(jobId, assessmentId, gateId, [finish], CancellationToken.None).ConfigureAwait(false);
             return await LoadAsync(jobId, assessmentId, CancellationToken.None).ConfigureAwait(false)
@@ -193,6 +229,14 @@ public sealed class AssessmentOrchestrator
     }
 
     public static AssessmentSnapshot? ReadLatest(StoredJob storedJob) => AssessmentJournal.ReadLatest(storedJob);
+
+    private async Task RequireGateAsync(JobId jobId, AssessmentId assessmentId, SanitizationGateDecisionId gateId,
+        CancellationToken cancellationToken)
+    {
+        try { await _store.RequireSanitizationGateAsync(jobId, gateId, cancellationToken).ConfigureAwait(false); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception) { throw new AssessmentException("assessment_gate_unverified", assessmentId); }
+    }
 
     private static Observation CreateRetestStartMarker(
         StoredJob job, EvidenceId repairId, AssessmentId assessmentId,
