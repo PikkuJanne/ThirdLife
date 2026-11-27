@@ -6,6 +6,7 @@ using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
 using ThirdLife.Actions.WindowsUpdates;
 using ThirdLife.Core.Evidence;
+using ThirdLife.Core.Handover;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
 using ThirdLife.Core.Repairs;
@@ -282,6 +283,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ClearReport();
         ClearFinalization();
         ClearSupportExport();
+        ClearHandoverReview();
         Status = "Job closed. Reopen it by its workshop job ID.";
         Publish();
     }
@@ -422,6 +424,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         var jobId = Job!.Job.JobId;
         return RunReportAsync("Generating the workshop report from saved evidence.", async cancellationToken =>
         {
+            ClearHandoverReview();
+            var reviewScope = await ReadPublicationScopeAsync(jobId, cancellationToken);
             var finalization = await ReadFinalizationForReportAsync(jobId, cancellationToken);
             var stored = await LoadJobAsync(jobId, cancellationToken);
             if (IsSeparateEvidenceOrigin(stored))
@@ -450,7 +454,9 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             }, cancellationToken);
             ReportArtifact = artifact;
             ReportPreview = string.Empty;
-            ReportStatus = "Workshop report saved. Open it here to review its findings and limits.";
+            var recorded = await RecordPublishedHandoverFileAsync(reviewScope, HandoverOutputKind.WorkshopRecord, artifact, cancellationToken);
+            ReportStatus = recorded ? "Workshop report saved. Open it here to review its findings and limits."
+                : "Workshop report saved. The handover evidence changed before the receipt was recorded. Generate a current copy before sign-off.";
         });
     }
 
@@ -520,6 +526,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         if (refreshFinalization)
         {
             _finalizationReadVersion++;
+            ClearHandoverReview();
         }
 
         IsBusy = true;
@@ -696,6 +703,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         {
             ClearFinalization();
             ClearSupportExport();
+            ClearHandoverReview();
             ClearBrokerHistory();
             ClearPackageHistory();
             ClearWindowsUpdateHistory();

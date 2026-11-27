@@ -13,20 +13,23 @@ public sealed partial class SqliteJobStore : IFinalizationStore
     public Task<FinalizationChecklist?> LoadFinalizationAsync(JobId jobId, CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(jobId);
-        return ReadJournalTransactionAsync<FinalizationChecklist?>(async (transaction, ct) =>
-        {
-            if (!_supportsFinalization ||
-                await ReadFinalizationStateAsync(transaction, jobId, ct).ConfigureAwait(false) is not { } state)
-            {
-                return null;
-            }
+        return ReadJournalTransactionAsync((transaction, ct) => ReadFinalizationAsync(transaction, jobId, ct), token);
+    }
 
-            var history = await ReadFinalizationHistoryAsync(transaction, jobId, ct).ConfigureAwait(false);
-            var restart = state.EvidenceVersion is null ? FinalizationOutcome.Unknown :
-                await ReadFinalizationRestartAsync(transaction, jobId, ct).ConfigureAwait(false);
-            var scans = await ReadFinalizationArtifactScansAsync(transaction, jobId, ct).ConfigureAwait(false);
-            return FinalizationChecklist.Evaluate(state.EvidenceVersion, history, restart, scans);
-        }, token);
+    private async Task<FinalizationChecklist?> ReadFinalizationAsync(SqliteTransaction transaction, JobId jobId,
+        CancellationToken token)
+    {
+        if (!_supportsFinalization ||
+            await ReadFinalizationStateAsync(transaction, jobId, token).ConfigureAwait(false) is not { } state)
+        {
+            return null;
+        }
+
+        var history = await ReadFinalizationHistoryAsync(transaction, jobId, token).ConfigureAwait(false);
+        var restart = state.EvidenceVersion is null ? FinalizationOutcome.Unknown :
+            await ReadFinalizationRestartAsync(transaction, jobId, token).ConfigureAwait(false);
+        var scans = await ReadFinalizationArtifactScansAsync(transaction, jobId, token).ConfigureAwait(false);
+        return FinalizationChecklist.Evaluate(state.EvidenceVersion, history, restart, scans);
     }
 
     public Task SaveFinalizationConfirmationAsync(JobId jobId, FinalizationChecklist expected, FinalizationRuleId ruleId,

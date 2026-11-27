@@ -11,9 +11,15 @@ public sealed class RecipientGuideStore
     public RecipientGuideStore(string registeredDirectory) =>
         _files = new(registeredDirectory, Guid.NewGuid, printableRecipientGuide: true);
 
-    public string Save(JobId jobId, RenderedRecipientGuide preview, CancellationToken cancellationToken = default)
+    public string Save(JobId jobId, RenderedRecipientGuide preview, CancellationToken cancellationToken = default) =>
+        SaveArtifact(jobId, preview, cancellationToken).FileName;
+
+    public WorkshopReportArtifact SaveArtifact(JobId jobId, RenderedRecipientGuide preview, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(preview);
-        return _files.Write(jobId, preview.PrintableHtml, cancellationToken).FileName;
+        return _files.Write(jobId, preview.PrintableHtml, cancellationToken);
     }
+
+    public void VerifyReceipt(WorkshopReportReceipt receipt, CancellationToken cancellationToken = default) =>
+        _files.VerifyReceipt(receipt, cancellationToken);
 }

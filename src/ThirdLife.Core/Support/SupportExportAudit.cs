@@ -29,7 +29,7 @@ public sealed record SupportExportAudit
     private static readonly SearchValues<char> LowerHex = SearchValues.Create("0123456789abcdef");
 
     public SupportExportAudit(string internalSupportId, string schemaVersion, string manifestVersion, string contentSha256,
-        DateTimeOffset recordedAtUtc, OperatorId operatorId, SupportExportState state, OperatorId? recoveryOperatorId = null)
+        DateTimeOffset recordedAtUtc, OperatorId operatorId, SupportExportState state, string? reviewVersion = null, OperatorId? recoveryOperatorId = null)
     {
         if (internalSupportId is not { Length: 36 } || !internalSupportId.StartsWith("SUP-", StringComparison.Ordinal) ||
             internalSupportId.AsSpan(4).ContainsAnyExcept(LowerHex) ||
@@ -50,6 +50,7 @@ public sealed record SupportExportAudit
         RecordedAtUtc = DomainValue.RequireTimestamp(recordedAtUtc, nameof(recordedAtUtc));
         OperatorId = operatorId ?? throw new ArgumentNullException(nameof(operatorId));
         State = DomainValue.RequireDefined(state, nameof(state));
+        ReviewVersion = reviewVersion is null ? null : DomainValue.RequireVersion(reviewVersion, nameof(reviewVersion));
         if (recoveryOperatorId is not null && state != SupportExportState.Published)
         {
             throw new ArgumentException("Recovery requires a verified published archive.", nameof(recoveryOperatorId));
@@ -64,6 +65,9 @@ public sealed record SupportExportAudit
     public DateTimeOffset RecordedAtUtc { get; }
     public OperatorId OperatorId { get; }
     public SupportExportState State { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ReviewVersion { get; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public OperatorId? RecoveryOperatorId { get; }

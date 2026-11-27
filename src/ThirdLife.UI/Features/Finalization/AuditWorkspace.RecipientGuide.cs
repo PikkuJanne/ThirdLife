@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.IO;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
+using ThirdLife.Core.Handover;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Persistence;
 using ThirdLife.Reports.RecipientGuide;
@@ -58,6 +59,7 @@ internal sealed partial class AuditWorkspace
             Publish();
             try
             {
+                var reviewScope = await ReadPublicationScopeAsync(job.Job.JobId, CancellationToken.None);
                 var current = await BuildRecipientGuideAsync(job);
                 if (current is null || current.HandoverSequence != expected.HandoverSequence ||
                     !string.Equals(current.Content.PrintableHtml, expected.Content.PrintableHtml, StringComparison.Ordinal))
@@ -67,8 +69,11 @@ internal sealed partial class AuditWorkspace
                     return;
                 }
 
-                var name = await Task.Run(() => _recipientGuideStore!.Save(job.Job.JobId, expected.Content));
-                RecipientGuideStatus = $"Printable guide saved as {name} in {RecipientGuideLocation}.";
+                var artifact = await Task.Run(() => _recipientGuideStore!.SaveArtifact(job.Job.JobId, expected.Content));
+                var recorded = await RecordPublishedHandoverFileAsync(reviewScope, HandoverOutputKind.RecipientGuide,
+                    artifact, CancellationToken.None);
+                RecipientGuideStatus = recorded ? $"Printable guide saved as {artifact.FileName} in {RecipientGuideLocation}."
+                    : "Printable guide saved. The handover evidence changed before the receipt was recorded. Save a current copy before sign-off.";
             }
             catch (Exception exception) when (exception is JobStoreException or WorkshopReportStoreException or ArgumentException)
             {
