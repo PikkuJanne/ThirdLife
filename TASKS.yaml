@@ -8570,6 +8570,16 @@ tasks:
     limitation: Private standalone audit only. The final frozen candidate and Team B transition recommendation remain open.
   notes:
   - TL-0710 records actual portfolio acceptance and transition consent.
+  - summary: Reviewed the exact private 0.3.7 cabinet and saved-report data-access change after the previous package audit.
+    task: TL-0709
+    command: Exact MSI native metadata readback, embedded cabinet extraction and comparison, and integrated paired package preflight
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 19 byte-for-byte matching files, 15 installer tables and four fixed property assignments
+    environment: Active Windows 11 Pro 26H2 native x64 host, two independently reproduced private worktrees
+    reference: artifacts/evidence/TL-0709/private-candidate-boundary.md, 8440ae0cd7e6797a8c348ce5094396d30e443595
+    limitation: Exact private 0.3.7 code and artifact inspection. Stable signature, the frozen candidate and installed 0.3.7 lifecycle remain outside this case.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
