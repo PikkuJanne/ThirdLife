@@ -103,6 +103,10 @@ def author_tables(path: Path, payload: dict[str, bytes], version: str) -> list[s
         table(path, "CustomAction", "Action\tType\tSource\tTarget", "s72\ti2\tS72\tL255", "Action", [
             # A fixed property assignment clears any externally supplied value before the registry read.
             ("ResetNativeBuild", 51, BUILD_PROPERTY, "unavailable"),
+            # Only FindRelatedProducts can populate the two upgrade lists.
+            ("ClearRelatedPreview", 51, "RELATEDPREVIEW", "[ThirdLifeEmptyUpgradeList]"),
+            ("ClearNewerPreview", 51, "NEWERPREVIEW", "[ThirdLifeEmptyUpgradeList]"),
+            ("UseExactUpgradeFiles", 51, "REINSTALLMODE", "amus"),
         ]),
         table(path, "LaunchCondition", "Condition\tDescription", "s255\tl255", "Condition", [
             (f"Installed OR ({REQUIRED_PLATFORM})", "This preview requires Windows 11 client build 26300 on native x64."),
@@ -115,15 +119,19 @@ def author_tables(path: Path, payload: dict[str, bytes], version: str) -> list[s
                   (upgrade_code, version, "", "", 2, "", "NEWERPREVIEW"),
               ]),
         table(path, "InstallExecuteSequence", "Action\tCondition\tSequence", "s72\tS255\ti2", "Action", [
+            ("ClearRelatedPreview", "", 5), ("ClearNewerPreview", "", 10),
             ("FindRelatedProducts", "", 25), ("ResetNativeBuild", "", 40),
             ("AppSearch", "", 50), ("LaunchConditions", "", 100),
+            ("UseExactUpgradeFiles", "RELATEDPREVIEW AND NOT Installed", 110),
             ("CostInitialize", "", 800), ("FileCost", "", 900), ("CostFinalize", "", 1000),
             ("InstallValidate", "", 1400), ("InstallInitialize", "", 1500),
-            ("RemoveExistingProducts", "", 1550), ("ProcessComponents", "", 1600),
+            ("ProcessComponents", "", 1600),
             ("UnpublishFeatures", "", 1800), ("RemoveRegistryValues", "", 2600),
             ("RemoveFiles", "", 3500), ("InstallFiles", "", 4000), ("WriteRegistryValues", "", 5000),
             ("RegisterUser", "", 6000), ("RegisterProduct", "", 6100),
-            ("PublishFeatures", "", 6300), ("PublishProduct", "", 6400), ("InstallFinalize", "", 6600),
+            ("PublishFeatures", "", 6300), ("PublishProduct", "", 6400),
+            # Keep the previous product registered through the replacement file transaction.
+            ("InstallExecute", "", 6550), ("RemoveExistingProducts", "", 6575), ("InstallFinalize", "", 6600),
         ]),
     ]
 
