@@ -39,6 +39,12 @@ changed interface. The earlier TL-0113 keyboard, Narrator and display observatio
 TL-0116 integrated audit checks retain the scope of their original builds.
 [TRACE operator shell](docs/ui/accessible-shell.md), [TL-0113 observations](artifacts/evidence/TL-0113/human-walkthrough.md)
 
+Handover checks also exercised the exact backup drive review with keyboard
+focus, UI Automation states and wrapped controls at 200% fixture scaling,
+with an isolated high-contrast palette. Audible output and the physical
+display settings for that candidate remain outside those observations.
+[Handover technical evidence](artifacts/evidence/TL-0608/backup-readiness-controls.md)
+
 ## 3. Recipient-controlled accessibility setup
 
 Core 1.0 may guide a present recipient through supported Windows settings such as text scaling, contrast, keyboard accessibility, pointer size/speed, screen reader, captions, speech input, mono audio, language, and keyboard layout.

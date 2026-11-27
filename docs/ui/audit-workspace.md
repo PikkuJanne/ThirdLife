@@ -179,7 +179,9 @@ The report includes the renderer build, saved policy and preparation digests,
 and each plan approval. Findings, manual results, repairs, retests, package
 transactions, independent verification and finalization retain their sources
 and timestamps. An earlier confirmation remains in the record when it needs
-a recheck.
+a recheck. The backup sample section keeps a current or earlier outcome
+visible and leaves Windows backup setup pending. A newly recorded sample
+result clears the active preview. Generate a fresh report to see it.
 
 Choose **Review handover readiness** in Handover to see the current blockers
 and the exact saved output identifiers and SHA-256 digests. A support archive

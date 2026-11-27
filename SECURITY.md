@@ -11,9 +11,18 @@ Security controls must preserve the standalone project boundary. Future portfoli
 
 ## 2. Supported reporting path
 
-A public security contact and disclosure process are **TBD before preview release**. `TL-0610` and `TL-0705` must replace this placeholder with the approved reporting route, supported versions, expected response handling, and any coordinated-disclosure policy.
+The current packages are private engineering artifacts. Publicly supported
+versions, the security contact and disclosure handling remain open for
+the exact candidate. Repository private vulnerability reporting was
+disabled at the 27 November 2026 evidence review. Before exposing a
+candidate, record the approved confidential contact, expected response
+handling and supported versions.
 
-Do not place vulnerability details, device records, secrets, diagnostic archives, or exploit proof in a public issue without review.
+Stop the affected operation after an unexpected privileged action, trust
+mismatch or possible data exposure. Keep vulnerability details, device
+records, secrets, diagnostic archives and reproduction material off public
+issues. Share a reviewed sanitized record through the authorized channel
+when it is available. [Support guidance](docs/support.md)
 
 ## 3. Protected assets
 
