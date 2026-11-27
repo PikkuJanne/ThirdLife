@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 
 namespace ThirdLife.Catalog.Schema;
 
@@ -8,12 +9,14 @@ public sealed class CatalogDocument
         string catalogId,
         string version,
         string contentSha256,
+        ImmutableArray<byte> utf8Json,
         bool syntheticData,
         ImmutableArray<CatalogApplication> applications)
     {
         CatalogId = catalogId;
         Version = version;
         ContentSha256 = contentSha256;
+        Utf8Json = utf8Json;
         SyntheticData = syntheticData;
         Applications = applications;
     }
@@ -21,6 +24,8 @@ public sealed class CatalogDocument
     public string CatalogId { get; }
     public string Version { get; }
     public string ContentSha256 { get; }
+    [JsonIgnore]
+    public ImmutableArray<byte> Utf8Json { get; }
     public bool SyntheticData { get; }
     public ImmutableArray<CatalogApplication> Applications { get; }
 }
