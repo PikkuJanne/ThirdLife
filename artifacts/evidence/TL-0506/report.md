@@ -1,4 +1,49 @@
-# TL-0506 read-only security observations
+# TL-0506 security baseline
+
+## Candidate rules and workshop reviews
+
+Implementation commit `da82485a57989f1a9423f4b4739ac5f6331c0897` is based on `2dd57392b4f5bc4a85774fde7c84d142f70f57b0` on November 27, 2026. Inspect collects read-only evidence after intake. Decide evaluates the selected assessment. The restricted workshop report includes the recorded rule outcomes, their evidence, operator reviews and coverage limits.
+
+| Candidate requirement | How evidence qualifies |
+| --- | --- |
+| Firewall and antivirus | Both Windows Security Center categories must report good health. A separate requirement checks Microsoft Defender service, antivirus, real-time protection and signature freshness. A stopped or unmonitored provider cannot satisfy the rule. The firewall observation covers category health across registered products. |
+| User Account Control | Windows Security Center and the native UAC setting must agree for an enabled result. Conflicting evidence remains unresolved. |
+| Recent time synchronization | The latest local Windows Time operational status event 260 must report a successful status and a valid last-success timestamp. Decide compares its UTC value with the evaluation time. The candidate accepts up to seven days inclusive. NTP configuration is displayed independently. |
+| Restart | CBS, Windows Update and file-rename indicators can establish a pending restart. Their absence leaves the clear-state requirement unresolved. |
+| Management and ownership | A positive domain, MDM or work-account signal blocks deployment. Empty or unavailable signals leave ownership unresolved. The review records below cannot override this rule. |
+| Administrators and remote access | The operator checks membership and remote-access paths against workshop authorization. Each review binds the operator code, structured outcome, assessment, procedure revision and time. An unexplained administrator or unauthorized remote access blocks deployment. An incomplete review requires human review. |
+| Existing Windows requirements | The candidate retains the earlier requirements for activation, supported Windows 11 client on x64, TPM and Secure Boot. BitLocker status on the Windows volume is report-only. |
+
+The application selects the SHA-256-pinned laptop policy `0.1.0-candidate.3` and matching Basic and Job Seeker profiles. Eight required rules extend the earlier policy. Its earlier snapshots and their saved decisions keep their original version and digest. A later security review marks the saved disposition historical in Decide and the workshop report. A new assessment starts with both reviews outstanding, even if its timestamp matches the earlier assessment. The manual records retain their retest links and accept no account names, tool names or notes. Pilot adoption remains at TL-0611. [Candidate policy](../../../src/ThirdLife.UI/Features/Disposition/CommunityLaptopCandidate/community-laptop-policy.json)
+
+The time provider queries one event in reverse order. It projects only the event time, last successful synchronization and last error into a fixed 256-byte buffer. A denied, missing, oversized or malformed event cannot establish recent synchronization. A newer error takes precedence over an earlier success. Both times originate on the device. Independent wall-clock accuracy is outside the observation. The provider uses the existing assessment timeout and concurrency limit and closes its local handles. [Microsoft Windows Time traceability](https://learn.microsoft.com/en-us/windows-server/networking/windows-time-service/windows-time-for-traceability)
+
+### Active-machine observation and controlled checks
+
+The host ran Windows 11 Pro 26H2, build 26300.9974, native x64. The production provider ran unelevated and returned `AccessDenied` in 5.156 s. Nine of 15 observations had values, including the NTP client setting. Windows Time reported a nonzero last-sync error. The timestamp stayed unavailable. The observed subset provides no device clearance. Actual administrator and remote-access authorization must come from the operator reviewing that device.
+
+| Check on November 27, 2026 | Result |
+| --- | --- |
+| Base commit, `dotnet test tests/ThirdLife.Inventory.Tests -c Release --filter FullyQualifiedName~SecurityBaselineProviderTests` | 22 passed in 5 s, including the existing standard-user smoke. |
+| `dotnet test tests/ThirdLife.Inventory.Tests -c Release --no-restore --filter "FullyQualifiedName~SecurityBaselineProviderTests\|FullyQualifiedName~InventoryReadOnlyBoundaryTests"` | 49 passed in 5 s. The real host returned the unresolved state above. Fixed native buffer fixtures exercised valid, missing, truncated and wrong-type values. |
+| `dotnet test tests/ThirdLife.Policy.Tests -c Release --no-restore --filter FullyQualifiedName~SecurityBaselinePolicyTests` | 11 passed in 201 ms. Complete controlled facts, unavailable and disabled protection, pending restart and attempts to override protected rules were evaluated. |
+| Scoped WPF/SQLite review and accessibility tests | `SecurityReviewsReopenWithAttribution` and `AuditControlsExpose` (method-name filters) passed in 3 s during iteration. Isolated operator inputs exercised review, retest, reopen, policy citations and restricted report output. WPF automation peers, focus and keyboard order were checked. A completed host administrator or remote-access review and human assistive-technology observations are outside these results. |
+| Final focused application check | `dotnet test tests/ThirdLife.UI.Tests -c Release --no-restore --filter "FullyQualifiedName~SecurityCandidateCitesOwnedHealth\|FullyQualifiedName~AuditControlsExpose\|FullyQualifiedName~SecurityReviewsReopen"` passed all three cases in 3 s. A new assessment cleared an unsaved review selection. A failed remote-access review led to Do not deploy in Decide and in the reopened report. |
+| Targeted, including Quick | `eng/verify.ps1 -Tier Targeted -TestProject @('tests/ThirdLife.Policy.Tests/ThirdLife.Policy.Tests.csproj', 'tests/ThirdLife.Reports.Tests/ThirdLife.Reports.Tests.csproj')` passed in 139.614 s. Bundle and repository validation, eight governance checks, formatting, warnings-as-errors Release build and 1,568 .NET tests passed (144 Core, 998 Inventory, 197 UI, 199 Policy, 30 Reports). |
+| Clean Full gate | A separate detached checkout of `da82485` passed `eng/verify.ps1 -Tier Full -Restore` in 410.609 s. All 310 governance regressions and 2,514 deterministic .NET cases across 13 assemblies passed. Restore used the locked graph, formatting passed and the Release build produced zero warnings or errors. |
+| Native application | `eng/run-ui-smoke.ps1` opened the clean Release apphost with a standard user token. External UI Automation navigated to Inspect in 2.175 s and the process exited normally. The tested apphost SHA-256 was `58c12d3f0e53b3e6f20da9df81da1d309a48c5ee1bc885d007818a22d0fb3090`. |
+
+The initial Targeted pass identified a constructor formatting error. The next pass exposed a test-created workspace without a report store. The corrected fixture generated and opened the restricted report through the ordinary application path. The final focused suite and complete Targeted run used that fixture.
+
+At the implementation checkpoint, the verified working-tree Release assembly SHA-256 digests were `7ac853ed20f1e2be0d6ff88450bf00effdd7a952c53e933bd3e6cd6705332995` (Inventory) and `0f887325534dce54ae3feebb50723a6f372aef12e4d3a64eabcf3e0ab208834d` (UI). The packaged candidate policy digest is `4406ccac580cd1b52e439ac3aa79b5931eb3fc7372396e3c6beda55e7661a483`.
+
+### Integration
+
+The final Quick gate passed all 1,339 .NET tests in 149.609 s, 29.609 s over the 120 s target. The governance suite ran concurrently. The Release build took 10.03 s and the 197 UI cases took 81 s. The preceding Targeted run took 74 s for the same UI cases. TL-0505 recorded 73 s for 192 UI cases and 138.755 s for standalone Quick on this host.
+
+The final task-record check caught an encoding change outside TL-0506. The earlier task bytes were restored from the base and the task diff was checked for scope. Marking TL-0507 ready also exposed a historical test fixture that rewound dependencies while retaining today's ready state on their dependents. Its setup now returns both ready and done dependents to backlog when rewinding a prerequisite. The production dependency rule is unchanged. All eight work-selection regressions passed. The complete final governance run, `python -m unittest discover -s tools/tests -p 'test_*.py'`, passed all 310 cases in 273.169 s. [Integration PR](https://github.com/PikkuJanne/ThirdLife/pull/79)
+
+## Earlier provider checkpoint
 
 On 2026-11-27 the active Windows 11 x64 host ran the production security provider under a standard token. Inspect starts this provider in the existing sanitization-gated inventory assessment. The journal retains typed observations under the job. The restricted workshop report projects the named fields. Earlier assessments and saved policy decisions retain their source data and policy versions.
 

@@ -6399,7 +6399,7 @@ tasks:
   workstream: security-baseline
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -6451,6 +6451,24 @@ tasks:
     duration: 255.722 s for 1329 deterministic tests including Quick, plus focused native observation
     reference: artifacts/evidence/TL-0506/report.md, 8291677a164f81783a1e22fd4f17c7c9d8cb844c
     limitation: Nine of fourteen host fields had values. Missing observations cannot clear ownership. Remaining work includes explicit versioned security rules, recent time synchronization and attributable administrator and remote-access review.
+  - summary: The pinned candidate evaluates eight additional required rules. Inspect, Decide and the restricted report preserve assessment-bound operator reviews, coverage limits and superseded decisions on reopen.
+    command: eng/verify.ps1 -Tier Targeted for Policy and Reports including Quick, focused WPF and SQLite reopen tests, and SecurityBaselineProviderTests plus InventoryReadOnlyBoundaryTests
+    tier: targeted
+    result: passed
+    environment: Unelevated active Windows 11 Pro 26H2 x64 host build 26300.9974, isolated jobs, controlled policy inputs, and local Windows security and time sources
+    date: '2026-11-27'
+    duration: 139.614 s for 1568 deterministic tests, 3 s for three focused WPF cases and 5 s for 49 inventory and boundary tests including the native smoke
+    reference: artifacts/evidence/TL-0506/report.md, da82485a57989f1a9423f4b4739ac5f6331c0897
+    limitation: Nine of fifteen host fields had values. A Windows Time error left synchronization unresolved. Actual administrator and remote-access outcomes require attributable device-specific review. Pilot adoption of the candidate remains at TL-0611.
+  - summary: Clean-checkout regression passed for the new security rules, historical data, manual record format, application entry points and restricted workshop report.
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Separate tracked-clean worktree of the implementation commit on the active Windows 11 x64 host, locked NuGet restore and pinned Python toolchain
+    date: '2026-11-27'
+    duration: 410.609 s for 310 governance regressions and 2514 deterministic .NET tests
+    reference: artifacts/evidence/TL-0506/report.md, da82485a57989f1a9423f4b4739ac5f6331c0897
+    limitation: The independently run host smoke covers read-only production collection. Fresh full-profile verification belongs to TL-0507 and pilot acceptance remains at TL-0611.
   notes:
   - TL-0611 carries actual security-baseline acceptance for pilot scope. A documented blind spot cannot clear a required
     baseline rule.
@@ -6469,7 +6487,7 @@ tasks:
   workstream: verification
   kind: code
   priority: P0
-  status: backlog
+  status: ready
   size: L
   executor: codex
   environment: windows

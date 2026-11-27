@@ -53,9 +53,11 @@ job and approval survived two orderly restarts and reached the independent
 verification handoff with controlled package and update results.
 [Maintenance evidence](artifacts/evidence/TL-0505/report.md)
 
-Continue TL-0506's versioned security rules, recent time synchronization
-evidence and attributable administrator and remote-access review. TL-0507
-uses that baseline for the independent full-profile verification pass.
+TL-0506 is complete at engineering scope. The laptop candidate evaluates
+firewall, antivirus, Defender, UAC, recent time synchronization, restart and
+two assessment-bound operator reviews. The active host's time status reported
+an error, so recent synchronization stayed unresolved. TL-0507 is ready to
+implement fresh post-maintenance verification of the complete machine profile.
 [Security evidence](artifacts/evidence/TL-0506/report.md)
 
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B

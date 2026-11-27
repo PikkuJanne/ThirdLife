@@ -3839,7 +3839,7 @@ class DevelopmentContractResetTests(unittest.TestCase):
             done = {task_id for task_id, task in self.tasks.items() if task["status"] == "done"}
             inconsistent = [
                 task for task in self.tasks.values()
-                if task["status"] == "done" and not set(task["depends_on"]) <= done
+                if task["status"] in {"ready", "done"} and not set(task["depends_on"]) <= done
             ]
             if not inconsistent:
                 break
