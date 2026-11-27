@@ -38,3 +38,21 @@ The WPF test used isolated SQLite and modeled the recipient acknowledgement.
 No actual recipient choice, account, backup, recovery material, accessibility
 setting or operating-system setup was applied. TL-0605 owns the recipient
 guide and TL-0607 owns the complete handover decision.
+
+The locked Targeted run passed in 409.475 s, with 1,599 .NET cases and
+eight work-selection regressions. Clean Full at `f39667f1a94bdeb6871fa758476e368fe7d47ca3`
+passed in 887.559 s with 310 governance regressions and 2,571 deterministic
+.NET cases across 13 assemblies. The governance suite took 475.607 s and
+the WPF suite took 236 s while other engineering checks used the active host.
+
+The report integration base is main `515a6d6fbcc4b34828256c3bbdace4e59e6d7d07`.
+The existing workshop artifact remains stored when a mode or guidance
+choice changes. The visible preview is cleared so the next report uses the
+current checklist. The combined focused WPF selection
+`AuditRecipientHandoverTests | AuditFinalizationTests | WorkshopFinalizationReportTests`
+passed all three cases in 7 s, including the modeled change from an existing
+workshop report to a required checklist recheck.
+
+The report-integration Quick passed in 288.222 s with 1,379 .NET cases
+and eight work-selection regressions. The 120 s target was exceeded
+while other branch checks ran. WPF took 126 s.

@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
@@ -10,7 +11,9 @@ using ThirdLife.Core.Sanitization;
 using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
+using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Features.Disposition;
+using ThirdLife.UI.Shell;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
 using static ThirdLife.UI.Tests.AuditWorkflowTests;
 
@@ -88,7 +91,9 @@ public sealed class RepairWorkflowTests
             Assert.Equal(priorFailureId, link.PriorFailureEvidenceId);
         }
 
-        await using var reopened = disk.OpenWorkspace([provider]);
+        var reports = new WorkshopReportStore(Path.Combine(disk.Root, "repair-reports"));
+        await using var reopened = new AuditWorkspace(async token => await disk.OpenSqliteAsync(token).ConfigureAwait(false),
+            [provider], TimeProvider.System, reports);
         await reopened.OpenJobAsync(jobId);
 
         Assert.Equal(2, provider.InvocationCount);
@@ -117,6 +122,16 @@ public sealed class RepairWorkflowTests
                 Assert.Contains(retestAssessmentId.Value, retest, StringComparison.Ordinal);
                 Assert.Contains(priorFailureId.Value, retest, StringComparison.Ordinal);
             });
+
+        await reopened.GenerateReportAsync();
+        await reopened.OpenReportAsync();
+        Assert.Contains("Operator recorded system storage replacement", reopened.ReportPreview, StringComparison.Ordinal);
+        Assert.Contains($"Workshop operator code {OperatorCode}. Repair record {saved.RepairId.Value}.",
+            reopened.ReportPreview, StringComparison.Ordinal);
+        Assert.Contains($"Earlier assessment {priorAssessmentId.Value}. Failed evidence {priorFailureId.Value}.",
+            reopened.ReportPreview, StringComparison.Ordinal);
+        Assert.Contains($"Retest assessment {retestAssessmentId.Value} started at", reopened.ReportPreview, StringComparison.Ordinal);
+        Assert.DoesNotContain("repair.recorded", reopened.ReportPreview, StringComparison.Ordinal);
     }
 
     [Fact]

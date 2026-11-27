@@ -168,14 +168,17 @@ handover decision remain separate.
 
 Open **Handover** for the current job, then choose **Generate workshop report**.
 Generation rereads the durable job and writes a deterministic UTF-8 text report.
-The report distinguishes collected findings, unknowns, unrun providers, manual
-results and the latest assessment outcome. Earlier findings retain their own
-timestamps and provenance. Report generation leaves readiness unknown.
+The report includes the renderer build, saved policy and preparation digests,
+and each plan approval. Findings, manual results, repairs, retests, package
+transactions, independent verification and finalization retain their sources
+and timestamps. An earlier confirmation remains in the record when it needs
+a recheck. Review handover eligibility and sign-off separately.
 
 Use **Open workshop report** to read the verified generated copy in the keyboard-
 accessible preview. The preview opens the issued artifact for the current job.
-Selecting a different job clears the open action and preview. Earlier saved reports
-remain in the workshop folder and generating again creates a new artifact.
+Selecting a different job or saving a new finalization result clears the open
+action and preview. Earlier copies remain in the protected workshop report
+folder. Generate a fresh copy when newer evidence is available.
 
 The destination is the protected per-user directory
 `%LOCALAPPDATA%\ThirdLife\SetupCore\WorkshopReports`. The report uses opaque

@@ -414,6 +414,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         var jobId = Job!.Job.JobId;
         return RunReportAsync("Generating the workshop report from saved evidence.", async cancellationToken =>
         {
+            var finalization = await ReadFinalizationForReportAsync(jobId, cancellationToken);
             var stored = await LoadJobAsync(jobId, cancellationToken);
             if (IsSeparateEvidenceOrigin(stored))
             {
@@ -427,13 +428,16 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             var checkpoint = await ReadMaintenanceForReportAsync(jobId, cancellationToken);
             var verification = await ReadProfileVerificationForReportAsync(jobId, cancellationToken);
             var coldBoot = await ReadColdBootVerificationAsync(jobId, cancellationToken);
+            await ConfirmReportEvidenceAsync(jobId, finalization, cancellationToken);
             var now = _timeProvider.GetUtcNow();
             var artifact = await Task.Run(() =>
             {
                 var packages = ReadPackageRecords(journals, includeEarlierAttempts: true);
                 var preparation = ProjectPreparationRecords(stored, assessment, journals, checkpoint, verification, now, cancellationToken);
-                var content = WorkshopReportRenderer.RenderWithPackageRecords(stored, summary, policy, packages,
-                    preparation, ProjectProfileVerification(verification, coldBoot), cancellationToken);
+                var content = WorkshopReportRenderer.RenderTechnicalRecord(stored, summary, policy, packages,
+                    preparation, ProjectProfileVerification(verification, coldBoot),
+                    ProjectWorkshopRecordDetails(jobId, journals, finalization),
+                    cancellationToken);
                 return _reportStore!.Write(jobId, content, cancellationToken);
             }, cancellationToken);
             ReportArtifact = artifact;
@@ -494,7 +498,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
                     _ => "The workshop report could not be saved. Previously saved reports were preserved.",
                 };
             }
-            catch (Exception exception) when (exception is AssessmentException or JobStoreException
+            catch (Exception exception) when (exception is AssessmentException or JobStoreException or JobLifecycleException
                 or ArgumentException or InvalidOperationException)
             {
                 ReportStatus = "The workshop report could not be generated from this job. Reopen the job and review its saved records.";

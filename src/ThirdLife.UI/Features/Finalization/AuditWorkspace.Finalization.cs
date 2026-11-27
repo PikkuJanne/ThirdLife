@@ -72,6 +72,7 @@ internal sealed partial class AuditWorkspace
             {
                 await Task.Run(() => store.SaveFinalizationConfirmationAsync(job.Job.JobId, expected, rule, outcome,
                     reason, actor));
+                ClearReport();
                 _finalizationFeedback = SavedFinalizationMessage;
             }
             catch (JobStoreConflictException)
