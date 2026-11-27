@@ -1,6 +1,6 @@
 # ThirdLife Setup Core - Current status
 
-**Snapshot date** 2026-11-26  
+**Snapshot date** 2026-11-27  
 **Bundle baseline** 0.8.0  
 **Runtime authority** Active Codex machine only. Remote CI is supplementary.
 
@@ -25,9 +25,11 @@ qualification and the TL-0314 privilege decision.
 [Application orchestration](artifacts/evidence/TL-0313/report.md)
 
 TL-0501 and TL-0502 cover approval-bound scheduling and attributable action
-skips. Verify and the workshop report show the saved preparation disposition
-after reopen. Essential omissions require review. TL-0503 is next for disk,
-power and resource preflight. Live multi-action qualification and exact
-approval remain prerequisites at the M5 technical gate, TL-0511.
+skips. TL-0503 checks current platform, storage and power before package
+download and dispatch. A late resource deferral survives reopening in Verify
+and the workshop report. TL-0504 is next for structured Windows Update.
+Live multi-action qualification and exact approval remain prerequisites at the
+M5 technical gate, TL-0511.
 [Scheduling evidence](artifacts/evidence/TL-0501/report.md)
 [Action outcome evidence](artifacts/evidence/TL-0502/report.md)
+[Preflight evidence](artifacts/evidence/TL-0503/report.md)
