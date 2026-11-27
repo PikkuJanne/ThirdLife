@@ -6611,7 +6611,17 @@ tasks:
   - Resolve both profiles against the catalog without network access.
   - Check the package-license/privacy matrix against the exact candidates. Reuse valid unchanged approvals and present
     new or materially changed content only.
-  evidence: []
+  evidence:
+  - summary: Reviewed the exact bundled pilot policy, catalogue and profiles with offline resolution and exact configuration export.
+    task: TL-0508
+    command: Release WPF candidate-profile and exact configuration archive selection, plus bundled source digest review
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 6 selected tests in 3 s and 4 exact source digests
+    environment: Active Windows 11 native x64 host, isolated synthetic providers and local configuration
+    reference: artifacts/evidence/TL-0508/candidate-inputs.md, c3284b46dfc94c2b30b2f129a08476b5d7e1d0b0
+    limitation: Synthetic candidate and scoped existing plain-text editor engineering record. Live pilot applications and changed policy or rights still require exact decisions.
   notes:
   - Prepare and verify the candidate inputs before seeking actual adoption decisions.
   expected_test_tier: targeted
