@@ -78,9 +78,14 @@ retains live update and multi-action qualification.
 
 TL-0601 adds the workshop checklist to TRACE Handover. It saves attributable
 confirmations, retains earlier results, and requires a recheck after a relevant
-job or boot change. Bounded artifact detection, assisted and sealed handover,
-and the technical workshop record are the next implementation tracks.
+job or boot change. Bounded artifact detection and assisted and sealed handover
+are the next implementation tracks.
 [Finalization evidence](artifacts/evidence/TL-0601/report.md)
+
+TL-0604 generates the restricted technical workshop record from saved
+provenance, repairs, approval, preparation, verification and current or
+earlier finalization. The record keeps whole-device handover open.
+[Workshop record evidence](artifacts/evidence/TL-0604/report.md)
 
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B
 exit remain at TL-0710. [Decision and graph review](docs/reviews/2026-11-27-single-guest-continuation.md)

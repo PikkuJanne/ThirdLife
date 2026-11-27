@@ -47,3 +47,8 @@ profile. Native update and live multi-action qualification stay with TL-0511.
 Integration Quick on the TL-0601 base `1fff725` passed 1,381 .NET cases and
 eight work-selection regressions in 380.266 s. Other checks ran on the same
 host. WPF took 202 s and the Release build took 23.22 s.
+
+The subsequent merge trial against the technical workshop report main
+`515a6d6` passed both repository validators and all nine focused application
+cases for system-disk policy projection and workshop finalization, in 7 s of
+test time. It reused the unchanged native provider result.

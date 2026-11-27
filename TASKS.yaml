@@ -7077,7 +7077,7 @@ tasks:
   workstream: reports
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: any
@@ -7107,7 +7107,17 @@ tasks:
   verification:
   - Compare golden reports for representative ready, repair, review, alternative-OS, and do-not-deploy jobs.
   - Run HTML/markup injection and long-text tests.
-  evidence: []
+  evidence:
+  - summary: The normal Handover report retained exact plan provenance, approval and repair history, independent verification, and current and earlier finalization.
+    task: TL-0604
+    command: eng/verify.ps1 -Tier Targeted -Restore with the Reports and UI selections in the evidence record
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 267.992 s, 1407 deterministic .NET executions and eight work-selection regressions
+    environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64, .NET SDK 10.0.400, Python 3.14.7, isolated SQLite and WPF
+    reference: artifacts/evidence/TL-0604/report.md, b7fefee6c9b596dda8ea348908982a2a184694cf
+    limitation: Controlled inputs and modeled boot change. Physical printing and perceptual assistive-technology use were unobserved. An existing ActiveMachine focus assertion reproduced on the unchanged baseline.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
