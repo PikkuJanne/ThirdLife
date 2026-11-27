@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using ThirdLife.Actions.WindowsUpdates;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Sanitization;
 using ThirdLife.Core.WindowsUpdates;
 using ThirdLife.Policy.Schema;
 
@@ -16,6 +17,28 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
     {
         ArgumentNullException.ThrowIfNull(jobId);
         return ReadJournalTransactionAsync((transaction, ct) => ReadWindowsUpdatesAsync(transaction, jobId, ct), token);
+    }
+
+    public async Task<string?> FindWindowsUpdatePolicyAsync(JobId jobId, SanitizationGateDecisionId gateId,
+        Guid scanId, WindowsUpdateCandidate exact, string? servicingPolicySha256, CancellationToken token = default)
+    {
+        try
+        {
+            return await ReadJournalTransactionAsync(async (transaction, ct) =>
+            {
+                _layout.ValidateJobDirectory(jobId);
+                await RequireExpectedSanitizationGateAsync(_connection, transaction, jobId, gateId, ct).ConfigureAwait(false);
+                var history = await ReadWindowsUpdatesAsync(transaction, jobId, ct).ConfigureAwait(false);
+                if (history.LastOrDefault() is not { Stage: WindowsUpdateStage.ScanCompleted, Scan: { } scan } latest ||
+                    latest.GateId != gateId || latest.Id != scanId || !WindowsUpdatePolicy.Matches(exact, scan) ||
+                    WindowsUpdateHistory.Disposition(history) != WindowsUpdateDisposition.ApprovalRequired ||
+                    history.Length > WindowsUpdateHistory.MaximumEntries - 12) { return null; }
+
+                return await RequireWindowsUpdatePolicyAsync(_connection, transaction, jobId, exact, servicingPolicySha256,
+                    null, _timeProvider.GetUtcNow(), ct).ConfigureAwait(false);
+            }, token).ConfigureAwait(false);
+        }
+        catch (JobStoreConflictException) { return null; }
     }
 
     public async Task<WindowsUpdateEntry?> TryStartWindowsUpdateDispatchAsync(WindowsUpdateEntry intent, CancellationToken token = default)
@@ -85,7 +108,8 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
                 {
                     throw new JobStoreConflictException();
                 }
-                await RequireWindowsUpdateFixturePolicyAsync(connection, transaction, entry, ct).ConfigureAwait(false);
+                await RequireWindowsUpdatePolicyAsync(connection, transaction, entry.JobId, entry.Approval.Exact,
+                    entry.Approval.ServicingPolicySha256, entry.Approval.PolicyDecisionId, entry.OccurredAtUtc, ct).ConfigureAwait(false);
                 if (entry.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted)
                 {
                     var prepared = history[^1];
@@ -124,45 +148,84 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
         await command.ExecuteNonQueryAsync(token).ConfigureAwait(false);
     }
 
-    private async Task RequireWindowsUpdateFixturePolicyAsync(SqliteConnection connection, SqliteTransaction transaction,
-        WindowsUpdateEntry entry, CancellationToken token)
+    private async Task<string> RequireWindowsUpdatePolicyAsync(SqliteConnection connection, SqliteTransaction transaction, JobId jobId,
+        WindowsUpdateCandidate exact, string? servicingPolicySha256, string? expectedDecisionId, DateTimeOffset at, CancellationToken token)
     {
-        // The production policy for the reviewed MSI cannot authorize servicing Windows.
-        // Only the separately scoped synthetic candidate is implemented for fixture dispatch.
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = PolicyDecisionProjection + """
 
             WHERE d.job_id = $job_id ORDER BY d.decision_sequence DESC LIMIT 1;
             """;
-        command.Parameters.AddWithValue("$job_id", entry.JobId.Value);
+        command.Parameters.AddWithValue("$job_id", jobId.Value);
         var saved = await ReadPolicyDecisionRowAsync(command, token).ConfigureAwait(false);
-        var intake = await ReadLatestSanitizationEvidenceAsync(connection, transaction, entry.JobId, token).ConfigureAwait(false);
-        if (saved is not
+        var intake = await ReadLatestSanitizationEvidenceAsync(connection, transaction, jobId, token).ConfigureAwait(false);
+        if (saved?.Decision.Disposition != Disposition.ReadyToPrepare || intake is null ||
+            !saved.Decision.EvidenceIds.Contains(intake.Metadata.EvidenceId) ||
+            (expectedDecisionId is not null && saved.Decision.DecisionId != expectedDecisionId) || saved.Decision.EvaluatedAtUtc > at)
+        {
+            throw new JobStoreConflictException();
+        }
+
+        var document = saved.Snapshot.Document;
+        if (servicingPolicySha256 is { } digest)
+        {
+            var now = _timeProvider.GetUtcNow();
+            if (saved.Decision.JobEvidenceCount is null || intake.Metadata.Provenance.Kind != ProvenanceKind.HumanConfirmation ||
+                document is not
+                {
+                    IsCurrentSchema: true, SyntheticData: false, Status: PolicyStatus.Effective,
+                    ClaimScope: WindowsUpdateServicingPolicy.OrganizationClaimScope
+                } ||
+                document.Effective.FromUtc is not { } from || from > now || document.Effective.UntilUtc <= now ||
+                saved.Decision.ActiveCapabilityIds is not { } selectedCapabilities ||
+                !selectedCapabilities.SequenceEqual(document.Rules.SelectMany(rule => rule.ActiveForCapabilityIds)
+                    .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal), StringComparer.Ordinal) ||
+                !WindowsUpdateServicingPolicy.MatchesQualificationOrganizationPolicy(exact, digest, document.ContentSha256, now))
             {
-                Decision.Disposition: Disposition.ReadyToPrepare, Snapshot.Document:
-                { IsCurrentSchema: true, SyntheticData: true, Status: PolicyStatus.Candidate, ClaimScope: "windows_update_fixture" }
-            } ||
-            intake?.Metadata.Provenance.Kind != ProvenanceKind.SyntheticFixture || !saved.Decision.EvidenceIds.Contains(intake.Metadata.EvidenceId) ||
-            saved.Decision.DecisionId != entry.Approval!.PolicyDecisionId || saved.Decision.EvaluatedAtUtc > entry.OccurredAtUtc)
+                throw new JobStoreConflictException();
+            }
+            var job = await ReadStoredJobAsync(connection, transaction, jobId, token).ConfigureAwait(false);
+            if (job is not { IsArchived: false } ||
+                job.SanitizationEvidence.Any(item => item.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) ||
+                job.Observations.Any(item => item.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture) ||
+                job.HumanTests.Any(item => item.Metadata.Provenance.Kind == ProvenanceKind.SyntheticFixture))
+            {
+                throw new JobStoreConflictException();
+            }
+        }
+        else if (intake.Metadata.Provenance.Kind != ProvenanceKind.SyntheticFixture ||
+            document is not { IsCurrentSchema: true, SyntheticData: true, Status: PolicyStatus.Candidate, ClaimScope: "windows_update_fixture" })
         {
             throw new JobStoreConflictException();
         }
 
         // A subsequent assessment or newly appended fact invalidates preparation against the
         // old decision, including evidence whose source timestamp predates the decision.
-        command.Parameters.Clear();
-        command.CommandText = """
-            SELECT evidence_id FROM evidence_records WHERE job_id = $job_id ORDER BY evidence_sequence DESC LIMIT 1;
-            """;
-        command.Parameters.AddWithValue("$job_id", entry.JobId.Value);
-        var newestEvidence = await command.ExecuteScalarAsync(token).ConfigureAwait(false) as string;
-        if (!saved.Decision.EvidenceIds.Any(id => id.Value == newestEvidence))
+        if (saved.Decision.JobEvidenceCount is { } count)
         {
-            throw new JobStoreConflictException();
+            if (count != await ReadEvidenceCountAsync(connection, transaction, jobId, token).ConfigureAwait(false))
+            {
+                throw new JobStoreConflictException();
+            }
+        }
+        else
+        {
+            // Earlier controlled decisions used the last cited evidence ID.
+            command.Parameters.Clear();
+            command.CommandText = """
+                SELECT evidence_id FROM evidence_records WHERE job_id = $job_id ORDER BY evidence_sequence DESC LIMIT 1;
+                """;
+            command.Parameters.AddWithValue("$job_id", jobId.Value);
+            var newestEvidence = await command.ExecuteScalarAsync(token).ConfigureAwait(false) as string;
+            if (!saved.Decision.EvidenceIds.Any(id => id.Value == newestEvidence))
+            {
+                throw new JobStoreConflictException();
+            }
         }
 
         await RequirePolicyDecisionEvidenceAsync(connection, transaction, saved.Decision, token).ConfigureAwait(false);
+        return saved.Decision.DecisionId;
     }
 
     private async Task<ImmutableArray<WindowsUpdateEntry>> ReadWindowsUpdatesAsync(SqliteTransaction transaction,

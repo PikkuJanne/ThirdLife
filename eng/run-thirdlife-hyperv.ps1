@@ -3,17 +3,21 @@
 param(
     [Parameter(Mandatory, ParameterSetName = 'Prepare')][switch] $Prepare,
     [Parameter(ParameterSetName = 'Prepare')][switch] $WindowsUpdateAssessment,
+    [Parameter(ParameterSetName = 'Prepare')][switch] $WindowsUpdateBrokerAssessment,
+    [Parameter(ParameterSetName = 'Prepare')][switch] $WindowsUpdateBrokerRefusal,
     [Parameter(ParameterSetName = 'Prepare')][string] $BrokerArtifact =
         (Join-Path ([Environment]::GetFolderPath('ProgramFiles')) 'ThirdLife\Broker\ThirdLife.Broker.exe'),
     [Parameter(ParameterSetName = 'Prepare')][string] $SdkArchive,
     [Parameter(Mandatory, ParameterSetName = 'Run')]
     [ValidateSet('Inspect','Verify','DistinctAccount','Accept','Decline','Interrupt','Timeout','Disconnect','RetainObservation',
-        'ApplicationPreview','ApplicationAccept','ApplicationDecline','ApplicationCancel','WindowsUpdateAssessment')]
+        'ApplicationPreview','ApplicationAccept','ApplicationDecline','ApplicationCancel','WindowsUpdateAssessment','WindowsUpdateBrokerAssessment','WindowsUpdateBrokerRefusal')]
     [string] $Scenario,
     [Parameter(ParameterSetName = 'Run')][pscredential] $Credential,
     [Parameter(ParameterSetName = 'Run')][switch] $PromptForCredential,
     [Parameter(ParameterSetName = 'Run')][guid] $ExpectedVMId = [guid]::Empty,
     [Parameter(ParameterSetName = 'Run')][ValidatePattern('\A[0-9a-fA-F]{64}\z')][string] $PayloadSha256,
+    [Parameter(ParameterSetName = 'Run')][ValidatePattern('\A[0-9a-f]{64}\z')][string] $ReviewedWindowsUpdateBrokerSha256,
+    [Parameter(ParameterSetName = 'Run')][ValidatePattern('\A[0-9a-f]{40}\z')][string] $ReviewedWindowsUpdateBrokerSource,
     [string] $WorkDirectory = (Join-Path $env:LOCALAPPDATA 'ThirdLife\HyperV')
 )
 
@@ -26,10 +30,24 @@ if ($Scenario -and $Scenario -ine 'Inspect') {
     $Scenario = $scenarioEntry.Name
 }
 $applicationScenario = $Scenario -cin @('ApplicationPreview', 'ApplicationAccept', 'ApplicationDecline', 'ApplicationCancel')
-$updateScenario = $WindowsUpdateAssessment -or $Scenario -ceq 'WindowsUpdateAssessment'
+if (@(@($WindowsUpdateAssessment,$WindowsUpdateBrokerAssessment,$WindowsUpdateBrokerRefusal) | Where-Object { $_ }).Count -gt 1) {
+    throw 'Select one Windows Update qualification case.'
+}
+$updateRefusal = $WindowsUpdateBrokerRefusal -or $Scenario -ceq 'WindowsUpdateBrokerRefusal'
+if ($updateRefusal -and -not $Prepare -and
+    (-not $ReviewedWindowsUpdateBrokerSha256 -or -not $ReviewedWindowsUpdateBrokerSource -or $ReviewedWindowsUpdateBrokerSha256 -ieq $profile.brokerSha256)) {
+    throw 'The refusal case requires the reviewed v2 artifact digest and source commit for the existing protected guest installation.'
+}
+if ((-not $updateRefusal) -and ($ReviewedWindowsUpdateBrokerSha256 -or $ReviewedWindowsUpdateBrokerSource)) {
+    throw 'A separate artifact review applies only to the Windows Update refusal case.'
+}
+$brokerHash = if ($updateRefusal) { $ReviewedWindowsUpdateBrokerSha256 } else { $profile.brokerSha256 }
+$brokerSource = if ($updateRefusal) { $ReviewedWindowsUpdateBrokerSource } else { $profile.brokerSource }
+$nativeAssessment = $WindowsUpdateBrokerAssessment -or $Scenario -ceq 'WindowsUpdateBrokerAssessment'
+$updateScenario = $WindowsUpdateAssessment -or $Scenario -ceq 'WindowsUpdateAssessment' -or $nativeAssessment
 $requiresApplicationConsent = $applicationScenario -and $Scenario -cne 'ApplicationPreview'
-$evidenceTask = if ($updateScenario) { 'TL-0504' } elseif ($applicationScenario) { 'TL-0313' } else { $profile.task }
-if (($applicationScenario -or ($updateScenario -and -not $Prepare)) -and $ExpectedVMId -eq [guid]::Empty) {
+$evidenceTask = if ($updateScenario -or $updateRefusal) { 'TL-0504' } elseif ($applicationScenario) { 'TL-0313' } else { $profile.task }
+if (($applicationScenario -or (($updateScenario -or $updateRefusal) -and -not $Prepare)) -and $ExpectedVMId -eq [guid]::Empty) {
     throw 'Bind the selected case to the exact VMId returned by Inspect.'
 }
 $repo = Split-Path -Parent $PSScriptRoot
@@ -39,7 +57,8 @@ if ($work -ieq $repo -or $work.StartsWith($repo + '\', [StringComparison]::Ordin
     throw 'Store Hyper-V bundles and local run output outside the repository.'
 }
 $id = [guid]::NewGuid().ToString('N')
-$payloadName = if ($updateScenario) { 'windows-update-assessment.zip' } else { 'payload.zip' }
+$payloadName = if ($updateRefusal) { 'windows-update-broker-refusal.zip' } elseif ($nativeAssessment) { 'windows-update-broker-assessment.zip' }
+    elseif ($updateScenario) { 'windows-update-assessment.zip' } else { 'payload.zip' }
 $payload = Join-Path $work $payloadName
 $sdk = Join-Path $work 'dotnet-sdk-win-x64.zip'
 
@@ -65,9 +84,10 @@ Assert-LocalWorkDirectory
 if ($Prepare) {
     $null = [IO.Directory]::CreateDirectory($work)
     $provisioner = Join-Path $PSScriptRoot 'install-thirdlife-broker.ps1'
-    $projects = if ($updateScenario) { 'ThirdLife.Packages.Tests' } else { 'ThirdLife.UI.Tests', 'ThirdLife.Broker.Tests' }
+    $projects = if ($updateRefusal) { 'ThirdLife.UI.Tests' } elseif ($nativeAssessment) { 'ThirdLife.Broker.Tests' }
+        elseif ($updateScenario) { 'ThirdLife.Packages.Tests' } else { 'ThirdLife.UI.Tests', 'ThirdLife.Broker.Tests' }
     if (-not $updateScenario) {
-        Assert-Digest $BrokerArtifact SHA256 $profile.brokerSha256
+        if (-not $updateRefusal) { Assert-Digest $BrokerArtifact SHA256 $profile.brokerSha256 }
         Assert-Digest $provisioner SHA256 $profile.provisionerSha256
     }
     if (Test-Path -LiteralPath $sdk) {
@@ -110,8 +130,10 @@ if ($Prepare) {
         Copy-Item -LiteralPath $driverPath -Destination $content
         if (-not $updateScenario) {
             Copy-Item -LiteralPath $provisioner -Destination $content
-            Copy-Item -LiteralPath $BrokerArtifact -Destination (Join-Path $content 'ThirdLife.Broker.exe')
-            Assert-Digest (Join-Path $content 'ThirdLife.Broker.exe') SHA256 $profile.brokerSha256
+            if (-not $updateRefusal) {
+                Copy-Item -LiteralPath $BrokerArtifact -Destination (Join-Path $content 'ThirdLife.Broker.exe')
+                Assert-Digest (Join-Path $content 'ThirdLife.Broker.exe') SHA256 $profile.brokerSha256
+            }
         }
         [IO.File]::WriteAllText((Join-Path $content 'source.txt'), $source)
         Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -194,7 +216,7 @@ function Connect-Guest {
 
 function Invoke-Guest([string] $Mode, [int] $TimeoutSeconds = 20) {
     $job = Invoke-Command -Session $session -ScriptBlock $guest -AsJob -ArgumentList @(
-        $Mode, $id, $profile.computer, $profile.account, $Scenario, $testName, $profile.brokerSha256,
+        $Mode, $id, $profile.computer, $profile.account, $Scenario, $testName, $brokerHash,
         $profile.provisionerSha256, $profile.sdkSha512, $PayloadSha256, $driverHash, $consoleSession, $testSource)
     try {
         if (-not (Wait-Job -Job $job -Timeout $TimeoutSeconds)) { throw "Guest phase $Mode exceeded its time limit." }
@@ -236,7 +258,7 @@ try {
         [pscustomobject]@{ VMId = $vm.Id; GuestBuild = $identity.Build; CredentialVerified = $true; UacPolicy = $uacPolicy }
         return
     }
-    if ($requiresApplicationConsent -and ($uacPolicy.EnableLUA -ne 1 -or
+    if (($requiresApplicationConsent -or $updateRefusal) -and ($uacPolicy.EnableLUA -ne 1 -or
         $uacPolicy.PromptOnSecureDesktop -ne 1 -or $uacPolicy.ConsentPromptBehaviorAdmin -notin @(2, 5))) {
         throw 'The application case requires Windows consent on the secure desktop.'
     }
@@ -246,11 +268,14 @@ try {
     Assert-Digest $sdk SHA512 $profile.sdkSha512
     $testSource = & git -C $repo rev-parse HEAD
     if ($LASTEXITCODE -ne 0 -or $testSource -cnotmatch '\A[0-9a-f]{40}\z') { throw 'Cannot identify the test source.' }
-    if ($applicationScenario -or $updateScenario) {
+    if ($applicationScenario -or $updateScenario -or $updateRefusal) {
         $dirty = & git -C $repo status --porcelain --untracked-files=no
         if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'Run the application case from the committed payload checkout.' }
     }
     $testName = [string]$scenarioEntry.Value
+    if ($updateRefusal -and $testSource -cne $ReviewedWindowsUpdateBrokerSource) {
+        throw 'The reviewed v2 artifact and protected refusal test must come from the same clean commit.'
+    }
     if (-not $testName) { throw 'The scenario has no test in the pinned profile.' }
 
     $failedPhase = 'Guest stage'
@@ -304,6 +329,7 @@ try {
         Start-Sleep -Milliseconds 500
     }
     if (-not $observed.Passed -or $observed.State -in @('Running', 'Queued') -or $observed.BrokerRemaining -or
+        ($updateRefusal -and -not $announced) -or
         ($applicationScenario -and (-not $applicationPlan -or $requiresApplicationConsent -ne $announced))) {
         throw 'The expected scenario was not verified with one passing case and no surviving broker.'
     }
@@ -339,8 +365,8 @@ finally {
                 $testNativeErrorCode = $observed.TestNativeErrorCode
             }
             $record = [ordered]@{
-                task = $evidenceTask; scenario = $Scenario; brokerSource = $profile.brokerSource; testSource = $testSource
-                brokerSha256 = $profile.brokerSha256; payloadSha256 = $PayloadSha256; sdkSha512 = $profile.sdkSha512
+                task = $evidenceTask; scenario = $Scenario; brokerSource = $brokerSource; testSource = $testSource
+                brokerSha256 = $brokerHash; payloadSha256 = $PayloadSha256; sdkSha512 = $profile.sdkSha512
                 durationSeconds = [Math]::Round(([DateTime]::UtcNow - $runStarted).TotalSeconds, 3)
                 startedUtc = $runStarted.ToString('o'); stoppedAt = $failedPhase; cleanupVerified = $cleaned
                 possibleGuestResidue = $staged -and -not $cleaned
@@ -355,11 +381,17 @@ finally {
                 $record.consentProcessObserved = $announced
                 $record.brokerRemainingAtLastStatus = if ($observed) { $observed.BrokerRemaining } else { $null }
             }
+            if ($updateRefusal) {
+                $record.consentProcessObserved = $announced
+                $record.brokerRemainingAtLastStatus = if ($observed) { $observed.BrokerRemaining } else { $null }
+            }
             if ($updateScenario) {
                 foreach ($field in @('brokerSource', 'brokerSha256', 'protectedBrokerVerified')) { $record.Remove($field) }
-                $record.updateAssessment = if ($observed) { $observed.UpdateAssessment } else { $null }
+                if ($nativeAssessment) { $record.nativeBrokerAssessment = if ($observed) { $observed.UpdateAssessment } else { $null } }
+                else { $record.updateAssessment = if ($observed) { $observed.UpdateAssessment } else { $null } }
                 if ($provisioned) {
-                    $record.adapterSha256 = $provisioned.adapterSha256
+                    if ($nativeAssessment) { $record.managedBrokerAssemblySha256 = $provisioned.adapterSha256 }
+                    else { $record.adapterSha256 = $provisioned.adapterSha256 }
                     $record.wuapiVersion = $provisioned.wuapiVersion
                     $record.windowsBuild = $provisioned.windowsBuild
                 }

@@ -53,6 +53,17 @@ internal sealed class WindowsOperatingSystemSource : IOperatingSystemSource
             ReadProductType());
     }
 
+    internal static int? ReadBuildRevision()
+    {
+        // One fixed DWORD in the native Windows view. Never read a caller-supplied key or allocate registry data.
+        const uint nativeDword = 0x00010010; // RRF_SUBKEY_WOW6464KEY | RRF_RT_REG_DWORD
+        var localMachine = new nint(unchecked((int)0x80000002));
+        uint size = sizeof(int);
+        var result = NativeMethods.RegGetValueW(localMachine, @"SOFTWARE\Microsoft\Windows NT\CurrentVersion", "UBR", nativeDword,
+            out var type, out var revision, ref size);
+        return result == 0 && type == 4 && size == sizeof(int) && revision >= 0 ? revision : null;
+    }
+
     [SupportedOSPlatform("windows")]
     private static SystemInventorySourceValue<WindowsProductType> ReadProductType()
     {
@@ -103,6 +114,11 @@ internal sealed class WindowsOperatingSystemSource : IOperatingSystemSource
 
     private static class NativeMethods
     {
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        [DllImport("advapi32.dll", ExactSpelling = true, CharSet = CharSet.Unicode)]
+        internal static extern int RegGetValueW(nint key, string subkey, string value, uint flags,
+            out uint type, out int data, ref uint size);
+
         [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
         [DllImport("kernel32.dll", ExactSpelling = true)]
         [return: MarshalAs(UnmanagedType.Bool)]

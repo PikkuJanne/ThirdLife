@@ -148,7 +148,7 @@
     <GroupBox Header="Windows Update" AutomationProperties.Name="Windows Update" Margin="0,16,0,0"
               Visibility="{Binding ShowsWindowsUpdates, Converter={StaticResource PlanReviewVisibility}}">
       <StackPanel>
-        <TextBlock Text="Scan the configured Windows Update service and check individual offers online. Update downloads and installation are unavailable."
+        <TextBlock Text="Scan the configured Windows Update service and check individual offers online. Servicing requires a qualified policy and approval for the exact revision."
                    TextWrapping="Wrap" />
         <WrapPanel Margin="0,8,0,4">
           <Button x:Name="ScanWindowsUpdatesButton" Content="Scan for Windows updates" Click="ScanWindowsUpdates"
@@ -176,6 +176,23 @@
                    Visibility="{Binding HasWindowsUpdatePreview, Converter={StaticResource PlanReviewVisibility}}"
                    TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True" Margin="0,8,0,0"
                    AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
+        <Button x:Name="EvaluateUpdatePolicyButton" Content="Evaluate servicing policy for this offer" Click="EvaluateUpdatePolicy"
+                HorizontalAlignment="Left" Margin="0,8,0,0" IsEnabled="{Binding CanEvaluateUpdatePolicy}"
+                Visibility="{Binding ShowsUpdatePolicyEvaluation, Converter={StaticResource PlanReviewVisibility}}" />
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowsUpdateApproval, Converter={StaticResource PlanReviewVisibility}}">
+          <Label Target="{Binding ElementName=UpdateOperatorInput}" Content="Workshop operator identifier" />
+          <TextBox x:Name="UpdateOperatorInput" MaxLength="128" Text="{Binding UpdateOperator, UpdateSourceTrigger=PropertyChanged}"
+                   AutomationProperties.Name="Workshop operator identifier for this update" IsEnabled="{Binding CanEditJob}" />
+          <Button x:Name="ApproveUpdateButton" Content="Approve download and installation of this revision"
+                  Click="ApproveUpdate" IsEnabled="{Binding CanApproveWindowsUpdate}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+        </StackPanel>
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowsApprovedUpdate, Converter={StaticResource PlanReviewVisibility}}">
+          <TextBox Text="{Binding ApprovedUpdateScope, Mode=OneWay}" IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                   TextWrapping="Wrap" MaxHeight="180" VerticalScrollBarVisibility="Auto"
+                   AutomationProperties.Name="Approved Windows Update scope" />
+          <Button x:Name="RunUpdateButton" Content="Start approved download and installation"
+                  Click="RunApprovedUpdate" IsEnabled="{Binding CanRunApprovedUpdate}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+        </StackPanel>
       </StackPanel>
     </GroupBox>
   </StackPanel>

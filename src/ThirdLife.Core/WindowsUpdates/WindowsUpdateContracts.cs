@@ -22,6 +22,7 @@ public enum WindowsUpdateStatus
     Partial,
     ApprovalChanged,
     Unavailable,
+    ConsentDeclined,
 }
 
 public sealed record WindowsUpdateIdentity

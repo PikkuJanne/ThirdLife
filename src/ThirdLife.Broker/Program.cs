@@ -71,7 +71,16 @@ internal static class Program
                 return Rejected;
             }
 
-            var outcome = await BrokerSession.RunAsync(pipe, ticket, () => AuthenticateClient(pipe, client), lifetime.Token)
+            var isServicing = ticket.ProtocolVersion == BrokerProtocolLimits.WindowsUpdateVersion;
+            if (isServicing)
+            {
+                var hardRemaining = BrokerProtocolLimits.MaximumLifetime + BrokerProtocolLimits.MaximumUpdateOperationLifetime +
+                    BrokerProtocolLimits.MaximumUpdateReceiptLifetime - Stopwatch.GetElapsedTime(startup);
+                if (hardRemaining <= TimeSpan.Zero) { return Interrupted; }
+                lifetime.CancelAfter(hardRemaining);
+            }
+            var handler = isServicing ? WindowsUpdateBrokerHandler.Create(new WindowsUpdates.NativeWindowsUpdateBackend(), client.Identity.LogonSid) : null;
+            var outcome = await BrokerSession.RunAsync(pipe, ticket, () => AuthenticateClient(pipe, client), lifetime.Token, handler)
                 .ConfigureAwait(false);
             return outcome switch
             {

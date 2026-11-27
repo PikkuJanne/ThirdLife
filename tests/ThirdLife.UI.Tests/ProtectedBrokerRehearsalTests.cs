@@ -11,9 +11,12 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32.SafeHandles;
 using ThirdLife.Actions.Registry;
+using ThirdLife.Actions.WindowsUpdates;
 using ThirdLife.Broker.Protocol;
 using ThirdLife.Broker.Protocol.Transport;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Sanitization;
+using ThirdLife.Core.WindowsUpdates;
 using ThirdLife.Inventory.Windows;
 using ThirdLife.UI.BrokerClient;
 
@@ -101,6 +104,40 @@ public sealed class ProtectedBrokerRehearsalTests
     [Trait("Category", "Extended")]
     public void InstalledBrokerClientRetainsAnObservationWhenItsReceiveLoopIsInterrupted() =>
         RunInteractive(RetainObservationScenario, RehearseRetainedObservationAsync);
+
+    [Fact]
+    [Trait("Category", "ActiveMachine")]
+    [Trait("Category", "Extended")]
+    public void InstalledWindowsUpdateBrokerRefusesAnUnreviewedRequestBeforeNativeAdmission() =>
+        RunInteractive("windowsupdatebrokerrefusal", async token =>
+        {
+            const string scenario = "windowsupdatebrokerrefusal";
+            var now = DateTimeOffset.UtcNow;
+            var exact = new WindowsUpdateCandidate(new(new("10000000-aaaa-bbbb-cccc-000000000001"), 17), WindowsUpdateClass.Security, 32000);
+            Assert.Null(WindowsUpdateServicingPolicy.CurrentQualificationPolicySha256(exact, now));
+            var impact = ActionRegistry.DescribeWindowsUpdateServicing(exact);
+            var actions = new WindowsUpdateApprovedActions(Guid.NewGuid(), new(Guid.NewGuid(), impact.Download), new(Guid.NewGuid(), impact.Install));
+            var envelope = BrokerEnvelope.ForWindowsUpdate(Guid.NewGuid(), BrokerNonce.Create(), now.AddSeconds(70));
+            var request = BrokerWindowsUpdateRequest.Create(envelope, new JobId("job-tl0504-refusal-fixture"), new SanitizationGateDecisionId("gate-fixture"),
+                Guid.NewGuid(), "policy-decision-" + Guid.NewGuid().ToString("N"), new string('a', 64), actions, exact, actions.Download.ActionId);
+            var ticket = BrokerLaunchTicket.Create(Environment.ProcessId, request);
+            Trace(new("RequestingConsent", scenario));
+            using var process = Assert.IsType<Process>(await TrustedBrokerLauncher.LaunchAsync(ticket, token));
+            using var connection = Assert.IsType<AuthenticatedBrokerConnection>(await AuthenticatedBrokerConnection.ConnectAsync(
+                process, WindowsBrokerPeer.CurrentIdentity(), ticket, envelope, token));
+            Trace(new("AuthenticatedHello", scenario));
+            await BrokerPipeFrames.WriteAsync(connection.Pipe, request, token);
+            var result = Assert.IsType<BrokerWindowsUpdateResult>(await BrokerPipeFrames.ReadAsync(connection.Pipe, token, ticket.ProtocolVersion));
+            Assert.True(ticket.MatchesEnvelope(result.Envelope));
+            Assert.Equal(request.Action.ActionId, result.ActionId);
+            Assert.Equal(request.ApprovalSha256, result.ApprovalSha256);
+            Assert.Equal(BrokerWindowsUpdateDispatchState.NotStarted, result.DispatchState);
+            Assert.Equal(new WindowsUpdateOperation(WindowsUpdateStatus.ApprovalChanged, null), result.Operation);
+            await process.WaitForExitAsync(token).WaitAsync(TimeSpan.FromSeconds(5), token);
+            Assert.Equal(0, process.ExitCode);
+            Assert.False(WindowsBrokerPeer.CurrentIdentity().IsElevated);
+            Trace(new("Result", scenario, "NotStarted", 1, ClientUnelevated: true, ExitCode: process.ExitCode));
+        });
 
     private static void Rehearse(string scenario, BrokerBatchStatus expected) =>
         RunInteractive(scenario, async cancellationToken =>

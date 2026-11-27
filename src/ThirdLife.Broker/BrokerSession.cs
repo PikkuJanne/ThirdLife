@@ -17,18 +17,36 @@ internal enum BrokerSessionOutcome
 internal static class BrokerSession
 {
     public static async Task<BrokerSessionOutcome> RunAsync(
-        Stream stream, BrokerLaunchTicket ticket, Func<bool> authenticateClient, CancellationToken cancellationToken)
+        Stream stream, BrokerLaunchTicket ticket, Func<bool> authenticateClient, CancellationToken cancellationToken,
+        WindowsUpdateBrokerHandler? updateHandler = null)
     {
         try
         {
-            if (await BrokerPipeFrames.ReadAsync(stream, cancellationToken).ConfigureAwait(false) is not BrokerHello hello ||
+            using var admission = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            if (ticket.ProtocolVersion == BrokerProtocolLimits.WindowsUpdateVersion)
+            {
+                var remaining = ticket.ExpiresAtUtc - TimeProvider.System.GetUtcNow();
+                if (remaining <= TimeSpan.Zero || remaining > BrokerProtocolLimits.MaximumLifetime) { return BrokerSessionOutcome.Rejected; }
+                admission.CancelAfter(remaining);
+            }
+            if (await BrokerPipeFrames.ReadAsync(stream, admission.Token, ticket.ProtocolVersion).ConfigureAwait(false) is not BrokerHello hello ||
                 !IsCurrentEnvelope(ticket, hello.Envelope) || !authenticateClient())
             {
                 return BrokerSessionOutcome.Rejected;
             }
 
-            await BrokerPipeFrames.WriteAsync(stream, new BrokerHelloAck(hello.Envelope), cancellationToken).ConfigureAwait(false);
-            if (await BrokerPipeFrames.ReadAsync(stream, cancellationToken).ConfigureAwait(false) is not BrokerRequest request ||
+            await BrokerPipeFrames.WriteAsync(stream, new BrokerHelloAck(hello.Envelope), admission.Token).ConfigureAwait(false);
+            var message = await BrokerPipeFrames.ReadAsync(stream, admission.Token, ticket.ProtocolVersion).ConfigureAwait(false);
+            if (message is BrokerWindowsUpdateRequest update)
+            {
+                if (updateHandler is null || !IsCurrentEnvelope(ticket, update.Envelope) || !ticket.MatchesRequest(update) || !authenticateClient())
+                {
+                    return BrokerSessionOutcome.Rejected;
+                }
+                return await WindowsUpdateBrokerSession.RunAsync(stream, ticket, update, authenticateClient, updateHandler, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            if (message is not BrokerRequest request ||
                 !IsCurrentEnvelope(ticket, request.Envelope) || !ticket.MatchesRequest(request) ||
                 !authenticateClient() || !IsAllowedBatch(request.Actions))
             {

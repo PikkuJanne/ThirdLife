@@ -83,6 +83,22 @@ public sealed class WindowsPreparationResourcesTests(ITestOutputHelper output)
 
     [Fact]
     [Trait("Category", "ActiveMachine")]
+    public void ActiveMachineWindowsUpdateReadsTheFixedServicingTargetWithoutElevation()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        Assert.False(new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator));
+        var timer = Stopwatch.StartNew();
+        var resources = WindowsPreparationResources.ReadForWindowsUpdate(DateTimeOffset.UtcNow, CancellationToken.None);
+        var target = resources.Target;
+        Assert.NotNull(target);
+        Assert.Equal(Environment.OSVersion.Version.Build, target.Build);
+        Assert.True(target.BuildRevision >= 0 && target.Edition > 0);
+        output.WriteLine($"Observed Windows {target.Build}.{target.BuildRevision}, numeric edition {target.Edition}; " +
+            $"servicingSupported={resources.ServicingSupported}, elapsed={timer.Elapsed}.");
+    }
+
+    [Fact]
+    [Trait("Category", "ActiveMachine")]
     public void ActiveMachinePreparationProbeUsesUnelevatedBoundedNativeReads()
     {
         using var identity = WindowsIdentity.GetCurrent();

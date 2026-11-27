@@ -1,3 +1,5 @@
+using ThirdLife.Core.WindowsUpdates;
+
 namespace ThirdLife.Inventory.Windows;
 
 public enum WindowsPreparationPower
@@ -29,13 +31,14 @@ public sealed class WindowsPreparationResourceSnapshot
 }
 
 public sealed class WindowsServicingResources(bool? servicingSupported, WindowsPreparationPower power,
-    ulong? systemAvailableBytes, ulong? cacheAvailableBytes, bool? cacheSharesSystemVolume)
+    ulong? systemAvailableBytes, ulong? cacheAvailableBytes, bool? cacheSharesSystemVolume, WindowsUpdateServicingTarget? target = null)
 {
     public bool? ServicingSupported { get; } = servicingSupported;
     public WindowsPreparationPower Power { get; } = power;
     public ulong? SystemAvailableBytes { get; } = systemAvailableBytes;
     public ulong? CacheAvailableBytes { get; } = cacheAvailableBytes;
     public bool? CacheSharesSystemVolume { get; } = cacheSharesSystemVolume;
+    public WindowsUpdateServicingTarget? Target { get; } = target;
 }
 
 /// <summary>Reads platform, power and caller-available storage at each preparation route's fixed locations.</summary>
@@ -85,7 +88,9 @@ public static class WindowsPreparationResources
         var (cacheFree, cacheMount) = WindowsStorageVolumeSource.ReadPreparationVolume(
             Path.Combine(windows, "SoftwareDistribution", "Download"));
         var servicingFree = GetSystemInstallCapacity(systemFree, storeFree, WindowsStorageVolumeSource.ShareVolume(systemMount, storeMount));
-        return new(servicing, ReadPower(), servicingFree, cacheFree, WindowsStorageVolumeSource.ShareVolume(systemMount, cacheMount));
+        var target = os.Edition.Status == SystemInventorySourceStatus.Available && WindowsOperatingSystemSource.ReadBuildRevision() is { } revision
+            ? new WindowsUpdateServicingTarget(os.Version.GetRequiredValue().Build, revision, os.Edition.GetRequiredValue()) : null;
+        return new(servicing, ReadPower(), servicingFree, cacheFree, WindowsStorageVolumeSource.ShareVolume(systemMount, cacheMount), target);
     }
 
     internal static bool? EvaluateServicing(OperatingSystemSnapshot os, DateOnly today)

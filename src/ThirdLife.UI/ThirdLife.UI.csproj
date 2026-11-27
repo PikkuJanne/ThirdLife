@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Features\PlanReview\ServicingPolicies\*.json" LogicalName="ThirdLife.UI.ServicingPolicy.%(Filename).json" />
     <EmbeddedResource Include="app.manifest" LogicalName="ThirdLife.UI.app.manifest" />
     <EmbeddedResource Include="..\..\fixtures\policies\community-laptop-policy.json"
                       LogicalName="ThirdLife.UI.community-laptop-policy.json" />

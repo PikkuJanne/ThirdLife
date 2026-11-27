@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ThirdLife Windows Update broker v2",
+  "$comment": "The runtime also checks the frame bound, exact integer tokens, unique keys, dates, distinct approved IDs, recomputed approval/impact digest and selected phase kind.",
+  "type": "object",
+  "required": ["protocol_version", "kind", "correlation_id", "nonce", "expires_at_utc"],
+  "properties": {
+    "protocol_version": { "const": 2 },
+    "kind": { "enum": ["hello", "hello_ack", "windows_update_request", "windows_update_result", "cancel", "error"] },
+    "correlation_id": { "$ref": "broker-protocol.schema.json#/$defs/nonzeroUuid" },
+    "nonce": { "$ref": "broker-protocol.schema.json#/$defs/lowerHex64" },
+    "expires_at_utc": { "$ref": "broker-protocol.schema.json#/$defs/utcTimestamp" }
+  },
+  "oneOf": [
+    { "properties": { "kind": { "enum": ["hello", "hello_ack"] } } },
+    {
+      "required": ["action_id"],
+      "properties": { "kind": { "const": "cancel" }, "action_id": { "$ref": "broker-protocol.schema.json#/$defs/nonzeroUuid" } }
+    },
+    {
+      "required": ["code"],
+      "properties": {
+        "kind": { "const": "error" },
+        "code": { "enum": ["invalid_message", "unauthorized", "expired", "replay", "invalid_state", "unavailable"] }
+      }
+    },
+    {
+      "required": ["job_id", "gate_id", "scan_id", "policy_decision_id", "policy_sha256", "approval_id", "download_action_id", "install_action_id", "approval_sha256", "action"],
+      "properties": {
+        "kind": { "const": "windows_update_request" },
+        "job_id": { "$ref": "broker-protocol.schema.json#/$defs/jobId" },
+        "gate_id": { "$ref": "broker-protocol.schema.json#/$defs/jobId" },
+        "scan_id": { "$ref": "broker-protocol.schema.json#/$defs/nonzeroUuid" },
+        "policy_decision_id": { "type": "string", "minLength": 48, "maxLength": 48, "pattern": "^policy-decision-[0-9a-f]{32}$", "not": { "const": "policy-decision-00000000000000000000000000000000" } },
+        "policy_sha256": { "$ref": "broker-protocol.schema.json#/$defs/lowerHex64" },
+        "approval_id": { "$ref": "broker-protocol.schema.json#/$defs/nonzeroUuid" },
+        "download_action_id": { "$ref": "broker-protocol.schema.json#/$defs/nonzeroUuid" },
+        "install_action_id": { "$ref": "broker-protocol.schema.json#/$defs/nonzeroUuid" },
+        "approval_sha256": { "$ref": "broker-protocol.schema.json#/$defs/lowerHex64" },
+        "action": {
+          "type": "object", "additionalProperties": false,
+          "required": ["contract_version", "action_id", "type", "parameters"],
+          "properties": {
+            "contract_version": { "const": 1 },
+            "action_id": { "$ref": "broker-protocol.schema.json#/$defs/nonzeroUuid" },
+            "type": { "enum": ["windows_update_download", "windows_update_install"] },
+            "parameters": {
+              "type": "object", "additionalProperties": false,
+              "required": ["update_id", "revision", "classification", "maximum_download_bytes"],
+              "properties": {
+                "update_id": { "$ref": "broker-protocol.schema.json#/$defs/nonzeroUuid" },
+                "revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+                "classification": { "enum": ["security", "critical"] },
+                "maximum_download_bytes": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "required": ["action_id", "approval_sha256", "dispatch_state", "status", "reboot_required", "progress_percent"],
+      "properties": {
+        "kind": { "const": "windows_update_result" },
+        "action_id": { "$ref": "broker-protocol.schema.json#/$defs/nonzeroUuid" },
+        "approval_sha256": { "$ref": "broker-protocol.schema.json#/$defs/lowerHex64" },
+        "dispatch_state": { "enum": ["not_started", "attempted", "unconfirmed"] },
+        "status": { "type": "integer", "minimum": 1, "maximum": 11 },
+        "reboot_required": { "type": ["boolean", "null"] },
+        "progress_percent": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "dispatch_state": { "const": "attempted" } } },
+          "then": { "properties": { "status": { "enum": [1, 6, 7] } } }
+        },
+        {
+          "if": { "properties": { "dispatch_state": { "const": "unconfirmed" } } },
+          "then": { "properties": { "status": { "const": 9 }, "reboot_required": { "const": null }, "progress_percent": { "const": null } } }
+        },
+        {
+          "if": { "properties": { "dispatch_state": { "const": "not_started" } } },
+          "then": { "properties": { "status": { "not": { "enum": [1, 9] } }, "reboot_required": { "const": null }, "progress_percent": { "const": null } } }
+        }
+      ]
+    }
+  ],
+  "unevaluatedProperties": false
+}

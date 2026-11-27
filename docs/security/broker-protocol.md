@@ -1,5 +1,7 @@
 # Broker protocol v1
 
+The Windows Update servicing mode uses a separate version and a one-phase request. [Windows Update broker v2](windows-update-broker.md)
+
 TL-0310 defines the bounded payload contract shared by the unelevated client and
 the ephemeral broker. This version carries synthetic no-op actions. Package
 requests are outside this protocol version. A qualified independent Windows or

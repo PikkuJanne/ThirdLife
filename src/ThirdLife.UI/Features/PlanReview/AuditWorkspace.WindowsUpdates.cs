@@ -21,7 +21,7 @@ internal sealed partial class AuditWorkspace
         !_updateHistoryUnavailable && _updateHistory.Length <= WindowsUpdateHistory.MaximumEntries - 2;
     public bool CanCancelWindowsUpdate => _updateCancellation is { IsCancellationRequested: false };
     public bool IsWindowsUpdateRunning => _updateCancellation is not null;
-    public string WindowsUpdateCancelLabel => _checkingUpdateOffer ? "Cancel offer check" : "Cancel update scan";
+    public string WindowsUpdateCancelLabel => _servicingUpdate ? "Cancel update operation" : _checkingUpdateOffer ? "Cancel offer check" : "Cancel update scan";
 
     public string WindowsUpdateStatusText
     {
@@ -29,6 +29,11 @@ internal sealed partial class AuditWorkspace
         {
             if (_updateCancellation is not null)
             {
+                if (_servicingUpdate)
+                {
+                    return _updateCancellation.IsCancellationRequested ? "Cancellation requested. Waiting for the servicing outcome." :
+                        "Checking approval and servicing this exact revision. Windows may ask for elevation.";
+                }
                 if (_checkingUpdateOffer)
                 {
                     return _updateCancellation.IsCancellationRequested ? "Stopping the offer check." :
@@ -59,7 +64,19 @@ internal sealed partial class AuditWorkspace
     internal static string DescribeSavedWindowsUpdate(ImmutableArray<WindowsUpdateEntry> history)
     {
         var latest = history[^1];
+        if (latest is { Stage: WindowsUpdateStage.Approved, Approval: { } scope })
+        {
+            return $"Approval saved for {DescribeUpdate(scope.Exact)}. Review the saved scope before starting servicing.";
+        }
+        if (latest.Stage == WindowsUpdateStage.ResourcesDeferred)
+        {
+            return "Resource checks deferred servicing. Review power, storage and recovery requirements before scanning again.";
+        }
         if (latest.Stage == WindowsUpdateStage.ScanStarted) { return "The scan has no saved result. Run a fresh scan."; }
+        if (latest.Stage == WindowsUpdateStage.BrokerRefused)
+        {
+            return "The broker confirmed that Windows servicing did not start. Review the authorization and run a fresh scan.";
+        }
         if (latest.Stage == WindowsUpdateStage.DispatchUnconfirmed)
         {
             return "ThirdLife handed off the update request. Its outcome is unknown and needs workshop review before further preparation.";
@@ -79,6 +96,7 @@ internal sealed partial class AuditWorkspace
                 WindowsUpdateStatus.ApprovalChanged => "The offer or approval changed.",
                 WindowsUpdateStatus.Cancelled => "Preparation was cancelled.",
                 WindowsUpdateStatus.TimedOut => "The time allowed for preparation expired.",
+                WindowsUpdateStatus.ConsentDeclined => "Windows elevation consent was declined.",
                 WindowsUpdateStatus.Offline => "Windows Update was offline.",
                 WindowsUpdateStatus.AccessDenied => "Windows denied access.",
                 WindowsUpdateStatus.ServiceUnavailable or WindowsUpdateStatus.Unavailable => "A required service or resource was unavailable.",

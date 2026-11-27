@@ -24,6 +24,7 @@ internal sealed partial class AuditWorkspace
         {
             if (_selectedUpdateOffer == value || (value is not null && !WindowsUpdateOffers.Contains(value))) { return; }
             _selectedUpdateOffer = value;
+            _reviewedUpdate = null;
             WindowsUpdatePreview = string.Empty;
             Publish();
         }
@@ -46,12 +47,14 @@ internal sealed partial class AuditWorkspace
         return RunAsync(async () =>
         {
             WindowsUpdatePreview = string.Empty;
+            _reviewedUpdate = null;
             _checkingUpdateOffer = true;
             _updateCancellation = new CancellationTokenSource();
             var token = _updateCancellation.Token;
             Publish();
             try
             {
+                var requestedAt = _timeProvider.GetUtcNow();
                 var result = await Task.Run(async () =>
                 {
                     if (!await IsCurrentOfferAsync(store, journal, job.Job.JobId, gate.DecisionId, offer, token)) { return null; }
@@ -65,6 +68,8 @@ internal sealed partial class AuditWorkspace
                 }
                 else if (_selectedUpdateOffer == offer)
                 {
+                    _reviewedUpdate = await ReviewServicingPolicyAsync(journal, job.Job.JobId, gate.DecisionId, offer,
+                        result, requestedAt, token);
                     WindowsUpdatePreview = DescribeCheckedOffer(offer, result);
                 }
             }
@@ -99,6 +104,8 @@ internal sealed partial class AuditWorkspace
     {
         WindowsUpdateOffers = [];
         _selectedUpdateOffer = null;
+        _reviewedUpdate = null;
+        _updateOperator = string.Empty;
         WindowsUpdatePreview = string.Empty;
     }
 
@@ -142,7 +149,16 @@ internal sealed partial class AuditWorkspace
         if (WindowsUpdatePolicy.IsSelectable(offer.Exact) && result.EligibilityReason == WindowsUpdateEligibilityReason.Eligible)
         {
             details.Add(DescribeServicingImpact(offer.Exact));
-            details.Add("Servicing requires a qualified rollback reserve, update policy, broker and exact approval.");
+            if (!IsFixtureScenario && WindowsUpdateServicingPolicy.CurrentQualificationSummary(offer.Exact, _timeProvider.GetUtcNow()) is { } review)
+            {
+                details.Add(DescribeUpdateRecovery(review));
+            }
+            details.Add(_reviewedUpdate switch
+            {
+                null => "Servicing requires a qualified rollback reserve, update policy, broker and exact approval.",
+                { DecisionId: null } => "Evaluate the servicing policy against this job's current assessment before approving.",
+                _ => "The current policy and resource checks allow this exact offer to be presented for approval.",
+            });
         }
         return string.Join(Environment.NewLine, details);
     }
@@ -160,6 +176,11 @@ internal sealed partial class AuditWorkspace
         return $"System space available {Bytes(result.SystemAvailableBytes)}. Update cache space available {Bytes(result.CacheAvailableBytes)}. " +
             $"Recommended installation space {recommendation}. {check}";
     }
+
+    private static string DescribeUpdateRecovery(WindowsUpdateQualificationSummary review) =>
+        $"Supervised qualification reserves at least {review.InstallWorkingBytes:N0} bytes for installation and " +
+        $"{review.RollbackReserveBytes:N0} additional bytes for recovery using Windows Update uninstall. " +
+        $"A larger Windows installation-space recommendation takes precedence. The review expires at {review.EffectiveUntil:u}.";
 
     private static string DescribeServicingImpact(WindowsUpdateCandidate exact)
     {

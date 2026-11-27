@@ -8,11 +8,14 @@ namespace ThirdLife.Broker.Protocol;
 public static class BrokerProtocolLimits
 {
     public const int CurrentVersion = 1;
+    public const int WindowsUpdateVersion = 2;
     public const int MaximumMessageBytes = 4_096;
     public const int MaximumJsonDepth = 4;
     public const int MaximumActions = 4;
     public const int MaximumSequence = 32;
     public static readonly TimeSpan MaximumLifetime = TimeSpan.FromMinutes(2);
+    public static readonly TimeSpan MaximumUpdateOperationLifetime = TimeSpan.FromMinutes(30);
+    public static readonly TimeSpan MaximumUpdateReceiptLifetime = TimeSpan.FromSeconds(10);
 
     public static bool IsWithinWindow(DateTimeOffset expiresAtUtc, DateTimeOffset now) =>
         now != default && expiresAtUtc > now && expiresAtUtc - now <= MaximumLifetime;
@@ -35,15 +38,22 @@ public sealed record BrokerNonce
 public sealed record BrokerEnvelope
 {
     public BrokerEnvelope(Guid correlationId, BrokerNonce nonce, DateTimeOffset expiresAtUtc)
+        : this(BrokerProtocolLimits.CurrentVersion, correlationId, nonce, expiresAtUtc) { }
+
+    public static BrokerEnvelope ForWindowsUpdate(Guid correlationId, BrokerNonce nonce, DateTimeOffset expiresAtUtc) =>
+        new(BrokerProtocolLimits.WindowsUpdateVersion, correlationId, nonce, expiresAtUtc);
+
+    private BrokerEnvelope(int version, Guid correlationId, BrokerNonce nonce, DateTimeOffset expiresAtUtc)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(correlationId, Guid.Empty);
         ArgumentOutOfRangeException.ThrowIfEqual(expiresAtUtc, default);
         CorrelationId = correlationId;
+        ProtocolVersion = version;
         Nonce = nonce ?? throw new ArgumentNullException(nameof(nonce));
         ExpiresAtUtc = expiresAtUtc.ToUniversalTime();
     }
 
-    public int ProtocolVersion { get; } = BrokerProtocolLimits.CurrentVersion;
+    public int ProtocolVersion { get; }
     public Guid CorrelationId { get; }
     public BrokerNonce Nonce { get; }
     public DateTimeOffset ExpiresAtUtc { get; }
@@ -58,6 +68,8 @@ public enum BrokerMessageKind
     Result,
     Cancel,
     Error,
+    WindowsUpdateRequest,
+    WindowsUpdateResult,
 }
 
 public abstract class BrokerMessage
@@ -92,7 +104,7 @@ public sealed class BrokerRequest : BrokerMessage
         ImmutableArray<ActionRequest> actions) : base(envelope)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(approvalId, Guid.Empty);
-        if (actions.IsDefaultOrEmpty || actions.Length > BrokerProtocolLimits.MaximumActions)
+        if (envelope.ProtocolVersion != BrokerProtocolLimits.CurrentVersion || actions.IsDefaultOrEmpty || actions.Length > BrokerProtocolLimits.MaximumActions)
         {
             throw new ArgumentException("The broker request has an invalid action count.", nameof(actions));
         }
