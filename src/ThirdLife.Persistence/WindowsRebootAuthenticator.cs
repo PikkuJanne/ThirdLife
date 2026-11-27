@@ -16,8 +16,7 @@ internal static class WindowsRebootAuthenticator
 
     internal static RebootResumeToken? TrySeal(RebootCheckpoint checkpoint, GuardedStoreFile databaseGuard)
     {
-        var digest = SHA256.HashData(checkpoint.CreateAuthenticationData());
-        var sealedDigest = Transform(digest, Purpose(databaseGuard), protect: true);
+        var sealedDigest = Seal(checkpoint.CreateAuthenticationData(), databaseGuard, "ThirdLife.RebootCheckpoint.v1"u8);
         return sealedDigest is { Length: > 0 and <= RebootResumeToken.MaximumBytes }
             ? new RebootResumeToken(sealedDigest)
             : null;
@@ -25,14 +24,21 @@ internal static class WindowsRebootAuthenticator
 
     internal static bool Matches(RebootCheckpoint checkpoint, RebootResumeToken token, GuardedStoreFile databaseGuard)
     {
-        var openedDigest = Transform(token.AuthenticityBlob.ToArray(), Purpose(databaseGuard), protect: false);
-        var expectedDigest = SHA256.HashData(checkpoint.CreateAuthenticationData());
-        return openedDigest is not null && CryptographicOperations.FixedTimeEquals(openedDigest, expectedDigest);
+        return Matches(checkpoint.CreateAuthenticationData(), token.AuthenticityBlob.ToArray(), databaseGuard,
+            "ThirdLife.RebootCheckpoint.v1"u8);
     }
 
-    private static byte[] Purpose(GuardedStoreFile databaseGuard)
+    internal static byte[]? Seal(byte[] data, GuardedStoreFile databaseGuard, ReadOnlySpan<byte> purpose) =>
+        Transform(SHA256.HashData(data), Purpose(databaseGuard, purpose), protect: true);
+
+    internal static bool Matches(byte[] data, byte[] authenticator, GuardedStoreFile databaseGuard, ReadOnlySpan<byte> purpose)
     {
-        var label = "ThirdLife.RebootCheckpoint.v1"u8;
+        var openedDigest = Transform(authenticator, Purpose(databaseGuard, purpose), protect: false);
+        return openedDigest is not null && CryptographicOperations.FixedTimeEquals(openedDigest, SHA256.HashData(data));
+    }
+
+    private static byte[] Purpose(GuardedStoreFile databaseGuard, ReadOnlySpan<byte> label)
+    {
         var entropy = new byte[label.Length + sizeof(uint) + sizeof(ulong)];
         label.CopyTo(entropy);
         BinaryPrimitives.WriteUInt32LittleEndian(entropy.AsSpan(label.Length), databaseGuard.Identity.VolumeSerialNumber);

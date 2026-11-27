@@ -243,6 +243,45 @@ public sealed class WorkshopReportRendererTests
         Assert.DoesNotContain("final profile checks passed", historical);
         Assert.Throws<ArgumentException>(() => WorkshopReportRenderer.RenderWithPackageRecords(Stored(), null, null,
             [], null, verification with { JobId = new JobId("unrelated-job") }));
+
+        var checkpoint = new ColdBootCheckpoint(Guid.Parse("2d646ca6-cb7b-48ee-a771-04373435d3d4"), SampleTime.AddMinutes(-5), 7);
+        var pending = verification with
+        {
+            Result = null,
+            ColdBootCheckpoint = checkpoint,
+            ColdBootState = ColdBootVerificationState.AwaitingShutdown,
+        };
+        var checkpointReport = WorkshopReportRenderer.RenderWithPackageRecords(Stored(), null, null, [], null, pending);
+        Assert.Contains("Cold-boot checkpoint", checkpointReport);
+        Assert.Contains("Checkpoint saved at", checkpointReport);
+        Assert.Contains("shutdown /s /t 0", checkpointReport);
+        Assert.Contains("Windows boot session 7", checkpointReport);
+        Assert.DoesNotContain("Independent final profile verification", checkpointReport);
+
+        var postBoot = verification with
+        {
+            ColdBootCheckpoint = checkpoint,
+            ColdBootObservation = new ColdBootObservation(8, SampleTime.AddMinutes(-1), ColdBootKind.OrderlyPowerOff),
+            ColdBootState = ColdBootVerificationState.ReadyToVerify,
+            IsPostBoot = true,
+        };
+        var withoutProbe = WorkshopReportRenderer.RenderWithPackageRecords(Stored(), null, null, [], null, postBoot);
+        Assert.Contains("No result was recorded. Blocks post-boot verification", withoutProbe);
+        Assert.Contains("an unmet or unresolved requirement", withoutProbe);
+        Assert.DoesNotContain("required launch probes passed", withoutProbe);
+
+        var launch = matchingVersion ? ProfileVerificationState.Passed : ProfileVerificationState.Unavailable;
+        var observed = new ProfileVerificationResult(result.StartedAtUtc, result.FinishedAtUtc, false,
+            result.ProfileSha256, result.PolicySha256, result.Checks, [capability with { LaunchProbe = launch }],
+            result.PolicyFindings, result.WindowsBuild, result.FreeBytes, result.VolumeCapacityBytes, result.UpdateOfferCount,
+            result.EligibleUpdateOfferCount, result.UpdateDisposition, result.UpdateRecoveryPending);
+        var completed = WorkshopReportRenderer.RenderWithPackageRecords(Stored(), null, null, [], null, postBoot with { Result = observed });
+        Assert.Contains("Independent post-boot profile verification", completed);
+        Assert.Contains("Windows recorded an orderly shutdown and full startup", completed);
+        Assert.Contains("Windows boot session 8", completed);
+        Assert.Contains("A physical power-cycle claim requires separate evidence", completed);
+        Assert.Contains(matchingVersion ? "Post-boot launch probe. Verified." : "Post-boot launch probe. Evidence unavailable.", completed);
+        Assert.Equal(matchingVersion, completed.Contains("required launch probes passed", StringComparison.Ordinal));
     }
 
     private static StoredJob Stored(

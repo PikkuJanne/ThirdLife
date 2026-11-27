@@ -6629,7 +6629,7 @@ tasks:
   workstream: verification
   kind: code
   priority: P0
-  status: ready
+  status: done
   size: M
   executor: codex
   environment: windows
@@ -6662,12 +6662,55 @@ tasks:
     Reuse its verified state; do not require another guest or Windows baseline. Record a physical host power cycle
     only if actually observed under the applicable explicit trigger.
   - Test stale checkpoint, copied resume token, changed device/job, ambiguous shutdown, and post-boot failure.
-  evidence: []
+  evidence:
+  - summary: Verify saved an authenticated cold-boot request against the final maintenance boundary. Same-session reopen, Windows restart, hybrid, ambiguous, stale and copied-store requests could not qualify. A new launch failure remained visible and blocked readiness.
+    task: TL-0509
+    command: Focused dotnet test selections ColdBootCheckpoint, ColdBootMigration, WindowsColdBootEvidenceTests, FullMaintenanceReviewResumesThroughFinalRestartWithoutReinstalling, and FinalProfileReportSeparatesExactVersionsFromDeviceAcceptance
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: Four focused Persistence cases in 3 s, two WPF cases in 9 s, two Reports cases in 94 ms
+    environment: Active Windows 11 Pro 26H2 native x64 host, build 26300.9974, controlled boot and package inputs, guarded SQLite and WPF
+    reference: artifacts/evidence/TL-0509/report.md, 881150ea8eeddefc2d8e68af9d21ee3290656fda
+    limitation: Modeled outcomes cover warm and hybrid refusal, changed job and review, migration, continuity, the exact version and failed launch results.
+  - summary: Actual orderly guest shutdown reached Hyper-V Off before power-on. Boot 9 admitted a fresh verification pass and the same job, plan, approval and checkpoint reopened with the restricted report.
+    task: TL-0509
+    command: GuestColdBootReopensTheApprovedJobAndRunsFreshVerification with prepare, request, same-boot, verify and reopen stages on ThirdLife-W11
+    tier: extended
+    result: passed
+    date: '2026-11-27'
+    duration: Five stages in 17.566 s test time, warm restart observation 41.217 s, cold transition 53.466 s
+    environment: Existing ThirdLife-W11 guest, Windows 11 Pro 26H2 native x64 build 26300.9974, native boot and event log evidence, controlled adapters
+    reference: artifacts/evidence/TL-0509/guest.md, source tree f6a5830f1e2cf21ac5ca66acbe025ed8d73fdeb8
+    limitation: This VM experiment covers power-off, startup and application continuity. Package, launch, profile and Windows Update outcomes were controlled. The physical host power cycle remains unobserved.
+  - summary: The active-machine Targeted gate passed the formatting, Release build, repository checks and 1,939 .NET tests with zero skips.
+    task: TL-0509
+    command: eng/verify.ps1 -Tier Targeted with Actions, Inventory, Persistence, Verification, Reports, Packages and UI projects
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 264.312 s
+    environment: Active Windows 11 Pro 26H2 native x64 host, .NET SDK 10.0.400 and Python 3.14.7
+    reference: artifacts/evidence/TL-0509/report.md, 881150ea8eeddefc2d8e68af9d21ee3290656fda
+    limitation: Includes Quick and the changed subsystems. Native and Extended results retain separate evidence.
+  - summary: The clean migration gate passed all 310 governance regressions and 2,541 deterministic .NET tests across 13 assemblies with zero skips.
+    task: TL-0509
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 456.691 s
+    environment: Clean detached worktree on the active Windows 11 Pro 26H2 native x64 host, .NET SDK 10.0.400 and Python 3.14.7
+    reference: artifacts/evidence/TL-0509/report.md, 881150ea8eeddefc2d8e68af9d21ee3290656fda
+    limitation: The default Full filter excludes native and Extended cases. The separately run guest evidence covers the observed cold start.
   notes:
-  - Keep D-033 product cold-boot semantics and any genuinely required physical product or release condition explicit.
-    An unperformed physical host power cycle limits the claim.
+  - Verify requires a fresh result from the immediately following orderly full boot within 24 hours of the request.
+    A changed boot, plan, approval, journal or blocking check holds readiness.
+  - The actual device cold boot and applicable device checks remain required for final product acceptance under D-033.
+    TL-0707 retains the stable release active-machine cold-boot and continuity requirement.
   expected_test_tier: targeted
-  full_test_triggers: []
+  full_test_triggers:
+  - Run Full from a clean checkout for the cold-boot checkpoint migration.
   extended_test_triggers:
   - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
     risk affected by the task.
@@ -6677,7 +6720,7 @@ tasks:
   workstream: quality
   kind: test
   priority: P0
-  status: backlog
+  status: ready
   size: XL
   executor: codex
   environment: windows

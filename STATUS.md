@@ -58,9 +58,16 @@ post-maintenance pass and reopens the result with exact installed versions,
 profile capabilities and unresolved machine requirements. The controlled
 application test detected a version downgrade under the same approval.
 The native host scan returned four offers outside the servicing scope.
-Whole-device acceptance remains open. TL-0509 is ready to implement
-the cold-boot checkpoint and post-boot re-verification.
+Whole-device acceptance remains open.
 [Profile verification evidence](artifacts/evidence/TL-0507/report.md)
+
+TL-0509 saves an authenticated cold-boot checkpoint and requires fresh profile
+checks and the approved launch probe on the next confirmed full startup.
+`ThirdLife-W11` powered off and started again. Verify reopened the same job and
+approval, saved the post-boot result with controlled adapters and reopened it
+in the workshop report. Physical host power-cycle evidence remains unobserved.
+TL-0510 is ready for the full-profile and failure-injection matrix.
+[Cold-boot evidence](artifacts/evidence/TL-0509/report.md)
 
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B
 exit remain at TL-0710. [Decision and graph review](docs/reviews/2026-11-27-single-guest-continuation.md)

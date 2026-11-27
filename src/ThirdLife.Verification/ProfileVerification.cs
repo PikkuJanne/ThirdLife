@@ -17,7 +17,8 @@ public enum ProfilePackageStatus
 }
 
 public sealed record ProfilePackageCheck(string CapabilityId, string ExpectedVersion, string? ObservedVersion,
-    ProfilePackageStatus Status, DateTimeOffset ObservedAtUtc, Guid? ActionId = null);
+    ProfilePackageStatus Status, DateTimeOffset ObservedAtUtc, Guid? ActionId = null,
+    ProfileVerificationState? LaunchProbe = null);
 
 public sealed record ProfileUpdateCheck(WindowsUpdateScan Scan, DateTimeOffset ObservedAtUtc, bool RecoveryPending = false);
 
@@ -188,7 +189,9 @@ public static class ProfileVerification
         };
         return new(capability.CapabilityId, essential, state, package?.ExpectedVersion,
             state == ProfileVerificationState.Stale ? null : package?.ObservedVersion, package?.ActionId,
-            state == ProfileVerificationState.Stale ? null : package?.Status);
+            state == ProfileVerificationState.Stale ? null : package?.Status,
+            state == ProfileVerificationState.Stale && package?.LaunchProbe is not null
+                ? ProfileVerificationState.Unavailable : package?.LaunchProbe);
     }
 
     private static ILookup<string, Observation> Index(IReadOnlyList<Observation> observations, bool synthetic)

@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using ThirdLife.Actions.Planning;
+using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.Core.WindowsUpdates;
 using ThirdLife.Packages;
@@ -29,6 +30,7 @@ public sealed partial class PackageSetupTests
         var runtime = new FixtureInstaller(PackageInstallStatus.Applied, register: true);
         var agent = new MaintenanceScanFixture();
         uint bootSession = 7;
+        ColdBootObservation? coldBoot = null;
         var service = new PilotPackageService(runtime);
         var jobId = string.Empty;
         Guid approval;
@@ -186,6 +188,89 @@ public sealed partial class PackageSetupTests
         Assert.Equal(1, runtime.InstallCalls);
         Assert.Equal(1, runtime.ProbeCalls);
 
+        clock.Current = clock.Current.AddMinutes(1);
+        WithVerifyPanel(reporter, (window, panel) =>
+        {
+            var save = Named<Button>(panel, "RecordColdBootCheckpointButton");
+            var run = Named<Button>(panel, "RunPostBootVerificationButton");
+            var status = Named<TextBlock>(panel, "ColdBootVerificationMessage");
+            Assert.False(run.IsEnabled);
+            Assert.True(save.IsVisible && save.IsEnabled && save.Focus());
+            Invoke(window, save);
+            PumpUntil(window, () => !reporter.IsBusy && reporter.HasColdBootVerificationDetails,
+                () => reporter.OperationError + reporter.ColdBootVerificationStatus);
+            Assert.True(status.IsVisible && status.Focusable);
+            Assert.Equal(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(status));
+            Assert.Contains("Checkpoint saved", status.Text);
+            Assert.False(run.IsEnabled);
+        });
+
+        await using (var sameBoot = Open())
+        {
+            await sameBoot.OpenJobAsync(jobId);
+            Assert.Contains("Checkpoint saved", sameBoot.ColdBootVerificationStatus);
+            Assert.False(sameBoot.CanRunPostBootVerification);
+        }
+
+        bootSession++;
+        clock.Current = clock.Current.AddMinutes(1);
+        coldBoot = new(bootSession, clock.Current, ColdBootKind.Restart);
+        await using (var afterRestart = Open())
+        {
+            await afterRestart.OpenJobAsync(jobId);
+            Assert.Contains("Windows recorded a restart", afterRestart.ColdBootVerificationStatus);
+            Assert.False(afterRestart.CanRunPostBootVerification);
+            Assert.Equal(1, runtime.ProbeCalls);
+            await afterRestart.RecordColdBootCheckpointAsync();
+            Assert.Contains("Checkpoint saved", afterRestart.ColdBootVerificationStatus);
+        }
+
+        bootSession++;
+        clock.Current = clock.Current.AddMinutes(1);
+        coldBoot = new(bootSession, clock.Current, ColdBootKind.OrderlyPowerOff);
+        runtime.RegisteredVersion = "8.9.9.1";
+        runtime.ProbeStatus = renewApproval ? PackageVerificationStatus.ExitedEarly : PackageVerificationStatus.Passed;
+        var probeOutcome = renewApproval ? "Requirement unmet. Blocks post-boot verification." : "Verified.";
+        await using var afterColdBoot = Open();
+        await afterColdBoot.OpenJobAsync(jobId);
+        WithVerifyPanel(afterColdBoot, (window, panel) =>
+        {
+            var run = Named<Button>(panel, "RunPostBootVerificationButton");
+            var beforePostBoot = agent.Scans;
+            Assert.True(run.IsVisible && run.IsEnabled && run.Focus());
+            Invoke(window, run);
+            PumpUntil(window, () => !afterColdBoot.IsBusy && afterColdBoot.ProfileVerificationDetails.Contains("post-boot pass", StringComparison.Ordinal),
+                () => afterColdBoot.OperationError + afterColdBoot.ColdBootVerificationStatus);
+            Assert.Equal(beforePostBoot + 1, agent.Scans);
+            var evidence = Named<TextBox>(panel, "ColdBootVerificationEvidence");
+            Assert.True(evidence.IsVisible && evidence.IsReadOnly && evidence.Focusable);
+            Assert.Contains("orderly shutdown and full startup", evidence.Text);
+            Assert.Contains(ExactVersions, afterColdBoot.ProfileVerificationDetails);
+            Assert.Contains($"Post-boot launch probe. {probeOutcome}", afterColdBoot.ProfileVerificationDetails);
+        });
+        Assert.Equal(1, runtime.InstallCalls);
+        Assert.Equal(2, runtime.ProbeCalls);
+
+        await using var afterPostBoot = Open();
+        await afterPostBoot.OpenJobAsync(jobId);
+        await CheckReportAsync(afterPostBoot, "Review the separate final profile verification results");
+        Assert.Contains("Independent post-boot profile verification", afterPostBoot.ReportPreview);
+        Assert.Contains($"Post-boot launch probe. {probeOutcome}", afterPostBoot.ReportPreview);
+        Assert.Contains("an unmet or unresolved requirement", afterPostBoot.ColdBootVerificationStatus);
+
+        static void WithVerifyPanel(AuditWorkspace workspace, Action<MainWindow, PackageVerificationView> check) => ShellTestHost.Run(() =>
+        {
+            var window = new MainWindow(workspace);
+            try
+            {
+                ShellTestHost.Show(window);
+                window.ShowStage(ShellStage.Verify);
+                ShellTestHost.Drain(window);
+                check(window, Named<PackageVerificationView>(Named<FrameworkElement>(window, "AuditView"), "PackageVerificationPanel"));
+            }
+            finally { CloseWindow(window); }
+        });
+
         static async Task CheckReportAsync(AuditWorkspace workspace, string phase)
         {
             Assert.Contains(phase, workspace.PreparationDispositionStatus);
@@ -197,7 +282,7 @@ public sealed partial class PackageSetupTests
 
         Task<SqliteJobStore> OpenStore(CancellationToken token) => SqliteJobStore.OpenForTestingAsync(
             Path.Combine(disk.Root, "store"), SqliteJobStore.CurrentSchemaVersion, clock, null, () => 10_000UL,
-            readBootSession: () => bootSession, cancellationToken: token);
+            readBootSession: () => bootSession, readColdBoot: (_, _) => coldBoot, cancellationToken: token);
 
         AuditWorkspace Open() => OpenMaintenanceWorkspace(disk, clock, service, agent, OpenStore);
     }

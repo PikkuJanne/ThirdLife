@@ -7,24 +7,41 @@ using ThirdLife.Verification;
 
 namespace ThirdLife.Reports.WorkshopReport;
 
-public sealed record WorkshopProfileVerification(JobId JobId, ProfileVerificationResult Result, bool IsCurrent);
+public sealed record WorkshopProfileVerification(JobId JobId, ProfileVerificationResult? Result, bool IsCurrent,
+    ColdBootCheckpoint? ColdBootCheckpoint = null, ColdBootObservation? ColdBootObservation = null,
+    bool IsPostBoot = false, ColdBootVerificationState? ColdBootState = null);
 
 public static partial class WorkshopReportRenderer
 {
     public static string DescribeProfileVerification(WorkshopProfileVerification verification)
     {
         ArgumentNullException.ThrowIfNull(verification);
-        if (!verification.IsCurrent)
+        if (verification.Result is not { } result)
         {
-            return "The saved final profile verification is historical. Current readiness requires another verification.";
+            return "No final profile checks have been saved.";
         }
 
-        if (verification.Result.SyntheticData)
+        if (!verification.IsCurrent)
+        {
+            return verification.IsPostBoot
+                ? "The saved post-boot verification is historical. Current readiness requires another cold-boot verification."
+                : "The saved final profile verification is historical. Current readiness requires another verification.";
+        }
+
+        if (result.SyntheticData)
         {
             return "The final profile results come from a synthetic test. Device acceptance remains open.";
         }
 
-        return verification.Result.ProfileChecksPassed
+        if (verification.IsPostBoot)
+        {
+            return verification.ColdBootObservation is { Kind: ColdBootKind.OrderlyPowerOff } && result.ProfileChecksPassed &&
+                result.Capabilities.All(capability => !capability.Essential || capability.LaunchProbe == ProfileVerificationState.Passed)
+                ? "The post-boot profile checks and required launch probes passed. Handover still requires applicable device checks and finalization."
+                : "The post-boot checks found an unmet or unresolved requirement. Review the blocking results before handover.";
+        }
+
+        return result.ProfileChecksPassed
             ? "The final profile checks passed. Cold-boot verification and finalization are still required for handover."
             : "The final profile checks found an unmet or unresolved requirement. Review the blocking results before handover.";
     }
@@ -32,7 +49,39 @@ public static partial class WorkshopReportRenderer
     public static string DescribeProfileVerificationDetails(WorkshopProfileVerification verification)
     {
         ArgumentNullException.ThrowIfNull(verification);
-        return string.Join(Environment.NewLine, ProfileVerificationLines(verification.Result));
+        return verification.Result is { } result
+            ? string.Join(Environment.NewLine, ProfileVerificationLines(result, verification.IsPostBoot))
+            : string.Empty;
+    }
+
+    public static string DescribeColdBootVerification(WorkshopProfileVerification verification)
+    {
+        ArgumentNullException.ThrowIfNull(verification);
+        if (verification.ColdBootCheckpoint is null)
+        {
+            return "Save a cold-boot checkpoint on this job before shutting down Windows.";
+        }
+
+        if (verification.IsPostBoot && verification.IsCurrent && verification.Result is not null)
+        {
+            return DescribeProfileVerification(verification);
+        }
+
+        return (verification.ColdBootState, verification.ColdBootObservation?.Kind) switch
+        {
+            (ColdBootVerificationState.AwaitingShutdown, _) => "Checkpoint saved. Save your work. Press Windows+R, enter shutdown /s /t 0, and press Enter. Wait for the device to power off, turn it on, then reopen this job in Verify.",
+            (ColdBootVerificationState.ReadyToVerify, ColdBootKind.OrderlyPowerOff) => "Windows recorded a full startup after an orderly shutdown. Post-boot verification queries the configured Windows Update service and runs the approved package launch checks.",
+            (ColdBootVerificationState.Historical, _) => "The saved cold-boot checkpoint is historical. Save a new checkpoint before attempting final acceptance.",
+            (_, ColdBootKind.Restart) => "Windows recorded a restart. Save a new checkpoint before attempting an orderly shutdown and full startup.",
+            (_, ColdBootKind.HybridOrResume) => "Windows recorded a hybrid startup or resume. Save a new checkpoint before attempting a full shutdown and startup.",
+            _ => "Windows could not confirm an orderly shutdown and full startup. Save a new checkpoint before trying again.",
+        };
+    }
+
+    public static string DescribeColdBootVerificationDetails(WorkshopProfileVerification verification)
+    {
+        ArgumentNullException.ThrowIfNull(verification);
+        return string.Join(Environment.NewLine, ColdBootVerificationLines(verification));
     }
 
     private static void WriteProfileVerification(StringBuilder report, JobId jobId,
@@ -43,21 +92,58 @@ public static partial class WorkshopReportRenderer
             throw new ArgumentException("The final profile verification belongs to another job.", nameof(verification));
         }
 
+        if (verification.ColdBootCheckpoint is not null)
+        {
+            Line(report, "");
+            Line(report, "Cold-boot checkpoint");
+            if (!verification.IsPostBoot || !verification.IsCurrent)
+            {
+                Line(report, DescribeColdBootVerification(verification));
+            }
+            foreach (var row in ColdBootVerificationLines(verification))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Line(report, row);
+            }
+        }
+
+        if (verification.Result is not { } result) { return; }
         Line(report, "");
-        Line(report, "Independent final profile verification");
+        Line(report, verification.IsPostBoot ? "Independent post-boot profile verification" : "Independent final profile verification");
         Line(report, DescribeProfileVerification(verification));
-        foreach (var row in ProfileVerificationLines(verification.Result))
+        foreach (var row in ProfileVerificationLines(result, verification.IsPostBoot))
         {
             cancellationToken.ThrowIfCancellationRequested();
             Line(report, row);
         }
 
-        Line(report, $"Reviewed profile SHA-256 {verification.Result.ProfileSha256}.");
-        Line(report, $"Final verification policy SHA-256 {verification.Result.PolicySha256}.");
+        Line(report, $"Reviewed profile SHA-256 {result.ProfileSha256}.");
+        Line(report, $"Final verification policy SHA-256 {result.PolicySha256}.");
     }
 
-    private static IEnumerable<string> ProfileVerificationLines(ProfileVerificationResult result)
+    private static IEnumerable<string> ColdBootVerificationLines(WorkshopProfileVerification verification)
     {
+        if (verification.ColdBootCheckpoint is not { } checkpoint) { yield break; }
+        yield return string.Create(CultureInfo.InvariantCulture,
+            $"Checkpoint saved at {Timestamp(checkpoint.RequestedAtUtc)} in Windows boot session {checkpoint.RequestedBootSession}.");
+        if (verification.ColdBootObservation is { } observation)
+        {
+            var description = observation.Kind switch
+            {
+                ColdBootKind.OrderlyPowerOff => "Windows recorded an orderly shutdown and full startup.",
+                ColdBootKind.Restart => "Windows recorded a restart. An orderly shutdown and full startup are required.",
+                ColdBootKind.HybridOrResume => "Windows recorded a hybrid startup or resume. A full startup is required.",
+                _ => "Windows could not establish how this session started.",
+            };
+            yield return string.Create(CultureInfo.InvariantCulture,
+                $"Windows boot session {observation.BootSession} started at {Timestamp(observation.StartedAtUtc)}. {description}");
+            yield return "These Windows records describe the observed operating-system session. A physical power-cycle claim requires separate evidence.";
+        }
+    }
+
+    private static IEnumerable<string> ProfileVerificationLines(ProfileVerificationResult result, bool isPostBoot)
+    {
+        if (isPostBoot) { yield return "Checks and launch probes from the post-boot pass"; }
         yield return $"Checks ran from {Timestamp(result.StartedAtUtc)} to {Timestamp(result.FinishedAtUtc)}.";
         yield return "";
         yield return "Profile capabilities and exact package versions";
@@ -82,6 +168,13 @@ public static partial class WorkshopReportRenderer
             if (capability.ActionId is { } actionId)
             {
                 yield return $"  Reviewed action {actionId:D}.";
+                if (isPostBoot)
+                {
+                    var probe = capability.LaunchProbe is { } state ? VerificationState(state) : "No result was recorded.";
+                    var blocker = capability.Essential && capability.LaunchProbe != ProfileVerificationState.Passed
+                        ? " Blocks post-boot verification." : "";
+                    yield return $"  Post-boot launch probe. {probe}{blocker}";
+                }
             }
         }
 

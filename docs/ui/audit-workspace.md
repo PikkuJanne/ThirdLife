@@ -58,7 +58,7 @@ provenance. A physical pass or failure cannot be recorded from that workspace.
 Closing and reopening preserves all saved attempts and suggests the next unfinished
 check. A new attempt appends a record and links to the previous visible attempt. An
 essential failure remains visible as a blocker candidate. M1 supplies no readiness
-approval. Cold-boot checks remain in their later assigned task.
+approval.
 
 The job store keeps its existing SQLite schema and registered local path. Earlier
 human-test records remain readable. The four stored outcomes retain their existing wire
@@ -111,6 +111,27 @@ qualification. Pilot and public exposure retain their separate decisions.
 [Product contract](../product-contract.md) ·
 [Backend rationale](../adr/0009-winget-backend.md) ·
 [Release interface](../../RELEASE_INTERFACE.md)
+
+## Final cold-boot verification
+
+At the final full-maintenance verification boundary, open **Verify** and choose
+**Save cold-boot checkpoint**. The request stays with the current job, approved plan
+and local Windows session. Save your work and use Windows Run to enter
+`shutdown /s /t 0`. Wait for the device to power off, turn it on and reopen the same
+job in **Verify**. The application leaves shutdown and power-on to the operator.
+
+When Windows confirms an orderly full shutdown and the next full startup, choose
+**Run post-boot verification**. This reads the configured Windows Update service,
+collects fresh operating-system and hardware evidence, checks the exact approved
+package registration and reruns the reviewed bounded launch probe. A warm or hybrid
+startup, missing evidence, a changed job or an expired checkpoint requires a new
+checkpoint. The request expires after 24 hours.
+
+Verify and the restricted workshop report show the saved Windows sessions, exact
+package version, probe outcome and remaining blockers. Applicable physical device
+checks and finalization are still required for handover.
+
+[Windows shutdown command](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/shutdown)
 
 ## Workshop report
 
