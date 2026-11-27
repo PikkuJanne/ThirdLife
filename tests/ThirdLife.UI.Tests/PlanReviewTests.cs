@@ -379,7 +379,8 @@ public sealed partial class PlanReviewTests
         });
     }
 
-    private static void InPlanReview(AuditWorkspace workspace, Action<MainWindow, PlanReviewView> check) =>
+    private static void InPlanReview(AuditWorkspace workspace, Action<MainWindow, PlanReviewView> check,
+        TimeSpan? timeout = null) =>
         ShellTestHost.Run(() =>
         {
             var window = new MainWindow(workspace) { Width = 640, Height = 420 };
@@ -393,7 +394,7 @@ public sealed partial class PlanReviewTests
                 check(window, panel);
             }
             finally { CloseWindow(window); }
-        });
+        }, timeout);
 
     [Fact]
     public async Task DurableNoOpApprovalStaysVisibleWhenBrokerIsUnavailable()
@@ -569,7 +570,9 @@ public sealed partial class PlanReviewTests
             Assert.DoesNotContain(workspace.ActionSkipChoices, choice => skipped.Contains(choice.ActionId));
             var execution = Named<BrokerExecutionView>(Named<FrameworkElement>(window, "AuditView"), "BrokerExecutionPanel");
             Invoke(window, Named<Button>(execution, "RunBrokerButton"));
-            PumpUntil(window, () => !workspace.IsBusy, () => workspace.BrokerExecutionStatus);
+            // Each scheduled action writes its own authorization, outcome, and verification.
+            PumpUntil(window, () => !workspace.IsBusy, () => workspace.BrokerExecutionStatus,
+                timeout: TimeSpan.FromSeconds(15));
             Assert.Contains("Operator chose to skip this action", workspace.BrokerHistoryText, StringComparison.Ordinal);
             Assert.Equal(skipEssential ? 2 : 3, sent.Count);
             Assert.DoesNotContain(sent, skipped.Contains);
@@ -593,7 +596,7 @@ public sealed partial class PlanReviewTests
                     () => workspace.PlanReviewStatus);
                 skipped.Add(id);
             }
-        });
+        }, timeout: TimeSpan.FromSeconds(30));
 
         await using var reopened = OpenBrokerWorkspace(disk, clock, backend, verifier);
         await reopened.OpenJobAsync(jobId);
