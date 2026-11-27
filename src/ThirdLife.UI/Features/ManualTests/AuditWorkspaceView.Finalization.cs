@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using ThirdLife.Core.Finalization;
+using ThirdLife.Reports.WorkshopReport;
 
 namespace ThirdLife.UI.Features.ManualTests;
 
@@ -64,7 +65,8 @@ public partial class AuditWorkspaceView
         {
             var previous = (FinalizationCheck.SelectedItem as FinalizationOption)?.Id;
             var options = checklist?.Rows.Select(static row =>
-                new FinalizationOption(row.Rule.Id, RuleLabel(row.Rule.Id), ResultSummary(row))).ToArray() ?? [];
+                new FinalizationOption(row.Rule.Id,
+                    WorkshopReportRenderer.DescribeFinalizationRule(row.Rule.Id), ResultSummary(row))).ToArray() ?? [];
             if (jobChanged)
             {
                 FinalizationOperatorCode.Clear();
@@ -149,7 +151,7 @@ public partial class AuditWorkspaceView
         FinalizationNotApplicable.Visibility = VisibleWhen(row?.Rule.AllowsNotApplicable == true);
 
         var reasons = row?.Rule.AllowedReasons.Select(static reason =>
-            new FinalizationReasonOption(reason, ReasonLabel(reason))).ToArray() ?? [];
+            new FinalizationReasonOption(reason, WorkshopReportRenderer.DescribeFinalizationReason(reason))).ToArray() ?? [];
         if (FinalizationReasonInput.ItemsSource is not FinalizationReasonOption[] previous ||
             !previous.SequenceEqual(reasons))
         {
@@ -187,7 +189,7 @@ public partial class AuditWorkspaceView
     private static string DescribeConfirmation(FinalizationRecord record, bool current)
     {
         var state = current ? "Current confirmation" : "Earlier confirmation";
-        var reason = record.Reason is { } value ? $" {ReasonLabel(value)}." : string.Empty;
+        var reason = record.Reason is { } value ? $" {WorkshopReportRenderer.DescribeFinalizationReason(value)}." : string.Empty;
         return string.Create(CultureInfo.InvariantCulture,
             $"{state} · {record.RecordedAtUtc.UtcDateTime:yyyy-MM-dd HH:mm:ss} UTC · {record.OperatorId.Value} · {OutcomeLabel(record.Outcome)}{reason}");
     }
@@ -201,22 +203,6 @@ public partial class AuditWorkspaceView
             FinalizationOutcome.NotApplicable => "Not applicable",
             _ => "Unconfirmed",
         };
-
-    private static string RuleLabel(FinalizationRuleId rule) => rule switch
-    {
-        FinalizationRuleId.WorkshopAccounts => "Workshop accounts",
-        FinalizationRuleId.BrowserSessions => "Browser sessions",
-        FinalizationRuleId.WiFiProfiles => "Wi-Fi profiles",
-        FinalizationRuleId.Credentials => "Workshop credentials",
-        FinalizationRuleId.Shares => "Workshop shares",
-        FinalizationRuleId.TestMedia => "Test media",
-        FinalizationRuleId.Diagnostics => "Diagnostic exports",
-        FinalizationRuleId.Downloads => "Downloads and package residue",
-        FinalizationRuleId.RemoteSupport => "VPN and remote support",
-        FinalizationRuleId.ClipboardKeyMaterial => "Clipboard and key material",
-        FinalizationRuleId.PendingRestart => "Pending restart",
-        _ => "Workshop check",
-    };
 
     private static string RuleGuidance(FinalizationRuleId rule) => rule switch
     {
@@ -240,13 +226,6 @@ public partial class AuditWorkspaceView
         FinalizationOutcome.Failed => "Problem found.",
         FinalizationOutcome.NotApplicable => "Not applicable.",
         _ => "Could not confirm.",
-    };
-
-    private static string ReasonLabel(FinalizationReason reason) => reason switch
-    {
-        FinalizationReason.NoWorkshopUse => "The workshop did not use this",
-        FinalizationReason.CapabilityAbsent => "The capability is absent",
-        _ => "Reason unavailable",
     };
 
     private sealed record FinalizationOption(FinalizationRuleId Id, string Label, string Result)

@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using ThirdLife.Core.Evidence;
+using ThirdLife.Core.Finalization;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
 using ThirdLife.Core.Sanitization;
@@ -167,6 +168,99 @@ public sealed class WorkshopReportRendererTests
     {
         Assert.Throws<OperationCanceledException>(() =>
             WorkshopReportRenderer.Render(Stored(), cancellationToken: new CancellationToken(canceled: true)));
+    }
+
+    [Fact]
+    public void TechnicalRecordReportsBoundPlanProvenanceAndWithholdsHostileValues()
+    {
+        var created = new DateTimeOffset(2026, 11, 24, 12, 30, 0, TimeSpan.Zero);
+        var validOperator = new OperatorId("operator-reviewed");
+        var hostileCode = new OperatorId("AAAAA-BBBBB-CCCCC-DDDDD-EEEEE");
+        var plan = new WorkshopPlanProvenance(SampleJob.JobId, new('a', 64), new('b', 64), new('c', 64),
+            new('d', 64), new('e', 64), new('f', 64), true,
+            [
+                new(new("81918fd0-dc2c-4b1b-b253-f8619e520699"), hostileCode, created.AddSeconds(1)),
+                new(new("ae3aee53-48e8-4898-8264-df4437ed964e"), validOperator, created),
+            ]);
+        var job = Stored([new Observation(Metadata("windows-system-inventory"), new("device.model"),
+            EvidenceValue.FromString("<script>alert('hostile')</script>"), null, null)]);
+        var details = new WorkshopRecordDetails([plan]);
+        var report = WorkshopReportRenderer.RenderTechnicalRecord(job, null, null, [], null, null, details);
+
+        var expected = $"""
+            - Saved plan SHA-256 {plan.PlanSha256} (synthetic test).
+              Impact SHA-256 {plan.ImpactSha256}.
+              Catalog SHA-256 {plan.CatalogSha256}.
+              Profile SHA-256 {plan.ProfileSha256}.
+              Policy SHA-256 {plan.PolicySha256}.
+              Reviewed evidence SHA-256 {plan.EvidenceSha256}.
+              Operator approval ae3aee53-48e8-4898-8264-df4437ed964e at 2026-11-24T12:30:00.0000000Z.
+              Workshop operator code operator-reviewed.
+              Operator approval 81918fd0-dc2c-4b1b-b253-f8619e520699 at 2026-11-24T12:30:01.0000000Z.
+              Workshop operator code Withheld by the workshop schema.
+            """;
+        Assert.Contains(expected.ReplaceLineEndings("\n"), report, StringComparison.Ordinal);
+        Assert.Matches(@"Renderer build [0-9A-Za-z.+-]+\.", report);
+        Assert.DoesNotContain(hostileCode.Value, report, StringComparison.Ordinal);
+        Assert.DoesNotContain("<script>", report, StringComparison.Ordinal);
+        Assert.Throws<ArgumentException>(() => WorkshopReportRenderer.RenderTechnicalRecord(job, null, null, [],
+            null, null, new([plan with { JobId = new("foreign-job") }])));
+        Assert.Throws<ArgumentException>(() => WorkshopReportRenderer.RenderTechnicalRecord(job, null, null, [],
+            null, null, new([plan with { ProfileSha256 = "<script>" }])));
+    }
+
+    [Fact]
+    public void TechnicalRecordSeparatesCurrentAutomatedAndOperatorEvidenceFromEarlierResults()
+    {
+        var history = new FinalizationRecord[]
+        {
+            new(1, FinalizationRuleId.Credentials, FinalizationOutcome.Passed, null, Operator, SampleTime, "prior-scope"),
+            new(2, FinalizationRuleId.BrowserSessions, FinalizationOutcome.NotApplicable, FinalizationReason.NoWorkshopUse,
+                Operator, SampleTime.AddSeconds(1), "current-scope"),
+        };
+        var checklist = FinalizationChecklist.Evaluate("current-scope", history, FinalizationOutcome.Passed);
+        var review = new WorkshopFinalizationReview(SampleJob.JobId, checklist);
+        var report = WorkshopReportRenderer.RenderTechnicalRecord(Stored(), null, null, [], null, null, new([], review));
+
+        Assert.Contains("Required finalization checks remain open.", report, StringComparison.Ordinal);
+        Assert.Contains("- Pending restart. Required. Automated observation. Checked and clear.", report, StringComparison.Ordinal);
+        Assert.Contains("- Browser sessions. Required. Operator confirmation. Not applicable.", report, StringComparison.Ordinal);
+        Assert.Contains("- Workshop credentials. Required, blocks handover. Needs recheck", report, StringComparison.Ordinal);
+        Assert.Contains("- Earlier or superseded confirmation for Workshop credentials. Checked and clear.", report, StringComparison.Ordinal);
+        Assert.Contains("- Current confirmation for Browser sessions. Not applicable.\n  Reason The workshop did not use this.\n",
+            report, StringComparison.Ordinal);
+
+        var missing = WorkshopReportRenderer.RenderTechnicalRecord(Stored(), null, null, [], null, null, new([]));
+        Assert.Contains("No checklist result is available. Required workshop checks remain unverified.", missing, StringComparison.Ordinal);
+        Assert.Throws<ArgumentException>(() => WorkshopReportRenderer.RenderTechnicalRecord(Stored(), null, null, [],
+            null, null, new([], review with { JobId = new("foreign-job") })));
+    }
+
+    [Fact]
+    public void TechnicalRecordKeepsEarlierArtifactIndicationsAndCurrentSourceAvailabilityDistinct()
+    {
+        var earlier = Scan(1, "earlier-scope", WorkshopArtifactStatus.Present);
+        var current = Scan(2, "current-scope", WorkshopArtifactStatus.AccessDenied);
+        var checklist = FinalizationChecklist.Evaluate("current-scope", [], artifactScans: [earlier, current]);
+        var review = new WorkshopFinalizationReview(SampleJob.JobId, checklist);
+        var report = WorkshopReportRenderer.RenderTechnicalRecord(Stored(), null, null, [], null, null, new([], review));
+
+        Assert.Contains("A saved workshop artifact indication still needs resolution.", report, StringComparison.Ordinal);
+        Assert.Contains("Earlier or superseded scan", report, StringComparison.Ordinal);
+        Assert.Contains("Current scan", report, StringComparison.Ordinal);
+        Assert.Contains("Synthetic fixture. Detector workshop-artifact-detector-1.", report, StringComparison.Ordinal);
+        Assert.Contains("Package staging folders. Indication found.", report, StringComparison.Ordinal);
+        Assert.Contains("Package staging folders. Access denied.", report, StringComparison.Ordinal);
+        Assert.Contains("Specified local SMB shares. No exact names entered.", report, StringComparison.Ordinal);
+
+        static WorkshopArtifactScan Scan(long sequence, string scope, WorkshopArtifactStatus package) => new(sequence,
+            SampleTime.AddSeconds(sequence), scope, WorkshopArtifactScan.CurrentDetectorRevision, ProvenanceKind.SyntheticFixture,
+            Enum.GetValues<WorkshopArtifactKind>().Select(kind => new WorkshopArtifactFinding(kind, kind switch
+            {
+                WorkshopArtifactKind.PackageStagingResidue => package,
+                WorkshopArtifactKind.ConfiguredSmbShares => WorkshopArtifactStatus.TargetsNotConfigured,
+                _ => WorkshopArtifactStatus.Unavailable,
+            })).ToArray());
     }
 
     [Fact]

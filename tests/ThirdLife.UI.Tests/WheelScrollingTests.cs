@@ -5,6 +5,7 @@ using System.Windows.Media;
 using ThirdLife.UI.Features.ManualTests;
 using ThirdLife.UI.Shell;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
+using static ThirdLife.UI.Tests.AuditWorkflowTests;
 
 namespace ThirdLife.UI.Tests;
 
@@ -156,18 +157,23 @@ public sealed class WheelScrollingTests
     }
 
     [Fact]
-    public void WheelOverReportMovesItsReadingPaneWithinOnePulse()
+    public async Task WheelOverReportMovesItsReadingPaneWithinOnePulse()
     {
         using var fixture = new M1AuditFixture();
+        await using var workspace = fixture.CreateWorkspace();
+        await workspace.CreateJobAsync();
+        await workspace.RecordSanitizationAsync(VerifiedSample());
+        await workspace.StartAssessmentAsync();
+        await workspace.GenerateReportAsync();
+        await workspace.OpenReportAsync();
+        Assert.NotEmpty(workspace.ReportPreview);
         ShellTestHost.Run(() =>
         {
-            var window = new MainWindow(fixture.CreateWorkspace()) { Width = 500, Height = 320 };
+            var window = new MainWindow(workspace) { Width = 500, Height = 320 };
             try
             {
                 var auditView = ShellTestHost.Element<AuditWorkspaceView>(window, "AuditView");
                 var preview = Assert.IsType<TextBox>(auditView.FindName("WorkshopReportPreview"));
-                preview.Visibility = Visibility.Visible;
-                preview.Text = string.Join(Environment.NewLine, Enumerable.Repeat("Synthetic report line for scroll testing.", 80));
                 ShellTestHost.Show(window);
                 window.ShowStage(ShellStage.Handover);
                 ShellTestHost.Drain(window);
@@ -175,6 +181,8 @@ public sealed class WheelScrollingTests
                 ShellTestHost.Drain(window);
                 var outer = ShellTestHost.Element<ScrollViewer>(window, "ShellScroll");
                 var inner = FindVisualDescendant<ScrollViewer>(preview);
+                Assert.Equal(workspace.ReportPreview, preview.Text);
+                Assert.True(inner.ScrollableHeight >= 8.5d);
                 var outerBefore = outer.VerticalOffset;
 
                 SendWheel(inner, -20);

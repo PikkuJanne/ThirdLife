@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
+using ThirdLife.Core.Repairs;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.Policy.Versioning;
 
@@ -28,6 +29,7 @@ public static partial class WorkshopReportRenderer
         IReadOnlyList<WorkshopPackageRecord>? packages = null,
         IReadOnlyList<WorkshopPreparationPlan>? preparation = null,
         WorkshopProfileVerification? profileVerification = null,
+        WorkshopRecordDetails? technicalRecord = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);
@@ -56,10 +58,12 @@ public static partial class WorkshopReportRenderer
             job.HumanTests.Any(static item => IsFixture(item.Metadata));
         var gate = SanitizationGate.Inspect(job);
         var report = new StringBuilder();
-        var showEvidenceIds = savedDecision is not null;
-        Line(report, showEvidenceIds ? "ThirdLife Setup Core - Workshop disposition record" : "ThirdLife Setup Core - Workshop audit record");
+        var showEvidenceIds = savedDecision is not null || technicalRecord is not null;
+        Line(report, technicalRecord is not null ? "ThirdLife Setup Core - Technical workshop record" :
+            showEvidenceIds ? "ThirdLife Setup Core - Workshop disposition record" : "ThirdLife Setup Core - Workshop audit record");
         Line(report, "Classification: WORKSHOP_RESTRICTED");
-        Line(report, showEvidenceIds ? "Schema: workshop-disposition-v2" : "Schema: workshop-audit-v1");
+        Line(report, technicalRecord is not null ? "Schema: workshop-technical-v3" :
+            showEvidenceIds ? "Schema: workshop-disposition-v2" : "Schema: workshop-audit-v1");
         Line(report, $"Job: {SafeCode(job.Job.JobId.Value)}");
         Line(report, $"Device: {SafeCode(job.Job.DeviceId.Value)}");
         Line(report, $"Job created: {Timestamp(job.Job.CreatedAtUtc)}");
@@ -74,6 +78,11 @@ public static partial class WorkshopReportRenderer
             Line(report, "Readiness: Unknown. This audit gives no readiness approval.");
         }
 
+        if (technicalRecord is not null)
+        {
+            WriteRecordProvenance(report, job.Job.JobId, technicalRecord.Plans, cancellationToken);
+        }
+
         Line(report, "");
         Line(report, "Assessment summary");
         WriteAssessment(report, gate, latestAssessment);
@@ -82,7 +91,7 @@ public static partial class WorkshopReportRenderer
         WriteSanitization(report, job, gate, showEvidenceIds, cancellationToken);
         Line(report, "");
         Line(report, "Saved observations");
-        var needsReview = WriteObservations(report, job, showEvidenceIds, cancellationToken);
+        var needsReview = WriteObservations(report, job, showEvidenceIds, technicalRecord is not null, cancellationToken);
         if (job.Observations.Any(item => item.Metadata.ProviderId.Value == "windows-security-baseline"))
         {
             Line(report, "Security Center reports firewall and antivirus category health. Defender service, real-time protection and signature health have a separate finding.");
@@ -96,12 +105,24 @@ public static partial class WorkshopReportRenderer
         Line(report, "Manual check records");
         needsReview |= WriteManualTests(report, job, showEvidenceIds, cancellationToken);
         Line(report, "");
+        if (technicalRecord is not null)
+        {
+            WriteRepairHistory(report, job, cancellationToken);
+        }
+
         if (savedDecision is not null)
         {
             WritePolicySections(report, savedDecision, savedDecision.HasNewSecurityReview(job), cancellationToken);
         }
         else
         {
+            if (technicalRecord is not null)
+            {
+                Line(report, "Policy");
+                Line(report, "No policy decision is saved for the current assessment.");
+                Line(report, "");
+            }
+
             Line(report, "Next step");
             Line(report, NextStep(job, gate, latestAssessment, needsReview));
         }
@@ -109,6 +130,12 @@ public static partial class WorkshopReportRenderer
         if (packages is { Count: > 0 })
         {
             WritePackageRecords(report, packages, cancellationToken);
+        }
+        else if (technicalRecord is not null)
+        {
+            Line(report, "");
+            Line(report, "Machine-wide setup journal");
+            Line(report, "No machine-wide package transaction is saved for this job.");
         }
 
         if (preparation is { Count: > 0 })
@@ -119,6 +146,17 @@ public static partial class WorkshopReportRenderer
         if (profileVerification is not null)
         {
             WriteProfileVerification(report, job.Job.JobId, profileVerification, cancellationToken);
+        }
+        else if (technicalRecord is not null)
+        {
+            Line(report, "");
+            Line(report, "Independent profile verification");
+            Line(report, "No profile verification result is saved for this job.");
+        }
+
+        if (technicalRecord is not null)
+        {
+            WriteFinalizationReview(report, job.Job.JobId, technicalRecord.Finalization, cancellationToken);
         }
 
         return report.ToString();
@@ -199,7 +237,8 @@ public static partial class WorkshopReportRenderer
         }
     }
 
-    private static bool WriteObservations(StringBuilder report, StoredJob job, bool showEvidenceIds, CancellationToken cancellationToken)
+    private static bool WriteObservations(StringBuilder report, StoredJob job, bool showEvidenceIds,
+        bool showRepairHistory, CancellationToken cancellationToken)
     {
         int included = 0;
         int outsideSchema = 0;
@@ -212,6 +251,11 @@ public static partial class WorkshopReportRenderer
             {
                 // The supplied summary is reconstructed through the assessment service. Its
                 // internal journal envelopes are never projected as device observations.
+                continue;
+            }
+
+            if (showRepairHistory && observation.Metadata.ProviderId.Value == RepairJournal.ReservedProviderId)
+            {
                 continue;
             }
 
