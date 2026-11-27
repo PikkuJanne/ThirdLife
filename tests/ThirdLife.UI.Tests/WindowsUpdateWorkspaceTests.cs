@@ -137,6 +137,7 @@ public sealed class WindowsUpdateWorkspaceTests
                 Assert.Contains("machine cache", result.Text);
                 Assert.Contains("independent check", result.Text);
                 Assert.Contains("Meets the Windows Update space recommendation", result.Text);
+                Assert.Contains("this revision supports uninstall", result.Text);
 
                 picker.SelectedIndex = 1;
                 ShellTestHost.Drain(window);
@@ -144,6 +145,7 @@ public sealed class WindowsUpdateWorkspaceTests
                 Invoke(window, check);
                 PumpUntil(window, () => !workspace.IsBusy && workspace.HasWindowsUpdatePreview);
                 Assert.Contains("driver", result.Text, StringComparison.OrdinalIgnoreCase);
+                Assert.Contains("Uninstall support for this revision is unknown", result.Text);
                 Assert.DoesNotContain("machine cache", result.Text);
                 Assert.Equal([SecurityUpdate, DriverUpdate], agent.Checked);
             }
@@ -228,7 +230,8 @@ public sealed class WindowsUpdateWorkspaceTests
                 exact.Classification, exact.MaximumDownloadBytes) : exact;
             return new(observed, WindowsUpdateStatus.Succeeded, DateTimeOffset.UtcNow, false, true, true,
                 65_536, 65_536, true, 8192, exact.Classification == WindowsUpdateClass.Driver
-                    ? WindowsUpdateEligibilityReason.Driver : WindowsUpdateEligibilityReason.Eligible);
+                    ? WindowsUpdateEligibilityReason.Driver : WindowsUpdateEligibilityReason.Eligible,
+                RemovalSupported: exact.Classification == WindowsUpdateClass.Driver ? null : true);
         }
 
         public Task<WindowsUpdateOperation> DownloadAsync(WindowsUpdateCandidate exact, CancellationToken cancellationToken) =>

@@ -46,7 +46,7 @@ public sealed class WindowsUpdateAgentTests(ITestOutputHelper output)
             $"servicingSupported={observation.ServicingSupported}, powerReady={observation.PowerReady}, restart={observation.RebootRequired}, " +
             $"systemObserved={observation.SystemAvailableBytes.HasValue}, cacheObserved={observation.CacheAvailableBytes.HasValue}, " +
             $"sharedVolume={observation.CacheSharesSystemVolume}, recommendedBytes={observation.RecommendedInstallationBytes}, " +
-            $"recommendedSpaceMet={observation.HasRecommendedSpace}, elapsed={timer.Elapsed}.");
+            $"recommendedSpaceMet={observation.HasRecommendedSpace}, removalSupported={observation.RemovalSupported?.ToString() ?? "Unknown"}, elapsed={timer.Elapsed}.");
         Assert.Contains(observation.Status, new[] { WindowsUpdateStatus.Succeeded, WindowsUpdateStatus.ApprovalChanged,
             WindowsUpdateStatus.Unavailable, WindowsUpdateStatus.Offline, WindowsUpdateStatus.AccessDenied,
             WindowsUpdateStatus.ServiceUnavailable, WindowsUpdateStatus.TimedOut, WindowsUpdateStatus.Partial });
@@ -55,7 +55,11 @@ public sealed class WindowsUpdateAgentTests(ITestOutputHelper output)
             Assert.NotNull(observation.EligibilityReason);
             Assert.NotNull(observation.RebootRequired);
         }
-        else { Assert.Null(observation.HasRecommendedSpace); }
+        else
+        {
+            Assert.Null(observation.HasRecommendedSpace);
+            Assert.Null(observation.RemovalSupported);
+        }
     }
 
     [Fact]
@@ -198,7 +202,10 @@ public sealed class WindowsUpdateAgentTests(ITestOutputHelper output)
         public string HandlerID { get; init; } = WuaSession.CbsHandler;
         public bool IsDownloaded { get; init; } = true;
         public decimal MaxDownloadSize { get; init; } = 500;
-        public int RecommendedHardDiskSpace { get; init; }
+        public Func<object?> ReadDiskRecommendation { get; init; } = () => 0;
+        public object? RecommendedHardDiskSpace => ReadDiskRecommendation();
+        public Func<object?> ReadRemovalSupport { get; init; } = () => null;
+        public object? IsUninstallable => ReadRemovalSupport();
         public bool IsBeta { get; init; }
         public bool IsInstalled { get; init; }
         public bool IsMandatory { get; init; }

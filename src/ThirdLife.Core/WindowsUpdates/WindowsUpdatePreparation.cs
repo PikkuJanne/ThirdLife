@@ -5,7 +5,8 @@ public sealed record WindowsUpdatePreparation(
     WindowsUpdateCandidate Exact, WindowsUpdateStatus Status, DateTimeOffset ObservedAtUtc,
     bool? RebootRequired = null, bool? ServicingSupported = null, bool? PowerReady = null,
     ulong? SystemAvailableBytes = null, ulong? CacheAvailableBytes = null, bool? CacheSharesSystemVolume = null,
-    long? RecommendedInstallationBytes = null, WindowsUpdateEligibilityReason? EligibilityReason = null)
+    long? RecommendedInstallationBytes = null, WindowsUpdateEligibilityReason? EligibilityReason = null,
+    bool? RemovalSupported = null)
 {
     // Compare the maximum transfer and the publisher's recommendation before installation.
     // Neither value specifies the space necessary for a successful rollback.

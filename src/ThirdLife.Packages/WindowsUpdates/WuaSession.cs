@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Microsoft.CSharp.RuntimeBinder;
 using ThirdLife.Core.WindowsUpdates;
 
 namespace ThirdLife.Packages.WindowsUpdates;
@@ -111,13 +112,25 @@ internal static class WuaSession
         if (current != exact) { return Failure(WindowsUpdateStatus.ApprovalChanged); }
 
         // IUpdate reports zero when it has no pre-install disk space recommendation.
-        int recommendedMb = update.RecommendedHardDiskSpace;
-        long? recommended = recommendedMb > 0 ? recommendedMb * 1_048_576L : null;
+        var recommendedMb = ReadOptionalValue<int>(() => update.RecommendedHardDiskSpace);
+        long? recommended = recommendedMb is > 0 ? recommendedMb.Value * 1_048_576L : null;
+        var removalSupported = ReadOptionalValue<bool>(() => update.IsUninstallable);
         dynamic system = scope.Create(SystemInfoClass);
         bool reboot = system.RebootRequired;
         if (!HasWindowsUpdateAuthority(scope, session)) { return Failure(WindowsUpdateStatus.Unavailable); }
         return new(exact, WindowsUpdateStatus.Succeeded, DateTimeOffset.UtcNow, reboot,
-            RecommendedInstallationBytes: recommended, EligibilityReason: reason);
+            RecommendedInstallationBytes: recommended, EligibilityReason: reason, RemovalSupported: removalSupported);
+    }
+
+    private static T? ReadOptionalValue<T>(Func<object?> read) where T : struct
+    {
+        // An unavailable optional automation property leaves the other exact-offer facts usable.
+        try { return read() as T?; }
+        catch (Exception error) when (error is COMException or UnauthorizedAccessException or RuntimeBinderException or
+            MissingMemberException or NotSupportedException or NotImplementedException)
+        {
+            return null;
+        }
     }
 
     internal static WindowsUpdateInstalledObservation ObserveInstalled(WindowsUpdateIdentity exact, CancellationToken token,

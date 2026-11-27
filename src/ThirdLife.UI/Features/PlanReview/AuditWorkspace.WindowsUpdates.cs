@@ -46,36 +46,59 @@ internal sealed partial class AuditWorkspace
 
             var latest = _updateHistory[^1];
             var when = latest.OccurredAtUtc.ToString("u", CultureInfo.CurrentCulture);
-            string outcome;
-            if (latest.GateId != Gate?.Decision?.DecisionId)
-            {
-                outcome = "Saved under an earlier intake decision. Scan again after completing the current intake.";
-            }
-            else if (latest.Stage == WindowsUpdateStage.ScanStarted)
-            {
-                outcome = "The scan has no saved result. Run a fresh scan.";
-            }
-            else if (latest.Scan is { Status: not WindowsUpdateStatus.Succeeded } scan)
-            {
-                outcome = DescribeScanProblem(scan.Status);
-            }
-            else
-            {
-                outcome = WindowsUpdateHistory.Disposition(_updateHistory) switch
-                {
-                    WindowsUpdateDisposition.Current => "The configured service offered no applicable, nonhidden updates. Windows reported no pending restart.",
-                    WindowsUpdateDisposition.RestartRequired => "Windows reported a required restart. Rescan after the next confirmed restart.",
-                    WindowsUpdateDisposition.ApprovalRequired => "The configured service offered applicable updates. Review the saved inventory in Prepare.",
-                    WindowsUpdateDisposition.PassLimitReached => "The three-pass update limit was reached. Review remaining updates.",
-                    WindowsUpdateDisposition.ReviewRequired => "Update evidence needs workshop review before further preparation.",
-                    _ => "Update currency is unknown. Run a fresh scan and review the saved evidence.",
-                };
-            }
+            var outcome = latest.GateId != Gate?.Decision?.DecisionId
+                ? "Saved under an earlier intake decision. Scan again after completing the current intake."
+                : DescribeSavedWindowsUpdate(_updateHistory);
 
             var capacity = _updateHistory.Length > WindowsUpdateHistory.MaximumEntries - 2
                 ? " This job's update journal is full. Its saved history remains available for review." : string.Empty;
             return $"{when} · {outcome}{capacity}";
         }
+    }
+
+    internal static string DescribeSavedWindowsUpdate(ImmutableArray<WindowsUpdateEntry> history)
+    {
+        var latest = history[^1];
+        if (latest.Stage == WindowsUpdateStage.ScanStarted) { return "The scan has no saved result. Run a fresh scan."; }
+        if (latest.Stage == WindowsUpdateStage.DispatchUnconfirmed)
+        {
+            return "ThirdLife handed off the update request. Its outcome is unknown and needs workshop review before further preparation.";
+        }
+        if (latest.Stage == WindowsUpdateStage.DispatchNotSent)
+        {
+            var phase = history.LastOrDefault(entry => entry.Id == latest.PreviousId && entry.Approval == latest.Approval);
+            var action = phase?.Stage switch
+            {
+                WindowsUpdateStage.DownloadPreparing => "download",
+                WindowsUpdateStage.InstallPreparing => "install",
+                _ => null,
+            };
+            if (action is null) { return "The saved update action needs workshop review."; }
+            var reason = latest.Operation?.Status switch
+            {
+                WindowsUpdateStatus.ApprovalChanged => "The offer or approval changed.",
+                WindowsUpdateStatus.Cancelled => "Preparation was cancelled.",
+                WindowsUpdateStatus.TimedOut => "The time allowed for preparation expired.",
+                WindowsUpdateStatus.Offline => "Windows Update was offline.",
+                WindowsUpdateStatus.AccessDenied => "Windows denied access.",
+                WindowsUpdateStatus.ServiceUnavailable or WindowsUpdateStatus.Unavailable => "A required service or resource was unavailable.",
+                _ => "Required checks did not complete.",
+            };
+            var next = latest.Operation?.RebootRequired == true
+                ? "Windows reported a pending restart. After the next confirmed restart, rescan and review the offer in Prepare."
+                : "Run a fresh scan and review the offer in Prepare.";
+            return $"ThirdLife stopped before asking Windows to {action} this revision. {reason} {next}";
+        }
+        if (latest.Scan is { Status: not WindowsUpdateStatus.Succeeded } scan) { return DescribeScanProblem(scan.Status); }
+        return WindowsUpdateHistory.Disposition(history) switch
+        {
+            WindowsUpdateDisposition.Current => "The configured service offered no applicable, nonhidden updates. Windows reported no pending restart.",
+            WindowsUpdateDisposition.RestartRequired => "Windows reported a required restart. Rescan after the next confirmed restart.",
+            WindowsUpdateDisposition.ApprovalRequired => "The configured service offered applicable updates. Review the saved inventory in Prepare.",
+            WindowsUpdateDisposition.PassLimitReached => "The three-pass update limit was reached. Review remaining updates.",
+            WindowsUpdateDisposition.ReviewRequired => "Update evidence needs workshop review before further preparation.",
+            _ => "Update currency is unknown. Run a fresh scan and review the saved evidence.",
+        };
     }
 
     public string WindowsUpdateInventory { get; private set; } = string.Empty;

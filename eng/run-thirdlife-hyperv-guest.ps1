@@ -469,7 +469,7 @@ exit `$LASTEXITCODE
                 if ($case.Count -eq 1 -and $case[0].GetAttribute('testName') -ceq $TestName) {
                     $passed = $testExit -eq 0 -and $case[0].GetAttribute('outcome') -ceq 'Passed'
                     if ($passed -and $updateScenario) {
-                        # Extract only bounded counts. Keep TRX output and provider details inside the guest.
+                        # Export only bounded counts, fixed status tokens and the optional removal fact.
                         $stdout = $case[0].SelectSingleNode(".//*[local-name()='StdOut']")
                         if ($stdout -and $stdout.InnerText -cmatch 'Offered (\d{1,2}) revisions, selectable (\d{1,2})\.') {
                             $offered = [int]$Matches[1]
@@ -485,6 +485,14 @@ exit `$LASTEXITCODE
                             if ($stdout.InnerText -cmatch "lookup status=($states), reason=($reasons)?,") {
                                 $updateAssessment.status = $Matches[1]
                                 $updateAssessment.reason = $Matches[2]
+                                if ($stdout.InnerText -cmatch 'removalSupported=(True|False|Unknown),') {
+                                    $updateAssessment.removalSupported = switch ($Matches[1]) {
+                                        'True' { $true }
+                                        'False' { $false }
+                                        default { $null }
+                                    }
+                                }
+                                else { $passed = $false; $testFailure = 'RemovalObservationMissing' }
                             }
                             else { $passed = $false; $testFailure = 'ExactAssessmentUnavailable' }
                         }

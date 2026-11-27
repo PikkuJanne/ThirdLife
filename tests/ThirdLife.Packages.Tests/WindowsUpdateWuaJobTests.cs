@@ -22,9 +22,9 @@ public sealed class WindowsUpdateWuaJobTests
     {
         var cases = new (Session Fixture, WindowsUpdateStatus Expected, long? Bytes)[]
         {
-            (new Session { Offer = new() { RecommendedHardDiskSpace = 512 }, RebootRequired = true }, WindowsUpdateStatus.Succeeded, 512 * 1_048_576L),
+            (new Session { Offer = new() { ReadDiskRecommendation = () => 512 }, RebootRequired = true }, WindowsUpdateStatus.Succeeded, 512 * 1_048_576L),
             (new Session(), WindowsUpdateStatus.Succeeded, null),
-            (new Session { Offer = new() { RecommendedHardDiskSpace = -1 } }, WindowsUpdateStatus.Succeeded, null),
+            (new Session { Offer = new() { ReadDiskRecommendation = () => -1 } }, WindowsUpdateStatus.Succeeded, null),
             (new Session { SearchRows = [] }, WindowsUpdateStatus.ApprovalChanged, null),
             (new Session { SearchRows = [new(), new()] }, WindowsUpdateStatus.ApprovalChanged, null),
             (new Session { Offer = new() { MaxDownloadSize = 501 } }, WindowsUpdateStatus.ApprovalChanged, null),
@@ -44,8 +44,57 @@ public sealed class WindowsUpdateWuaJobTests
                 Assert.Equal(fixture.RebootRequired, result.RebootRequired);
                 Assert.Contains($"UpdateID='{Exact.Identity.UpdateId:D}' and RevisionNumber=2", fixture.Criteria, StringComparison.Ordinal);
             }
-            else { Assert.Null(result.EligibilityReason); }
+            else
+            {
+                Assert.Null(result.EligibilityReason);
+                Assert.Null(result.RemovalSupported);
+            }
         }
+    }
+
+    [Fact]
+    public void OptionalRemovalSupportPreservesIndependentFactsWhenUnavailableOrMalformed()
+    {
+        var cases = new (Func<object?> Read, bool? Expected)[]
+        {
+            (() => true, true),
+            (() => false, false),
+            (() => null, null),
+            (() => 1, null),
+            (() => throw new UnauthorizedAccessException(), null),
+        };
+        foreach (var (read, expected) in cases)
+        {
+            var fixture = new Session { Offer = new() { ReadRemovalSupport = read, ReadDiskRecommendation = () => 512 } };
+            var result = WuaSession.AssessOffer(Exact, CancellationToken.None, fixture.Create);
+            Assert.Equal(WindowsUpdateStatus.Succeeded, result.Status);
+            Assert.Equal(WindowsUpdateEligibilityReason.Eligible, result.EligibilityReason);
+            Assert.Equal(Exact, result.Exact);
+            Assert.Equal(512 * 1_048_576L, result.RecommendedInstallationBytes);
+            Assert.Equal(expected, result.RemovalSupported);
+            Assert.Null(fixture.Dispatched);
+        }
+    }
+
+    [Fact]
+    public void MissingDeniedOrMalformedDiskRecommendationPreservesExactEligibilityAndRemoval()
+    {
+        Func<object?>[] unavailable = [() => null, () => "512", () => throw new NotSupportedException(),
+            () => throw new UnauthorizedAccessException()];
+        foreach (var read in unavailable)
+        {
+            var fixture = new Session { Offer = new() { ReadDiskRecommendation = read, ReadRemovalSupport = () => true } };
+            var result = WuaSession.AssessOffer(Exact, CancellationToken.None, fixture.Create);
+            Assert.Equal(WindowsUpdateStatus.Succeeded, result.Status);
+            Assert.Equal(Exact, result.Exact);
+            Assert.Equal(WindowsUpdateEligibilityReason.Eligible, result.EligibilityReason);
+            Assert.True(result.RemovalSupported);
+            Assert.Null(result.RecommendedInstallationBytes);
+            Assert.Null(fixture.Dispatched);
+        }
+
+        var failed = new Session { Offer = new() { ReadDiskRecommendation = () => throw new InvalidOperationException() } };
+        Assert.Throws<InvalidOperationException>(() => WuaSession.AssessOffer(Exact, CancellationToken.None, failed.Create));
     }
 
     [Fact]

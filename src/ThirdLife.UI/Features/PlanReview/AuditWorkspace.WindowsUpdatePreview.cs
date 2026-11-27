@@ -132,6 +132,12 @@ internal sealed partial class AuditWorkspace
             result.ServicingSupported switch { true => "This Windows release is supported for servicing.", false => "This Windows installation is outside the supported servicing scope.", _ => "Windows servicing support is unknown." },
             result.PowerReady switch { true => "Power check passed.", false => "Connect reliable external power and check again.", _ => "Power state is unknown." },
             DescribeSpace(result),
+            result.RemovalSupported switch
+            {
+                true => "Windows Update reports that this revision supports uninstall.",
+                false => "Windows Update reports that uninstall is unavailable for this revision.",
+                _ => "Uninstall support for this revision is unknown.",
+            },
         };
         if (WindowsUpdatePolicy.IsSelectable(offer.Exact) && result.EligibilityReason == WindowsUpdateEligibilityReason.Eligible)
         {
@@ -157,17 +163,17 @@ internal sealed partial class AuditWorkspace
 
     private static string DescribeServicingImpact(WindowsUpdateCandidate exact)
     {
-        var download = ActionRegistry.Describe(ActionRegistry.CreateDownloadWindowsUpdate(Guid.NewGuid(), exact));
-        var install = ActionRegistry.Describe(ActionRegistry.CreateInstallWindowsUpdate(Guid.NewGuid(), exact));
+        var (download, install) = ActionRegistry.DescribeWindowsUpdateServicing(exact);
         if (download is
             {
                 Scope: ActionScope.Machine, Privilege: ActionPrivilege.Elevated, NetworkUse: ActionNetworkUse.WindowsUpdate,
-                Verification: ActionVerification.ExactDownloadedUpdateRevision
+                Verification: ActionVerification.ExactDownloadedUpdateRevision, Availability: ActionAvailability.WindowsUpdateServicingBrokerRequired
             } &&
             install is
             {
                 Scope: ActionScope.Machine, Privilege: ActionPrivilege.Elevated, Reboot: ActionReboot.MayRequire,
-                Rollback: ActionRollback.ManualReview, Verification: ActionVerification.ExactInstalledUpdateRevision
+                Rollback: ActionRollback.ManualReview, Verification: ActionVerification.ExactInstalledUpdateRevision,
+                Availability: ActionAvailability.WindowsUpdateServicingBrokerRequired
             })
         {
             return "The download would transfer this revision from Windows Update to the machine cache and verify the downloaded revision. " +

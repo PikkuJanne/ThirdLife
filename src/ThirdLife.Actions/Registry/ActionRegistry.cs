@@ -42,6 +42,7 @@ public static partial class ActionRegistry
     private static readonly ActionDefinition UpdateDownload = UpdateScan with
     {
         Kind = ActionKind.DownloadWindowsUpdate,
+        Availability = ActionAvailability.WindowsUpdateServicingBrokerRequired,
         Privilege = ActionPrivilege.Elevated,
         Verification = ActionVerification.ExactDownloadedUpdateRevision,
         Rollback = ActionRollback.ManualReview,

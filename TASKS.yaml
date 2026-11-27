@@ -6178,6 +6178,24 @@ tasks:
     duration: 433.080 s, 304 governance tests and 2317 .NET tests, zero skips
     reference: artifacts/evidence/TL-0504/report.md, ac3c96f1b89169ce8fffb0d4dfefde17b01ae369
     limitation: Native WUA observations and the guest run were collected separately. Production update execution remains unqualified.
+  - summary: Prepare checks an exact saved offer and its servicing resources. A changed job, intake, scan or revision invalidates the preview.
+    command: eng/verify.ps1 -Tier Targeted with Packages and Persistence and the deterministic WindowsUpdate filter, plus eng/run-ui-smoke.ps1
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 x64 build 26300.9974, .NET SDK 10.0.400
+    date: '2026-11-27'
+    duration: 138.756 s for 1308 tests including Quick, 1.355 s for the unelevated shell smoke
+    reference: artifacts/evidence/TL-0504/report.md, 0bbbe8a6ade0f7c8c8fd3c2a005c859b65bab87a
+    limitation: WPF and SQLite used isolated jobs and controlled providers. The online host and guest checks used the native adapter separately.
+  - summary: Exact native lookup identified an unsupported handler on the host and guest. Neither service offered an eligible revision.
+    command: Packages WindowsUpdateAgentTests ActiveMachine cases on host, eng/run-thirdlife-hyperv.ps1 -Scenario WindowsUpdateAssessment in limited-token guest
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 x64 host and same-machine Generation 2 guest, build 26300.9974, wuapi.dll 1511.2611.5012.0
+    date: '2026-11-27'
+    duration: 1.7728 min for three host cases and 104.127 s for one guest case including staging and cleanup
+    reference: artifacts/evidence/TL-0504/report.md, 0bbbe8a6ade0f7c8c8fd3c2a005c859b65bab87a
+    limitation: The host WUA supplied no installation-space recommendation. Native servicing, rollback and a servicing-related restart remain unobserved.
   execution_prerequisites:
   - kind: capability
     scope: A WUA-specific authenticated ephemeral broker and effective update policy qualified for the exact action, source, servicing, power, storage and rollback requirements.

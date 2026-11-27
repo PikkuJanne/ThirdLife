@@ -263,7 +263,8 @@ public sealed class ActionRegistryTests
         var decoded = Assert.IsType<WindowsUpdateActionRequest>(ActionRequestCodec.Parse(ActionRequestCodec.Serialize(request)));
         Assert.Equal(request.Kind, decoded.Kind);
         Assert.Equal(request.Exact, decoded.Exact);
-        Assert.Equal(ActionAvailability.WindowsUpdateAgentRequired, ActionRegistry.Describe(decoded).Availability);
+        Assert.Equal(kind == ActionKind.ScanWindowsUpdate ? ActionAvailability.WindowsUpdateAgentRequired :
+            ActionAvailability.WindowsUpdateServicingBrokerRequired, ActionRegistry.Describe(decoded).Availability);
         Assert.Equal(verification, ActionRegistry.Describe(decoded).Verification);
         var envelope = JsonNode.Parse(ActionRequestCodec.Serialize(request))!.AsObject();
         var parameters = envelope["parameters"]!.AsObject();
