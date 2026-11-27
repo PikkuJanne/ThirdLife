@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Microsoft.Data.Sqlite;
+using ThirdLife.Actions.Planning;
 using ThirdLife.Actions.WindowsUpdates;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
@@ -99,6 +100,14 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
                 entry = entry with { PreviousId = unsent.Id };
             }
             if (!WindowsUpdateHistory.CanAppend(history, entry)) { throw new JobStoreConflictException(); }
+
+            if (entry.Stage is WindowsUpdateStage.DownloadChecked or WindowsUpdateStage.InstallChecked or
+                WindowsUpdateStage.DownloadPreparing or WindowsUpdateStage.InstallPreparing or
+                WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted)
+            {
+                var packages = await ReadJobJournalHistoriesAsync(transaction, entry.JobId, ct).ConfigureAwait(false);
+                if (MaintenancePhases.RequiresPackageRecovery(packages)) { throw new JobStoreConflictException(); }
+            }
 
             if (entry.Stage is WindowsUpdateStage.Approved or WindowsUpdateStage.DownloadPreparing or WindowsUpdateStage.InstallPreparing
                 or WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted)

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Recovery;
+using ThirdLife.Actions.WindowsUpdates;
 using ThirdLife.Core.Jobs;
 
 namespace ThirdLife.Persistence;
@@ -174,7 +175,9 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
     private async Task RequirePackageAttemptAsync(SqliteConnection connection, SqliteTransaction transaction,
         JournalPlanSnapshot plan, JournalApproval approval, JournalEntry entry, CancellationToken token)
     {
-        if (await HasUnreconciledJournalActionAsync(connection, transaction, plan.Key, token).ConfigureAwait(false))
+        var updates = await ReadWindowsUpdatesAsync(transaction, plan.Key.JobId, token).ConfigureAwait(false);
+        if (WindowsUpdateHistory.RecoveryBeforePackages(updates) != UpdateRecovery.None ||
+            await HasUnreconciledJournalActionAsync(connection, transaction, plan.Key, token).ConfigureAwait(false))
         {
             throw new JobStoreConflictException();
         }

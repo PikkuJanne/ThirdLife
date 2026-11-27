@@ -181,6 +181,7 @@ internal sealed partial class AuditWorkspace
         try
         {
             _updateHistory = await Task.Run(() => journal.LoadWindowsUpdatesAsync(jobId));
+            _updateRecovery = WindowsUpdateHistory.RecoveryBeforePackages(_updateHistory);
             var lastInventory = _updateHistory.LastOrDefault(entry => entry.Scan is { Status: WindowsUpdateStatus.Succeeded });
             if (lastInventory?.Scan is not { } scan) { return; }
             var rows = scan.Updates.Select((update, index) => scan.EligibilityReasons is { } reasons && update.Classification == WindowsUpdateClass.Restricted
@@ -219,6 +220,7 @@ internal sealed partial class AuditWorkspace
     private void ClearWindowsUpdateHistory()
     {
         _updateHistory = [];
+        _updateRecovery = UpdateRecovery.None;
         _updateHistoryUnavailable = false;
         WindowsUpdateInventory = string.Empty;
         ClearWindowsUpdateOffers();

@@ -310,7 +310,9 @@ public sealed class WindowsUpdateWorkflowTests
             var workflow = Controlled(reopened, provider);
             provider.Scan = Available();
             await workflow.ScanAsync(job.JobId, gate.DecisionId);
-            Assert.Equal(WindowsUpdateDisposition.ReviewRequired, WindowsUpdateHistory.Disposition(await reopened.LoadWindowsUpdatesAsync(job.JobId)));
+            var afterRescan = await reopened.LoadWindowsUpdatesAsync(job.JobId);
+            Assert.Equal(WindowsUpdateDisposition.ReviewRequired, WindowsUpdateHistory.Disposition(afterRescan));
+            Assert.Equal(UpdateRecovery.ReviewResult, WindowsUpdateHistory.RecoveryBeforePackages(afterRescan));
         }
         else if (scenario == "empty")
         {
@@ -346,6 +348,7 @@ public sealed class WindowsUpdateWorkflowTests
         await observer.ScanAsync(job.JobId, gate.DecisionId);
         var verifiedHistory = await reopened.LoadWindowsUpdatesAsync(job.JobId);
         Assert.Equal(WindowsUpdateDisposition.Current, WindowsUpdateHistory.Disposition(verifiedHistory));
+        Assert.Equal(UpdateRecovery.None, WindowsUpdateHistory.RecoveryBeforePackages(verifiedHistory));
         Assert.Equal(Update.Identity, Assert.Single(provider.VerificationQueries));
         Assert.True(verifiedHistory[^1].Verification!.Observation.Installed);
         Assert.Equal(2, provider.Mutations.Count);
@@ -369,7 +372,9 @@ public sealed class WindowsUpdateWorkflowTests
             await agent.InstallEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             var other = Controlled(second, new FixtureAgent());
             var concurrentScan = await other.ScanAsync(job.JobId, gate.DecisionId);
-            Assert.Equal(WindowsUpdateDisposition.ReviewRequired, WindowsUpdateHistory.Disposition(await second.LoadWindowsUpdatesAsync(job.JobId)));
+            var pending = await second.LoadWindowsUpdatesAsync(job.JobId);
+            Assert.Equal(WindowsUpdateDisposition.ReviewRequired, WindowsUpdateHistory.Disposition(pending));
+            Assert.Equal(UpdateRecovery.ReviewResult, WindowsUpdateHistory.RecoveryBeforePackages(pending));
             await Assert.ThrowsAsync<JobStoreConflictException>(() => other.ApproveAsync(job.JobId, gate.DecisionId,
                 concurrentScan.Id, Update, Operator, policy));
         }
@@ -682,9 +687,9 @@ public sealed class WindowsUpdateWorkflowTests
         Func<WindowsUpdateCandidate, CancellationToken, Task<bool>>? preflight = null) =>
         new(store, provider, provider, preflight ?? ((_, _) => Task.FromResult(true)), Clock);
 
-    private static async Task<(Job Job, SanitizationGateDecision Gate, string PolicyId)> SeedAsync(SqliteJobStore store)
+    internal static async Task<(Job Job, SanitizationGateDecision Gate, string PolicyId)> SeedAsync(SqliteJobStore store, Job? existing = null)
     {
-        var job = PersistenceTestData.CreateJob();
+        var job = existing ?? PersistenceTestData.CreateJob();
         var intake = PersistenceTestData.CreateSanitization();
         var facts = new[]
         {
@@ -694,7 +699,7 @@ public sealed class WindowsUpdateWorkflowTests
                 ProvenanceKind.SyntheticFixture, ValueAvailability.Available), new("memory.installed_bytes"),
                 EvidenceValue.FromInteger(16_000_000_000), "bytes", null),
         };
-        await store.CreateJobAsync(job);
+        if (existing is null) { await store.CreateJobAsync(job); }
         await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, observations: facts, sanitizationEvidence: [intake]));
         var gate = await store.RecordSanitizationGateDecisionAsync(SanitizationGate.Evaluate(job.JobId, intake, Clock.GetUtcNow()));
         var json = JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "community-laptop-policy.json")))!.AsObject();
@@ -714,7 +719,7 @@ public sealed class WindowsUpdateWorkflowTests
         new(PersistenceTestData.CreateMetadata("evidence-" + id, EvidenceClassification.Observed, ProvenanceKind.SyntheticFixture,
             ValueAvailability.Available), new(key), EvidenceValue.FromEnum(value), null, null);
 
-    private sealed class FixtureAgent : IWindowsUpdateAgent, IWindowsUpdateDispatchBackend
+    internal sealed class FixtureAgent : IWindowsUpdateAgent, IWindowsUpdateDispatchBackend
     {
         internal int Scans { get; private set; }
         internal WindowsUpdateScan Scan { get; set; } = Available(Update);

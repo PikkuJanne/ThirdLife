@@ -20,6 +20,54 @@ public sealed class WindowsUpdateWorkspaceTests
         new WindowsUpdateIdentity(Guid.Parse("3eb39a15-46bf-4b84-bda7-52da5463485d"), 1), WindowsUpdateClass.Driver, 256);
 
     [Fact]
+    public async Task RestartPausesPackagePhaseInPrepareAndVerifyAfterReopenWithoutStartingAnAction()
+    {
+        using var disk = new AuditTestStore();
+        var agent = new ScanFixture { RestartRequired = true };
+        string id;
+        await using (var first = Open(disk, agent))
+        {
+            await first.CreateJobAsync();
+            id = first.JobId;
+            await first.RecordSanitizationAsync(VerifiedSample());
+            Assert.False(first.HasMaintenancePhaseStatus);
+            await first.ScanWindowsUpdatesAsync();
+            Assert.True(first.HasMaintenancePhaseStatus);
+        }
+
+        await using var reopened = Open(disk, agent);
+        await reopened.OpenJobAsync(id);
+        Assert.Contains("restart Windows", reopened.MaintenancePhaseStatus);
+        Assert.False(reopened.CanRunApprovedUpdate);
+        Assert.Equal(1, agent.Calls);
+        ShellTestHost.Run(() =>
+        {
+            var window = new MainWindow(reopened);
+            try
+            {
+                ShellTestHost.Show(window);
+                var view = Named<FrameworkElement>(window, "AuditView");
+                window.ShowStage(ShellStage.Prepare);
+                ShellTestHost.Drain(window);
+                var prepare = Named<PlanReviewView>(view, "PlanReviewPanel");
+                CheckMessage(Named<TextBlock>(prepare, "MaintenancePauseMessage"));
+                window.ShowStage(ShellStage.Verify);
+                ShellTestHost.Drain(window);
+                var verify = Named<PackageVerificationView>(view, "PackageVerificationPanel");
+                CheckMessage(Named<TextBlock>(verify, "MaintenancePauseMessage"));
+            }
+            finally { CloseWindow(window); }
+
+            void CheckMessage(TextBlock message)
+            {
+                Assert.True(message.IsVisible && message.Focusable);
+                Assert.Equal(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(message));
+                Assert.Equal(reopened.MaintenancePhaseStatus, message.Text);
+            }
+        });
+    }
+
+    [Fact]
     public async Task RestrictedScanRequiresIntakeAndPreservesLastSuccessfulInventoryAfterOfflineReopen()
     {
         using var disk = new AuditTestStore();
@@ -212,12 +260,13 @@ public sealed class WindowsUpdateWorkspaceTests
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Task HoldCheck { get; init; } = Task.CompletedTask;
         public bool ChangedRevision { get; init; }
+        public bool RestartRequired { get; init; }
 
         public async Task<WindowsUpdateScan> ScanAsync(CancellationToken cancellationToken)
         {
             var calls = Interlocked.Increment(ref _calls);
             if (wait) { await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken); }
-            return calls == 1 ? new WindowsUpdateScan(WindowsUpdateStatus.Succeeded, [SecurityUpdate, DriverUpdate], false)
+            return calls == 1 ? new WindowsUpdateScan(WindowsUpdateStatus.Succeeded, [SecurityUpdate, DriverUpdate], RestartRequired)
                 : new WindowsUpdateScan(WindowsUpdateStatus.Offline, [], null);
         }
 

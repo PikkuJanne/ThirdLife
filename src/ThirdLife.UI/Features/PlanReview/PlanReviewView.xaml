@@ -8,9 +8,16 @@
   <StackPanel>
     <TextBlock Text="Review exactly what will change" Style="{DynamicResource Trace.TitleText}"
                AutomationProperties.HeadingLevel="Level1" TextWrapping="Wrap" />
+    <TextBlock Text="For a full maintenance run, review Windows updates first. After each required restart, reopen the job and rescan. Then review packages, check their installed state, and complete the final restart and verification."
+               Visibility="{Binding ShowsWindowsUpdates, Converter={StaticResource PlanReviewVisibility}}"
+               Style="{DynamicResource Trace.MetaText}" TextWrapping="Wrap" Margin="0,4,0,4" />
     <TextBlock Text="Save the exact plan approval before requesting installation."
                Style="{DynamicResource Trace.MetaText}" TextWrapping="Wrap" Margin="0,4,0,16" />
 
+    <TextBlock x:Name="MaintenancePauseMessage" Text="{Binding MaintenancePhaseStatus, NotifyOnTargetUpdated=True}"
+               Visibility="{Binding HasMaintenancePhaseStatus, Converter={StaticResource PlanReviewVisibility}}"
+               AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" Focusable="True"
+               KeyboardNavigation.IsTabStop="True" TextWrapping="Wrap" Margin="0,0,0,8" />
     <TextBlock Text="{Binding PlanReviewAccess}" Style="{DynamicResource Trace.AttentionText}" TextWrapping="Wrap" />
     <Border Style="{DynamicResource Trace.EvidencePanel}" Margin="0,0,0,16">
       <StackPanel>
