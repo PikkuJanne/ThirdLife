@@ -88,6 +88,8 @@ internal sealed partial class AuditWorkspace
         ClearRecipientGuide();
         ClearToggleKeysReview();
         ClearBackupReadiness();
+        _latestBackupSampleAudit = null;
+        _backupSampleAuditUnavailable = false;
         RecipientHandover = null;
         _handoverModeFeedback = string.Empty;
     }

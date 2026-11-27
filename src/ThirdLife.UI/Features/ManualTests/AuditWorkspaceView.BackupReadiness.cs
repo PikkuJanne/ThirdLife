@@ -58,9 +58,15 @@ public partial class AuditWorkspaceView
             FocusAndReveal(BackupSampleConfirmed);
             return;
         }
+        if (string.IsNullOrWhiteSpace(BackupSampleOperator.Text))
+        {
+            SetError(BackupReadinessError, "Enter your workshop operator code for the sample record.");
+            FocusAndReveal(BackupSampleOperator);
+            return;
+        }
         SetError(BackupReadinessError, string.Empty);
         FocusAndReveal(BackupReadinessMessage);
-        await Workspace.PrepareBackupSampleAsync(reviewId, recipientConfirmed: true);
+        await Workspace.PrepareBackupSampleAsync(reviewId, recipientConfirmed: true, BackupSampleOperator.Text);
     }
 
     private async void CheckBackupSample(object sender, RoutedEventArgs e)
@@ -77,9 +83,11 @@ public partial class AuditWorkspaceView
         {
             _shownBackupReadinessReview = review;
             BackupSampleConfirmed.IsChecked = false;
+            BackupSampleOperator.Clear();
         }
         BackupSampleRegion.Visibility = VisibleWhen(review.HasValue);
         BackupPreparedRegion.Visibility = VisibleWhen(Workspace.ShowsBackupSampleCheck);
+        BackupSampleJournalMessage.Visibility = VisibleWhen(Workspace.BackupSampleJournalStatus.Length != 0);
         (JobId, long)? context = Workspace.ShowsBackupReadiness && Workspace.RecipientHandover is { } handover
             ? (handover.JobId, handover.Sequence) : null;
         if (_backupReadinessContext != context)

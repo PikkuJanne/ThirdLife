@@ -7879,6 +7879,16 @@ tasks:
     environment: Clean active Windows 11 x64 source, scoped host volume and isolated protection and WPF fixtures
     reference: artifacts/evidence/TL-0702/handover-sample.md, e737f799e724ac60eb104db68f5250d1fb152a42
     limitation: Sample preparation and exact separate-copy readback only. Windows File History execution, restore attribution, and durable current sample continuity remain open.
+  - summary: Protected harmless-sample intent, copy outcomes and current or historical state survive reopening the job.
+    task: TL-0702
+    command: eng/verify.ps1 -Tier Full -Restore, selected Persistence plus corrected active-machine AuditBackupReadinessTests
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 553.982 s, 319 repository checks and 2685 .NET tests, plus focused persistence and WPF selections
+    environment: Clean active Windows 11 x64 checkout, separately selected local disk and isolated job fixture
+    reference: artifacts/evidence/TL-0702/sample-journal.md, 93557a2d4b11ad8557e33e65621db0df2c227f48
+    limitation: Saved scope and copy evidence survive reopening. Windows File History execution, restore attribution and actual recipient choice remain unobserved.
   notes:
   - The actual recipient controls destination, credentials and recovery material. TL-0710 carries the final security/privacy
     disposition.

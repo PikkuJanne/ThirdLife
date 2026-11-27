@@ -24,6 +24,8 @@ public sealed class FileHistoryRestoreSample
 
     public byte[] CopyContent() => [.. _content];
 
+    public bool IsFor(FileHistoryApproval approval) => approval.Review.ReviewId == ReviewId;
+
     internal bool Matches(FileHistorySampleDigest digest) =>
         digest.ByteLength == ByteLength && string.Equals(digest.Sha256, Sha256, StringComparison.Ordinal);
 }

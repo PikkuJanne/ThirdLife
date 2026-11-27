@@ -59,6 +59,11 @@ public sealed class AuditBackupReadinessTests
             Assert.Same(approval, Keyboard.FocusedElement);
             Assert.False(Directory.Exists(original));
             approval.IsChecked = true;
+            var operatorCode = Named<TextBox>(view, "BackupSampleOperator");
+            Invoke(window, prepare);
+            Assert.Same(operatorCode, Keyboard.FocusedElement);
+            Assert.False(Directory.Exists(original));
+            operatorCode.Text = "operator-backup-sample";
             Invoke(window, prepare);
             PumpUntil(window, () => !workspace.IsBusy && workspace.CanCheckBackupSample);
             Assert.Contains("Backup remains pending", workspace.BackupReadinessStatus, StringComparison.Ordinal);
@@ -73,7 +78,29 @@ public sealed class AuditBackupReadinessTests
             Invoke(window, checkCopy);
             PumpUntil(window, () => !workspace.IsBusy && workspace.BackupReadinessStatus.StartsWith("The separate copy matches", StringComparison.Ordinal));
             Assert.Contains("Backup remains pending", workspace.BackupReadinessStatus, StringComparison.Ordinal);
+            var current = Assert.IsType<ThirdLife.Core.Jobs.StoredJob>(workspace.Job);
+            Invoke(window, Named<Button>(view, "CloseJobButton"));
+            Assert.Null(workspace.Job);
+            Named<TextBox>(view, "JobIdInput").Text = current.Job.JobId.Value;
+            Invoke(window, Named<Button>(view, "OpenJobButton"));
+            var stages = Named<ListBox>(window, "StageList");
+            PumpUntil(window, () => !workspace.IsBusy && workspace.Job?.Job.JobId == current.Job.JobId &&
+                stages.SelectedItem is not null, () => workspace.OperationError);
+            Assert.IsType<MainWindow>(window).ShowStage(ShellStage.Handover);
+            var savedMessage = Named<TextBlock>(view, "BackupSampleJournalMessage");
+            PumpUntil(window, () => savedMessage.IsVisible && savedMessage.Text.Length != 0);
+            Assert.Contains("This handover recorded a matching separate sample copy. Backup remains pending.", savedMessage.Text, StringComparison.Ordinal);
+            Assert.False(workspace.CanCheckBackupSample);
         });
+
+        var job = Assert.IsType<ThirdLife.Core.Jobs.StoredJob>(workspace.Job);
+        await using var reopened = await SqliteJobStore.OpenForTestingAsync(Path.Combine(disk.Root, "store"),
+            SqliteJobStore.CurrentSchemaVersion, time, null, () => 180_000, () => 10);
+        var saved = await reopened.LoadFileHistorySampleHistoryAsync(job.Job.JobId);
+        Assert.Equal(new[] { FileHistorySampleAuditState.Preparing, FileHistorySampleAuditState.Prepared,
+            FileHistorySampleAuditState.CopyUnavailable, FileHistorySampleAuditState.CopyMatches },
+            saved.Select(entry => entry.State));
+        Assert.Single(saved.Select(entry => entry.SampleId).Distinct());
     }
 
     [Fact]

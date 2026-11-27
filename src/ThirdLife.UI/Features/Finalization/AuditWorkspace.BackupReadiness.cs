@@ -1,6 +1,9 @@
 using System.Globalization;
 using System.IO;
+using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Handover;
+using ThirdLife.Core.Jobs;
+using ThirdLife.Persistence;
 using ThirdLife.Reports.Storage;
 using ThirdLife.UI.Features.Finalization;
 
@@ -16,17 +19,40 @@ internal sealed partial class AuditWorkspace
     private FileHistoryReview? _backupReview;
     private string? _reviewedBackupDrive;
     private PreparedFileHistorySample? _preparedBackupSample;
+    private FileHistorySampleAudit? _latestBackupSampleAudit;
+    private bool _backupSampleAuditUnavailable;
 
     public string BackupReadinessStatus { get; private set; } = BackupReadinessInstructions;
     public bool ShowsBackupReadiness => !IsFixtureScenario && RecipientHandover is { Handover.Mode: HandoverMode.Assisted };
     public bool CanCheckBackupReadiness => ShowsBackupReadiness && CanEditJob && !_readingFinalization;
     public Guid? BackupReadinessReviewId => _backupReview?.ReviewId;
-    public bool CanPrepareBackupSample => CanCheckBackupReadiness && _backupReview is not null;
+    public bool CanPrepareBackupSample => CanCheckBackupReadiness && _backupReview is not null &&
+        _store is IFileHistorySampleAuditStore;
     public bool ShowsBackupSampleCheck => ShowsBackupReadiness && _preparedBackupSample is not null;
     public bool CanCheckBackupSample => CanCheckBackupReadiness && ShowsBackupSampleCheck;
     public string BackupSampleRecoveryInstructions => _preparedBackupSample is { } prepared
         ? $"Use Windows File History to restore {prepared.Sample.FileName} from {DisplayedBackupSampleRoot}\\original to {DisplayedBackupSampleRoot}\\recovered."
         : string.Empty;
+    public string BackupSampleJournalStatus
+    {
+        get
+        {
+            if (_backupSampleAuditUnavailable) { return "The saved sample history is unavailable. Backup remains pending."; }
+            if (_latestBackupSampleAudit is not { } audit) { return string.Empty; }
+            var prefix = audit.HandoverSequence == RecipientHandover?.Sequence ? "This handover recorded" : "An earlier handover recorded";
+            var state = audit.State switch
+            {
+                FileHistorySampleAuditState.Preparing => "an unconfirmed sample preparation",
+                FileHistorySampleAuditState.Prepared => "a prepared harmless sample",
+                FileHistorySampleAuditState.PreparationUnavailable => "that sample preparation was unavailable",
+                FileHistorySampleAuditState.CopyUnavailable => "that the recovered sample was unavailable",
+                FileHistorySampleAuditState.CopyMismatch => "a recovered sample that did not match",
+                FileHistorySampleAuditState.CopyMatches => "a matching separate sample copy",
+                _ => "an unavailable sample status",
+            };
+            return $"{prefix} {state}. Backup remains pending.";
+        }
+    }
 
     public Task CheckBackupReadinessAsync(string volumeRoot, long requiredBytes, bool recipientControlsRecovery)
     {
@@ -64,11 +90,12 @@ internal sealed partial class AuditWorkspace
         }, refreshFinalization: false);
     }
 
-    public Task PrepareBackupSampleAsync(Guid reviewedId, bool recipientConfirmed)
+    public Task PrepareBackupSampleAsync(Guid reviewedId, bool recipientConfirmed, string operatorCode)
     {
         if (!CanPrepareBackupSample || !recipientConfirmed || Job is not { } job ||
             _backupReview is not { } review || review.ReviewId != reviewedId ||
-            _reviewedBackupDrive is not { } volumeRoot || _backupInventory is not { } inventory)
+            _reviewedBackupDrive is not { } volumeRoot || _backupInventory is not { } inventory ||
+            _store is not IFileHistorySampleAuditStore store)
         {
             return Task.CompletedTask;
         }
@@ -87,28 +114,42 @@ internal sealed partial class AuditWorkspace
             }
 
             var sample = approval.CreateRestoreSample(handover, available, destination);
-            var probe = _backupSampleProbe ?? RegisteredBackupSampleProbe();
-            var outcome = probe is null
-                ? FileHistorySamplePreparation.Unavailable
-                : await Task.Run(() => probe.Prepare(sample));
-
             _backupReview = null;
             _reviewedBackupDrive = null;
-            _preparedBackupSample = outcome == FileHistorySamplePreparation.Prepared && probe is not null
-                ? new PreparedFileHistorySample(approval, sample, probe, volumeRoot) : null;
-            BackupReadinessStatus = outcome switch
+            try
             {
-                FileHistorySamplePreparation.Prepared => "Harmless restore sample prepared. Backup remains pending.",
-                FileHistorySamplePreparation.CapacityReached => "The protected sample folder is full. Backup remains pending.",
-                _ => "The protected sample could not be prepared. Backup remains pending.",
-            };
+                var actor = new OperatorId(operatorCode.Trim());
+                var staged = await Task.Run(() => store.StageFileHistorySampleAsync(approval, sample, actor));
+                _latestBackupSampleAudit = staged;
+                _backupSampleAuditUnavailable = false;
+                var probe = _backupSampleProbe ?? RegisteredBackupSampleProbe();
+                var outcome = probe is null
+                    ? FileHistorySamplePreparation.Unavailable
+                    : await Task.Run(() => probe.Prepare(sample));
+                var auditState = outcome == FileHistorySamplePreparation.Prepared
+                    ? FileHistorySampleAuditState.Prepared : FileHistorySampleAuditState.PreparationUnavailable;
+                var saved = await Task.Run(() => store.RecordFileHistorySampleAsync(job.Job.JobId, staged, auditState));
+                _latestBackupSampleAudit = saved;
+                _preparedBackupSample = outcome == FileHistorySamplePreparation.Prepared && probe is not null
+                    ? new PreparedFileHistorySample(approval, sample, probe, volumeRoot, saved) : null;
+                BackupReadinessStatus = outcome switch
+                {
+                    FileHistorySamplePreparation.Prepared => "Harmless restore sample prepared. Backup remains pending.",
+                    FileHistorySamplePreparation.CapacityReached => "The protected sample folder is full. Backup remains pending.",
+                    _ => "The protected sample could not be prepared. Backup remains pending.",
+                };
+            }
+            catch (JobStoreException)
+            {
+                BackupReadinessStatus = "The job could not confirm sample preparation. Review the saved result before preparing another sample.";
+            }
         }, refreshFinalization: false);
     }
 
     public Task CheckBackupSampleAsync()
     {
         if (!CanCheckBackupSample || Job is not { } job || _preparedBackupSample is not { } prepared ||
-            _backupInventory is not { } inventory)
+            _backupInventory is not { } inventory || _store is not IFileHistorySampleAuditStore store)
         {
             return Task.CompletedTask;
         }
@@ -126,18 +167,43 @@ internal sealed partial class AuditWorkspace
             }
 
             var observed = await Task.Run(() => prepared.Probe.Observe(prepared.Sample));
-            if (observed is null)
-            {
-                BackupReadinessStatus = "The protected recovered copy is unavailable. Backup remains pending.";
-                return;
-            }
-
-            var result = prepared.Approval.EvaluateRestore(handover, available, destination, prepared.Sample,
+            var check = prepared.Approval.EvaluateRestore(handover, available, destination, prepared.Sample,
                 observed, windowsRestoreAttributed: false);
-            BackupReadinessStatus = result == FileHistoryRestoreOutcome.Pending
-                ? "The separate copy matches the original sample. Backup remains pending until Windows File History restoration is recorded."
-                : "The separate copy could not be verified against the prepared sample. Backup remains pending.";
+            var outcome = observed is null ? FileHistorySampleAuditState.CopyUnavailable
+                : check == FileHistoryRestoreOutcome.Pending ? FileHistorySampleAuditState.CopyMatches
+                : FileHistorySampleAuditState.CopyMismatch;
+            try
+            {
+                var saved = await Task.Run(() => store.RecordFileHistorySampleAsync(job.Job.JobId, prepared.Audit, outcome));
+                _latestBackupSampleAudit = saved;
+                _preparedBackupSample = prepared with { Audit = saved };
+                BackupReadinessStatus = outcome switch
+                {
+                    FileHistorySampleAuditState.CopyUnavailable => "The protected recovered copy is unavailable. Backup remains pending.",
+                    FileHistorySampleAuditState.CopyMatches => "The separate copy matches the original sample. Backup remains pending until Windows File History restoration is recorded.",
+                    _ => "The separate copy could not be verified against the prepared sample. Backup remains pending.",
+                };
+            }
+            catch (JobStoreException)
+            {
+                ClearBackupReadiness();
+                BackupReadinessStatus = "The job could not save the copy result. Backup remains pending.";
+            }
         }, refreshFinalization: false);
+    }
+
+    private async Task<(FileHistorySampleAudit? Audit, bool Unavailable)> ReadBackupSampleAuditAsync(JobId jobId)
+    {
+        if (_store is not IFileHistorySampleAuditStore store) { return (null, false); }
+        try
+        {
+            var history = await Task.Run(() => store.LoadFileHistorySampleHistoryAsync(jobId));
+            return (history.Count == 0 ? null : history[^1], false);
+        }
+        catch (JobStoreException)
+        {
+            return (null, true);
+        }
     }
 
     private static FileHistoryRestoreProbe? RegisteredBackupSampleProbe()
@@ -165,5 +231,5 @@ internal sealed partial class AuditWorkspace
     }
 
     private sealed record PreparedFileHistorySample(FileHistoryApproval Approval, FileHistoryRestoreSample Sample,
-        FileHistoryRestoreProbe Probe, string VolumeRoot);
+        FileHistoryRestoreProbe Probe, string VolumeRoot, FileHistorySampleAudit Audit);
 }
