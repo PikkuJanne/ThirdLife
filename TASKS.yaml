@@ -8022,6 +8022,16 @@ tasks:
     environment: Active Windows 11 native x64 host, clean source build and isolated fixture stores
     reference: artifacts/evidence/TL-0703/current-data-map.md, dd69090554665a87c7e145b81a3bcf5710e4382a
     limitation: Current runtime paths and preservation contract reviewed. Exact installer inventory and application and job-data removal behavior still require lifecycle verification.
+  - summary: Exposed reversible job archive and restore in TRACE Jobs with durable history.
+    task: TL-0703
+    command: eng/verify.ps1 -Tier Full -Restore, scoped Targeted and focused Release WPF archive and workflow selections
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 534.079 s, 319 repository checks and 2688 .NET cases, plus 248.312 s Targeted
+    environment: Clean active Windows 11 x64 checkout with isolated WPF and SQLite job fixtures
+    reference: artifacts/evidence/TL-0703/reversible-job-archive.md, a8edc835da69e1cac6356bee87dbc6fae567f8d8
+    limitation: Verified reversible archive and restore only. Exact installed removal and the separate job-data deletion choice remain open.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

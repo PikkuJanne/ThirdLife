@@ -6,7 +6,7 @@ lifecycle work. [Approved privacy guidance](privacy/privacy-model.md)
 
 | Record | Current behavior |
 | --- | --- |
-| Job, approvals, journal, policy snapshots, verification and finalization | Archive is reversible and makes the job read-only while archived. History stays associated with the job. There is no automatic 180-day job expiry or explicit job-data deletion command in the current application. |
+| Job, approvals, journal, policy snapshots, verification and finalization | In **Jobs**, archive the open job to keep its history available in read-only state. Reopen it by code and choose **Restore archived job** to resume work. Automatic job expiry and an explicit job-data deletion choice remain pending. |
 | Local workshop report and recipient guide copies | The two protected folders each have a limit of 64 files, 64 MiB total and 8 MiB per artifact. Destinations that already exist are preserved. Staged writes only clean their owned temporary file. A full folder needs review of retained copies. |
 | Sanitized logs | The store enforces age and the consuming subsystem's byte ceiling during writes and supported cleanup. It handles owned temporary and transaction files with schema, root and ownership checks. The package sink uses 14 days and 1 MiB. |
 | Battery and package staging | Operation cleanup is limited to verified source-owned files. The battery workspace reconciles its prior ownership marker. The package runtime removes the verified installer and attempts nonrecursive removal of its own empty directory. Failures remain reportable. There is no shared sweep of unrelated folders. |
