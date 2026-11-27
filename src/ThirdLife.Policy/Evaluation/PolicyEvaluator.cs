@@ -55,6 +55,12 @@ public static class PolicyEvaluator
         "operating_system.support_state" => ["supported", "unsupported", "audit_only"],
         "processor.windows_11_eligibility" => ["eligible", "ineligible"],
         "firmware.mode" => ["uefi", "bios"],
+        "security.firewall_health" or "security.antivirus_health" => ["good", "poor", "snoozed"],
+        "security.defender_health" => ["real_time_active_signatures_current", "requires_review"],
+        "security.uac_state" => ["enabled", "requires_review"],
+        "security.time_sync_recency" => ["within_seven_days", "older_than_seven_days"],
+        "reboot.pending_status" => ["clear", "pending_indicated"],
+        "security.administrator_review" or "security.remote_access_review" => ["passed", "failed"],
         _ => default,
     };
 

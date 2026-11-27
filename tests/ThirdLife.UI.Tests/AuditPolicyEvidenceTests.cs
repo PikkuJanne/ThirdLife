@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -7,6 +8,7 @@ using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Policy.Decisions;
+using ThirdLife.Policy.Evaluation;
 using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
 using ThirdLife.Reports.WorkshopReport;
@@ -82,6 +84,83 @@ public sealed class AuditPolicyEvidenceTests
         Assert.Contains(workspace.Findings, item => item.DisplayName == "Ownership review");
         var report = WorkshopReportRenderer.Render(workspace.Job!);
         Assert.Contains("Unresolved management or ownership blocks handover.", report);
+    }
+
+    [Fact]
+    public async Task SecurityCandidateCitesOwnedHealthAndExpiresTimeAtTheEvaluationClock()
+    {
+        using var disk = new AuditTestStore();
+        var timestamp = NormalizedEvidence.Observed(new("security.last_successful_sync_utc"),
+            EvidenceValue.FromInteger(SampleTime.ToUnixTimeSeconds()), sourceReference: "security.w32time.last_successful_sync");
+        var security = new ProjectionProvider("windows-security-baseline",
+            [EnumFact("security.firewall_health", "good", "security.wsc.firewall"),
+             EnumFact("security.antivirus_health", "good", "security.wsc.antivirus"),
+             EnumFact("security.defender_health", "real_time_active_signatures_current", "security.defender.computer_status"),
+             NormalizedEvidence.Inferred(new("security.uac_state"), EvidenceValue.FromEnum("enabled"),
+                 sourceReference: "security.uac_configuration_and_health"),
+             timestamp,
+             EnumFact("security.administrator_review", "passed", "fixture.unrelated"),
+             EnumFact("security.remote_access_review", "passed", "fixture.unrelated")]);
+        var reports = new WorkshopReportStore(Path.Combine(disk.Root, "security-workshop-reports"));
+        await using var workspace = new AuditWorkspace(
+            async token => await disk.OpenSqliteAsync(token).ConfigureAwait(false),
+            [OperatingSystem(LifecycleSource, "x64"), SystemInventory(), security], new FixedClock(), reports);
+        await AssessAsync(workspace);
+        var job = workspace.Job!;
+        var assessment = workspace.Assessment!;
+        var candidate = WorkshopPolicyCandidate.ForDeviceClass(PolicyDeviceClass.Laptop)!;
+        var cutoff = SampleTime.AddDays(7);
+        var projected = AuditPolicyEvidence.Create(job, assessment, cutoff);
+        var lastSync = Fact(assessment.Observations, "security.last_successful_sync_utc");
+        var recent = Fact(projected, "security.time_sync_recency");
+        Assert.Equal(lastSync.Metadata.EvidenceId, recent.Metadata.EvidenceId);
+        Assert.Equal(EvidenceClassification.Inferred, recent.Metadata.EvidenceClassification);
+        Assert.Equal("within_seven_days", recent.Value!.StringValue);
+        Assert.DoesNotContain(projected, fact => fact.EvidenceKey.Value is "security.remote_access_review" or "security.administrator_review");
+        var decision = PolicyEvaluator.Evaluate(candidate.Document, projected, activeCapabilityIds: null);
+        foreach (var id in new[] { "POL-FIREWALL-001", "POL-ANTIVIRUS-001", "POL-DEFENDER-001", "POL-UAC-001", "POL-TIME-001" })
+        {
+            Assert.Equal(PolicyRuleState.Met, decision.Outcomes.Single(outcome => outcome.Rule.Requirement.RequirementId.Value == id).State);
+        }
+
+        var stale = AuditPolicyEvidence.Create(job, assessment, cutoff.AddSeconds(1));
+        Assert.Equal("older_than_seven_days", Fact(stale, "security.time_sync_recency").Value!.StringValue);
+        Assert.Equal(SampleTime.ToUnixTimeSeconds(), lastSync.Value!.IntegerValue);
+        await workspace.EvaluatePolicyAsync();
+        Assert.True(workspace.HasPolicyDecision, workspace.PolicyStatus);
+        Assert.Contains("Policy rule POL-DEFENDER-001. Pass.", workspace.PolicyExpertDetails);
+        Assert.Contains("Policy rule POL-ADMINS-001. Pending confirmation.", workspace.PolicyExpertDetails);
+        await workspace.GenerateReportAsync();
+        await workspace.OpenReportAsync();
+        Assert.Contains("Policy rule POL-TIME-001. Pass.", workspace.ReportPreview);
+        Assert.Contains(workspace.Findings, item => item.Name == "security.last_successful_sync_utc" &&
+            item.Value == SampleTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture));
+        Assert.Contains("Policy rule POL-REMOTE-001. Pending confirmation.", workspace.ReportPreview);
+    }
+
+    [Theory]
+    [InlineData(1, "unix_seconds", "security.w32time.last_successful_sync", "provider_value_malformed")]
+    [InlineData(0, "seconds", "security.w32time.last_successful_sync", "provider_value_malformed")]
+    [InlineData(0, "unix_seconds", "security.registry.ntp_client", null)]
+    public async Task FutureMalformedOrUnattributedTimeCannotPass(
+        int offsetSeconds, string unit, string source, string? expectedIssue)
+    {
+        using var disk = new AuditTestStore();
+        var timestamp = NormalizedEvidence.Observed(new("security.last_successful_sync_utc"),
+            EvidenceValue.FromInteger(SampleTime.ToUnixTimeSeconds() + offsetSeconds), sourceReference: source);
+        var security = new ProjectionProvider("windows-security-baseline",
+            [timestamp, EnumFact("security.firewall_health", "good", "fixture.unrelated"),
+             EnumFact("security.uac_state", "enabled", "security.uac_configuration_and_health")], timeUnit: unit);
+        var reboot = new ProjectionProvider("windows-pending-reboot",
+            [EnumFact("reboot.pending_status", "clear", "pending_reboot.partial_indicator_union")]);
+        await using var workspace = OpenLive(disk, security, reboot);
+        await AssessAsync(workspace);
+        var evidence = AuditPolicyEvidence.Create(workspace.Job!, workspace.Assessment!, SampleTime);
+        var time = evidence.SingleOrDefault(fact => fact.EvidenceKey.Value == "security.time_sync_recency");
+        if (expectedIssue is null) { Assert.Null(time); }
+        else { Assert.Equal(expectedIssue, time!.LimitationCode); }
+        Assert.Equal("provider_value_malformed", Fact(evidence, "security.uac_state").LimitationCode);
+        Assert.DoesNotContain(evidence, fact => fact.EvidenceKey.Value is "reboot.pending_status" or "security.firewall_health");
     }
 
     [Fact]
@@ -337,13 +416,15 @@ public sealed class AuditPolicyEvidenceTests
         Assert.Single(observations, fact => fact.EvidenceKey.Value == key);
 
     private sealed class ProjectionProvider(
-        string id, NormalizedEvidence[] facts, ProviderEvidenceOrigin origin = ProviderEvidenceOrigin.ActiveMachine) : IInventoryProvider
+        string id, NormalizedEvidence[] facts, ProviderEvidenceOrigin origin = ProviderEvidenceOrigin.ActiveMachine,
+        string timeUnit = "unix_seconds") : IInventoryProvider
     {
         public InventoryProviderDescriptor Descriptor { get; } = new(new ProviderId(id),
             ProviderPrivilegeRequirement.StandardUser, TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(15),
             ProviderNetworkUse.None, origin, [ProviderOperatingSystem.Windows11],
             new ProviderFailureDefinition(new EvidenceKey("test." + id + ".failure"), "fixture." + id + ".failure"),
-            facts.Select(fact => new ProviderEvidenceDefinition(fact.EvidenceKey, fact.Value!.Kind, unit: null, fact.SourceReference!)));
+            facts.Select(fact => new ProviderEvidenceDefinition(fact.EvidenceKey, fact.Value!.Kind,
+                fact.EvidenceKey.Value == "security.last_successful_sync_utc" ? timeUnit : null, fact.SourceReference!)));
 
         public ValueTask<ProviderReadResult> ObserveAsync(CancellationToken cancellationToken = default)
         {

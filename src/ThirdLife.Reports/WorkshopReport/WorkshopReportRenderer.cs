@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.ManualTests;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.Policy.Versioning;
 
@@ -83,9 +84,11 @@ public static partial class WorkshopReportRenderer
         var needsReview = WriteObservations(report, job, showEvidenceIds, cancellationToken);
         if (job.Observations.Any(item => item.Metadata.ProviderId.Value == "windows-security-baseline"))
         {
-            Line(report, "Security Center reports category health. Approved antivirus identity needs separate evidence.");
-            Line(report, "Time client configuration does not establish a successful synchronization.");
-            Line(report, "Remote Desktop configuration covers one Windows setting. Other remote access and administrator accounts need separate review.");
+            Line(report, "Security Center reports firewall and antivirus category health. Defender service, real-time protection and signature health have a separate finding.");
+            Line(report, "The time client setting records configuration. Windows Time supplies the last successful synchronization when available.");
+            Line(report, "The Remote Desktop setting covers incoming Windows Remote Desktop connections. Review other remote access and local administrators in the manual checks.");
+            Line(report, "BitLocker reports protection on the Windows volume. This assessment reads its status only.");
+            Line(report, "A restart indicator can identify a pending restart. Missing indicators leave restart clearance unresolved.");
             Line(report, "Unresolved management or ownership blocks handover.");
         }
         Line(report, "");
@@ -94,7 +97,7 @@ public static partial class WorkshopReportRenderer
         Line(report, "");
         if (savedDecision is not null)
         {
-            WritePolicySections(report, savedDecision, cancellationToken);
+            WritePolicySections(report, savedDecision, savedDecision.HasNewSecurityReview(job), cancellationToken);
         }
         else
         {
@@ -212,8 +215,11 @@ public static partial class WorkshopReportRenderer
                 continue;
             }
 
-            var value = DescribeValue(observation);
-            string unit = observation.Unit is { } storedUnit && observation.Value is not null && value != Withheld
+            bool syncTimestamp = observation.EvidenceKey.Value == "security.last_successful_sync_utc";
+            var value = syncTimestamp && observation.Value is not null
+                ? WorkshopSyncTime(observation) ?? Withheld
+                : DescribeValue(observation);
+            string unit = !syncTimestamp && observation.Unit is { } storedUnit && observation.Value is not null && value != Withheld
                 ? $" {SafeCode(storedUnit)}" : "";
             Line(report, $"- {observation.EvidenceKey.Value}: {value}{unit}");
             WriteAttribution(report, observation.Metadata, observation.OperatorId, showEvidenceIds);
@@ -262,6 +268,10 @@ public static partial class WorkshopReportRenderer
                 _ => throw new InvalidOperationException("The manual result is invalid."),
             };
             var caseName = item.Details?.CaseId ?? "Legacy manual check";
+            if (ManualTestCatalog.IsSecurityReview(caseName) && ManualTestCatalog.TryGetCase(caseName, out var review))
+            {
+                caseName = $"{review.Title} ({review.Id})";
+            }
             Line(report, $"- {caseName}: {result}");
             WriteAttribution(report, item.Metadata, item.OperatorId, showEvidenceIds);
             Line(report, $"  Record: {SafeCode(item.HumanTestId.Value)}.");
@@ -269,6 +279,10 @@ public static partial class WorkshopReportRenderer
             if (item.Details is { } details)
             {
                 Line(report, $"  Procedure: {SafeCode(details.ProcedureRevision)}.");
+                if (details.AssessmentId is { } reviewedAssessment)
+                {
+                    Line(report, $"  Reviewed assessment: {SafeCode(reviewedAssessment)}.");
+                }
                 if (details.RetestOf is not null)
                 {
                     Line(report, $"  Retest of: {SafeCode(details.RetestOf.Value)}.");
@@ -319,6 +333,22 @@ public static partial class WorkshopReportRenderer
         {
             Line(report, $"  Limitation: {SafeCode(limitation)}.");
         }
+    }
+
+    public static string? WorkshopSyncTime(Observation observation)
+    {
+        if (observation.EvidenceKey.Value != "security.last_successful_sync_utc" ||
+            observation.Metadata.ProviderId.Value != "windows-security-baseline" ||
+            observation.Metadata.EvidenceClassification != EvidenceClassification.Observed ||
+            observation.Metadata.Provenance.Kind is not (ProvenanceKind.ProviderObservation or ProvenanceKind.SyntheticFixture) ||
+            observation.Metadata.Provenance.SourceReference != "security.w32time.last_successful_sync" ||
+            observation.Unit != "unix_seconds" || observation.Value?.IntegerValue is not { } seconds ||
+            seconds <= 0 || seconds > observation.Metadata.CollectedAtUtc.ToUnixTimeSeconds())
+        {
+            return null;
+        }
+
+        return DateTimeOffset.FromUnixTimeSeconds(seconds).ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
     }
 
     private static string DescribeValue(Observation observation) => observation.Value?.Kind switch

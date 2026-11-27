@@ -115,6 +115,31 @@ public sealed class AuditAccessibilityTests
                     () => Named<TextBlock>(view, "ManualInputError").Text);
                 Assert.Equal(HumanTestResult.NotAvailable, Assert.Single(workspace.Job!.HumanTests).TestResult);
 
+                manualCheck.SelectedValue = ManualTestCatalog.RemoteAccessReview;
+                Assert.Equal("Manual hardware or security check", new ComboBoxAutomationPeer(manualCheck).GetName());
+                Assert.False(notes.IsVisible);
+                Assert.True(Named<TextBlock>(view, "SecurityReviewScope").IsVisible);
+                manualOutcome.SelectedValue = HumanTestResult.NotAvailable;
+                reason.SelectedValue = ManualTestUnavailableReason.PermissionDenied;
+                Assert.True(reason.Focus());
+                NextIs(window, save);
+                Invoke(window, save);
+                PumpUntil(window, () => workspace.Job?.HumanTests.Count == 2 && workspace.CanEditJob);
+                var review = workspace.Job!.HumanTests[1];
+                Assert.Equal(ManualTestCatalog.SecurityReviewRevision, review.Details!.ProcedureRevision);
+                Assert.Equal(workspace.Assessment!.AssessmentId.Value, review.Details.AssessmentId);
+                Assert.Equal(string.Empty, review.Details.Notes);
+                Assert.Equal("permission_denied", review.LimitationCode);
+                Assert.Equal(ProvenanceKind.SyntheticFixture, review.Metadata.Provenance.Kind);
+
+                manualOutcome.SelectedValue = HumanTestResult.NotRun;
+                Invoke(window, start);
+                PumpUntil(window, () => workspace.SecurityReviewAssessmentId is { } current &&
+                    current != review.Details.AssessmentId && workspace.CanEditJob);
+                Assert.Null(manualOutcome.SelectedValue);
+                Assert.Empty(Assert.Single(workspace.ManualProgress!.Items, item =>
+                    item.Case.Id == ManualTestCatalog.RemoteAccessReview).History);
+
                 ShellTestHost.Invoke(window, "JobsButton");
                 Assert.Same(create, Keyboard.FocusedElement);
                 Assert.NotNull(workspace.Job);

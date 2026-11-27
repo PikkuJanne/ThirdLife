@@ -25,6 +25,11 @@ public sealed record ManualTestCase(
 public static class ManualTestCatalog
 {
     public const string ProcedureRevision = "M1-MHT-1";
+    public const string SecurityReviewRevision = "M5-SBR-1";
+    public const string AdministratorReview = "SBR-001";
+    public const string RemoteAccessReview = "SBR-002";
+
+    public static bool IsSecurityReview(string caseId) => caseId is AdministratorReview or RemoteAccessReview;
 
     public static IReadOnlyList<ManualTestCase> Cases { get; } =
     [
@@ -136,6 +141,18 @@ public static class ManualTestCatalog
             "Detection or reading fails, the connection is unstable or the port is damaged.",
             "Eject or remove the test item safely. Verify no test content was retained.", false,
             [CapabilityAbsent, EquipmentMissing, PermissionDenied, UnsafeToRun]),
+        new(AdministratorReview, "Local administrator review",
+            "Inspect the members of the local Administrators group using an authorized Windows account-management view. Check each member, including groups, against the workshop's authorized list.",
+            "Every administrator is accounted for and authorized for this device.",
+            "An administrator or group is unexplained or unauthorized. If you cannot inspect the full membership or establish authorization, select Not available.",
+            "Leave accounts and group memberships unchanged. Save only the outcome and workshop operator code.", true,
+            [ProviderUnavailable, PermissionDenied]),
+        new(RemoteAccessReview, "Remote-access review",
+            "Review Windows Remote Desktop and Remote Assistance, installed remote-support tools and their unattended-access settings against workshop authorization for this device.",
+            "All reviewed remote-access paths are disabled or explicitly authorized for this device.",
+            "You found an unexplained tool or an unauthorized remote-access path or unattended session. If coverage or authorization cannot be established, select Not available.",
+            "Leave settings and tools unchanged. Save only the outcome and workshop operator code.", true,
+            [ProviderUnavailable, PermissionDenied]),
     ];
 
     public static bool TryGetCase(string id, [NotNullWhen(true)] out ManualTestCase? testCase)

@@ -171,11 +171,11 @@
               </Grid>
             </StackPanel>
           </TabItem>
-          <TabItem x:Name="HardwareChecksTab" Header="Hardware checks">
+          <TabItem x:Name="HardwareChecksTab" Header="Hardware and security checks">
       <StackPanel Margin="0,12,0,0">
-        <TextBlock Text="Follow a safe applicable check, then record what you observed. Detected hardware alone cannot pass a check." />
+        <TextBlock Text="Choose a hardware check or review local administrators and remote access. For a security review, complete the device assessment first." />
         <TextBlock x:Name="FixtureManualNotice" Visibility="Collapsed"
-                   Text="A fixture job supports Not run or Not available. Simulated hardware cannot provide a real manual result." />
+                   Text="A fixture job supports Not run or Not available. A workshop observation is required for Pass or Fail." />
         <TextBlock Text="Use the workshop operator code from Intake. Keep notes free of names, serial numbers, network details and personal content." Style="{DynamicResource Trace.MetaText}" Margin="0,8,0,0" />
         <TextBlock x:Name="ManualBatterySafety" Text="Battery reports cannot detect swelling. Swelling requires human inspection."
                    Style="{DynamicResource Trace.AttentionText}" Margin="0,8,0,0" />
@@ -184,7 +184,7 @@
           <Button x:Name="NextManualCheckButton" Content="Go to next unfinished check" Click="SelectNextManualCheck" />
           <Label Target="{Binding ElementName=ManualCheck}" Content="Manual check" />
           <ComboBox x:Name="ManualCheck" DisplayMemberPath="Label" SelectedValuePath="Case.Id" SelectionChanged="ManualCheckChanged"
-                    AutomationProperties.Name="Manual hardware check" />
+                    AutomationProperties.Name="Manual hardware or security check" />
           <StackPanel x:Name="ManualInstructions" DataContext="{Binding SelectedItem.Case, ElementName=ManualCheck}"
                       Visibility="Collapsed">
             <TextBlock Text="Procedure" Style="{DynamicResource Trace.SectionText}" Margin="0,12,0,4" />
@@ -196,6 +196,7 @@
             <TextBlock Text="Cleanup" FontWeight="SemiBold" Margin="0,8,0,0" />
             <TextBlock Text="{Binding Cleanup}" />
           </StackPanel>
+          <TextBlock x:Name="SecurityReviewScope" Visibility="Collapsed" Style="{DynamicResource Trace.MetaText}" />
           <TextBlock x:Name="ManualCurrentResult" AutomationProperties.LiveSetting="Polite" />
           <Expander Header="Last 10 saved results">
             <ListBox x:Name="ManualHistory" MaxHeight="200" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -225,9 +226,11 @@
               <ComboBox x:Name="ManualUnavailableReason" SelectedValuePath="Value" DisplayMemberPath="Label"
                         AutomationProperties.Name="Reason the manual check is unavailable" />
             </StackPanel>
-            <Label Target="{Binding ElementName=ManualNotes}" Content="Brief observation" />
-            <TextBox x:Name="ManualNotes" MaxLength="{x:Static manual:ManualTestService.MaximumNotesLength}"
-                     TextWrapping="Wrap" AutomationProperties.Name="Brief manual observation" />
+            <StackPanel x:Name="ManualNotesFields">
+              <Label Target="{Binding ElementName=ManualNotes}" Content="Brief observation" />
+              <TextBox x:Name="ManualNotes" MaxLength="{x:Static manual:ManualTestService.MaximumNotesLength}"
+                       TextWrapping="Wrap" AutomationProperties.Name="Brief manual observation" />
+            </StackPanel>
             <TextBlock x:Name="ManualInputError" Style="{DynamicResource Trace.ErrorText}" AutomationProperties.LiveSetting="Polite" />
             <Button x:Name="SaveManualResultButton" Content="Save manual result" Style="{DynamicResource Trace.PrimaryButton}" HorizontalAlignment="Left" Click="SaveManualResult" />
           </StackPanel>

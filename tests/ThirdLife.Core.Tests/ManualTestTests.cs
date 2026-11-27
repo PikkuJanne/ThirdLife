@@ -62,10 +62,24 @@ public sealed class ManualTestTests
         Assert.False(string.IsNullOrWhiteSpace(testCase.FailCriteria));
         Assert.False(string.IsNullOrWhiteSpace(testCase.Cleanup));
 
+        var securityReview = ManualTestCatalog.IsSecurityReview(caseId);
+        var assessmentId = securityReview ? "assessment-00000000000000000000000000000001" : null;
+        if (securityReview)
+        {
+            var intake = new SanitizationEvidence(
+                new EvidenceMetadata(EvidenceId.New(), PrivacyClassification.WorkshopRestricted,
+                    EvidenceClassification.Observed, new ProviderId("fixture-intake"), Timestamp,
+                    new EvidenceProvenance(ProvenanceKind.SyntheticFixture, "manual-fixture"), ValueAvailability.Available),
+                SanitizationState.NoDonorStorage, "external_check", Operator, Timestamp, null,
+                SanitizationVerificationState.Verified, "m1-intake-v1");
+            await store.AppendEvidenceAsync(new JobEvidenceBatch(Job.JobId, sanitizationEvidence: [intake]));
+            await new JobService(store, new FixedTimeProvider(Timestamp)).CompleteIntakeAsync(Job.JobId, intake.Metadata.EvidenceId);
+        }
+        var notes = securityReview ? string.Empty : "The check could not run.";
         foreach (var reason in testCase.UnavailableReasons)
         {
             var record = await service.RecordAsync(
-                Job.JobId, caseId, HumanTestResult.NotAvailable, Operator, "The check could not run.", reason);
+                Job.JobId, caseId, HumanTestResult.NotAvailable, Operator, notes, reason, assessmentId);
 
             Assert.Equal(HumanTestResult.NotAvailable, record.TestResult);
             Assert.Equal(ValueAvailability.Unknown, record.Metadata.ValueAvailability);
@@ -75,10 +89,10 @@ public sealed class ManualTestTests
         foreach (var reason in Enum.GetValues<ManualTestUnavailableReason>().Except(testCase.UnavailableReasons))
         {
             await Assert.ThrowsAsync<ArgumentException>(() => service.RecordAsync(
-                Job.JobId, caseId, HumanTestResult.NotAvailable, Operator, "Unexpected reason", reason));
+                Job.JobId, caseId, HumanTestResult.NotAvailable, Operator, notes, reason, assessmentId));
         }
 
-        var progress = ManualTestService.GetProgress((await store.LoadJobAsync(Job.JobId))!);
+        var progress = ManualTestService.GetProgress((await store.LoadJobAsync(Job.JobId))!, assessmentId);
         var item = Assert.Single(progress.Items, candidate => candidate.Case.Id == caseId);
         Assert.Equal(testCase.UnavailableReasons.Count, item.History.Count);
         Assert.False(item.HasBlockerCandidate);

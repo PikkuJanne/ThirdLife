@@ -9,7 +9,7 @@ namespace ThirdLife.UI.Features.Disposition;
 internal static class WorkshopPolicyCandidate
 {
     private const string ResourceName = "ThirdLife.UI.community-laptop-policy.json";
-    private const string CandidateSha256 = "34e60ed972a4f8860196f17f0f3c8d6412d621be786aaac82474a9911a489519";
+    private const string CandidateSha256 = "4406ccac580cd1b52e439ac3aa79b5931eb3fc7372396e3c6beda55e7661a483";
     private static readonly Lazy<PolicySnapshot?> Candidate = new(Load);
 
     public static PolicySnapshot? ForDeviceClass(PolicyDeviceClass deviceClass)

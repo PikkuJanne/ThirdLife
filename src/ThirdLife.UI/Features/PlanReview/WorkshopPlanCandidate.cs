@@ -14,8 +14,8 @@ internal sealed record PlanProfileOption(
 internal static class WorkshopPlanCandidate
 {
     private const string CatalogSha256 = "60880321e29f0db5deb77c85bd10d1c5926ca1b068d930445695580891c1bdce";
-    private const string BasicSha256 = "fd4c7b3a07c9d655bfb430287464b3e3ba9f8a3670ffeda4399b81798c0e72d4";
-    private const string JobSeekerSha256 = "a72d3158384fa144ce7363d9727a86abe5adca4ae8451d7e9dd8c189014f0b2e";
+    private const string BasicSha256 = "d80c1c029067ebc3f172011cf66a551eff50c7661c6daf8874aced23324130e2";
+    private const string JobSeekerSha256 = "928e0a6a5072a480d416861fc1051afd5efd2fc32b40459cad4aa4c3b113eb05";
     private static readonly DateTimeOffset FixtureAsOfUtc = new(2026, 8, 21, 0, 0, 0, TimeSpan.Zero);
     private static readonly Lazy<ImmutableArray<PlanProfileOption>> Candidate = new(Load);
 
