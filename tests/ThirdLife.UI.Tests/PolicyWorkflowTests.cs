@@ -89,7 +89,7 @@ public sealed class PolicyWorkflowTests
         var saved = Assert.IsType<StoredPolicyDecision>(
             await store.LoadLatestPolicyDecisionAsync(jobId, exported.AssessmentId.Value));
         Assert.True(saved.Snapshot.Document.IsCurrentSchema);
-        Assert.Equal("0.1.0-candidate.2", saved.Decision.PolicyVersion);
+        Assert.Equal("0.1.0-candidate.3", saved.Decision.PolicyVersion);
         Assert.Equal(Disposition.HumanReviewRequired, saved.Decision.Disposition);
         Assert.Equal(1, provider.InvocationCount);
         Assert.Contains(saved.Decision.PolicySha256, exported.Preview, StringComparison.Ordinal);

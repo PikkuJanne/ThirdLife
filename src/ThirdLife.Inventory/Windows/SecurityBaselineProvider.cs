@@ -38,18 +38,25 @@ public sealed class SecurityBaselineProvider : IInventoryProvider
     ];
     private const string OwnershipSource = "security.management_indicators";
     private const string UacSource = "security.uac_configuration_and_health";
+    private const string TimeSyncSource = "security.w32time.last_successful_sync";
     private static readonly EvidenceKey OwnershipKey = new("ownership.lock_state");
     private static readonly EvidenceKey UacKey = new("security.uac_state");
+    private static readonly EvidenceKey TimeSyncKey = new("security.last_successful_sync_utc");
 
     private readonly Func<SecurityCheck, CancellationToken, SystemInventorySourceValue<string>> _read;
+    private readonly Func<CancellationToken, SystemInventorySourceValue<long>> _readTimeSync;
     private int _active;
     private bool _cleanupFailed;
 
-    public SecurityBaselineProvider() : this(WindowsSecurityBaselineSource.Read, ProviderEvidenceOrigin.ActiveMachine) { }
+    public SecurityBaselineProvider() : this(WindowsSecurityBaselineSource.Read,
+        WindowsTimeSyncSource.Read, ProviderEvidenceOrigin.ActiveMachine)
+    { }
 
-    internal SecurityBaselineProvider(Func<SecurityCheck, CancellationToken, SystemInventorySourceValue<string>> read, ProviderEvidenceOrigin origin)
+    internal SecurityBaselineProvider(Func<SecurityCheck, CancellationToken, SystemInventorySourceValue<string>> read,
+        Func<CancellationToken, SystemInventorySourceValue<long>> readTimeSync, ProviderEvidenceOrigin origin)
     {
         _read = read;
+        _readTimeSync = readTimeSync;
         var fields = Checks.Select(item => new ProviderEvidenceDefinition(
             new EvidenceKey(item.Key), EvidenceValueKind.Enum, null, item.Source));
         Descriptor = new InventoryProviderDescriptor(new ProviderId(ProviderIdentity),
@@ -57,7 +64,8 @@ public sealed class SecurityBaselineProvider : IInventoryProvider
             ProviderNetworkUse.None, origin, [ProviderOperatingSystem.Windows11],
             new ProviderFailureDefinition(new("security.baseline_provider_status"), "security.baseline_status"),
             [.. fields, new(OwnershipKey, EvidenceValueKind.Enum, null, OwnershipSource),
-             new(UacKey, EvidenceValueKind.Enum, null, UacSource)]);
+             new(UacKey, EvidenceValueKind.Enum, null, UacSource),
+             new(TimeSyncKey, EvidenceValueKind.WholeNumber, "unix_seconds", TimeSyncSource)]);
     }
 
     public InventoryProviderDescriptor Descriptor { get; }
@@ -115,7 +123,12 @@ public sealed class SecurityBaselineProvider : IInventoryProvider
         };
         findings.Add(uac);
 
-        var statuses = values.Values.Select(item => item.Status);
+        var sync = _readTimeSync(cancellationToken);
+        findings.Add(sync.Status == SystemInventorySourceStatus.Available
+            ? NormalizedEvidence.Observed(TimeSyncKey, EvidenceValue.FromInteger(sync.GetRequiredValue()), sourceReference: TimeSyncSource)
+            : NormalizedEvidence.NotAvailable(TimeSyncKey, sync.Status == SystemInventorySourceStatus.InvalidData
+                ? ProviderLimitation.SourceValueMalformed : ProviderLimitation.SourceValueMissing, TimeSyncSource));
+        var statuses = values.Values.Select(item => item.Status).Append(sync.Status);
         if (statuses.Contains(SystemInventorySourceStatus.InvalidData)) { return ProviderReadResult.InvalidData(findings); }
         if (statuses.Contains(SystemInventorySourceStatus.AccessDenied)) { return ProviderReadResult.AccessDenied(findings); }
         return statuses.Contains(SystemInventorySourceStatus.Unavailable)

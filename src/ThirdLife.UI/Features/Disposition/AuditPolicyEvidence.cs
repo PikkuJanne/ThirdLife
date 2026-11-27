@@ -9,6 +9,8 @@ namespace ThirdLife.UI.Features.Disposition;
 
 internal static class AuditPolicyEvidence
 {
+    private const string SecurityProvider = "windows-security-baseline";
+    private static readonly EvidenceKey TimeSyncRecency = new("security.time_sync_recency");
     private const string OsProvider = "windows-operating-system";
     private const string IdentitySource = "os.windows.identity";
     private const string LifecycleSource = "os.lifecycle.catalog";
@@ -43,7 +45,7 @@ internal static class AuditPolicyEvidence
         var projected = new List<Observation> { ProjectSanitization(intake) };
         foreach (var fact in assessment.Observations)
         {
-            if (Project(fact, familyIssue, lifecycleIssue, architectureIssue) is { } selected)
+            if (Project(fact, familyIssue, lifecycleIssue, architectureIssue, evaluatedAtUtc) is { } selected)
             {
                 if ((fact.EvidenceKey.Value == "operating_system.release" && observations.Contains("os.family")) ||
                     (fact.EvidenceKey.Value == "operating_system.support_state" && observations.Contains("os.support_target")))
@@ -51,11 +53,18 @@ internal static class AuditPolicyEvidence
                     selected = WithLimit(fact, fact.EvidenceKey, Conflict);
                 }
 
+                if (selected.Metadata.CollectedAtUtc > evaluatedAtUtc ||
+                    observations[fact.EvidenceKey.Value].Skip(1).Any())
+                {
+                    selected = WithLimit(selected, selected.EvidenceKey, Conflict);
+                }
+
                 projected.Add(selected);
             }
         }
 
-        projected.AddRange(HumanConfirmationProjection.FromJob(job));
+        projected.AddRange(HumanConfirmationProjection.FromJob(job, assessment.AssessmentId.Value)
+            .Select(fact => fact.Metadata.CollectedAtUtc > evaluatedAtUtc ? WithLimit(fact, fact.EvidenceKey, Conflict) : fact));
         var repeated = projected.GroupBy(fact => fact.EvidenceKey)
             .Where(group => group.Skip(1).Any())
             .Select(group => group.Key)
@@ -81,7 +90,8 @@ internal static class AuditPolicyEvidence
             intake.Metadata.EvidenceClassification == EvidenceClassification.HumanConfirmed ? intake.OperatorId : null);
     }
 
-    private static Observation? Project(Observation fact, string? familyIssue, string? lifecycleIssue, string? architectureIssue) =>
+    private static Observation? Project(Observation fact, string? familyIssue, string? lifecycleIssue,
+        string? architectureIssue, DateTimeOffset evaluatedAtUtc) =>
         fact.EvidenceKey.Value switch
         {
             "os.family" when IsOsFamily(fact) =>
@@ -94,9 +104,50 @@ internal static class AuditPolicyEvidence
                 when IsLifecycle(fact) => fact,
             "os.architecture" when IsOwned(fact, OsProvider, "os.dotnet.os_architecture") => fact,
             "system.architecture" when IsSystemArchitecture(fact) => WithLimit(fact, fact.EvidenceKey, architectureIssue),
+            "security.last_successful_sync_utc" when IsOwned(fact, SecurityProvider, "security.w32time.last_successful_sync") =>
+                ProjectTimeSync(fact, evaluatedAtUtc),
+            "security.firewall_health" when IsOwned(fact, SecurityProvider, "security.wsc.firewall") =>
+                ProjectSecurityEnum(fact, EvidenceClassification.Observed),
+            "security.antivirus_health" when IsOwned(fact, SecurityProvider, "security.wsc.antivirus") =>
+                ProjectSecurityEnum(fact, EvidenceClassification.Observed),
+            "security.defender_health" when IsOwned(fact, SecurityProvider, "security.defender.computer_status") =>
+                ProjectSecurityEnum(fact, EvidenceClassification.Observed),
+            "security.uac_state" when IsOwned(fact, SecurityProvider, "security.uac_configuration_and_health") =>
+                ProjectSecurityEnum(fact, EvidenceClassification.Inferred),
+            "ownership.lock_state" when IsOwned(fact, SecurityProvider, "security.management_indicators") &&
+                (fact.Value is null or { Kind: EvidenceValueKind.Enum, StringValue: "management_indicated" }) => fact,
+            "reboot.pending_status" when IsOwned(fact, "windows-pending-reboot", "pending_reboot.partial_indicator_union") &&
+                (fact.Value is null or { Kind: EvidenceValueKind.Enum, StringValue: "pending_indicated" }) => fact,
             _ when IsTrustedDirectFact(fact) => fact,
             _ => null,
         };
+
+    private static Observation ProjectSecurityEnum(Observation fact, EvidenceClassification expectedClass) =>
+        fact.Value is null || (fact.Value.Kind == EvidenceValueKind.Enum && fact.Metadata.EvidenceClassification == expectedClass)
+            ? fact : WithLimit(fact, fact.EvidenceKey, Malformed);
+
+    private static Observation ProjectTimeSync(Observation fact, DateTimeOffset evaluatedAtUtc)
+    {
+        var metadata = fact.Metadata;
+        if (fact.LimitationCode is not null || fact.Value is null)
+        {
+            return WithLimit(fact, TimeSyncRecency, fact.LimitationCode ?? Missing);
+        }
+
+        if (fact.Unit != "unix_seconds" || metadata.EvidenceClassification != EvidenceClassification.Observed ||
+            fact.Value is not { Kind: EvidenceValueKind.WholeNumber, IntegerValue: > 0 and var seconds } ||
+            seconds > metadata.CollectedAtUtc.ToUnixTimeSeconds() || metadata.CollectedAtUtc > evaluatedAtUtc)
+        {
+            return WithLimit(fact, TimeSyncRecency, Malformed);
+        }
+
+        var age = evaluatedAtUtc - DateTimeOffset.FromUnixTimeSeconds(seconds);
+        var inferred = new EvidenceMetadata(metadata.EvidenceId, metadata.PrivacyClassification, EvidenceClassification.Inferred,
+            metadata.ProviderId, metadata.CollectedAtUtc, metadata.Provenance, metadata.ValueAvailability);
+        return new Observation(inferred, TimeSyncRecency,
+            EvidenceValue.FromEnum(age <= TimeSpan.FromDays(7) ? "within_seven_days" : "older_than_seven_days"),
+            unit: null, limitationCode: null);
+    }
 
     private static bool IsTrustedDirectFact(Observation fact)
     {
@@ -107,7 +158,7 @@ internal static class AuditPolicyEvidence
                 "memory.installed_bytes" or "storage.system.capacity_bytes" or "storage.system.free_bytes" or
                 "storage.system.health_state" or "battery.present" or "battery.swelling_inspection" or
                 "battery.full_charge_ratio_percent" or "firmware.mode" or "secure_boot.capable" or "secure_boot.enabled" or
-                "tpm.present" or "tpm.version" or "tpm.ready" or "ownership.lock_state" or "activation.state" or
+                "tpm.present" or "tpm.version" or "tpm.ready" or "activation.state" or
                 "function.display" or "function.keyboard" or "function.pointing" or "function.network" or
                 "function.audio_output" or "function.camera" or "function.microphone";
         }
@@ -123,8 +174,6 @@ internal static class AuditPolicyEvidence
             "tpm.present" or "tpm.version" => IsOwned(fact, FirmwareProvider, "tpm.tbs.device_info"),
             "tpm.ready" => IsOwned(fact, FirmwareProvider, "tpm.wmi.is_ready_information"),
             "activation.state" => IsOwned(fact, "windows-activation", "activation.slc.windows_application_status"),
-            "ownership.lock_state" => IsOwned(fact, "windows-security-baseline", "security.management_indicators") &&
-                (fact.Value is null or { Kind: EvidenceValueKind.Enum, StringValue: "management_indicated" }),
             _ => false,
         };
     }

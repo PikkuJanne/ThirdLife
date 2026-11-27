@@ -159,6 +159,14 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
 
     private SanitizationGateStatus? Gate => Job is null ? null : SanitizationGate.Inspect(Job);
 
+    internal string? SecurityReviewAssessmentId => CurrentReviewAssessment(Job, Assessment);
+
+    private static string? CurrentReviewAssessment(StoredJob? job, AssessmentSnapshot? assessment) =>
+        job is not null && assessment is { Outcome: AssessmentOutcome.Completed or AssessmentOutcome.RequiresReview } &&
+        SanitizationGate.Inspect(job) is { AllowsAssessment: true, Decision: { } gate } &&
+        assessment.JobId == job.Job.JobId && assessment.GateDecisionId == gate.DecisionId
+            ? assessment.AssessmentId.Value : null;
+
     public bool CanAssess => CanEditJob && Gate is { AllowsAssessment: true };
 
     public bool CanCompleteSavedSanitization => CanEditJob &&
@@ -361,9 +369,13 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             throw new InvalidOperationException("A fixture job requires a labelled fixture intake record.");
         }
 
+        var assessmentId = ManualTestCatalog.IsSecurityReview(caseId)
+            ? SecurityReviewAssessmentId ?? throw new InvalidOperationException("Complete the current assessment before recording a security review.")
+            : null;
         await Task.Run(() => _manualTests!.RecordAsync(job.Job.JobId, caseId, outcome,
-            new OperatorId(operatorCode.Trim()), notes.Trim(), reason));
+            new OperatorId(operatorCode.Trim()), notes.Trim(), reason, assessmentId: assessmentId));
         await ApplyJobAsync(await LoadJobAsync(job.Job.JobId));
+        ClearReport();
         Status = "Manual result saved. You can close and reopen this job to continue.";
     });
 
@@ -634,8 +646,11 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     private async Task ApplyJobAsync(StoredJob job, AssessmentSnapshot? currentRun = null, bool refreshPreparation = true)
     {
         var (manual, snapshot, separateOrigin, repairHistory) = await Task.Run(() =>
-            (ManualTestService.GetProgress(job), currentRun ?? AssessmentOrchestrator.ReadLatest(job),
-                IsSeparateEvidenceOrigin(job), RepairJournal.GetHistory(job)));
+        {
+            var assessment = currentRun ?? AssessmentOrchestrator.ReadLatest(job);
+            return (ManualTestService.GetProgress(job, CurrentReviewAssessment(job, assessment)), assessment,
+                IsSeparateEvidenceOrigin(job), RepairJournal.GetHistory(job));
+        });
         var jobChanged = Job?.Job.JobId != job.Job.JobId;
         var previousGate = Gate?.Decision?.DecisionId;
         Job = job;
@@ -784,6 +799,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
                 "security.uac_state" => "User Account Control setting and reported health",
                 "security.remote_desktop_configured" => "Windows Remote Desktop connection setting",
                 "security.ntp_client_configured" => "Windows network time client setting",
+                "security.last_successful_sync_utc" => "Last successful Windows time synchronization (UTC)",
                 "ownership.domain_join" => "Windows domain membership",
                 "ownership.mdm_registration" => "Device management registration",
                 "ownership.cloud_join" => "Device or current-user work account registration",
@@ -797,11 +813,20 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             };
             if (providerName == "windows-security-baseline")
             {
+                if (key == "security.last_successful_sync_utc" && value is not null)
+                {
+                    displayValue = WorkshopReportRenderer.WorkshopSyncTime(observation) ?? "Not available";
+                }
+
                 detail += key switch
                 {
+                    "security.firewall_health" => ". Category health covers registered firewall protection. Individual firewall profiles need separate inspection.",
                     "security.antivirus_health" => ". Category health only. Product approval needs separate evidence.",
+                    "security.defender_health" => ". Windows reports Defender service, antivirus, real-time protection and signature status.",
+                    "security.system_volume_protection" => ". This read-only check covers the Windows volume.",
                     "security.remote_desktop_configured" => ". Other remote support tools and administrator accounts need separate review.",
-                    "security.ntp_client_configured" => ". This setting does not establish a successful time synchronization.",
+                    "security.ntp_client_configured" => ". Windows Time supplies the last successful synchronization separately.",
+                    "security.last_successful_sync_utc" => ". The candidate policy checks the age of this Windows Time observation at evaluation.",
                     "ownership.lock_state" => ". Unresolved management or ownership blocks handover.",
                     _ => string.Empty,
                 };

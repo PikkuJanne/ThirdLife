@@ -13,13 +13,13 @@
   <ItemGroup>
     <EmbeddedResource Include="Features\PlanReview\ServicingPolicies\*.json" LogicalName="ThirdLife.UI.ServicingPolicy.%(Filename).json" />
     <EmbeddedResource Include="app.manifest" LogicalName="ThirdLife.UI.app.manifest" />
-    <EmbeddedResource Include="..\..\fixtures\policies\community-laptop-policy.json"
+    <EmbeddedResource Include="Features\Disposition\CommunityLaptopCandidate\community-laptop-policy.json"
                       LogicalName="ThirdLife.UI.community-laptop-policy.json" />
     <EmbeddedResource Include="..\..\fixtures\catalog\catalog.json"
                       LogicalName="ThirdLife.UI.catalog.json" />
-    <EmbeddedResource Include="..\..\fixtures\profiles\basic.json"
+    <EmbeddedResource Include="Features\Disposition\CommunityLaptopCandidate\basic.json"
                       LogicalName="ThirdLife.UI.basic.json" />
-    <EmbeddedResource Include="..\..\fixtures\profiles\job-seeker.json"
+    <EmbeddedResource Include="Features\Disposition\CommunityLaptopCandidate\job-seeker.json"
                       LogicalName="ThirdLife.UI.job-seeker.json" />
     <EmbeddedResource Include="Features\PlanReview\PackageSetup\*.json" />
   </ItemGroup>

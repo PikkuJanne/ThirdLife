@@ -6,19 +6,19 @@ namespace ThirdLife.Core.HumanConfirmation;
 
 public static class HumanConfirmationProjection
 {
-    private const string MappedProcedureRevision = "M1-MHT-1";
-
     /// <summary>
     /// Projects the latest mapped guided check per function without changing the job history.
     /// </summary>
-    public static IReadOnlyList<Observation> FromJob(StoredJob job)
+    public static IReadOnlyList<Observation> FromJob(StoredJob job, string? assessmentId = null)
     {
         ArgumentNullException.ThrowIfNull(job);
 
-        var observations = new List<Observation>(6);
-        foreach (var item in ManualTestService.GetProgress(job).Items)
+        var observations = new List<Observation>(8);
+        foreach (var item in ManualTestService.GetProgress(job, assessmentId).Items)
         {
-            if (item.Latest is not { Details.ProcedureRevision: MappedProcedureRevision } attempt ||
+            var revision = ManualTestCatalog.IsSecurityReview(item.Case.Id)
+                ? ManualTestCatalog.SecurityReviewRevision : ManualTestCatalog.ProcedureRevision;
+            if (item.Latest is not { Details: { } details } attempt || details.ProcedureRevision != revision ||
                 EvidenceKeyFor(item.Case.Id) is not { } key)
             {
                 continue;
@@ -42,6 +42,8 @@ public static class HumanConfirmationProjection
 
     private static EvidenceKey? EvidenceKeyFor(string caseId) => caseId switch
     {
+        ManualTestCatalog.AdministratorReview => new EvidenceKey("security.administrator_review"),
+        ManualTestCatalog.RemoteAccessReview => new EvidenceKey("security.remote_access_review"),
         "MHT-002" => new EvidenceKey("function.keyboard"),
         "MHT-003" => new EvidenceKey("function.pointing"),
         "MHT-005" => new EvidenceKey("function.display"),

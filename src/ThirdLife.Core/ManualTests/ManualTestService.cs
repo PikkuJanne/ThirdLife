@@ -1,5 +1,6 @@
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Sanitization;
 
 namespace ThirdLife.Core.ManualTests;
 
@@ -33,13 +34,24 @@ public sealed class ManualTestService
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
-    public async Task<HumanTestEvidence> RecordAsync(
+    public Task<HumanTestEvidence> RecordAsync(
         JobId jobId,
         string caseId,
         HumanTestResult result,
         OperatorId operatorId,
         string notes,
         ManualTestUnavailableReason? reason = null,
+        CancellationToken cancellationToken = default) =>
+        RecordAsync(jobId, caseId, result, operatorId, notes, reason, assessmentId: null, cancellationToken);
+
+    public async Task<HumanTestEvidence> RecordAsync(
+        JobId jobId,
+        string caseId,
+        HumanTestResult result,
+        OperatorId operatorId,
+        string notes,
+        ManualTestUnavailableReason? reason,
+        string? assessmentId,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(jobId);
@@ -61,20 +73,28 @@ public sealed class ManualTestService
             throw new JobLifecycleException("job_archived", "An archived job cannot record manual checks.");
         }
 
+        var securityReview = ManualTestCatalog.IsSecurityReview(caseId);
+        if (securityReview && !SanitizationGate.Inspect(stored).AllowsAssessment)
+        {
+            throw new JobLifecycleException("sanitization_gate_changed", "Security review requires an assessment under the current intake.");
+        }
+
         var fixtureJob = IsFixtureJob(stored);
         var hasObservation = result is HumanTestResult.Pass or HumanTestResult.Fail;
         if (fixtureJob && hasObservation)
         {
             throw new JobLifecycleException(
                 "fixture_manual_result",
-                "A fixture job can record unavailable or unperformed checks. Physical results require workshop evidence.");
+                "A fixture job can record unavailable or unperformed checks. Observed results require workshop evidence.");
         }
 
         // The loaded evidence is in durable append order. Each retest has its own
         // identity and references the previous attempt visible to this operator.
         var previous = stored.HumanTests.LastOrDefault(attempt =>
-            IsGuidedRecord(stored, attempt, fixtureJob) && attempt.Details!.CaseId == caseId);
-        var details = new ManualTestDetails(caseId, ManualTestCatalog.ProcedureRevision, notes, previous?.HumanTestId);
+            IsGuidedRecord(stored, attempt, fixtureJob) && attempt.Details!.CaseId == caseId &&
+            attempt.Details.AssessmentId == assessmentId);
+        var revision = securityReview ? ManualTestCatalog.SecurityReviewRevision : ManualTestCatalog.ProcedureRevision;
+        var details = new ManualTestDetails(caseId, revision, notes, previous?.HumanTestId, assessmentId);
         var origin = fixtureJob ? ProvenanceKind.SyntheticFixture :
             hasObservation ? ProvenanceKind.HumanConfirmation : ProvenanceKind.SystemGenerated;
         var metadata = new EvidenceMetadata(
@@ -83,20 +103,21 @@ public sealed class ManualTestService
             hasObservation ? EvidenceClassification.HumanConfirmed : EvidenceClassification.NotAvailable,
             Provider,
             _timeProvider.GetUtcNow(),
-            new EvidenceProvenance(origin, ManualTestCatalog.ProcedureRevision),
+            new EvidenceProvenance(origin, revision),
             hasObservation ? ValueAvailability.Available : ValueAvailability.Unknown);
         var record = new HumanTestEvidence(
             HumanTestId.New(), jobId, stored.Job.DeviceId, metadata, result, operatorId, limitation, details);
-        await _store.AppendEvidenceAsync(new JobEvidenceBatch(jobId, humanTests: [record]), cancellationToken)
+        await _store.AppendEvidenceAsync(new JobEvidenceBatch(jobId, humanTests: [record], requireUnarchivedJob: true), cancellationToken)
             .ConfigureAwait(false);
         return record;
     }
 
-    public static ManualTestProgress GetProgress(StoredJob job)
+    public static ManualTestProgress GetProgress(StoredJob job, string? assessmentId = null)
     {
         ArgumentNullException.ThrowIfNull(job);
         var fixtureJob = IsFixtureJob(job);
-        var recorded = job.HumanTests.Where(attempt => IsGuidedRecord(job, attempt, fixtureJob))
+        var recorded = job.HumanTests.Where(attempt => IsGuidedRecord(job, attempt, fixtureJob) &&
+            (attempt.Details!.AssessmentId is null || attempt.Details.AssessmentId == assessmentId))
             .ToLookup(attempt => attempt.Details!.CaseId, StringComparer.Ordinal);
         var items = ManualTestCatalog.Cases.Select(testCase =>
             new ManualTestProgressItem(testCase, Array.AsReadOnly(recorded[testCase.Id].ToArray())));

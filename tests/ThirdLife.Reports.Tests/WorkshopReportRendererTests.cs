@@ -47,6 +47,25 @@ public sealed class WorkshopReportRendererTests
         }
     }
 
+    [Theory]
+    [InlineData("security.w32time.last_successful_sync", "unix_seconds", 1_700_000_000L, "2023-11-14 22:13:20 UTC")]
+    [InlineData("security.w32time.last_successful_sync", "unix_seconds", long.MaxValue, "Withheld")]
+    [InlineData("security.w32time.last_successful_sync", "milliseconds", 1_700_000_000L, "Withheld")]
+    [InlineData("unrelated.source", "unix_seconds", 1_700_000_000L, "Withheld")]
+    public void ReportFormatsOnlyAttributableWindowsTime(string source, string unit, long seconds, string expected)
+    {
+        var metadata = new EvidenceMetadata(new("time-sample"), PrivacyClassification.WorkshopRestricted,
+            EvidenceClassification.Observed, new("windows-security-baseline"), SampleTime,
+            new(ProvenanceKind.SyntheticFixture, source), ValueAvailability.Available);
+        var observation = new Observation(metadata, new("security.last_successful_sync_utc"),
+            EvidenceValue.FromInteger(seconds), unit, limitationCode: null);
+
+        var report = WorkshopReportRenderer.Render(Stored([observation]));
+
+        Assert.Contains($"security.last_successful_sync_utc: {expected}", report);
+        Assert.Contains("Missing indicators leave restart clearance unresolved.", report);
+    }
+
     [Fact]
     public void ReportOmitsUnreviewedKeysOperationalPayloadsAndFreeFormNotes()
     {

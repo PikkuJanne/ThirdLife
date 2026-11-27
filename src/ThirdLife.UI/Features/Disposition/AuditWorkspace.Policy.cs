@@ -94,7 +94,8 @@ internal sealed partial class AuditWorkspace
                 // Capability choices are absent until a profile is selected and saved.
                 var result = DispositionEngine.Evaluate(candidate.Document, evidence, saved?.Decision.ActiveCapabilityIds);
                 return PolicyDecisionRecord.Create(candidate, jobId, snapshot.AssessmentId.Value, result,
-                    evidence.Select(item => item.Metadata.EvidenceId), now, expectedDecisionId);
+                    evidence.Select(item => item.Metadata.EvidenceId), now, expectedDecisionId,
+                    storedJob.SanitizationEvidence.Count + storedJob.Observations.Count + storedJob.HumanTests.Count);
             });
             if (saved is not null && !saved.Decision.EvidenceIds.AsSpan().SequenceEqual(decision.EvidenceIds.AsSpan()))
             {
@@ -161,14 +162,19 @@ internal sealed partial class AuditWorkspace
         }
 
         var decision = saved.Decision;
-        var historical = !saved.Snapshot.Document.IsCurrentSchema;
+        var policy = saved.Snapshot.Document;
+        var candidate = CandidateForSelectedClass()?.Document;
+        var historical = !policy.IsCurrentSchema || (candidate?.PolicyId == policy.PolicyId &&
+            PolicyVersionOrder.Compare(policy.Version, candidate.Version) < 0);
         var historicalAlternative = historical && decision.Disposition == Disposition.AlternativeOperatingSystemCandidate;
         var earlierIntake = Assessment is { } assessment && assessment.GateDecisionId != Gate?.Decision?.DecisionId;
         var label = saved.Snapshot.Document.Status == ThirdLife.Policy.Schema.PolicyStatus.Candidate ? "Candidate" : "Saved";
-        PolicyStatus = (historical, earlierIntake) switch
+        var reviewsChanged = Job is { } job && saved.HasNewSecurityReview(job);
+        PolicyStatus = (historical, earlierIntake, reviewsChanged) switch
         {
-            (true, _) => "Historical policy decision. Use the current policy for a new preparation decision.",
-            (_, true) => "Historical policy decision. Its assessment used an earlier intake record.",
+            (true, _, _) => "Historical policy decision. Use the current policy for a new preparation decision.",
+            (_, true, _) => "Historical policy decision. Its assessment used an earlier intake record.",
+            (_, _, true) => "Historical policy decision. Guided evidence changed. Run a new assessment, record its security reviews, and evaluate again.",
             _ => $"{label} decision saved for workshop review.",
         };
         PolicyDispositionTitle = WorkshopReportRenderer.SafePolicyPresentation(decision.Title);

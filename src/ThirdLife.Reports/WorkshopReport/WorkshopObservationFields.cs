@@ -62,6 +62,7 @@ internal static class WorkshopObservationFields
             "security.ntp_client_configured", "ownership.domain_join", "ownership.mdm_registration", "ownership.cloud_join",
             "ownership.lock_state", "security.baseline_provider_status", "security.defender_health",
             "security.system_volume_protection");
+        Add("windows-security-baseline", EvidenceValueKind.WholeNumber, "security.last_successful_sync_utc");
         Add("windows-activation", EvidenceValueKind.Enum, "activation.state", "activation.provider_status");
         Add("windows-pending-reboot", EvidenceValueKind.Enum, "reboot.pending_status", "reboot.provider_status");
         foreach (var source in new[] { "cbs", "windows_update", "file_rename" })

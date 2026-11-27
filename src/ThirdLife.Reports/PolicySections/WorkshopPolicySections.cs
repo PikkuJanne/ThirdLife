@@ -83,7 +83,7 @@ public static partial class WorkshopReportRenderer
         }
     }
 
-    private static void WritePolicySections(StringBuilder report, StoredPolicyDecision savedDecision, CancellationToken cancellationToken)
+    private static void WritePolicySections(StringBuilder report, StoredPolicyDecision savedDecision, bool hasNewSecurityReview, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var decision = savedDecision.Decision;
@@ -98,6 +98,10 @@ public static partial class WorkshopReportRenderer
             ? "Candidate policy evaluation for workshop review."
             : "Saved effective policy evaluation.");
         Line(report, $"Evaluated {Timestamp(decision.EvaluatedAtUtc)}.");
+        if (hasNewSecurityReview)
+        {
+            Line(report, "The saved decision predates a security review for this assessment. Run a fresh assessment and record its reviews before making a new decision.");
+        }
         Line(report, "");
         Line(report, SafePolicyPresentation(decision.RuleReport));
         Line(report, "");

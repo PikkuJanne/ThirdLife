@@ -1,5 +1,6 @@
 using System.IO;
 using ThirdLife.Core.Evidence;
+using ThirdLife.Core.HumanConfirmation;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
 using ThirdLife.Core.Sanitization;
@@ -7,6 +8,7 @@ using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Persistence;
+using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Shell;
 
 namespace ThirdLife.UI.Tests;
@@ -141,6 +143,86 @@ public sealed class AuditWorkflowTests
             Assert.Equal(0, provider.InvocationCount);
         }
         finally { await normal.CloseAsync(); }
+    }
+
+    [Fact]
+    public async Task SecurityReviewsReopenWithAttributionAndStayBoundToTheAssessedDeviceState()
+    {
+        using var disk = new AuditTestStore();
+        var provider = AuditTestProvider.Available("review-sentinel", ProviderEvidenceOrigin.ActiveMachine);
+        var reportStore = new WorkshopReportStore(Path.Combine(disk.Root, "security-review-reports"));
+        AuditWorkspace Open() => new(async token => await disk.OpenSqliteAsync(token).ConfigureAwait(false),
+            [provider], new FixedClock(), reportStore);
+        const string admin = ManualTestCatalog.AdministratorReview;
+        const string remote = ManualTestCatalog.RemoteAccessReview;
+        string jobId;
+        string assessmentId;
+        await using (var workspace = Open())
+        {
+            await workspace.CreateJobAsync();
+            jobId = workspace.JobId;
+            await workspace.RecordSanitizationAsync(VerifiedSample());
+            await workspace.RecordManualAsync(admin, HumanTestResult.Pass, OperatorCode, string.Empty, null);
+            Assert.Empty(workspace.Job!.HumanTests);
+            await workspace.StartAssessmentAsync();
+            assessmentId = workspace.Assessment!.AssessmentId.Value;
+            await workspace.RecordManualAsync(admin, HumanTestResult.Pass, OperatorCode, PrivateFailureSample, null);
+            await workspace.RecordManualAsync(admin, HumanTestResult.Pass, string.Empty, string.Empty, null);
+            Assert.Empty(workspace.Job!.HumanTests);
+
+            await workspace.RecordManualAsync(admin, HumanTestResult.Pass, OperatorCode, string.Empty, null);
+            await workspace.RecordManualAsync(remote, HumanTestResult.Pass, OperatorCode, string.Empty, null);
+            await workspace.EvaluatePolicyAsync();
+            Assert.True(workspace.HasPolicyDecision, workspace.OperationError);
+            Assert.DoesNotContain("Historical", workspace.PolicyStatus, StringComparison.Ordinal);
+            await workspace.GenerateReportAsync();
+            await workspace.OpenReportAsync();
+            Assert.Contains("Remote-access review (SBR-002): Pass", workspace.ReportPreview, StringComparison.Ordinal);
+
+            await workspace.RecordManualAsync(remote, HumanTestResult.Fail, "operator-retest", string.Empty, null);
+            Assert.Empty(workspace.ReportPreview);
+            Assert.StartsWith("Historical policy decision.", workspace.PolicyStatus, StringComparison.Ordinal);
+        }
+
+        await using var reopened = Open();
+        await reopened.OpenJobAsync(jobId);
+        Assert.StartsWith("Historical policy decision.", reopened.PolicyStatus, StringComparison.Ordinal);
+        var job = reopened.Job!;
+        var latest = job.HumanTests[^1];
+        Assert.Equal(job.HumanTests[1].HumanTestId, latest.Details!.RetestOf);
+        var facts = HumanConfirmationProjection.FromJob(job, assessmentId);
+        var remoteFact = Assert.Single(facts, fact => fact.EvidenceKey.Value == "security.remote_access_review");
+        Assert.Equal("failed", remoteFact.Value!.StringValue);
+        Assert.Same(latest.Metadata, remoteFact.Metadata);
+        Assert.Equal("operator-retest", remoteFact.OperatorId!.Value);
+        Assert.Equal(SampleTime, remoteFact.Metadata.CollectedAtUtc);
+        Assert.Equal("passed", Assert.Single(facts, fact => fact.EvidenceKey.Value == "security.administrator_review").Value!.StringValue);
+
+        await reopened.GenerateReportAsync();
+        await reopened.OpenReportAsync();
+        Assert.Contains("Remote-access review (SBR-002): Fail", reopened.ReportPreview, StringComparison.Ordinal);
+        Assert.Contains("predates a security review", reopened.ReportPreview, StringComparison.Ordinal);
+        Assert.Contains("operator-retest", reopened.ReportPreview, StringComparison.Ordinal);
+        Assert.DoesNotContain(PrivateFailureSample, reopened.ReportPreview, StringComparison.Ordinal);
+
+        await reopened.StartAssessmentAsync();
+        Assert.NotEqual(assessmentId, reopened.SecurityReviewAssessmentId);
+        Assert.Empty(HumanConfirmationProjection.FromJob(reopened.Job!, reopened.SecurityReviewAssessmentId));
+        Assert.Equal(3, reopened.Job!.HumanTests.Count);
+        await reopened.RecordManualAsync(admin, HumanTestResult.NotAvailable, OperatorCode, string.Empty,
+            ManualTestUnavailableReason.PermissionDenied);
+        var unknown = Assert.Single(HumanConfirmationProjection.FromJob(reopened.Job!, reopened.SecurityReviewAssessmentId));
+        Assert.Null(unknown.Value);
+        Assert.Equal("permission_denied", unknown.LimitationCode);
+        Assert.Null(reopened.Job!.HumanTests[^1].Details!.RetestOf);
+        await reopened.RecordManualAsync(remote, HumanTestResult.Fail, "operator-retest", string.Empty, null);
+        await reopened.EvaluatePolicyAsync();
+        Assert.Equal("Do not deploy", reopened.PolicyDispositionTitle);
+        await reopened.GenerateReportAsync();
+        await reopened.OpenReportAsync();
+        Assert.Contains("Policy rule POL-REMOTE-001. Fail.", reopened.ReportPreview, StringComparison.Ordinal);
+        Assert.Contains("Do not deploy", reopened.ReportPreview, StringComparison.Ordinal);
+        Assert.DoesNotContain("predates a security review", reopened.ReportPreview, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -33,7 +33,7 @@ public sealed partial class PlanReviewTests
         {
           "schema_version": "thirdlife.policy.v2",
           "policy_id": "community-laptop-policy",
-          "version": "0.1.0-candidate.2",
+          "version": "0.1.0-candidate.3",
           "status": "candidate",
           "synthetic_data": true,
           "classification": "PUBLIC_REFERENCE",

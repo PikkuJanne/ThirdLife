@@ -24,6 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\src\ThirdLife.UI\Features\Disposition\CommunityLaptopCandidate\community-laptop-policy.json"
+          Link="community-laptop-policy-candidate-3.json"
+          CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\fixtures\policies\community-laptop-policy.json"
           Link="community-laptop-policy.json"
           CopyToOutputDirectory="PreserveNewest" />

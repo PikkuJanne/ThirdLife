@@ -18,6 +18,7 @@ public partial class AuditWorkspaceView : UserControl
     private AuditWorkspace? _workspace;
     private DispatcherOperation? _announcement;
     private string? _displayedJob;
+    private string? _displayedReviewAssessment;
     private string? _lastStatus;
     private string? _lastOperationError;
     private string? _lastAssessmentStatus;
@@ -521,6 +522,21 @@ public partial class AuditWorkspaceView : UserControl
 
     private void RefreshManualProgress()
     {
+        var securityReview = ManualCheck.SelectedItem is ManualCheckOption selected &&
+            ManualTestCatalog.IsSecurityReview(selected.Case.Id);
+        ManualNotesFields.Visibility = VisibleWhen(!securityReview);
+        SecurityReviewScope.Visibility = VisibleWhen(securityReview);
+        var assessmentId = _workspace?.SecurityReviewAssessmentId;
+        if (securityReview && _displayedReviewAssessment != assessmentId)
+        {
+            ManualOutcome.SelectedIndex = -1;
+        }
+        _displayedReviewAssessment = assessmentId;
+        SecurityReviewScope.Text = assessmentId is not null
+            ? "Security review results apply to this assessment. A new assessment requires a fresh review."
+            : "Complete an assessment under the current intake before recording this review.";
+        SaveManualResultButton.IsEnabled = !securityReview || assessmentId is not null;
+
         var progress = _workspace?.ManualProgress;
         foreach (var option in _manualOptions)
         {

@@ -11,17 +11,37 @@ public sealed record ManualTestDetails
         string caseId,
         string procedureRevision,
         string notes,
-        HumanTestId? retestOf = null)
+        HumanTestId? retestOf = null,
+        string? assessmentId = null)
     {
         CaseId = DomainValue.RequireCode(caseId, nameof(caseId));
-        if (CaseId.Length != 7 || !CaseId.StartsWith("MHT-", StringComparison.Ordinal) ||
-            !char.IsAsciiDigit(CaseId[4]) || !char.IsAsciiDigit(CaseId[5]) || !char.IsAsciiDigit(CaseId[6]))
+        if (ManualTestCatalog.IsSecurityReview(CaseId))
         {
-            throw new ArgumentException("A guided check requires a stable manual-test case ID.", nameof(caseId));
+            AssessmentId = DomainValue.RequireIdentifier(assessmentId, nameof(assessmentId));
+            if (notes != string.Empty)
+            {
+                throw new ArgumentException("Security reviews accept only structured results.", nameof(notes));
+            }
+
+            Notes = string.Empty;
+        }
+        else
+        {
+            if (CaseId.Length != 7 || !CaseId.StartsWith("MHT-", StringComparison.Ordinal) ||
+                !char.IsAsciiDigit(CaseId[4]) || !char.IsAsciiDigit(CaseId[5]) || !char.IsAsciiDigit(CaseId[6]))
+            {
+                throw new ArgumentException("A guided check requires a stable manual-test case ID.", nameof(caseId));
+            }
+
+            if (assessmentId is not null)
+            {
+                throw new ArgumentException("Only a security review carries an assessment reference.", nameof(assessmentId));
+            }
+
+            Notes = DomainValue.RequireText(notes, nameof(notes), ManualTestService.MaximumNotesLength);
         }
 
         ProcedureRevision = DomainValue.RequireVersion(procedureRevision, nameof(procedureRevision));
-        Notes = DomainValue.RequireText(notes, nameof(notes), ManualTestService.MaximumNotesLength);
         RetestOf = retestOf;
     }
 
@@ -33,6 +53,10 @@ public sealed record ManualTestDetails
 
     [JsonPropertyName("notes")]
     public string Notes { get; }
+
+    [JsonPropertyName("assessment_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AssessmentId { get; }
 
     [JsonPropertyName("retest_of")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -130,6 +130,8 @@ public sealed class PolicyExceptionHistory
         key.StartsWith("secure_boot.", StringComparison.Ordinal) ||
         key.StartsWith("tpm.", StringComparison.Ordinal) ||
         key.StartsWith("ownership.", StringComparison.Ordinal) ||
+        key.StartsWith("security.", StringComparison.Ordinal) ||
+        key.StartsWith("reboot.", StringComparison.Ordinal) ||
         key.StartsWith("activation.", StringComparison.Ordinal);
 
     private static string RequireReason(string reason)
