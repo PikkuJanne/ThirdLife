@@ -1,5 +1,6 @@
 using System.Windows;
 using Microsoft.Win32;
+using ThirdLife.Core.Support;
 using ThirdLife.Diagnostics.Redaction;
 
 namespace ThirdLife.UI.Features.ManualTests;
@@ -44,6 +45,28 @@ public partial class AuditWorkspaceView
             SupportOperatorCode.Text, destination);
     }
 
+    private async void RecoverSupportExport(object sender, RoutedEventArgs e)
+    {
+        if (!Workspace.CanRecoverSupportExport) { return; }
+        if (PendingSupportExport.SelectedItem is not SupportExportAudit pending)
+        {
+            SetError(SupportRecoveryError, "Select the unconfirmed archive code.");
+            FocusAndReveal(PendingSupportExport);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(SupportRecoveryOperator.Text))
+        {
+            SetError(SupportRecoveryError, "Enter your workshop operator code.");
+            FocusAndReveal(SupportRecoveryOperator);
+            return;
+        }
+        SetError(SupportRecoveryError, string.Empty);
+        var directory = ChooseSupportFolder();
+        if (directory is null) { return; }
+        FocusAndReveal(SupportExportMessage);
+        await Workspace.RecoverSupportExportAsync(pending, SupportRecoveryOperator.Text, directory);
+    }
+
     private string? ChooseSupportFolder()
     {
         if (SelectSupportFolderForTesting is { } select) { return select(); }
@@ -84,6 +107,13 @@ public partial class AuditWorkspaceView
         }
 
         SupportPreviewRegion.Visibility = VisibleWhen(preview is not null);
+        SupportRecoveryRegion.Visibility = VisibleWhen(Workspace.PendingSupportExports.Count != 0);
+        RecoverSupportExportButton.IsEnabled = Workspace.CanRecoverSupportExport;
+        if (Workspace.PendingSupportExports.Count == 0)
+        {
+            SupportRecoveryOperator.Clear();
+            SetError(SupportRecoveryError, string.Empty);
+        }
         CancelSupportButton.Visibility = VisibleWhen(Workspace.CanCancelSupport);
         RetrySupportAuditButton.Visibility = VisibleWhen(Workspace.CanRetrySupportAudit);
         ExportSupportButton.IsEnabled = Workspace.CanExportSupport && SupportExportApproved.IsChecked == true;

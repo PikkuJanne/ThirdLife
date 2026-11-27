@@ -443,6 +443,16 @@
                    Style="{DynamicResource Trace.AttentionText}" />
         <Button x:Name="RetrySupportAuditButton" Content="Retry saving the export record" Click="RetrySupportAudit"
                 Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
+        <StackPanel x:Name="SupportRecoveryRegion" Visibility="Collapsed" Margin="0,8,0,0">
+          <Label Target="{Binding ElementName=PendingSupportExport}" Content="Unconfirmed support archive" />
+          <ComboBox x:Name="PendingSupportExport" ItemsSource="{Binding PendingSupportExports}" DisplayMemberPath="InternalSupportId"
+                    AutomationProperties.Name="Unconfirmed support archive" />
+          <Label Target="{Binding ElementName=SupportRecoveryOperator}" Content="Support recovery operator code" />
+          <TextBox x:Name="SupportRecoveryOperator" AutomationProperties.Name="Support recovery operator code" MaxLength="64" />
+          <Button x:Name="RecoverSupportExportButton" Content="Choose original folder and verify archive" Click="RecoverSupportExport"
+                  HorizontalAlignment="Left" Margin="0,8,0,0" />
+          <TextBlock x:Name="SupportRecoveryError" AutomationProperties.LiveSetting="Polite" Style="{DynamicResource Trace.ErrorText}" />
+        </StackPanel>
         <StackPanel x:Name="SupportPreviewRegion" Visibility="Collapsed" Margin="0,8,0,0">
           <TextBlock Text="{Binding SupportPreviewSummary}" />
           <TextBlock Text="The manifest shows the support code, versions and available generic machine details. The observations file shows check and package outcomes." />
