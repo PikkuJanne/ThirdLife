@@ -133,6 +133,19 @@ checks and finalization are still required for handover.
 
 [Windows shutdown command](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/shutdown)
 
+## Handover mode
+
+Open **Handover** and save the **Assisted** or **Sealed** mode using your
+workshop code. In assisted handover, record whether the present recipient
+requests guidance, defers it, or declines it in each setup area. Record
+the choice without entering a name, account, password, destination or key.
+Saving a guidance choice keeps the recipient in control of actual setup.
+
+Sealed handover leaves all recipient settings pending while you complete
+the machine-level checks. Changing the saved mode starts a fresh set of
+guidance choices and requires you to review the workshop checklist again.
+The earlier records remain in the job history.
+
 ## Workshop finalization
 
 In **Handover**, choose a workshop check and follow its guidance. Save the

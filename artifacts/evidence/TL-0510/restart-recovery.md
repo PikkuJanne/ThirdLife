@@ -26,3 +26,6 @@ The integration Targeted selection passed in 295.294 s. It ran Quick,
 seven Verification cases and six Persistence cases with zero skips
 under the locked Release build with zero warnings or errors. Quick
 covered 1,382 .NET cases and the eight work-selection regressions.
+The merge trial against main `244e51d` passed both repository validators
+and eight focused maintenance and handover-mode persistence cases in
+20 s of test time.
