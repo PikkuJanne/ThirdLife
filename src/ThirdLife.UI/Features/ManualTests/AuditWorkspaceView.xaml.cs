@@ -485,6 +485,7 @@ public partial class AuditWorkspaceView : UserControl
         RefreshRecipientGuide();
         RefreshSupportExport();
         RefreshHandoverCompletion();
+        RefreshToggleKeys();
         RefreshBackupReadiness();
         JobHeader.Visibility = VisibleWhen(Workspace.Job is not null);
         OperationErrorRegion.Visibility = VisibleWhen(Workspace.OperationError.Length != 0);

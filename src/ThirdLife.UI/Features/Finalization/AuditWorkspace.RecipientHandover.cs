@@ -55,6 +55,7 @@ internal sealed partial class AuditWorkspace
             {
                 await Task.Run(() => save(store, expected, actor));
                 ClearReport();
+                ClearToggleKeysReview();
                 ClearBackupReadiness();
                 _handoverModeFeedback = feedback;
             }
@@ -85,6 +86,7 @@ internal sealed partial class AuditWorkspace
     private void ClearHandoverMode()
     {
         ClearRecipientGuide();
+        ClearToggleKeysReview();
         ClearBackupReadiness();
         RecipientHandover = null;
         _handoverModeFeedback = string.Empty;

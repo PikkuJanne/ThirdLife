@@ -25,6 +25,7 @@ using ThirdLife.Policy.Versioning;
 using ThirdLife.Reports.RecipientGuide;
 using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.BrokerClient;
+using ThirdLife.UI.Features.Finalization;
 using ThirdLife.UI.Features.PlanReview;
 
 namespace ThirdLife.UI.Shell;
@@ -77,7 +78,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null,
         Func<DateTimeOffset, PreparationResourceSnapshot>? observePreparationResources = null,
         IWindowsUpdateAgent? fixtureWindowsUpdates = null,
-        RecipientGuideStore? recipientGuideStore = null)
+        RecipientGuideStore? recipientGuideStore = null, IRecipientToggleKeys? fixtureToggleKeys = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -111,6 +112,11 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             throw new ArgumentException("The fixture update agent requires a synthetic workspace.", nameof(fixtureWindowsUpdates));
         }
 
+        if (fixtureToggleKeys is not null && (!IsFixtureScenario || fixtureToggleKeys is WindowsToggleKeys))
+        {
+            throw new ArgumentException("The fixture settings adapter requires a synthetic workspace.", nameof(fixtureToggleKeys));
+        }
+        _toggleKeys = fixtureToggleKeys;
         UpdateAgent = fixtureWindowsUpdates;
         UpdateBackend = fixtureWindowsUpdates as IWindowsUpdateDispatchBackend;
         if (fixtureBrokerCoordinator is not null && !IsFixtureScenario)

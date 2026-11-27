@@ -322,6 +322,33 @@
             <TextBlock x:Name="RecipientChoicesSummary" Margin="0,8,0,0" TextWrapping="Wrap" />
           </StackPanel>
         </GroupBox>
+        <GroupBox x:Name="ToggleKeysRegion" Header="Recipient Toggle Keys" AutomationProperties.Name="Recipient Toggle Keys"
+                  Visibility="Collapsed" Margin="0,0,0,12">
+          <StackPanel>
+            <TextBlock Text="Toggle Keys plays tones for Caps Lock, Num Lock and Scroll Lock. Changes apply to the current Windows user." />
+            <WrapPanel Margin="0,8,0,0">
+              <Button x:Name="PreviewToggleKeysOnButton" Content="Preview turning on" Click="PreviewToggleKeysOn"
+                      IsEnabled="{Binding CanPreviewToggleKeys}" Margin="0,0,8,4" />
+              <Button x:Name="PreviewToggleKeysOffButton" Content="Preview turning off" Click="PreviewToggleKeysOff"
+                      IsEnabled="{Binding CanPreviewToggleKeys}" Margin="0,0,8,4" />
+              <Button x:Name="PreviewToggleKeysRestorationButton" Content="Preview restoring prior setting" Click="PreviewToggleKeysRestoration"
+                      IsEnabled="{Binding CanReviewToggleKeysRestoration}" Margin="0,0,8,4" />
+            </WrapPanel>
+            <TextBlock x:Name="ToggleKeysMessage" Text="{Binding ToggleKeysStatus}" Focusable="True" KeyboardNavigation.IsTabStop="False"
+                       AutomationProperties.Name="{Binding ToggleKeysStatus}" AutomationProperties.LiveSetting="Polite" />
+            <Button x:Name="KeepToggleKeysUnconfirmedButton" Content="Keep prior attempt unconfirmed" Click="KeepToggleKeysUnconfirmed"
+                    HorizontalAlignment="Left" IsEnabled="{Binding CanKeepToggleKeysAttemptUnconfirmed}" Visibility="Collapsed" Margin="0,8,0,0" />
+            <StackPanel x:Name="ToggleKeysReviewRegion" Visibility="Collapsed">
+              <Label Target="{Binding ElementName=ToggleKeysOperator}" Content="Accessibility setup operator code" />
+              <TextBox x:Name="ToggleKeysOperator" AutomationProperties.Name="Accessibility setup operator code" MaxLength="64" />
+              <CheckBox x:Name="ToggleKeysConfirmed" Content="The recipient approves this exact change for the current Windows user"
+                        Checked="ToggleKeysConfirmationChanged" Unchecked="ToggleKeysConfirmationChanged" Margin="0,8,0,0" />
+              <Button x:Name="ApplyToggleKeysButton" Content="Apply approved Toggle Keys change" Click="ApplyToggleKeys"
+                      IsEnabled="False" HorizontalAlignment="Left" Margin="0,8,0,0" />
+              <TextBlock x:Name="ToggleKeysError" Style="{DynamicResource Trace.ErrorText}" AutomationProperties.LiveSetting="Polite" />
+            </StackPanel>
+          </StackPanel>
+        </GroupBox>
         <GroupBox x:Name="BackupReadinessRegion" Header="Backup readiness" AutomationProperties.Name="Backup readiness"
                   Visibility="Collapsed" Margin="0,0,0,12">
           <StackPanel>
