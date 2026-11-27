@@ -7330,7 +7330,17 @@ tasks:
     automation, and announcement signals against ACCESSIBILITY.md.
   - Attach issue and test evidence for findings and fixes, and record unavailable physical or perceptual observations
     as specific validation limits.
-  evidence: []
+  evidence:
+  - summary: The two baseline desktop focus failures passed unchanged after programmatic stage transitions laid out the newly shown controls.
+    task: TL-0608
+    command: eng/verify.ps1 -Tier Targeted with the M1AuditJourneyTests and supported PolicyWorkflowTests active-host journeys
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 377.974 s, 1367 deterministic .NET cases plus two active-host journey cases
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated jobs and standard-user WPF
+    reference: artifacts/evidence/TL-0608/stage-focus.md, 522d90f3f2e585b8ce3b8735582096196836c55d
+    limitation: Verified stage-transition repair. The full M6 technical accessibility audit and perceptual scope remain open.
   notes:
   - Engineering audit scope cannot establish full perceptual accessibility. TL-0611 carries the accountable pilot accessibility
     disposition.
