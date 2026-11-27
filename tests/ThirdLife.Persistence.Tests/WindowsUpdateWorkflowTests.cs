@@ -321,6 +321,7 @@ public sealed class WindowsUpdateWorkflowTests
     [InlineData("resources", WindowsUpdateStatus.Unavailable)]
     [InlineData("cancel", WindowsUpdateStatus.Cancelled)]
     [InlineData("expired", WindowsUpdateStatus.TimedOut)]
+    [InlineData("backwards", WindowsUpdateStatus.TimedOut)]
     [InlineData("channel", WindowsUpdateStatus.ApprovalChanged)]
     [InlineData("receipt", WindowsUpdateStatus.Partial)]
     public async Task LatePhaseChangeCannotSendOrAttributeTheWrongAction(string change, WindowsUpdateStatus expected)
@@ -337,19 +338,23 @@ public sealed class WindowsUpdateWorkflowTests
         var worker = new WindowsUpdateWorkflow(store, agent, agent, (_, _) => Task.FromResult(resources), clock);
         var scan = await worker.ScanAsync(job.JobId, gate.DecisionId);
         var approval = await worker.ApproveAsync(job.JobId, gate.DecisionId, scan.Id, Update, Operator, policy);
+        WindowsUpdateEntry? concurrentApproval = null;
         agent.OnPrepare = async (dispatch, token) =>
         {
             if (dispatch.Action.Impact.Kind != ActionKind.InstallWindowsUpdate) { return; }
             var observer = Controlled(other, new FixtureAgent());
-            var intent = (await other.LoadWindowsUpdatesAsync(job.JobId, token))[^1];
-            Assert.Equal(WindowsUpdateStage.InstallStarted, intent.Stage);
-            Assert.True(await other.IsWindowsUpdateDispatchCurrentAsync(intent, token));
-            Assert.False(await other.IsWindowsUpdateDispatchCurrentAsync(intent with { Id = Guid.NewGuid() }, token));
+            var preparing = (await other.LoadWindowsUpdatesAsync(job.JobId, token))[^1];
+            Assert.Equal(WindowsUpdateStage.InstallPreparing, preparing.Stage);
+            var forged = preparing with { Id = Guid.NewGuid(), PreviousId = preparing.Id, Stage = WindowsUpdateStage.InstallStarted };
+            Assert.Null(await other.TryStartWindowsUpdateDispatchAsync(forged, token));
             await Assert.ThrowsAsync<InvalidOperationException>(() => observer.ExecuteAsync(job.JobId, approval.Id, token));
 
             switch (change)
             {
-                case "scan": await observer.ScanAsync(job.JobId, gate.DecisionId, token); break;
+                case "scan":
+                    var review = await observer.ScanAsync(job.JobId, gate.DecisionId, token);
+                    concurrentApproval = await observer.ApproveAsync(job.JobId, gate.DecisionId, review.Id, Update, Operator, policy, token);
+                    break;
                 case "intake":
                     await other.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId,
                         sanitizationEvidence: [PersistenceTestData.CreateSanitization("replaced")]), token);
@@ -358,31 +363,59 @@ public sealed class WindowsUpdateWorkflowTests
                 case "offer": agent.Scan = Available(); break;
                 case "resources": resources = false; break;
                 case "expired": clock.Advance(TimeSpan.FromMinutes(2)); break;
+                case "backwards": clock.Advance(TimeSpan.FromSeconds(-2)); break;
                 case "cancel": await cancel.CancelAsync(); break;
                 case "channel": agent.ChangeChannel = true; break;
                 case "receipt": agent.ChangeReceipt = true; break;
             }
         };
 
-        await worker.ExecuteAsync(job.JobId, approval.Id, cancel.Token);
-
+        var end = await worker.ExecuteAsync(job.JobId, approval.Id, cancel.Token);
         var history = await other.LoadWindowsUpdatesAsync(job.JobId);
-        var end = history[^1];
-        Assert.Equal(WindowsUpdateStage.InstallCompleted, end.Stage);
+        var sent = change == "receipt";
+        Assert.Equal(concurrentApproval?.Id ?? end.Id, history[^1].Id);
+        Assert.Equal(sent ? WindowsUpdateStage.DispatchUnconfirmed : WindowsUpdateStage.DispatchNotSent, end.Stage);
         Assert.Equal(expected, end.Operation!.Status);
         var approved = history.Single(row => row.Id == approval.Id).Approval!.Actions!;
         Assert.Equal(approved.ApprovalId, approval.Id);
-        Assert.Equal(approved.Install.ActionId, end.PreviousId);
+        var anchor = history.Single(row => row.Id == end.PreviousId);
+        Assert.Equal(sent ? WindowsUpdateStage.InstallStarted : WindowsUpdateStage.InstallPreparing, anchor.Stage);
+        if (sent) { Assert.Equal(approved.Install.ActionId, anchor.Id); }
+        else { Assert.DoesNotContain(history, row => row.Id == approved.Install.ActionId); }
+        if (change == "backwards") { Assert.True(end.OccurredAtUtc < anchor.OccurredAtUtc); }
         Assert.Equal([approved.Download, approved.Install], agent.Prepared.Select(phase => phase.Action));
         Assert.All(agent.Prepared, phase =>
         {
             Assert.Equal((job.JobId, gate.DecisionId, scan.Id, approval.Id, policy, Update),
                 (phase.JobId, phase.GateId, phase.ScanId, phase.ApprovalId, phase.PolicyDecisionId, phase.Exact));
         });
-        Assert.Equal(change == "receipt" ? 2 : 1, agent.Mutations.Count);
+        Assert.Equal(sent ? 2 : 1, agent.Mutations.Count);
         Assert.Equal(2, agent.ClosedChannels);
         Assert.Empty(agent.VerificationQueries);
-        Assert.False(await other.IsWindowsUpdateDispatchCurrentAsync(history.Single(row => row.Id == approved.Install.ActionId)));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => worker.ExecuteAsync(job.JobId, approval.Id));
+        if (change is "intake" or "policy") { return; } // Further approval first needs new qualifying policy evidence.
+        if (change == "backwards") { clock.Advance(TimeSpan.FromSeconds(2)); }
+        agent.OnPrepare = null;
+        agent.ChangeChannel = false;
+        agent.ChangeReceipt = false;
+        agent.Scan = Available(Update);
+        resources = true;
+        var rescanned = await worker.ScanAsync(job.JobId, gate.DecisionId);
+        var disposition = WindowsUpdateHistory.Disposition(await store.LoadWindowsUpdatesAsync(job.JobId));
+        Assert.Equal(sent ? WindowsUpdateDisposition.ReviewRequired : WindowsUpdateDisposition.ApprovalRequired, disposition);
+        if (sent)
+        {
+            await Assert.ThrowsAsync<JobStoreConflictException>(() =>
+                worker.ApproveAsync(job.JobId, gate.DecisionId, rescanned.Id, Update, Operator, policy));
+        }
+        else
+        {
+            var fresh = await worker.ApproveAsync(job.JobId, gate.DecisionId, rescanned.Id, Update, Operator, policy);
+            Assert.NotEqual(approved.Install.ActionId, fresh.Approval!.Actions!.Install.ActionId);
+            agent.AfterInstall = () => agent.Scan = Available();
+            await worker.ExecuteAsync(job.JobId, fresh.Id);
+            Assert.Equal(WindowsUpdateDisposition.Current, WindowsUpdateHistory.Disposition(await store.LoadWindowsUpdatesAsync(job.JobId)));
+        }
     }
 
     [Theory]
@@ -444,6 +477,112 @@ public sealed class WindowsUpdateWorkflowTests
         Assert.Equal(2, provider.Mutations.Count);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FreshScanAfterReopeningSupersedesOnlyAnUnsentPreparation(bool handoff)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var agent = new FixtureAgent();
+        Job job;
+        SanitizationGateDecision gate;
+        string policy;
+        await using (var store = await OpenAsync(workspace))
+        {
+            (job, gate, policy) = await SeedAsync(store);
+            var worker = Controlled(store, agent);
+            var scan = await worker.ScanAsync(job.JobId, gate.DecisionId);
+            var approval = await worker.ApproveAsync(job.JobId, gate.DecisionId, scan.Id, Update, Operator, policy);
+            if (handoff) { agent.AfterDownload = () => throw new InjectedPersistenceException(); }
+            else { agent.OnPrepare = (_, _) => throw new InjectedPersistenceException(); }
+            await Assert.ThrowsAsync<InjectedPersistenceException>(() => worker.ExecuteAsync(job.JobId, approval.Id));
+            Assert.Equal(handoff ? WindowsUpdateStage.DownloadStarted : WindowsUpdateStage.DownloadPreparing,
+                (await store.LoadWindowsUpdatesAsync(job.JobId))[^1].Stage);
+        }
+        await using var reopened = await OpenAsync(workspace);
+        var recovery = Controlled(reopened, new FixtureAgent());
+        var inventory = await recovery.ScanAsync(job.JobId, gate.DecisionId);
+        var history = await reopened.LoadWindowsUpdatesAsync(job.JobId);
+        if (handoff)
+        {
+            Assert.DoesNotContain(history, row => row.Stage == WindowsUpdateStage.DispatchNotSent);
+            Assert.Equal(WindowsUpdateDisposition.ReviewRequired, WindowsUpdateHistory.Disposition(history));
+            await Assert.ThrowsAsync<JobStoreConflictException>(() =>
+                recovery.ApproveAsync(job.JobId, gate.DecisionId, inventory.Id, Update, Operator, policy));
+        }
+        else
+        {
+            var unsent = Assert.Single(history.Where(row => row.Stage == WindowsUpdateStage.DispatchNotSent));
+            Assert.Equal(WindowsUpdateStage.DownloadPreparing, history.Single(row => row.Id == unsent.PreviousId).Stage);
+            Assert.Equal(WindowsUpdateDisposition.ApprovalRequired, WindowsUpdateHistory.Disposition(history));
+            var fresh = await recovery.ApproveAsync(job.JobId, gate.DecisionId, inventory.Id, Update, Operator, policy);
+            Assert.NotEqual(unsent.Approval!.Actions!.Download.ActionId, fresh.Approval!.Actions!.Download.ActionId);
+        }
+        Assert.Equal(handoff ? 1 : 0, agent.Mutations.Count);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task InternalDeadlineDuringFinalObservationOrResourcesRemainsTimedOut(bool duringScan)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        await using var store = await OpenAsync(workspace);
+        var (job, gate, policy) = await SeedAsync(store);
+        var timer = new DispatchDeadlineClock();
+        var agent = new FixtureAgent();
+        var armed = false;
+        var worker = new WindowsUpdateWorkflow(store, agent, agent, (_, _) =>
+        {
+            if (!duringScan && armed) { timer.Fire(); return Task.FromResult(false); }
+            return Task.FromResult(true);
+        }, timer);
+        var scan = await worker.ScanAsync(job.JobId, gate.DecisionId);
+        var approval = await worker.ApproveAsync(job.JobId, gate.DecisionId, scan.Id, Update, Operator, policy);
+        agent.OnPrepare = (_, _) =>
+        {
+            armed = true;
+            if (duringScan) { agent.OnScan = () => { timer.Fire(); throw new OperationCanceledException(); }; }
+            return Task.CompletedTask;
+        };
+        var end = await worker.ExecuteAsync(job.JobId, approval.Id);
+        Assert.Equal(WindowsUpdateStage.DispatchNotSent, end.Stage);
+        Assert.Equal(WindowsUpdateStatus.TimedOut, end.Operation!.Status);
+        Assert.Empty(agent.Mutations);
+    }
+
+    private sealed class DispatchDeadlineClock : TimeProvider
+    {
+        internal Action Fire { get; private set; } = () => throw new InvalidOperationException();
+        public override DateTimeOffset GetUtcNow() => Clock.GetUtcNow();
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            Fire = () => callback(state);
+            return base.CreateTimer(callback, state, dueTime, period);
+        }
+    }
+
+    [Fact]
+    public async Task ACorrelatedSentReceiptSurvivesClockRollbackAndVerifies()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var clock = new FixedTimeProvider(Clock.GetUtcNow());
+        await using var store = await SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot, SqliteJobStore.CurrentSchemaVersion,
+            clock, null, () => 10_000);
+        var (job, gate, policy) = await SeedAsync(store);
+        var agent = new FixtureAgent();
+        var worker = new WindowsUpdateWorkflow(store, agent, agent, (_, _) => Task.FromResult(true), clock);
+        var scan = await worker.ScanAsync(job.JobId, gate.DecisionId);
+        var approval = await worker.ApproveAsync(job.JobId, gate.DecisionId, scan.Id, Update, Operator, policy);
+        agent.AfterInstall = () => { agent.Scan = Available(); clock.Advance(TimeSpan.FromSeconds(-3)); };
+        await worker.ExecuteAsync(job.JobId, approval.Id);
+        var history = await store.LoadWindowsUpdatesAsync(job.JobId);
+        var receipt = Assert.Single(history.Where(row => row.Stage == WindowsUpdateStage.InstallCompleted));
+        Assert.True(receipt.OccurredAtUtc < history.Single(row => row.Id == receipt.PreviousId).OccurredAtUtc);
+        Assert.Equal(receipt.Id, history[^1].Verification!.InstallReceiptId);
+        Assert.Equal(WindowsUpdateDisposition.Current, WindowsUpdateHistory.Disposition(history));
+    }
+
     private static WindowsUpdateScan Available(params WindowsUpdateCandidate[] updates) => new(WindowsUpdateStatus.Succeeded, updates, false);
 
     private static Task<SqliteJobStore> OpenAsync(PersistenceTestWorkspace workspace, Func<ulong?>? boot = null) =>
@@ -497,6 +636,7 @@ public sealed class WindowsUpdateWorkflowTests
         internal WindowsUpdateOperation InstallResult { get; set; } = new(WindowsUpdateStatus.Succeeded, false, 100);
         internal Action? AfterDownload { get; set; }
         internal Action? AfterInstall { get; set; }
+        internal Action? OnScan { get; set; }
         internal TaskCompletionSource InstallEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal Task HoldInstall { get; init; } = Task.CompletedTask;
         internal Func<WindowsUpdateDispatch, CancellationToken, Task>? OnPrepare { get; set; }
@@ -533,6 +673,7 @@ public sealed class WindowsUpdateWorkflowTests
         public Task<WindowsUpdateScan> ScanAsync(CancellationToken cancellationToken)
         {
             Scans++;
+            OnScan?.Invoke();
             return Task.FromResult(Scan);
         }
 
