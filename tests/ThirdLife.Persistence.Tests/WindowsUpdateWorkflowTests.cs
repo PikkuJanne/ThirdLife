@@ -1,7 +1,11 @@
 using System.Runtime.Versioning;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.WindowsUpdates;
+using ThirdLife.Core;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Sanitization;
@@ -18,6 +22,54 @@ public sealed class WindowsUpdateWorkflowTests
     private static readonly WindowsUpdateCandidate Update = new(new(Guid.Parse("86d299a0-7c08-4cf9-b1d1-bea1f083dd56"), 4),
         WindowsUpdateClass.Security, 1_024);
     private static readonly OperatorId Operator = new("operator-synthetic-workshop");
+
+    [Fact]
+    public async Task MigrationKeepsOriginalApprovalBytesAndRequiresNewReviewBeforeDispatch()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var databasePath = Path.Combine(workspace.StoreRoot, "thirdlife-jobs.sqlite3");
+        var provider = new FixtureAgent();
+        WindowsUpdateEntry historical;
+        await using (var version7 = await SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot, 7, Clock, null))
+        {
+            var (job, gate, policy) = await SeedAsync(version7);
+            var scan = await Controlled(version7, provider).ScanAsync(job.JobId, gate.DecisionId);
+            historical = new(Guid.NewGuid(), scan.Id, job.JobId, gate.DecisionId, Clock.GetUtcNow(),
+                WindowsUpdateStage.Approved, null, new(scan.Id, Update, Operator, policy), null);
+        }
+
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(historical, DomainJson.CreateStrictOptions());
+        var json = Encoding.UTF8.GetString(bytes);
+        var hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        Assert.DoesNotContain("Actions", json, StringComparison.Ordinal);
+        await using (var connection = await SqliteTestControl.OpenAsync(databasePath))
+        await using (var insert = connection.CreateCommand())
+        {
+            insert.CommandText = "INSERT INTO windows_update_journal VALUES ($job, 3, $id, $gate, $payload, $hash);";
+            insert.Parameters.AddWithValue("$job", historical.JobId.Value);
+            insert.Parameters.AddWithValue("$id", historical.Id.ToString("D"));
+            insert.Parameters.AddWithValue("$gate", historical.GateId.Value);
+            insert.Parameters.AddWithValue("$payload", json);
+            insert.Parameters.AddWithValue("$hash", hash);
+            await insert.ExecuteNonQueryAsync();
+        }
+        await Assert.ThrowsAsync<InjectedPersistenceException>(() => SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot,
+            8, Clock, new ThrowingFaultInjector(JobStoreFaultPoint.BeforeMigrationCommit, 8)));
+        Assert.Equal(7, await SqliteTestControl.ReadUserVersionAsync(databasePath));
+        await using (var current = await OpenAsync(workspace))
+        {
+            Assert.Equal(historical, (await current.LoadWindowsUpdatesAsync(historical.JobId))[^1]);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => Controlled(current, provider).ExecuteAsync(historical.JobId, historical.Id));
+            Assert.Empty(provider.Prepared);
+        }
+        await Assert.ThrowsAsync<JobStoreVersionException>(() => SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot, 7, Clock, null));
+        await using var check = await SqliteTestControl.OpenAsync(databasePath);
+        await using var read = check.CreateCommand();
+        read.CommandText = "SELECT payload_json FROM windows_update_journal WHERE entry_id = $id AND payload_sha256 = $hash;";
+        read.Parameters.AddWithValue("$id", historical.Id.ToString("D"));
+        read.Parameters.AddWithValue("$hash", hash);
+        Assert.Equal(json, await read.ExecuteScalarAsync());
+    }
 
     [Theory]
     [InlineData(WindowsUpdateStatus.Offline)]
@@ -262,6 +314,78 @@ public sealed class WindowsUpdateWorkflowTests
     }
 
     [Theory]
+    [InlineData("scan", WindowsUpdateStatus.ApprovalChanged)]
+    [InlineData("intake", WindowsUpdateStatus.ApprovalChanged)]
+    [InlineData("policy", WindowsUpdateStatus.ApprovalChanged)]
+    [InlineData("offer", WindowsUpdateStatus.ApprovalChanged)]
+    [InlineData("resources", WindowsUpdateStatus.Unavailable)]
+    [InlineData("cancel", WindowsUpdateStatus.Cancelled)]
+    [InlineData("expired", WindowsUpdateStatus.TimedOut)]
+    [InlineData("channel", WindowsUpdateStatus.ApprovalChanged)]
+    [InlineData("receipt", WindowsUpdateStatus.Partial)]
+    public async Task LatePhaseChangeCannotSendOrAttributeTheWrongAction(string change, WindowsUpdateStatus expected)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var clock = new FixedTimeProvider(Clock.GetUtcNow());
+        await using var store = await SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot,
+            SqliteJobStore.CurrentSchemaVersion, clock, null, () => 10_000);
+        await using var other = await OpenAsync(workspace);
+        var (job, gate, policy) = await SeedAsync(store);
+        var agent = new FixtureAgent();
+        using var cancel = new CancellationTokenSource();
+        var resources = true;
+        var worker = new WindowsUpdateWorkflow(store, agent, agent, (_, _) => Task.FromResult(resources), clock);
+        var scan = await worker.ScanAsync(job.JobId, gate.DecisionId);
+        var approval = await worker.ApproveAsync(job.JobId, gate.DecisionId, scan.Id, Update, Operator, policy);
+        agent.OnPrepare = async (dispatch, token) =>
+        {
+            if (dispatch.Action.Impact.Kind != ActionKind.InstallWindowsUpdate) { return; }
+            var observer = Controlled(other, new FixtureAgent());
+            var intent = (await other.LoadWindowsUpdatesAsync(job.JobId, token))[^1];
+            Assert.Equal(WindowsUpdateStage.InstallStarted, intent.Stage);
+            Assert.True(await other.IsWindowsUpdateDispatchCurrentAsync(intent, token));
+            Assert.False(await other.IsWindowsUpdateDispatchCurrentAsync(intent with { Id = Guid.NewGuid() }, token));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => observer.ExecuteAsync(job.JobId, approval.Id, token));
+
+            switch (change)
+            {
+                case "scan": await observer.ScanAsync(job.JobId, gate.DecisionId, token); break;
+                case "intake":
+                    await other.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId,
+                        sanitizationEvidence: [PersistenceTestData.CreateSanitization("replaced")]), token);
+                    break;
+                case "policy": await other.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, [PersistenceTestData.CreateObservation("drift")]), token); break;
+                case "offer": agent.Scan = Available(); break;
+                case "resources": resources = false; break;
+                case "expired": clock.Advance(TimeSpan.FromMinutes(2)); break;
+                case "cancel": await cancel.CancelAsync(); break;
+                case "channel": agent.ChangeChannel = true; break;
+                case "receipt": agent.ChangeReceipt = true; break;
+            }
+        };
+
+        await worker.ExecuteAsync(job.JobId, approval.Id, cancel.Token);
+
+        var history = await other.LoadWindowsUpdatesAsync(job.JobId);
+        var end = history[^1];
+        Assert.Equal(WindowsUpdateStage.InstallCompleted, end.Stage);
+        Assert.Equal(expected, end.Operation!.Status);
+        var approved = history.Single(row => row.Id == approval.Id).Approval!.Actions!;
+        Assert.Equal(approved.ApprovalId, approval.Id);
+        Assert.Equal(approved.Install.ActionId, end.PreviousId);
+        Assert.Equal([approved.Download, approved.Install], agent.Prepared.Select(phase => phase.Action));
+        Assert.All(agent.Prepared, phase =>
+        {
+            Assert.Equal((job.JobId, gate.DecisionId, scan.Id, approval.Id, policy, Update),
+                (phase.JobId, phase.GateId, phase.ScanId, phase.ApprovalId, phase.PolicyDecisionId, phase.Exact));
+        });
+        Assert.Equal(change == "receipt" ? 2 : 1, agent.Mutations.Count);
+        Assert.Equal(2, agent.ClosedChannels);
+        Assert.Empty(agent.VerificationQueries);
+        Assert.False(await other.IsWindowsUpdateDispatchCurrentAsync(history.Single(row => row.Id == approved.Install.ActionId)));
+    }
+
+    [Theory]
     [InlineData("superseded")]
     [InlineData("empty")]
     [InlineData("unavailable")]
@@ -327,7 +451,7 @@ public sealed class WindowsUpdateWorkflowTests
 
     private static WindowsUpdateWorkflow Controlled(SqliteJobStore store, FixtureAgent provider,
         Func<WindowsUpdateCandidate, CancellationToken, Task<bool>>? preflight = null) =>
-        new(store, provider, preflight ?? ((_, _) => Task.FromResult(true)), Clock);
+        new(store, provider, provider, preflight ?? ((_, _) => Task.FromResult(true)), Clock);
 
     private static async Task<(Job Job, SanitizationGateDecision Gate, string PolicyId)> SeedAsync(SqliteJobStore store)
     {
@@ -361,7 +485,7 @@ public sealed class WindowsUpdateWorkflowTests
         new(PersistenceTestData.CreateMetadata("evidence-" + id, EvidenceClassification.Observed, ProvenanceKind.SyntheticFixture,
             ValueAvailability.Available), new(key), EvidenceValue.FromEnum(value), null, null);
 
-    private sealed class FixtureAgent : IWindowsUpdateAgent
+    private sealed class FixtureAgent : IWindowsUpdateAgent, IWindowsUpdateDispatchBackend
     {
         internal int Scans { get; private set; }
         internal WindowsUpdateScan Scan { get; set; } = Available(Update);
@@ -375,6 +499,36 @@ public sealed class WindowsUpdateWorkflowTests
         internal Action? AfterInstall { get; set; }
         internal TaskCompletionSource InstallEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal Task HoldInstall { get; init; } = Task.CompletedTask;
+        internal Func<WindowsUpdateDispatch, CancellationToken, Task>? OnPrepare { get; set; }
+        internal List<WindowsUpdateDispatch> Prepared { get; } = [];
+        internal bool ChangeChannel { get; set; }
+        internal bool ChangeReceipt { get; set; }
+        internal int ClosedChannels { get; set; }
+
+        public async Task<IWindowsUpdateDispatchChannel?> PrepareAsync(WindowsUpdateDispatch dispatch, CancellationToken token)
+        {
+            Prepared.Add(dispatch);
+            if (OnPrepare is not null) { await OnPrepare(dispatch, token); }
+            return new FixtureChannel(this, ChangeChannel ? dispatch with { ApprovalId = Guid.NewGuid() } : dispatch);
+        }
+
+        private sealed class FixtureChannel(FixtureAgent agent, WindowsUpdateDispatch dispatch) : IWindowsUpdateDispatchChannel
+        {
+            public WindowsUpdateDispatch Dispatch { get; } = dispatch;
+
+            public async Task<WindowsUpdateDispatchReceipt> SendAsync(CancellationToken token)
+            {
+                var outcome = Dispatch.Action.Impact.Kind == ActionKind.DownloadWindowsUpdate
+                    ? await agent.DownloadAsync(Dispatch.Exact, token) : await agent.InstallAsync(Dispatch.Exact, token);
+                return new(agent.ChangeReceipt ? Dispatch with { ScanId = Guid.NewGuid() } : Dispatch, outcome);
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                agent.ClosedChannels++;
+                return ValueTask.CompletedTask;
+            }
+        }
 
         public Task<WindowsUpdateScan> ScanAsync(CancellationToken cancellationToken)
         {

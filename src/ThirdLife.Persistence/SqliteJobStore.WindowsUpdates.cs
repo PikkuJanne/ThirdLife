@@ -17,6 +17,34 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
         return ReadJournalTransactionAsync((transaction, ct) => ReadWindowsUpdatesAsync(transaction, jobId, ct), token);
     }
 
+    public Task<bool> IsWindowsUpdateDispatchCurrentAsync(WindowsUpdateEntry intent, CancellationToken token = default)
+    {
+        ArgumentNullException.ThrowIfNull(intent);
+        return ReadJournalTransactionAsync(async (transaction, ct) =>
+        {
+            if (intent.Stage is not (WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted) ||
+                intent.Approval?.Actions is not { } actions || !actions.MatchesCurrentActions(intent.Approval.Exact))
+            {
+                return false;
+            }
+
+            var history = await ReadWindowsUpdatesAsync(transaction, intent.JobId, ct).ConfigureAwait(false);
+            if (history.LastOrDefault() != intent || !history.Any(entry => entry is { Stage: WindowsUpdateStage.Approved } &&
+                entry.Id == actions.ApprovalId && entry.GateId == intent.GateId && entry.Approval == intent.Approval))
+            {
+                return false;
+            }
+
+            try
+            {
+                await RequireExpectedSanitizationGateAsync(_connection, transaction, intent.JobId, intent.GateId, ct).ConfigureAwait(false);
+                await RequireWindowsUpdateFixturePolicyAsync(_connection, transaction, intent, ct).ConfigureAwait(false);
+                return true;
+            }
+            catch (JobStoreConflictException) { return false; }
+        }, token);
+    }
+
     public async Task<WindowsUpdateEntry> AppendWindowsUpdateAsync(WindowsUpdateEntry entry, CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
@@ -42,6 +70,10 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
 
             if (entry.Stage is WindowsUpdateStage.Approved or WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted)
             {
+                if (entry.Approval?.Actions?.MatchesCurrentActions(entry.Approval.Exact) != true)
+                {
+                    throw new JobStoreConflictException();
+                }
                 await RequireWindowsUpdateFixturePolicyAsync(connection, transaction, entry, ct).ConfigureAwait(false);
             }
 
