@@ -178,7 +178,7 @@ public sealed partial class SqliteJobStore : IFinalizationStore
 
         return verification.Record.Result.Checks.Single(check => check.Kind == ProfileCheckKind.PendingRestart).State switch
         {
-            ProfileVerificationState.Passed => FinalizationOutcome.Passed,
+            ProfileVerificationState.Passed when !verification.Record.Result.UpdateRecoveryPending => FinalizationOutcome.Passed,
             ProfileVerificationState.Failed => FinalizationOutcome.Failed,
             _ => FinalizationOutcome.Unknown,
         };

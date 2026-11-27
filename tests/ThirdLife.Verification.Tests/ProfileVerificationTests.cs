@@ -118,7 +118,7 @@ public sealed class ProfileVerificationTests
         var restricted = new WindowsUpdateCandidate(new(Guid.NewGuid(), 1), WindowsUpdateClass.Restricted);
         var excluded = Evaluate(EnoughSpace, "good", null, new(new(WindowsUpdateStatus.Succeeded, [restricted], false), Observed));
         var empty = Evaluate(EnoughSpace, "good", null, new(new(WindowsUpdateStatus.Succeeded, [], false), Observed));
-        var recovering = Evaluate(EnoughSpace, "good", null, new(new(WindowsUpdateStatus.Succeeded, [], false), Observed, true));
+        var recovering = Evaluate(EnoughSpace, "good", "clear", new(new(WindowsUpdateStatus.Succeeded, [], false), Observed, true));
         var offline = Evaluate(EnoughSpace, "good", null, new(new(WindowsUpdateStatus.Offline, [], null), Observed));
 
         Assert.Equal(1, excluded.UpdateOfferCount);
@@ -131,6 +131,7 @@ public sealed class ProfileVerificationTests
         Assert.Equal(ProfileVerificationState.Unavailable, Check(empty, ProfileCheckKind.PendingRestart));
         Assert.True(recovering.UpdateRecoveryPending);
         Assert.Equal(ProfileVerificationState.Unavailable, Check(recovering, ProfileCheckKind.WindowsUpdate));
+        Assert.Equal(ProfileVerificationState.Unavailable, Check(recovering, ProfileCheckKind.PendingRestart));
         Assert.Null(offline.UpdateOfferCount);
         Assert.Null(offline.UpdateDisposition);
         Assert.Equal(ProfileVerificationState.Unavailable, Check(offline, ProfileCheckKind.WindowsUpdate));
