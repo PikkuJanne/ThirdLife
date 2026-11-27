@@ -40,10 +40,10 @@ payload checks, evidence and cleanup.
 | --- | --- |
 | `Candidate` | Job Seeker resolves four version-bound capabilities into four scheduled fixture no-ops. Approval is saved before any dispatch. Each action has an independent controlled postcondition. Reopen shows the same plan, approval, outcomes and workshop report. Recipient choices remain deferred and whole-device readiness stays held. |
 | `OptionalFailure`, `EssentialFailure` | Inject the same video-call action failure in Basic and Job Seeker. The other three essential actions retain independent verification. Basic preserves preparation with the optional outcome visible, and Job Seeker holds preparation. |
-| `NetworkInterruption` | Stop an owned installer stream after a partial write and validate cleanup. Reopen the WPF job with its saved binding and retry guidance. |
+| `NetworkInterruption` | Stop a controlled installer stream after staging 128 KiB and verify removal of the partial file and its owned directory. Reopen the WPF job with its saved binding and retry guidance. |
 | `UiKill` | Terminate owned WPF clients after dispatch intent and after a saved applied outcome. Reopen and reconcile the exact job without another dispatch. |
 | `BrokerKill` | Retain authenticated partial results when the broker transport ends. Terminate an owned package fixture process and reopen the ambiguous attempt for review. |
-| `LowFreeSpace` | Inject low capacity before acquisition and a late decrease after acquisition. Prevent dispatch and reopen the saved deferral. |
+| `LowFreeSpace` | Inject zero bytes available on the system and staging volumes before acquisition. Separately inject critically low battery after acquisition, prevent dispatch and reopen the saved deferral. Package preflight reserves 1 GiB on the system volume and 128 MiB in staging before overhead and payload. |
 | `ChangedMetadata` | Exercise material changes in package/digest binding, acquisition admission and WPF approval recheck. Require fresh review before dispatch. |
 | `WrongClock` | Inject clock rollback and expiry at checkpoint validation. Independently confirm that an existing correlated sent receipt can still be verified. |
 | `BrokenSource` | Inject disconnected, incomplete and invalid source responses. Verify bounded reasons and exclusion of backend text. |
@@ -99,3 +99,116 @@ exposure. [Native scan evidence](../evidence/TL-0504/single-guest-inventory.md)
 The matrix adds tests and runners. It makes no change to the production
 providers, qualification or package/restart trust rules used by those
 observations.
+
+## Verification history
+
+The starting point was `29e432f3de4b459566997fade95a0fdb111767d7`.
+The two baseline WPF maintenance continuation cases passed in 10 s of test
+time in a clean detached worktree. The first format check exposed Windows
+line-ending differences, and the initial focused resource run exposed a
+fixture dispatcher issue. The resource rerun uses the ordinary Close job
+and Open job controls on the window dispatcher.
+
+The original offline assertion looked for persisted scan feedback in the
+transient maintenance phase banner. After reopen the phase is still Windows
+Update, and the saved network reason is visible in the Windows Update
+result bound in Prepare and Verify. The corrected case checks both fields,
+the exact approval and the subsequent scan recovery. The first clean Full
+attempt passed 310 governance regressions and stopped at the testing guide's
+stale manifest digest. The refreshed digest passed the bundle and repository
+validators.
+
+Targeted, including Quick, passed in 167.620 s with 1,358 test executions
+and zero skips, plus eight work-contract regressions. It selected the
+exact offline case and two existing maintenance continuation cases beyond
+Quick. The standalone iteration Quick took 157.615 s against the 120 s
+target with locked restore, formatting and 85 s of WPF test time. Targeted
+completed within its 600 s target.
+
+```powershell
+./eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj `
+    -Filter 'FullyQualifiedName~OfflineMaintenancePreservesTheApprovedJobAndResumesAfterReopen|FullyQualifiedName~FullMaintenanceReviewResumesThroughFinalRestart'
+```
+
+On 27 November 2026 the clean checkpoint
+`7431f58fdfaa1053fece0fa32e98e3a72046fdcf` passed
+`eng/verify.ps1 -Tier Full -Restore` in 408.203 s. It passed 310 governance
+cases and 2,543 deterministic .NET cases across 13 assemblies with zero skips.
+Locked restore, formatting and the warnings-as-errors Release build passed.
+The host ran Windows 11 Pro 26H2 build 26300.9974, native x64, .NET SDK
+10.0.400, Python 3.14.7 and PowerShell 7.6.9.
+[Reference-machine profile](../../docs/testing/reference-machine-profile.md)
+
+## Active-machine matrix results
+
+All 17 named scenarios passed at the same clean checkpoint. The 26 selections
+executed 40 cases in 94.102 s of summed selection time. The receipt records
+each filter, result, assembly digest and time. [Matrix receipt](../evidence/TL-0510/matrix.json)
+
+The measured workload is `m5-inventory-recovery-v1`, SHA-256
+`36217f57510f23145cba1aad962d3eed674f367df680e6b97223ef549fa24bec`.
+Both cases used software rendering, one worker and a 640 × 420 DIP window.
+The test sampled owned temporary and rollback-journal files every 10 ms.
+Memory is process peak working set including the isolated test host.
+
+| Measurement | Normal priority | Below normal, delay 350 ms |
+| --- | ---: | ---: |
+| Load fixture window | 690.45 ms | 743.54 ms |
+| Complete inventory | 527.83 ms | 440.38 ms |
+| Navigate while busy | 59.14 ms | 61.79 ms |
+| Cancel to durable outcome | 166.13 ms | 554.04 ms |
+| Reopen saved job | 184.25 ms | 137.23 ms |
+| Whole fixture elapsed | 2,767.99 ms | 2,999.71 ms |
+| CPU time | 2,593.75 ms | 2,421.88 ms |
+| Peak working set | 170,971,136 bytes | 170,266,624 bytes |
+| Sampled temporary peak | 254,512 bytes | 254,512 bytes |
+| SQLite growth | 385,024 bytes | 360,448 bytes |
+| Workshop report | 1,329 bytes | 1,329 bytes |
+
+The storage sample can miss shorter write peaks. The owned fixture directories
+were removed and the test host priority was restored. The interrupted package
+transfer separately observed and removed its 128 KiB staged payload. Native
+Windows Update cache growth remains unmeasured. The samples provide reference
+measurements and carry no approved performance budget.
+
+The ordinary compiled application ran unelevated with default WPF rendering.
+UI Automation reached Inspect after 1,193 ms. The process closed normally
+after 1,356 ms, with 175,214,592 bytes peak working set and 1,031.25 ms CPU.
+[Startup receipt](../evidence/TL-0510/startup.json)
+
+## Single-guest candidate results
+
+The first guest invocation closed its PowerShell Direct runspace before
+staging. A read-only check on the same guest found zero M5 staging
+directories. The corrected runner retains the connection engine through
+cleanup and keeps the existing per-operation time bounds.
+
+The corrected checkpoint `84e47d5fe6b697e14cb9f1463f61ed8b30fce2be`
+rebuilt Release with zero warnings and zero errors. The existing
+`ThirdLife-W11` ran Windows 11 Pro 26H2, build 26300.9974, native x64.
+The three cases passed in 91.149 s including staging and verified cleanup.
+The guest test command took 33.489 s. The run used the established
+administrative PowerShell Direct connection for private staging and a
+controlled workspace and journal for execution. The separate host
+application startup observation used a standard-user token.
+[Guest receipt](../evidence/TL-0510/guest.json)
+
+Job Seeker reopened the exact plan, approval and same four independent
+fixture verification outcomes in the restricted workshop report. Basic
+preserved its three essential outcomes when the optional video-call
+action failed. Job Seeker held preparation for the same failure, with
+the three independent outcomes intact. Each case created a fresh
+isolated SQLite store. The host archive, guest staging, SDK and fixture data
+were removed. The existing running guest remained on the same checkpoint
+state with no power transition.
+
+| Pinned candidate input | SHA-256 |
+| --- | --- |
+| Community Laptop candidate catalog | `60880321e29f0db5deb77c85bd10d1c5926ca1b068d930445695580891c1bdce` |
+| Basic profile | `d80c1c029067ebc3f172011cf66a551eff50c7661c6daf8874aced23324130e2` |
+| Job Seeker profile | `928e0a6a5072a480d416861fc1051afd5efd2fc32b40459cad4aa4c3b113eb05` |
+
+Continuity Quick passed 1,355 cases and eight work-contract regressions
+in 148.760 s. WPF accounted for 83 s. Quick exceeded its 120 s target
+by 28.760 s. The follow-up adjusts the auxiliary PowerShell connection
+lifetime and evidence while preserving the Full-tested .NET source.

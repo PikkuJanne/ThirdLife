@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "scenario": "shell_startup_external_uia_navigation",
+  "result": "passed",
+  "source_commit": "7431f58fdfaa1053fece0fa32e98e3a72046fdcf",
+  "tracked_source_clean": true,
+  "apphost_sha256": "d036372b813281cc48b83a5854dab159b537d8115f9fb5e796e16a597ce03f96",
+  "assembly_sha256": "27e2a776eb8d13511a4b5a6fa5d8e62ffe6cc4b232449b50d9aa5cc232d0dc89",
+  "standard_user_token": true,
+  "rendering": "default_wpf",
+  "cleanup": "normal_exit",
+  "claim": "Automated active-machine observation; no human screen-reader or cross-hardware claim.",
+  "elapsed_to_observation_ms": 1193,
+  "peak_working_set_bytes": 175214592,
+  "cpu_ms": 1031.25,
+  "total_elapsed_ms": 1356
+}
