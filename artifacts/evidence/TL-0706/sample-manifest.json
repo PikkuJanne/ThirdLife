@@ -1,0 +1,61 @@
+{
+  "scope": "private_candidate_synthetic_reference",
+  "samples": [
+    {
+      "path": "fixtures/jobs/assessment-ready.yaml",
+      "purpose": "synthetic job and accepted sanitization",
+      "sha256": "5e02c18a1a53053b607aa67df4a1dbca4e2e56afe8fa6fe74106a1b77ee72344",
+      "bytes": 11429,
+      "expected": "Fixture allows assessment and models ready to prepare."
+    },
+    {
+      "path": "fixtures/jobs/sanitization-blocked.yaml",
+      "purpose": "blocked sanitization",
+      "sha256": "a04650db6821675e9b29e8e6e0ecda3a9b7d54bcddbc19c9a19716cb29bb2c6a",
+      "bytes": 1114,
+      "expected": "Unknown sanitization blocks assessment. Policy evaluation is not run."
+    },
+    {
+      "path": "fixtures/jobs/partial-observations.yaml",
+      "purpose": "normalized partial observations and disposition",
+      "sha256": "dbaf812fee431d41ae9a48119dcadd8f2884ca1978dbb8c2f7a67e161b949dc3",
+      "bytes": 12360,
+      "expected": "Unknown required evidence leaves human review required."
+    },
+    {
+      "path": "fixtures/expected-reports/M1/workshop-audit.txt",
+      "purpose": "historical workshop output",
+      "sha256": "4e1e260c9482a7ae1531dbb23e7ac7106a5f32ab15ec5cc50d8b4fbe173f8dc8",
+      "bytes": 2159,
+      "expected": "M1 report identifies synthetic evidence and keeps device readiness unknown."
+    },
+    {
+      "path": "artifacts/evidence/TL-0605/guide-assisted.html",
+      "purpose": "assisted recipient guide",
+      "sha256": "62e83c34c7d91fb87e722d2707f2f2e1597ad5a5ccf2317dd83b6a5a76ea8234",
+      "bytes": 2727,
+      "expected": "Self-contained sample guide with the heading hierarchy recorded by TL-0605."
+    },
+    {
+      "path": "artifacts/evidence/TL-0605/guide-sealed.html",
+      "purpose": "sealed recipient guide",
+      "sha256": "022d0bc82fd95fc28e8a61649178b96565c7a44b90665d8b760c042598ee38c2",
+      "bytes": 2704,
+      "expected": "Self-contained sample guide with recipient setup deferred."
+    },
+    {
+      "path": "artifacts/evidence/TL-0606/synthetic-support.zip",
+      "purpose": "sanitized support archive",
+      "sha256": "a0708f181b7bc3086aad8047e696315c8648892a68f87be4894043462c20ad17",
+      "bytes": 1143,
+      "expected": "Exact synthetic archive with manifest.json and four observations in observations.jsonl."
+    },
+    {
+      "path": "artifacts/evidence/TL-0706/job-seeker-configuration.zip",
+      "purpose": "configuration archive produced by the unpacked candidate",
+      "sha256": "1fda12f7e7912904528040987565f53e3b3e15bc54c796a8b976b78de33de9ce",
+      "bytes": 23578,
+      "expected": "Three exact synthetic source JSON files matching the packaged Job Seeker preview."
+    }
+  ]
+}
