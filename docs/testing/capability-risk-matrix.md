@@ -37,7 +37,7 @@ Planned fixture/sample labels below are contract placeholders, not artifacts. `T
 
 ## 3. Privacy, safety, and active-machine scope
 
-All later execution occurs directly on the active Codex machine or in a clean clone/worktree, disposable VM, Windows Sandbox session, container, isolated workspace, or virtual disk it hosts. No second computer, lower-performance device, hardware lab, volunteer pool, external hardware matrix, or authoritative remote runtime is required.
+Run later cases on the active Codex machine using clean source worktrees, isolated workspaces, bounded fixtures or sequential states of its sole Windows guest, `ThirdLife-W11`. Historical Sandbox results retain their original environment. No second computer, lower-performance device, hardware lab, volunteer pool, external hardware matrix, or authoritative remote runtime is required.
 
 Fixtures/samples/evidence exclude serials/fragments, asset/service tags, hardware UUIDs, device/host names, usernames/SIDs, names/contacts, donor/recipient data, SSIDs, MAC/IP addresses, credentials, account/tenant data, product/recovery keys, personal paths, screenshots, photographs, audio/video, raw logs, dumps, and unreviewed archives.
 

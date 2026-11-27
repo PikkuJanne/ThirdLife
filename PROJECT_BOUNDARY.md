@@ -91,12 +91,14 @@ The active Codex machine is the only physical machine used for implementation, t
 Allowed same-machine isolation and constraint tools include:
 
 - clean clones and separate worktrees;
-- local virtual machines, Windows Sandbox, containers, and virtual disks when supported;
+- the one existing `ThirdLife-W11` guest, isolated workspaces and virtual disks; no additional Windows instance;
 - deterministic synthetic and captured provider fixtures;
 - configurable concurrency, low-priority execution, no-GPU paths, bounded low-space volumes, offline/interrupted-network stubs, and slow-destination fixtures;
 - capability-absent, permission-denied, provider-unavailable, and failure states exercised deterministically.
 
 These are engineering techniques, not proof that every modest computer or peripheral class has been tested. Missing touch, battery, Bluetooth, dock, card-reader, degraded-storage, manufacturer, or other hardware classes do not block development. Product behavior for absent or unavailable capability must still be deterministic, accessible, privacy-safe, and honestly reported.
+
+The single-guest limit applies to the complete project timeline, pilot, release and maintenance. Reuse authorized states of that same guest sequentially. Historical Windows Sandbox or multi-VM instructions do not authorize another guest, clone or licensing request. An unavailable live condition limits its dependent observation or action; it does not stop implementation or independent work. See the [product contract](docs/product-contract.md).
 
 The former `TL-0008 draft 1` physical device-pool and `MHT-001`–`MHT-021` walkthrough is superseded by `D-064`. Revised TL-0008 defines the test system and specifications; it does not execute the former broad physical, accessibility, failure-injection, low-resource, or cold-boot matrices.
 

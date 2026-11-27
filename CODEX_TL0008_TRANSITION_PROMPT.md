@@ -1,6 +1,6 @@
 # Codex Prompt — Apply the TL-0008 Single-Machine Validation Transition
 
-Use this prompt once in the live ThirdLife Setup Core repository.
+Archived prompt from the completed TL-0008 transition. Use `CODEX_START_PROMPT.md` for current work. D-076 supersedes the earlier guest environment instructions.
 
 ```text
 You are working in the ThirdLife Setup Core repository on task TL-0008.

@@ -4,6 +4,10 @@
 **Bundle baseline** 0.8.0  
 **Runtime authority** Active Codex machine only. Remote CI is supplementary.
 
+**Permanent guest capacity** The existing `ThirdLife-W11` only, throughout the
+project, pilot, release and maintenance. Reuse authorized guest states sequentially.
+No additional guest, Windows Sandbox or alternate Windows-baseline request is needed.
+
 TRACE is the default unelevated native interface on `main`. Jobs and the six stages
 expose saved intake, findings and manual checks, candidate policy, exact
 package review and approval, independent verification and recovery, and the
@@ -34,11 +38,15 @@ M5 technical gate, TL-0511.
 [Action outcome evidence](artifacts/evidence/TL-0502/report.md)
 [Preflight evidence](artifacts/evidence/TL-0503/report.md)
 
-TL-0504 is blocked on live Windows Update qualification. Prepare can save an exact
-approval and reopen it for an explicit start. The v2 broker checks Windows state,
-the approved scope and a protected grant before download or installation.
-The current guest offered one unsupported software revision. Its installation
-media has the same build, and no revision has an effective servicing review.
-Qualification resumes with an eligible revision in an authorized same-machine
-guest, exact approval, native receipts and independent installed-state verification.
+PR 75 integrated the TL-0504 typed Windows Update broker, exact phase approval,
+policy and storage checks, durable intent/receipts and independent verification.
+ThirdLife-W11 offered one unsupported software revision and zero eligible revisions.
+Live download, installation, any required restart and subsequent verification of a
+ThirdLife-installed revision remain unobserved. Reopen this case for an eligible
+revision on that guest with an effective review, measured reserve and exact authority.
 [Windows Update evidence](artifacts/evidence/TL-0504/report.md)
+
+Continue the saved no-eligible-offer workflow, TL-0505 restart coordination and
+TL-0506 read-only security observations. TL-0511 retains its native servicing
+evidence requirement. TL-0611 retains pilot input adoption and exposure decisions.
+[Single-guest correction](docs/reviews/2026-11-27-single-guest-continuation.md)

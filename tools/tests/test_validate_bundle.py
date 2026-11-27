@@ -3956,6 +3956,64 @@ class DevelopmentContractResetTests(unittest.TestCase):
         self.assertIn("TL-0401: legacy human evidence belongs only to completed history", self.validate_contract())
 
 
+class SingleGuestContinuationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tasks = copy.deepcopy(TASK_BY_ID)
+
+    def test_unavailable_update_offer_does_not_block_independent_engineering(self) -> None:
+        self.tasks["TL-0504"]["status"] = "blocked"
+        for task_id in ("TL-0502", "TL-0503", "TL-0309", "TL-0112", "TL-0004"):
+            self.tasks[task_id]["status"] = "done"
+        for task_id in ("TL-0505", "TL-0506"):
+            self.tasks[task_id]["status"] = "backlog"
+        selectable = validate_bundle.select_engineering_tasks(self.tasks)
+        self.assertIn("TL-0505", selectable)
+        self.assertIn("TL-0506", selectable)
+        self.assertTrue(validate_bundle.unmet_prerequisites(
+            self.tasks, self.tasks["TL-0504"], "execution_prerequisites",
+        ))
+
+    def test_pending_policy_adoption_allows_candidate_matrix_and_guide(self) -> None:
+        for task_id in ("TL-0503", "TL-0505", "TL-0507", "TL-0509", "TL-0603", "TL-0301"):
+            self.tasks[task_id]["status"] = "done"
+        self.tasks["TL-0508"]["status"] = "backlog"
+        for task_id in ("TL-0510", "TL-0605"):
+            self.tasks[task_id]["status"] = "backlog"
+        selectable = validate_bundle.select_engineering_tasks(self.tasks)
+        for task_id in ("TL-0510", "TL-0605"):
+            self.assertIn(task_id, selectable)
+            self.assertTrue(any(
+                item.get("task") == "TL-0508"
+                for item in validate_bundle.unmet_prerequisites(
+                    self.tasks, self.tasks[task_id], "release_prerequisites",
+                )
+            ))
+        # Engineering completion does not transitively satisfy an exposure decision.
+        self.assertTrue(any(
+            item.get("task") == "TL-0508"
+            for item in validate_bundle.unmet_prerequisites(
+                self.tasks, self.tasks["TL-0611"], "release_prerequisites",
+            )
+        ))
+
+    def test_implemented_update_code_does_not_substitute_for_native_evidence(self) -> None:
+        gate = self.tasks["TL-0511"]
+        for prerequisite in gate["execution_prerequisites"]:
+            if prerequisite["kind"] == "task":
+                self.tasks[prerequisite["task"]]["status"] = "done"
+            elif "Windows Update" not in prerequisite["scope"]:
+                prerequisite["evidence"] = "Controlled fixture for the other prerequisite."
+        pending = validate_bundle.unmet_prerequisites(self.tasks, gate, "execution_prerequisites")
+        self.assertEqual(len(pending), 1, pending)
+        self.assertEqual(pending[0]["kind"], "capability")
+        self.assertIn("Windows Update", pending[0]["scope"])
+        gate["status"] = "done"
+        gate["evidence"] = [{"summary": "Controlled engineering evidence only."}]
+        validation = validate_bundle.Validation()
+        validate_bundle.validate_prerequisites(validation, self.tasks)
+        self.assertIn("TL-0511: done requires satisfied execution_prerequisites", validation.errors)
+
+
 class StabilizationContractTests(unittest.TestCase):
     def validate_contract(
         self,

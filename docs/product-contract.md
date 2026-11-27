@@ -47,6 +47,8 @@ Codex can split and resequence implementation, revise real implementation depend
 
 Codex owns implementation verification and evidence with zero routine owner QA. Use the active Codex machine for authoritative runtime, security, resource and accessibility evidence. Keep fixtures, actual observations, unobserved behavior and decisions distinct. Remote CI is supplementary.
 
+The existing `ThirdLife-W11` is the sole Windows guest for this project's complete lifecycle, including pilot, release and maintenance. Execute scenarios sequentially and reuse its authorized checkpoint when restoration is needed. No task, gate or later milestone may require another Windows instance, a VM clone, a new Windows Sandbox instance, a changed/reinstalled Windows baseline solely to manufacture a test condition, or additional Windows licensing. The guest limit does not freeze its operating system: ordinary supported servicing, repair and authorized checkpoint refresh of the same guest remain Codex-owned. Destructive resets use the authority applicable to the operation, including existing grants. Historical evidence keeps its provenance; older broader environment instructions are superseded for future work. A missing live condition limits the affected observation or action while implementation and independent verification continue. Preserve promised product behavior and record any unqualified execution or release claim explicitly; unavailable evidence never becomes a pass.
+
 ## Specifications and progress
 
 - [Security](../SECURITY.md), [privacy](privacy/privacy-model.md), [logging](privacy/logging-standard.md) and [supply chain](supply-chain/dependencies.md) define the applicable trust, provenance, data and output controls.

@@ -10,6 +10,11 @@ prompt for scoped review, diagnosis, verification or exposure. The TL-0008 trans
 completed M1 assignment and Windows 11 migration are historical continuations. Use live
 STATUS.md and TASKS.yaml to find the current work.
 
+Every prompt below uses the active machine and the one existing `ThirdLife-W11` guest for
+the complete project lifecycle. Historical VM/Sandbox instructions do not authorize new
+guests, clones, reinstalling Windows just to manufacture a test condition or additional
+licensing requests. Ordinary supported servicing and repair of the same guest remain allowed.
+
 ## 2. Outcome execution prompt
 
 ```text
@@ -26,6 +31,16 @@ contract and preserve meaningful acceptance and completed evidence. When a compo
 blocked, record the exact failed operation, its missing prerequisite and affected actions.
 Continue independent work. A verified isolated checkpoint may integrate while an affected
 capability remains accurately unavailable and unreachable.
+
+Use only the existing ThirdLife-W11 guest and its authorized checkpoint when needed. Run
+scenarios sequentially, preserve evidence before restoration, and adapt reusable checks to
+that guest. Do not ask for another guest, Windows Sandbox or additional Windows licence,
+or change/reinstall Windows solely to manufacture a test condition. Codex owns ordinary
+supported servicing, repair and authorized checkpoint refresh of this same guest. Apply
+existing authority to any destructive reset; do not invent a new blanket approval.
+A missing live condition limits that observation and its dependent action, not engineering
+or later independent tasks. No eligible update offer is not proof of a fully patched system.
+Keep live qualification truthful while completing the code and available verification.
 
 Preserve standalone Team B/B1 scope, Windows 11 client/native x64 admission, unelevated UI,
 typed and bounded execution, exact approved trust and provenance, durable journal and
@@ -120,8 +135,9 @@ GPU/high concurrency, or unsupported claims.
 ## 8. Recovery/interruption prompt
 
 ```text
-Exercise only the named interruption/recovery scenario in the safest deterministic or
-disposable active-machine environment. Record checkpoint, injection, journal/database state,
+Exercise only the named interruption/recovery scenario in an isolated active-machine workspace
+or the existing ThirdLife-W11 guest, with its authorized checkpoint when restoration is required.
+Record checkpoint, injection, journal/database state,
 user message, recovery action, independent verification, cleanup, and limitation.
 
 Do not disrupt the host without an explicit task, recovery plan, and approval. Partial work is

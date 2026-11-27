@@ -23,6 +23,30 @@ Record the exact release, edition, build, OS architecture and tested artifact. U
 deterministic fixtures for platform refusal and historical-record compatibility.
 The supplementary Windows Server runner covers build, governance and deterministic tests.
 
+### One existing guest throughout the lifecycle
+
+The existing `ThirdLife-W11` is the only Windows guest for development, pilot, release and
+maintenance. Run scenarios sequentially on that guest. Reuse its existing authorized
+`Clean-Windows11-ThirdLife` checkpoint when restoration is needed, preserve required evidence first, and
+verify the same guest's identity and restored state. A clean source checkout does not
+require a new Windows installation. Do not request or create another Windows instance,
+a VM clone or a new Windows Sandbox instance, or change/reinstall Windows solely to
+manufacture a test condition. Do not reopen second-guest or additional-Windows-licensing
+questions. Ordinary supported servicing, repair and authorized checkpoint refresh of the
+same guest remain Codex-owned; its operating system is not frozen. Destructive resets use
+applicable existing authority. Historical Sandbox runs keep their provenance; the old
+launch instructions are not future execution routes. Adapt reusable scenarios to the
+named guest and use bounded fixtures or isolated workspaces for unavailable conditions.
+
+A successful Windows Update scan with no eligible offer proves that scan outcome only.
+An unsupported offer, policy exclusion, scan failure and an empty scan are distinct results;
+none proves a live installation or by itself establishes that Windows is fully patched.
+Record native servicing as unobserved when its required condition is absent. Complete the
+code, deterministic cases, read-only observations and independent work without requesting
+another environment. Reopen the live case when a relevant condition changes. An actual
+implementation defect remains an engineering task; an unavailable observation is not a
+reason to mark unimplemented functionality complete or to stop unrelated development.
+
 ### Engineering ownership, evidence and reuse
 
 Codex owns preparation, functional and regression tests, technical accessibility, diagnosis,
@@ -137,8 +161,8 @@ Required before pushing a feature/fix and after changes to:
 - accessibility;
 - report/export.
 
-When direct host policy blocks a legitimate test host, use the governed active-machine
-Sandbox/VM profile and record that limitation. Do not weaken host security.
+When direct host policy blocks a legitimate test host, use the existing `ThirdLife-W11`
+guest and record that limitation. Adapt the required runner if needed. Do not weaken host security.
 
 ## 4. Full tier
 
@@ -163,7 +187,7 @@ environment. For the current read-only inventory smoke on the unelevated active 
 host, use Targeted with the Inventory project and `-Filter "Category=ActiveMachine"`.
 Record each separate result; a default Full pass does not claim these scenarios passed.
 
-Use the approved active-machine clean environment when host policy blocks direct execution.
+Use the existing `ThirdLife-W11` guest when host policy blocks direct execution.
 
 Full is required:
 
@@ -202,8 +226,16 @@ be independently invokable and produce a durable scenario-level result.
 - remote-CI classification;
 - extended-scenario policy.
 
-Future clean-environment execution should use reusable host/guest runners with declarative
-profiles. Existing task-named scripts remain historical evidence or compatibility wrappers.
+Future clean-environment execution uses reusable host/guest runners with declarative
+profiles on the existing `ThirdLife-W11`. Existing Sandbox scripts and profiles are retained
+for historical evidence, not prospective invocation. Port needed checks to the named guest
+without creating another Windows instance.
+
+### Historical Sandbox profiles — do not invoke for new work
+
+The following v0.4.0 and TL-0107 through TL-0113 procedure details preserve the original
+commands and evidence context. Their former execution instructions are superseded by the
+single-guest contract above; none authorizes starting Windows Sandbox now.
 
 The v0.4.0 cumulative gate starts in a separate clean worktree on this physical machine with
 the shared `eng/verify.ps1` runner and declarative test manifest. Bootstrap Python from the
@@ -334,6 +366,8 @@ throughout it. Persistent evidence requires committed, tracked-clean source. No 
 guest security policy is changed. Direct-host loader compatibility, human review and other
 hardware remain separate evidence or explicit limitations.
 
+### Current reusable execution
+
 A new large task-specific runner requires:
 
 - technical reason;
@@ -387,8 +421,8 @@ The driver opens the isolated WPF fixture, sends keyboard input to its owned win
 waits for saved intake, assessment, manual-result, reopen and report outcomes. The optional
 probe observes real cross-process UI Automation events and proportional Win32 wheel input.
 The runner emits bounded JSON with source and binary digests, outcomes, duration and cleanup.
-The standard-user product shell smoke checks startup only. The reusable Sandbox verifier
-cannot exercise the offered interactive desktop route or a standard-user token. Codex owns
+The standard-user product shell smoke checks startup only. The historical Sandbox verifier
+did not exercise the offered interactive desktop route or a standard-user token. Codex owns
 this driver and will retire it when a shared externally driven WPF harness covers the same
 ordinary-input, persistence, isolation and artifact assertions. Keep the in-process tests for
 deterministic failure and recovery coverage. No Windows settings changes are needed.

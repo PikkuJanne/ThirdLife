@@ -26,7 +26,7 @@ A grant contains seven ASCII lines in the order below, each terminated by one LF
 
 The two deadlines are checked separately. The file remains available if content or final authorization fails. On success the broker marks the same exclusively held file for deletion and closes the handle before returning authorization to the native writer. A crash from this boundary onward can spend the grant without a conclusive servicing outcome. A missing slot fails closed. [Windows handle deletion](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle)
 
-No reviewed native offer is active in the checked-in servicing policy. Positive automated dispatch tests use bounded test doubles for machine policy, grant and native calls. File disposition tests use a temporary user-owned fixture. Live servicing requires an applicable reviewed offer, recovery and space evidence, effective privilege and organization authority, explicit operator approval, a matching protected grant for qualification, and the separate supervised execution environment.
+No reviewed native offer is active in the checked-in servicing policy. Positive automated dispatch tests use bounded test doubles for machine policy, grant and native calls. File disposition tests use a temporary user-owned fixture. Live servicing requires an applicable reviewed offer, recovery and space evidence, effective privilege and organization authority, explicit operator approval, a matching protected grant for each phase and supervised execution on the existing ThirdLife-W11 guest.
 
 ## Protected refusal rehearsal
 

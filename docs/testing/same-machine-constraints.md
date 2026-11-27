@@ -7,7 +7,7 @@
 
 ## 1. Purpose and claim boundary
 
-These procedures apply safe, bounded, reversible conditions on the active Codex machine or a disposable environment it hosts. Each profile answers one concrete product risk. None is a substitute for a second computer, a lower-performance machine, a hardware lab, a volunteer device pool, or cross-hardware certification.
+These procedures apply safe, bounded, reversible conditions on the active Codex machine, an isolated workspace, or its one existing `ThirdLife-W11` guest. Run guest scenarios sequentially. No profile requires another guest, Windows Sandbox instance, Windows installation or licence. Each profile answers one concrete product risk. None is a substitute for a second computer, a lower-performance machine, a hardware lab, a volunteer device pool, or cross-hardware certification.
 
 A same-machine constraint proves only the recorded build, active reference-machine profile, hosted environment, exact settings, fixture/workload, and observation window. It does not simulate a particular processor, RAM size, storage device, network, GPU, manufacturer, firmware, or minimum specification.
 
@@ -21,7 +21,7 @@ Before any later constraint run:
 2. update/reference the sanitized active-machine profile in `reference-machine-profile.md`;
 3. use a synthetic, deterministic, bounded fixture/workload with version, SHA-256, expected result, and privacy review;
 4. record exact supported product/test settings and an independently invokable command;
-5. prefer an injected provider, fake adapter, isolated workspace, disposable virtual disk, VM, Windows Sandbox session, or container over host mutation;
+5. prefer an injected provider, fake adapter, isolated workspace, disposable virtual disk or the existing `ThirdLife-W11` guest over host mutation;
 6. define baseline/comparison method, bounds, timeout, cancellation/checkpoint behavior, abort rule, cleanup/restoration, and residue check;
 7. preflight free space and preserve host/recovery headroom; and
 8. stop if the procedure would affect donor/personal data, firmware, TPM, Secure Boot, activation, ownership/management controls, host safety, or an unreviewed mutation boundary.

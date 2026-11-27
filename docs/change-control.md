@@ -8,6 +8,8 @@ Codex may revise implementation interfaces, priorities, sequencing, task decompo
 
 An implementation dependency is a component, interface or data required to build another component. An execution prerequisite applies at the affected action, and a release prerequisite applies to a defined product claim or exposure. Evidence from an isolated integration does not make a blocked capability available. Retain any relevant release limitation and request actual consent only before the action for which it is required.
 
+Apply the permanent single-guest constraint from the product contract to every current and future task, gate, runbook and runner. Replacing an obsolete multi-guest assumption with sequential checks on the existing `ThirdLife-W11`, or separating unavailable live evidence from engineering completion, is an authorized engineering correction. Do not reopen a second-guest or additional-Windows-licensing questionnaire or propose changing/reinstalling Windows solely to manufacture a test condition. Ordinary supported servicing, repair and authorized checkpoint refresh of the same guest are engineering work. Destructive resets use applicable existing authority, without a new blanket approval rule. Preserve actual action consent, trust checks and truthful capability claims; retain historical observations without treating their former execution instructions as current authority.
+
 An ADR may document alternatives, a selected engineering route and its limitations. It gains authority through the product contract and relevant specification, implementation evidence and review.
 
 ## Material product or authority change

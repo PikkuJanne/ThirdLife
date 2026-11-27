@@ -134,7 +134,7 @@ At `TL-0706`, record:
 - test tier, command/scenario, duration, result, and skipped cases with rationale;
 - observed limitations and unsupported environments.
 
-The active Codex machine is the only physical validation hardware. Same-machine VMs, containers, worktrees, process constraints, and deterministic fixtures are engineering evidence, not a cross-hardware certification. The release may state that the product is **designed for modest supported hardware** and report the observations above. It must not claim manufacturer coverage, broad modest-hardware validation, or minimum specifications that were not actually tested. See `LOW_SPEC.md` and `TESTING.md`.
+The active Codex machine is the only physical validation hardware, and the existing `ThirdLife-W11` is the only Windows guest for the complete lifecycle. Sequential states of that guest, worktrees, isolated workspaces, process constraints, and deterministic fixtures are engineering evidence, not a cross-hardware certification. No release task may introduce an additional guest or alternate Windows-baseline requirement. Missing live evidence constrains its specific capability or claim while candidate engineering continues; it cannot establish a false pass or silently remove promised functionality. The release may state that the product is **designed for modest supported hardware** and report the observations above. It must not claim manufacturer coverage, broad modest-hardware validation, or minimum specifications that were not actually tested. See `LOW_SPEC.md` and `TESTING.md`.
 
 ## 10. Privilege and security
 

@@ -39,7 +39,7 @@ All direct and hosted environments use the active Codex machine:
 | Environment | Safe use | Limitation |
 |---|---|---|
 | Deterministic fixture/adapter | Typed provider, storage, clock, journal, package, update, report, and manual-workflow outcomes. | Proves only represented input/state. |
-| Hosted disposable environment | VM, Windows Sandbox, container, isolated workspace, copied synthetic store, or virtual disk for termination/interruption/recovery. | Does not prove physical power, firmware, battery, ports, or another machine. |
+| Hosted disposable environment | The one existing `ThirdLife-W11` guest, isolated workspace, copied synthetic store, or virtual disk for termination/interruption/recovery. | Does not prove physical power, firmware, battery, ports, or another machine. |
 | Safe same-machine constraint | Injected capacity, throttled adapter, bounded low priority/concurrency, no-GPU, slow destination, or deterministic network interruption. | Does not simulate a particular untested device. |
 | Physical active-machine observation | Later explicit UAC, operator interruption, or full off/on procedure when named by an owning task/gate. | Requires checkpoint, human attribution where applicable, abort rule, and restoration; proves that run only. |
 
@@ -198,8 +198,8 @@ dotnet test tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj
 
 ### TL-0408 native package route and Windows restart
 
-Run each native scenario independently in a Windows 11 native x64 disposable
-guest on the active machine. Require an admitted isolated guest, a clean
+Run each native scenario sequentially in the one existing Windows 11 native x64
+`ThirdLife-W11` guest on the active machine. Require that admitted guest, a clean
 checkpoint or equivalent restoration method, and authority for the exact
 candidate, target, package action and planned interruption or restart. Windows
 owns any consent prompt. TL-0412 covered one exact host install. The TL-0317
@@ -222,6 +222,15 @@ For checkpoint restoration, use the separate standing operator grant in
 same guest and its exact `Clean-Windows11-ThirdLife` checkpoint. Preserve the
 required evidence and confirm quiescence before each apply. Re-admit the
 restored guest and verify the expected baseline.
+
+These grants apply to the existing guest and the recorded operations; they do not require
+another baseline-choice question. Do not create a second guest or use Windows Sandbox.
+Historical Sandbox invocation strings elsewhere in this record preserve past evidence
+only. Port a needed current case to the existing guest or an isolated process/workspace.
+Inspection and the read-only Windows Update assessment do not require a restoration
+checkpoint. Keep checkpoint/recovery requirements for scenarios that depend on restoration.
+An unavailable eligible update leaves only its native servicing case unobserved; complete
+the handler, deterministic recovery tests and independent work without manufacturing an offer.
 
 1. Record the candidate digests, package identity, signed installer digest,
    initial machine-wide registration, isolated job ID and initial boot evidence.
@@ -249,7 +258,7 @@ restored guest and verify the expected baseline.
    Confirm that a verified result has independent exact machine-wide registration
    and the approved launch result. Confirm that the report matches the journal.
 5. Verify process and temporary-file cleanup, save bounded evidence, and restore
-   the disposable guest using its authorized restoration method. Record any
+   the same guest under its existing scoped restoration grant. Record any
    remaining guest state and distinguish an actual Windows restart from the
    modeled boot test and TL-0509 cold-start qualification.
 

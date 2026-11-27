@@ -5,6 +5,7 @@ This repository develops ThirdLife Setup Core: a local-first, auditable Windows 
 **Current project:** Team B / B1 — ThirdLife Setup Core  
 **Roadmap bundle:** 0.8.0 / ThirdLife Software Portfolio v2.1  
 **Physical validation scope:** active Codex machine only  
+**Windows guest:** existing `ThirdLife-W11` for all milestones, pilot, release and maintenance  
 **Pilot gate:** `TL-0611` — controlled v0.1 partner pilot  
 **Standalone release gate:** `TL-0710` — ThirdLife Setup Core 1.0  
 **Next Team B project after stable:** Scam Explainer  
