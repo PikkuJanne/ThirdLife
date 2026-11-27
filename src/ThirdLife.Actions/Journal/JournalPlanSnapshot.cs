@@ -51,7 +51,7 @@ public sealed class JournalPlanSnapshot
         string policySha256,
         string evidenceSha256,
         bool syntheticData,
-        ActionSchedule? schedule)
+        ActionSchedule? schedule, int? reviewedEvidenceCount)
     {
         Key = key;
         GateDecisionId = gateDecisionId;
@@ -66,6 +66,7 @@ public sealed class JournalPlanSnapshot
         EvidenceSha256 = evidenceSha256;
         SyntheticData = syntheticData;
         Schedule = schedule;
+        ReviewedEvidenceCount = reviewedEvidenceCount;
     }
 
     public JournalPlanKey Key { get; }
@@ -82,6 +83,10 @@ public sealed class JournalPlanSnapshot
 
     /// <summary>The graph bound to this exact plan digest, when the plan used the scheduled contract.</summary>
     public ActionSchedule? Schedule { get; }
+
+    public bool FullMaintenance => ReviewedEvidenceCount.HasValue;
+
+    public int? ReviewedEvidenceCount { get; }
 
     /// <summary>Indicates the plan was written using the current policy plan contract.</summary>
     /// <remarks>The contract version alone does not establish live readiness or dispatch authority.</remarks>
@@ -129,11 +134,11 @@ public sealed class JournalPlanSnapshot
 
         try
         {
-            var (gate, actions, current, catalog, profile, policy, evidence, synthetic, schedule) =
+            var (gate, actions, current, catalog, profile, policy, evidence, synthetic, schedule, reviewedEvidenceCount) =
                 JournalPlanEncoding.ReadPlan(key, ownedPlan);
             JournalPlanEncoding.RequireValidImpact(key, actions, ownedImpact);
             return new JournalPlanSnapshot(key, gate, ownedPlan, ownedImpact, actions, hasPlanningProvenance, current,
-                catalog, profile, policy, evidence, synthetic, schedule);
+                catalog, profile, policy, evidence, synthetic, schedule, reviewedEvidenceCount);
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException or
             FormatException or KeyNotFoundException)

@@ -62,7 +62,7 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
         {
             _layout.ValidateJobDirectory(entry.JobId);
             var history = await ReadWindowsUpdatesAsync(transaction, entry.JobId, ct).ConfigureAwait(false);
-            if (entry.BootUptime is not null || entry.OccurredAtUtc > _timeProvider.GetUtcNow())
+            if (entry.BootUptime is not null || entry.BootSession is not null || entry.OccurredAtUtc > _timeProvider.GetUtcNow())
             {
                 throw new JobStoreConflictException();
             }
@@ -107,6 +107,25 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
             {
                 var packages = await ReadJobJournalHistoriesAsync(transaction, entry.JobId, ct).ConfigureAwait(false);
                 if (MaintenancePhases.RequiresPackageRecovery(packages)) { throw new JobStoreConflictException(); }
+                var maintenance = await ReadMaintenanceAsync(transaction, entry.JobId, ct).ConfigureAwait(false);
+                if (maintenance is { Phase: not MaintenancePhase.FinalVerification })
+                {
+                    var exactPlan = packages.SingleOrDefault(package => package.Plan.Key == maintenance.Plan);
+                    var boot = _readBootSession();
+                    if (maintenance.Phase != MaintenancePhase.WindowsUpdates || exactPlan?.Plan.GateDecisionId != entry.GateId ||
+                        exactPlan?.ActiveApproval?.ApprovalId != maintenance.ApprovalId || !MaintenancePhases.WithinRestartLimit(maintenance, boot))
+                    {
+                        throw new JobStoreConflictException();
+                    }
+                    await RequireMaintenanceEvidenceAsync(transaction, exactPlan!.Plan, ct).ConfigureAwait(false);
+                    if (entry.Stage is not (WindowsUpdateStage.DownloadChecked or WindowsUpdateStage.InstallChecked))
+                    {
+                        var checkedStage = entry.Stage is WindowsUpdateStage.DownloadPreparing or WindowsUpdateStage.DownloadStarted
+                            ? WindowsUpdateStage.DownloadChecked : WindowsUpdateStage.InstallChecked;
+                        var checkedEntry = history.LastOrDefault(row => row.Stage == checkedStage && row.Approval == entry.Approval);
+                        if (checkedEntry?.BootSession != boot) { throw new JobStoreConflictException(); }
+                    }
+                }
             }
 
             if (entry.Stage is WindowsUpdateStage.Approved or WindowsUpdateStage.DownloadPreparing or WindowsUpdateStage.InstallPreparing
@@ -132,7 +151,7 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
             }
 
             recorded = entry.Stage == WindowsUpdateStage.ScanStarted || entry.Scan is not null || entry.Operation?.RebootRequired == true
-                ? entry with { BootUptime = _readBootUptime() } : entry;
+                ? entry with { BootUptime = _readBootUptime(), BootSession = _supportsMaintenance ? _readBootSession() : null } : entry;
             await InsertWindowsUpdateAsync(connection, transaction, history.Length + 1, recorded, ct).ConfigureAwait(false);
         }, token).ConfigureAwait(false);
         return recorded!;

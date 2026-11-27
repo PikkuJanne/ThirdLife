@@ -1,5 +1,7 @@
 # TL-0505 maintenance phase coordination
 
+## Initial cross-phase checkpoint
+
 On 2026-11-27 the cross-phase checkpoint was tested on the active Windows 11 Pro
 26H2 x64 host, build 26300.9974, with .NET SDK 10.0.400 and Python 3.14.7.
 The final technical commit is `9f2a27a590dc5073cd9e6459aff4ea3a34cf7a42`,
@@ -41,13 +43,13 @@ The initial Targeted attempts identified C# whitespace and a cancellation-token
 analyzer failure in the conflict reread. The reread now explicitly completes
 its check after a dispatch conflict.
 
-## Scope remaining
+### Scope at the initial checkpoint
 
 The storage tests use controlled kernel-uptime readings, update observations and
 isolated jobs. The WPF test uses a controlled provider. The checkpoint observed
 no actual machine restart, servicing operation or installation.
 
-TL-0505 remains in progress. The next implementation is the exact full-profile
+At that checkpoint TL-0505 remained in progress. The next implementation was the exact full-profile
 phase sequence bound to the reviewed actions, including durable post-package
 checks, final restart checkpoint, and handoff to independent final verification.
 Exercise shutdown and resume at each of those additional boundaries. The native
@@ -59,3 +61,111 @@ passed 59 Windows Update workflow, reboot store and interrupted journal migratio
 cases in 28 s with the Release build. The `dotnet test` filter selected
 `WindowsUpdateWorkflowTests`, `RebootCheckpointStoreTests` and
 `InterruptedJournalMigrationRecoversAndPreservesExistingJob`.
+
+## Full maintenance schedule
+
+Prepare offers the full schedule when reviewing the supported package profile.
+Before approval it displays Windows Update review, required restarts, the exact
+package actions, post-package checks, the final restart and independent
+verification. The reviewed phase list, evidence revision and action graph are
+bound to the plan digest. An update still requires its own exact revision,
+policy, resources and authorization. Package-only plans retain their earlier
+encoding and approval behavior.
+
+Schema 12 saves the first boundary with the approval and appends subsequent
+boundaries in SQLite. Closing the job leaves the phase in place. Reopening
+reads the latest boundary. An explicit continuation uses a fresh update scan,
+the current intake and assessment, and the exact package journal. Both sides of
+the final restart also require a new installed-state observation for each
+verified target. A mismatch or unavailable result survives reopening.
+Prepare, Verify and the workshop report distinguish the saved maintenance
+phase from whole-device acceptance.
+
+Windows supplies a local boot sequence independently of elapsed uptime. A
+later boot can therefore be recognized even when the operator returns late.
+The earlier encoding remains readable, including authenticated package
+checkpoints with only an uptime observation. The coordinator allows three
+pre-final restarts and a fourth for the final restart. A further eligible update
+goes back to update review and the existing three-pass servicing limit.
+Conflicting, stale or unavailable evidence holds continuation. An assessment
+change after package verification preserves the earlier result for a new
+readiness review.
+
+The full-schedule tests allow zero, one or two servicing restarts before
+packages. With no subsequent boot, the job stays at its final restart
+checkpoint. The package-only path can finish its action without a restart
+when Windows and the installer both report that none is required.
+
+### Ordinary Windows restarts on the existing guest
+
+On 27 November 2026, `GuestMaintenanceResumesTheSameApprovedJobAcrossTwoWindowsRestarts`
+ran in three separate processes on the existing Windows 11 Pro 26H2 x64
+guest, build 26300.9974. Each
+process opened the same isolated SQLite store. The test used the production
+Windows boot reader, a fixture operator and controlled update and package
+observations. The host separately checked the VM identity and quiescence
+before each orderly restart under the standing grant. Windows recorded one
+planned restart event for each request and the kernel boot time changed twice.
+[Standing guest restart authority](../../e2e/M4-first-write-slice.md#standing-guest-restart-authorization)
+
+| Stage | Observed result |
+| --- | --- |
+| Before the first restart | The saved schedule rejected a clear restart flag on the same boot. One case passed in 1.681 s. |
+| After the first restart | Windows reconnected with a later boot in 45.0 s. The same job, plan, impact and approval reopened. One modeled package attempt reached verified, the post-package check saved the final restart checkpoint, and another same-boot continuation was refused. One case passed in 1.676 s. |
+| After the second restart | Windows reconnected with a later boot in 51.6 s. Fresh controlled checks handed the saved job to independent verification. One case passed in 1.001 s. The host confirmed the original binding and removed the guest test store, binaries and staging. |
+
+The named case ran with the pinned .NET SDK 10.0.400 using `dotnet vstest
+ThirdLife.Persistence.Tests.dll` and its exact method filter. It uses the same
+opaque `THIRDLIFE_MAINTENANCE_RUN` (32 hexadecimal digits) and one
+`THIRDLIFE_MAINTENANCE_STAGE` per invocation, in the order `prepare`,
+`packages`, `verify`. The test itself only writes fixture records. Restarts
+are performed separately by the authorized guest operator or harness.
+The host retained the run-specific binding privately.
+
+The SHA-256 digests of the tested Release assemblies were
+`25828a0b88e4aa5283314072136e9a42fbc4999c542bb2c46bbbd1c4a2fcaeda`
+for Actions, `ee2b9dc46db168e7766104fc8418acafb4a0f8f849a29d775734b62ae0dd3d4a`
+for Persistence and `a8bd236aad9b3a3b26a71cd40f860fcfd612f8182ba0972729db8a9647a178fb`
+for the test assembly. The guest payload SHA-256 was
+`0f908bb32e948ccc47f79b013971cd6a5656064c11e66ec43d3d3b09d7a00c0f`.
+The guest exercised ordinary warm restarts. Native servicing receipts and
+the serviced revision remain TL-0511 qualifications. TL-0509 owns cold-boot
+coverage and TL-0507 owns the independent profile verification pass.
+
+### Active-machine regression results
+
+The technical checkpoint is `0761995441c2e68492d7534d48e26c2ca83d947b`
+on base `7d2282f11023aa9e6fb42f9ee7ff80eba8913bd2`. Tests ran on the
+Windows 11 Pro 26H2 x64 host, build 26300.9974, with .NET SDK 10.0.400 and
+Python 3.14.7. The guest Actions and Persistence assemblies matched the local
+Release binaries used for the Targeted run. Subsequent test changes added
+boundary shutdown and concurrent reassessment cases.
+
+| Check | Result on 27 November 2026 |
+| --- | --- |
+| Baseline on the base commit | Three existing `MaintenancePausesApprovedPackageAtEachUpdateRestartAcrossReopen` cases passed in 1 s. |
+| Targeted including Quick | `eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj -Filter '(FullyQualifiedName~RebootCheckpointStoreTests\|FullyQualifiedName~WindowsUpdateWorkflowTests\|FullyQualifiedName~InterruptedJournalMigration)&Category!=Extended&Category!=ActiveMachine'` passed in 205.032 s. The eight governance regressions, validators, formatting, warnings-as-errors build and 1,380 .NET cases passed (142 Core, 977 Inventory, 192 UI and 69 Persistence). |
+| Boundary interruptions and safety checks | The final focused Persistence selection `FullyQualifiedName~FullMaintenance\|FullyQualifiedName~StampedPackageReboot\|FullyQualifiedName~PackageRebootRequiresAuthenticatedProofOfANewerBoot\|FullyQualifiedName~ThreeExactPassesRequireFreshReview` passed 12 cases in 12 s. Each boundary was reopened after a modeled shutdown. Before/after-commit faults, missing or reversed boot sequences, expired or stale scans, package mismatches, concurrent reassessment, repeat servicing and schema 11 migration were exercised. |
+| WPF interruption, Extended | `dotnet test tests/ThirdLife.UI.Tests -c Release --no-restore --no-build --filter FullyQualifiedName~KilledNoOpApplicationReopensTheSameJobAndReconcilesWithoutDispatch` passed both cases in 10 s. An interrupted synthetic application resumed its existing job without replay in both scheduling modes. |
+| Native shell and UI Automation | From the clean technical checkout, `eng/run-ui-smoke.ps1` opened the Release WPF shell with a standard user token, navigated to Inspect and observed its status in 2.412 s. The process exited normally. The maintenance-specific WPF tests separately exercised the keyboard continuation control, focusable status, polite announcements and generated workshop report. |
+
+The first clean Full run took 471.544 s. Its 310 governance tests passed.
+Seven Actions cases failed during fixture setup because the fixture
+reconstructed the plan subject using an obsolete constructor. All other
+assemblies passed. Commit `f8a5da7bb37bbe61631ba4e18dd4ed0488eb8c2a`
+updated the comparison fixture to reuse the reviewed subject, schedule and
+maintenance flag. All 24 `PlanDiffTests` passed in 374 ms, followed by all
+254 deterministic Actions tests in 406 ms. The product and guest test sources
+are identical at the two commits.
+
+A fresh detached checkout of `f8a5da7bb37bbe61631ba4e18dd4ed0488eb8c2a`
+passed `eng/verify.ps1 -Tier Full -Restore` in 412.863 s. All 310 governance
+tests and 2,471 deterministic .NET tests across 13 assemblies passed with
+zero skips. Locked restore, formatting and the warnings-as-errors Release
+build passed. The checkout remained clean.
+
+The final standalone Quick run passed all 1,311 .NET cases in 138.755 s,
+18.755 s above the 120 s target. An earlier Quick run alongside Full took
+188.368 s with the same selection. On the standalone run the Release build
+fell from 17.20 s to 8.37 s and the 192-case WPF suite from 112 s to 73 s.
+The WPF suite accounted for more than half of the final run.

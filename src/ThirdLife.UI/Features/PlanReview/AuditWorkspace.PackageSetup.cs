@@ -37,7 +37,7 @@ internal sealed partial class AuditWorkspace
     public IReadOnlyList<PackageJournalItem> PackageJournal { get; private set; } = [];
     public bool IsPackageOperationRunning => _packageCancellation is not null;
     public bool ShowsPackageOperationStatus => IsPackageProfile || IsPackageOperationRunning;
-    public bool ShowsVerifyEmptyState => !HasPackageHistory && !HasRebootRecovery && !HasBrokerHistory && !HasPreparationDisposition;
+    public bool ShowsVerifyEmptyState => !HasPackageHistory && !HasRebootRecovery && !HasBrokerHistory && !HasPreparationDisposition && !HasMaintenancePhaseStatus;
     public bool ShowsPackageInstallActivity => IsPackageOperationRunning && !ShowsPackageRecoveryCancellation;
     public bool ShowsPackageVerificationPlanStatus => HasPackageHistory && IsPackageProfile && PlanReviewStatus != LatestPackageOutcome;
     public bool ShowsPackageVerificationActions => ShowsPackageRecovery || HasPackageRetryStatus ||
@@ -199,7 +199,15 @@ internal sealed partial class AuditWorkspace
         var approved = new JournalEntry(Guid.NewGuid(), snapshot.Key, request.ActionId, approval.ApprovalId,
             previous?.State ?? JournalState.Planned, JournalState.Approved, JournalActor.Operator,
             approval.ActorId, approval.CorrelationId, approval.OccurredAtUtc, JournalResult.None, JournalCheckpoint.PackagePlanApproval);
-        await journal.RecordPackageScheduleApprovalAsync(approval, [approved]);
+        if (displayed.Plan.FullMaintenance)
+        {
+            if (_store is not IMaintenancePhaseStore maintenance) { return false; }
+            await maintenance.RecordMaintenanceApprovalAsync(approval, [approved]);
+        }
+        else
+        {
+            await journal.RecordPackageScheduleApprovalAsync(approval, [approved]);
+        }
         _packageApproval = approval;
         ClearReport();
         await LoadPackageHistoryAsync(snapshot.Key.JobId);
@@ -338,13 +346,14 @@ internal sealed partial class AuditWorkspace
             await LoadPackageHistoryAsync(approval.Plan.JobId);
             await LoadWindowsUpdateHistoryAsync(approval.Plan.JobId);
             var saved = await journal.LoadJournalAsync(approval.Plan, CancellationToken.None);
-            if (HoldsPackageDispatch && saved?.ActiveApproval == approval && IsFreshPackageApproval(approval) &&
+            if ((HoldsPackageDispatch || displayed.Plan.FullMaintenance) && saved?.ActiveApproval == approval && IsFreshPackageApproval(approval) &&
                 saved.Entries.LastOrDefault(entry => entry.ActionId == request.ActionId) == previous)
             {
                 _packageApproval = approval;
             }
 
             _planReviewStatus = HoldsPackageDispatch ? MaintenancePhaseStatus :
+                displayed.Plan.FullMaintenance ? "Check and continue maintenance to refresh Windows Update and the current boot. Review the saved package plan before installation." :
                 "The saved approval or attempt changed before dispatch. Review the current package history.";
             return;
         }
@@ -610,6 +619,7 @@ internal sealed partial class AuditWorkspace
     private async Task LoadPackageHistoryAsync(JobId jobId)
     {
         var histories = await LoadPackageJournalsAsync(jobId, CancellationToken.None);
+        await LoadMaintenanceCheckpointAsync(jobId);
         _packagePhaseNeedsRecovery = MaintenancePhases.RequiresPackageRecovery(histories);
         RememberPackageRetry(histories);
         var latest = ReadPackageRecords(histories, includeEarlierAttempts: false);
@@ -673,6 +683,7 @@ internal sealed partial class AuditWorkspace
     {
         StopPackageRetryRefresh();
         _savedPackageRetry = default;
+        ClearMaintenanceCheckpoint();
         _packagePhaseNeedsRecovery = false;
         _packageNeedsReview = false;
         _canInspectSavedPackage = false;

@@ -18,7 +18,7 @@ public sealed class ProposedPlan
         PlanBlockReason? blockedReason,
         ImmutableArray<PlannedAction> actions,
         ImmutableArray<ProfileRecipientChoice> recipientChoices,
-        IEnumerable<ScheduledAction>? steps = null)
+        IEnumerable<ScheduledAction>? steps = null, bool fullMaintenance = false)
     {
         _subject = subject;
         JobId = subject.JobId;
@@ -34,7 +34,13 @@ public sealed class ProposedPlan
         Actions = actions;
         RecipientChoices = recipientChoices;
         Schedule = steps is null ? [] : ActionSchedule.Order(actions.Select(action => action.Request.ActionId), steps);
-        ContentSha256 = PlanIdentity.PlanHash(subject, policyDecision, blockedReason, actions, recipientChoices, Schedule);
+        FullMaintenance = fullMaintenance;
+        if (fullMaintenance && (Schedule.IsEmpty || Schedule.Any(step => step.Phase != MaintenancePhases.PackagePhase) ||
+            Actions.Any(action => action.Request is not InstallPackageActionRequest)))
+        {
+            throw new ArgumentException("The full maintenance schedule requires reviewed package actions in the package phase.", nameof(steps));
+        }
+        ContentSha256 = PlanIdentity.PlanHash(subject, policyDecision, blockedReason, actions, recipientChoices, Schedule, fullMaintenance);
     }
 
     public JobId JobId { get; }
@@ -63,10 +69,14 @@ public sealed class ProposedPlan
 
     public ImmutableArray<ScheduledAction> Schedule { get; }
 
+    public bool FullMaintenance { get; }
+
+    internal int ReviewedEvidenceCount => _subject.EvidenceCount;
+
     public string ContentSha256 { get; }
 
     /// <summary>Creates a reviewable proposal with a validated, immutable action graph.</summary>
-    public ProposedPlan WithSchedule(IEnumerable<ScheduledAction> steps)
+    public ProposedPlan WithSchedule(IEnumerable<ScheduledAction> steps, bool fullMaintenance = false)
     {
         ArgumentNullException.ThrowIfNull(steps);
         if (BlockedReason is not null || Actions.IsEmpty)
@@ -74,7 +84,7 @@ public sealed class ProposedPlan
             throw new InvalidOperationException("An action schedule requires a nonblocked proposal with at least one action.");
         }
 
-        return new ProposedPlan(_subject, PolicyDecision, BlockedReason, Actions, RecipientChoices, steps);
+        return new ProposedPlan(_subject, PolicyDecision, BlockedReason, Actions, RecipientChoices, steps, fullMaintenance);
     }
 }
 
@@ -86,7 +96,8 @@ internal sealed record PlanSubject(
     string PolicySha256,
     string? EvidenceSha256,
     bool SyntheticData,
-    ImmutableArray<string> ActiveCapabilityIds);
+    ImmutableArray<string> ActiveCapabilityIds,
+    int EvidenceCount);
 
 public sealed record PlannedAction(
     string CapabilityId,

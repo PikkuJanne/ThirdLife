@@ -86,7 +86,7 @@ internal sealed partial class AuditWorkspace
         ? Task.CompletedTask
         : RunAsync(async () =>
         {
-            var active = PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } approval &&
+            var active = (_packageApproval is null || IsFreshPackageApproval(_packageApproval)) && PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } approval &&
                 (!IsPackageProfile || _packageApproval is not null) ? approval : null;
             var changes = _planReviewChanges;
             var savedApproval = _packageApproval;
@@ -172,7 +172,9 @@ internal sealed partial class AuditWorkspace
             await RefreshActionDecisionsAsync(displayed.Plan.JobId);
             _planReviewStatus = plan.SyntheticData
                 ? DescribeBrokerApproval()
-                : "Approval saved for this exact plan. Select Install approved package to continue.";
+                : plan.FullMaintenance
+                    ? "The full maintenance schedule and exact package approval are saved. Use Check and continue maintenance to review the next phase."
+                    : "Approval saved for this exact plan. Select Install approved package to continue.";
         });
     }
 
@@ -228,6 +230,12 @@ internal sealed partial class AuditWorkspace
 
             var evidence = AuditPolicyEvidence.Create(job, assessment, now);
             var plan = PlanResolver.Resolve(job, policy.Document, chosen.Profile, chosen.Catalog, evidence, optional, now);
+            if (PackageRequest(plan) is not null && IncludeFullMaintenance)
+            {
+                return plan.WithSchedule(plan.Actions.Select(action => new ScheduledAction(action.Request.ActionId,
+                    MaintenancePhases.PackagePhase, [])), fullMaintenance: true);
+            }
+
             return PackageRequest(plan) is not null ||
                 (_brokerExecution?.HasScheduledVerification == true && plan is { SyntheticData: true, Actions.Length: > 1 })
                 ? plan.WithSchedule(plan.Actions.Select(action => new ScheduledAction(action.Request.ActionId, 1, [])))
@@ -251,6 +259,7 @@ internal sealed partial class AuditWorkspace
         PlanReviewDecision = null;
         SetBrokerPlan(current);
         RestoreScheduledApproval();
+        if (RestoreMaintenancePackageApproval(current)) { return; }
         _planReviewChanges = changes;
         if (RestorePlanDecline(current))
         {
@@ -329,6 +338,7 @@ internal sealed partial class AuditWorkspace
         if (clearSelection)
         {
             _selectedPlanProfile = null;
+            _includeFullMaintenance = false;
             _packageOperatorCode = string.Empty;
             PlanCapabilities = [];
             _planReviewHistory = [];

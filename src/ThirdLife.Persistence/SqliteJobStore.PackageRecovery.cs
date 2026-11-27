@@ -125,7 +125,8 @@ public sealed partial class SqliteJobStore : IPackageRecoveryStore
         }
 
         var checkpoint = new RebootCheckpoint(Guid.NewGuid(), restartEntry.Plan, restartEntry.ActionId, restartEntry.EntryId,
-            authority.Approval.ApprovalId, restartEntry.CorrelationId, now, now + RebootCheckpoint.MaximumLifetime, uptime);
+            authority.Approval.ApprovalId, restartEntry.CorrelationId, now, now + RebootCheckpoint.MaximumLifetime, uptime,
+            _supportsMaintenance ? _readBootSession() : null);
         if (WindowsRebootAuthenticator.TrySeal(checkpoint, _databaseGuard) is { } protectedToken)
         {
             await InsertRebootCheckpointAsync(connection, transaction, checkpoint, protectedToken, token).ConfigureAwait(false);
@@ -133,7 +134,9 @@ public sealed partial class SqliteJobStore : IPackageRecoveryStore
     }
 
     private bool HasObservedPackageRestart(RebootCheckpoint checkpoint) =>
-        checkpoint.PackageBootUptime is { } saved && _readBootUptime() is { } current && current < saved;
+        checkpoint.PackageBootSession is { } session
+            ? _readBootSession() > session
+            : checkpoint.PackageBootUptime is { } saved && _readBootUptime() is { } current && current < saved;
 
     private async Task<bool> TryInsertPackageRecoveryVerificationAsync(
         SqliteConnection connection, SqliteTransaction transaction, JournalEntry prior, JournalEntry verification, CancellationToken token)

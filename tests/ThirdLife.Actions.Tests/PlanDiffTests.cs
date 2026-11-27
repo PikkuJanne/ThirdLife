@@ -223,12 +223,12 @@ public sealed class PlanDiffTests
         // The normal resolver fixes action metadata and order. Use its own immutable construction
         // path to exercise isolated changes from a hypothetical later contract in this comparison.
         var constructor = Assert.Single(typeof(ProposedPlan).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance));
-        var subjectType = constructor.GetParameters()[0].ParameterType;
-        var subject = Activator.CreateInstance(subjectType,
-            [plan.JobId, plan.GateDecisionId, plan.ProfileSha256, plan.CatalogSha256, plan.PolicySha256,
-                plan.EvidenceSha256, plan.SyntheticData, plan.ActiveCapabilityIds]);
+        var subjectField = typeof(ProposedPlan).GetField("_subject", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(subjectField);
+        var subject = subjectField.GetValue(plan);
         return Assert.IsType<ProposedPlan>(constructor.Invoke(
-            [subject, plan.PolicyDecision, plan.BlockedReason, actions, plan.RecipientChoices, null]));
+            [subject, plan.PolicyDecision, plan.BlockedReason, actions, plan.RecipientChoices,
+                plan.Schedule.IsEmpty ? null : plan.Schedule, plan.FullMaintenance]));
     }
 
     private static PlanDiffResult Compare(ProposedPlan approved, ProposedPlan current) =>

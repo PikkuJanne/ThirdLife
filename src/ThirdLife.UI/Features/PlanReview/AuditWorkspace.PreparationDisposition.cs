@@ -50,11 +50,11 @@ internal sealed partial class AuditWorkspace
         try
         {
             var histories = await ReadPreparationJournalsAsync(job.Job.JobId, CancellationToken.None);
+            var checkpoint = await ReadMaintenanceForReportAsync(job.Job.JobId, CancellationToken.None);
             var now = _timeProvider.GetUtcNow();
-            var preparation = await Task.Run(() => ProjectPreparationRecords(job, assessment, histories, now, CancellationToken.None));
+            var preparation = await Task.Run(() => ProjectPreparationRecords(job, assessment, histories, checkpoint, now, CancellationToken.None));
             var current = preparation.SingleOrDefault(plan => plan.CurrentDisposition is not null);
-            var status = preparation.Length == 0 ? string.Empty : WorkshopReportRenderer.DescribePreparationDisposition(
-                current?.CurrentDisposition, current?.SyntheticData == true);
+            var status = preparation.Length == 0 ? string.Empty : WorkshopReportRenderer.DescribePreparationSummary(current);
             var outcomes = current is null ? string.Empty : string.Join(Environment.NewLine,
                 current.Actions.Where(action => action.LatestForAction).Select(action =>
                     $"{PlanReviewPresentation.CapabilityName(action.CapabilityId)} ({(action.Essential ? "essential" : "optional")}). " +
@@ -81,8 +81,38 @@ internal sealed partial class AuditWorkspace
         PreparationOutcomes = string.Empty;
     }
 
+    private Task<MaintenanceCheckpoint?> ReadMaintenanceForReportAsync(JobId jobId, CancellationToken token) =>
+        _store is IMaintenancePhaseStore store && !IsFixtureScenario
+            ? Task.Run(() => store.LoadMaintenanceAsync(jobId, token), token)
+            : Task.FromResult<MaintenanceCheckpoint?>(null);
+
+    private static WorkshopMaintenanceCheckpoint? ProjectMaintenance(JournalHistory history, MaintenanceCheckpoint? saved)
+    {
+        if (!history.Plan.FullMaintenance) { return null; }
+        if (saved?.Plan != history.Plan.Key || saved.ApprovalId != history.ActiveApproval?.ApprovalId)
+        {
+            return new(WorkshopMaintenancePhase.Unconfirmed, null);
+        }
+
+        var phase = saved.Phase switch
+        {
+            MaintenancePhase.WindowsUpdates => WorkshopMaintenancePhase.WindowsUpdates,
+            MaintenancePhase.Packages => WorkshopMaintenancePhase.Packages,
+            MaintenancePhase.PostPackageChecks => WorkshopMaintenancePhase.PostPackageChecks,
+            MaintenancePhase.FinalRestart => WorkshopMaintenancePhase.FinalRestart,
+            MaintenancePhase.FinalVerification => WorkshopMaintenancePhase.FinalVerification,
+            _ => WorkshopMaintenancePhase.Unconfirmed,
+        };
+        return new(phase, saved.LastCheckFailure?.Issue switch
+        {
+            MaintenanceCheckIssue.PackageMismatch => WorkshopMaintenanceIssue.PackageMismatch,
+            MaintenanceCheckIssue.PackageUnavailable => WorkshopMaintenanceIssue.PackageUnavailable,
+            _ => null,
+        });
+    }
+
     private WorkshopPreparationPlan[] ProjectPreparationRecords(StoredJob job, AssessmentSnapshot? assessment,
-        ImmutableArray<JournalHistory> journals, DateTimeOffset now, CancellationToken cancellationToken)
+        ImmutableArray<JournalHistory> journals, MaintenanceCheckpoint? checkpoint, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var reviewed = journals.Where(history => !history.Entries.IsEmpty).ToArray();
         var latest = reviewed.OrderBy(LatestReviewTime).LastOrDefault();
@@ -98,7 +128,7 @@ internal sealed partial class AuditWorkspace
                     item.State is JournalState.Started or JournalState.Applied or JournalState.RequiresReview));
             var rows = outcomes.Select(ProjectPreparationAction).ToArray();
             result.Add(new WorkshopPreparationPlan(history.Plan.Key.JobId, history.Plan.Key.PlanSha256, history.Plan.SyntheticData,
-                isCurrent ? projection.Disposition : null, rows));
+                isCurrent ? projection.Disposition : null, rows, ProjectMaintenance(history, checkpoint)));
         }
 
         return result.ToArray();
@@ -116,6 +146,7 @@ internal sealed partial class AuditWorkspace
         var gate = SanitizationGate.Inspect(job);
         if (!plan.IsCurrentPolicyPlan || plan.SyntheticData != IsFixtureScenario || !gate.AllowsAssessment ||
             gate.Decision?.DecisionId != plan.GateDecisionId ||
+            (plan.FullMaintenance && plan.ReviewedEvidenceCount != job.SanitizationEvidence.Count + job.Observations.Count + job.HumanTests.Count) ||
             assessment is not { Outcome: AssessmentOutcome.Completed or AssessmentOutcome.RequiresReview } ||
             assessment.GateDecisionId != plan.GateDecisionId || assessment.FinishedAtUtc > now)
         {

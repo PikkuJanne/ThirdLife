@@ -48,7 +48,8 @@ public static class PlanResolver
 
         var gate = SanitizationGate.Inspect(job);
         var subject = new PlanSubject(job.Job.JobId, gate.Decision?.DecisionId,
-            profile.ContentSha256, catalog.ContentSha256, policy.ContentSha256, null, profile.SyntheticData, []);
+            profile.ContentSha256, catalog.ContentSha256, policy.ContentSha256, null, profile.SyntheticData, [],
+            job.Observations.Count + job.HumanTests.Count + job.SanitizationEvidence.Count);
         var choices = profile.RecipientChoices.OrderBy(choice => choice.ChoiceId, StringComparer.Ordinal).ToImmutableArray();
         ProposedPlan Block(PlanBlockReason reason, DispositionDecision? decision = null) =>
             new(subject, decision, reason, [], choices);
