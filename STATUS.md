@@ -47,12 +47,15 @@ on ThirdLife-W11, reviewed recovery and space, exact authorization, native recei
 an independent installed-state check and a rescan after any required restart.
 [Update verification](artifacts/evidence/TL-0504/single-guest-inventory.md)
 
-TL-0505 pauses same-job package or update dispatch while the other operation has
-unresolved recovery. Continue the reviewed full-profile schedule through
-post-package checks and the final restart. TL-0506 now collects read-only security
-and management findings. Continue its versioned security rules, recent time
-synchronization evidence and attributable administrator and remote-access review.
-[Maintenance evidence](artifacts/evidence/TL-0505/report.md) ·
+TL-0505 binds the full maintenance schedule to the reviewed plan. Prepare, Verify
+and the workshop report show where the job stopped. On `ThirdLife-W11`, the same
+job and approval survived two orderly restarts and reached the independent
+verification handoff with controlled package and update results.
+[Maintenance evidence](artifacts/evidence/TL-0505/report.md)
+
+Continue TL-0506's versioned security rules, recent time synchronization
+evidence and attributable administrator and remote-access review. TL-0507
+uses that baseline for the independent full-profile verification pass.
 [Security evidence](artifacts/evidence/TL-0506/report.md)
 
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B

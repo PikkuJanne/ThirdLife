@@ -6309,7 +6309,7 @@ tasks:
   workstream: recovery
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -6349,15 +6349,44 @@ tasks:
     date: '2026-11-27'
     duration: 241.401 s for 1335 Targeted cases including Quick, then 18 s for 40 Windows Update workflow cases on the final recovery change
     reference: artifacts/evidence/TL-0505/report.md, 91c0153bd03228a45fd15f3e585a4eb27c01d72c
-    limitation: The passes model zero, one and two restarts. The full-profile schedule, post-package checks and final restart handoff remain in progress.
+    limitation: The initial cross-phase checkpoint modeled zero, one and two restarts. It preceded the full-profile schedule.
+  - summary: The reviewed schedule, approval and exact action results survive interruption at each phase boundary. Stale approval, stale assessment, excessive restarts and mismatching package observations hold the handoff.
+    command: eng/verify.ps1 -Tier Targeted with RebootCheckpointStoreTests, WindowsUpdateWorkflowTests and interrupted journal migration, plus focused boundary and WPF report cases
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 x64 build 26300.9974, .NET SDK 10.0.400, isolated SQLite stores and controlled providers
+    date: '2026-11-27'
+    duration: 205.032 s for 1380 .NET cases including Quick, then 12 s for 12 focused persistence cases
+    reference: artifacts/evidence/TL-0505/report.md, 0761995441c2e68492d7534d48e26c2ca83d947b
+    limitation: Fault injection and WPF controls model servicing and package outcomes. Whole-device acceptance and full-profile verification have independent prerequisites.
+  - summary: The same isolated job reached the final verification handoff after two orderly Windows restarts. The host verified its original plan and approval binding at each stage and removed guest staging.
+    command: GuestMaintenanceResumesTheSameApprovedJobAcrossTwoWindowsRestarts, sequential prepare, packages and verify stages, and KilledNoOpApplicationReopensTheSameJobAndReconcilesWithoutDispatch on the host
+    tier: extended
+    result: passed
+    environment: Existing ThirdLife-W11 Windows 11 x64 guest, native boot sequence and SQLite, fixture package and update providers, unelevated host WPF interruption tests
+    date: '2026-11-27'
+    duration: Guest stages 1.681 s, 1.676 s and 1.001 s, restart observations 45.0 s and 51.6 s, two host interruption cases in 10 s
+    reference: artifacts/evidence/TL-0505/report.md, guest Release payload 0f908bb32e948ccc47f79b013971cd6a5656064c11e66ec43d3d3b09d7a00c0f
+    limitation: Both restarts were ordinary Windows restarts. The guest performed no native servicing or package install in this scenario. TL-0509 and TL-0511 retain their separate qualifications.
+  - summary: The clean migration and shared plan contract gate passed, including material-change comparisons, ordered recovery, WPF and reports.
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean detached worktree on the active Windows 11 Pro 26H2 x64 host, .NET SDK 10.0.400 and Python 3.14.7
+    date: '2026-11-27'
+    duration: 412.863 s, 310 governance tests and 2471 deterministic .NET cases with zero skips
+    reference: artifacts/evidence/TL-0505/report.md, f8a5da7bb37bbe61631ba4e18dd4ed0488eb8c2a
+    limitation: Full excludes ActiveMachine, Extended and SandboxOnly tests. The separate guest and interruption observations cover the changed restart behavior.
   expected_test_tier: targeted
-  full_test_triggers: []
-  extended_test_triggers: []
+  full_test_triggers:
+  - Run Full from a clean checkout for the maintenance checkpoint migration and reviewed plan contract.
+  extended_test_triggers:
+  - Exercise the saved schedule across sequential orderly restarts of ThirdLife-W11 and verify application interruption recovery.
   notes:
   - Use the integrated Windows Update contracts and journal from b893288340fd274e827a86ce3fe8f20cf498393f with controlled
     adapters to implement maintenance phases. TL-0504 native servicing qualification is not a whole-task implementation
     dependency.
-  - Test ordinary restarts sequentially in ThirdLife-W11. Preserve native servicing-related restart evidence separately.
+  - The ordinary restart scenario was verified sequentially on ThirdLife-W11. Native servicing-related restart evidence remains separately scoped at TL-0511.
   execution_prerequisites:
   - kind: capability
     scope: For live update dispatch only, revalidate the TL-0504 qualified protected route, exact eligible revision, effective policy, supported recovery and measured reserve in ThirdLife-W11.
