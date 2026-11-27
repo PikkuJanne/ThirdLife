@@ -71,3 +71,12 @@ The packaging tool and evidence checkpoint passed Quick on the active
 host in 223.632 s, with 1,419 .NET tests and no skips. WPF consumed 109 s
 of the measured run. The packaging tool itself also produced and verified
 the same archive as the manual packer from the same Release source.
+
+The tool also published the handover-composed source
+`c1f92cc4dcfd6e27e544dc4aa8965c86e44d05b9`, which has the same application,
+test and governed input bytes as reviewed main `7590368`. Its 19-member
+private ZIP measured 1,223,748 bytes and SHA-256
+`eb00c3c931389dedf07a8109c0b6cfc2f7325ad72851fd65325aaac09647789b`.
+Its source-pinned SBOM has SHA-256
+`d60435212e6542ea8d0b079a3885bc5c9d5ee3822a0cfb4f68abbc3a8a1b8b98`.
+The exact post-handover package remains in the ignored private output.
