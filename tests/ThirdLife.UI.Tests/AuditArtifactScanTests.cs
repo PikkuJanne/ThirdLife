@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Finalization;
 using ThirdLife.Persistence;
+using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Shell;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
 using static ThirdLife.UI.Tests.AuditWorkflowTests;
@@ -18,6 +19,7 @@ public sealed class AuditArtifactScanTests
     public async Task HandoverScansExactOneTimeTargetsAndReopensOnlyTypedEvidence()
     {
         using var disk = new AuditTestStore();
+        var reportRoot = Path.Combine(disk.Root, "reports");
         var clock = TimeProvider.System;
         const string account = "WorkshopAccountOne";
         const string share = "WorkshopLocalShare";
@@ -63,7 +65,7 @@ public sealed class AuditArtifactScanTests
 
         await using var reopened = Open();
         await reopened.OpenJobAsync(jobId);
-        InHandover(reopened, (_, view) =>
+        InHandover(reopened, (window, view) =>
         {
             Named<Expander>(view, "WorkshopArtifactScanRegion").IsExpanded = true;
             var scan = Assert.Single(reopened.Finalization!.ArtifactScans);
@@ -74,11 +76,24 @@ public sealed class AuditArtifactScanTests
             var text = Named<TextBlock>(view, "ArtifactScanResult").Text;
             Assert.DoesNotContain(account, text, StringComparison.Ordinal);
             Assert.DoesNotContain(share, text, StringComparison.Ordinal);
+
+            Invoke(window, Named<Button>(view, "GenerateReportButton"));
+            PumpUntil(window, () => reopened.CanOpenReport, () => reopened.ReportStatus);
+            Invoke(window, Named<Button>(view, "OpenReportButton"));
+            PumpUntil(window, () => reopened.ReportPreview.Length > 0 && !reopened.IsBusy, () => reopened.ReportStatus);
+            var report = Named<TextBox>(view, "WorkshopReportPreview").Text;
+            Assert.Contains("Workshop artifact scans", report, StringComparison.Ordinal);
+            Assert.Contains("Current scan", report, StringComparison.Ordinal);
+            Assert.Contains("Package staging folders. Indication found.", report, StringComparison.Ordinal);
+            Assert.Contains("Specified local accounts. No indication in the checked scope.", report, StringComparison.Ordinal);
+            Assert.DoesNotContain(account, report, StringComparison.Ordinal);
+            Assert.DoesNotContain(share, report, StringComparison.Ordinal);
+            Assert.Equal(report, File.ReadAllText(Assert.Single(Directory.EnumerateFiles(reportRoot, "*.txt"))));
         });
 
         AuditWorkspace Open() => new(async token => await SqliteJobStore.OpenForTestingAsync(Path.Combine(disk.Root, "store"),
                 SqliteJobStore.CurrentSchemaVersion, clock, null, () => 180_000, () => 19, token).ConfigureAwait(false),
-            [AuditTestProvider.Available("artifact-scan-ui")], clock)
+            [AuditTestProvider.Available("artifact-scan-ui")], clock, new WorkshopReportStore(reportRoot))
         {
             FixtureArtifactScan = (accountNames, shareNames, token) =>
             {

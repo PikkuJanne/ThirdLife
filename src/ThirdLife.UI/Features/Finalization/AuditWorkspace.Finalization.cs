@@ -103,8 +103,7 @@ internal sealed partial class AuditWorkspace
         try
         {
             checklist = await Task.Run(() => store.LoadFinalizationAsync(job.Job.JobId));
-            if (checklist is { ArtifactScans.Count: > 0 } &&
-                (checklist.ArtifactScans[0].Origin == ProvenanceKind.SyntheticFixture) != IsFixtureScenario)
+            if (IsSeparateArtifactOrigin(checklist))
             {
                 checklist = null;
                 readFailed = true;

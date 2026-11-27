@@ -133,6 +133,10 @@ public static partial class WorkshopReportRenderer
                     _ => "No current result recorded.",
                 };
             Line(report, $"- {DescribeFinalizationRule(row.Rule.Id)}. {requirement} {source} {DescribeFinalizationOutcome(row.Outcome)}");
+            if (row.HasBlockingArtifact)
+            {
+                Line(report, "  A saved workshop artifact indication still needs resolution.");
+            }
         }
 
         Line(report, "");
@@ -158,7 +162,60 @@ public static partial class WorkshopReportRenderer
             Line(report, $"  Workshop operator code {SafeCode(record.OperatorId.Value)} at {Timestamp(record.RecordedAtUtc)}.");
             Line(report, $"  Evidence version {SafeCode(record.EvidenceVersion)}.");
         }
+
+        WriteArtifactScanHistory(report, checklist, cancellationToken);
     }
+
+    private static void WriteArtifactScanHistory(StringBuilder report, FinalizationChecklist checklist,
+        CancellationToken cancellationToken)
+    {
+        if (checklist.ArtifactScans.Count == 0) { return; }
+
+        Line(report, "");
+        Line(report, "Workshop artifact scans");
+        Line(report, "Each absence applies to its checked source and scope. Required workshop confirmations remain separate.");
+        var latestSequence = checklist.ArtifactScans[^1].Sequence;
+        foreach (var scan in checklist.ArtifactScans)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            bool current = scan.Sequence == latestSequence && scan.EvidenceVersion == checklist.EvidenceVersion &&
+                scan.DetectorRevision == WorkshopArtifactScan.CurrentDetectorRevision;
+            var context = current ? "Current" : "Earlier or superseded";
+            var origin = scan.Origin == ProvenanceKind.SyntheticFixture ? "Synthetic fixture" : "Automated local observation";
+            Line(report, $"- {context} scan at {Timestamp(scan.RecordedAtUtc)}. {origin}. Detector {SafeCode(scan.DetectorRevision)}.");
+            foreach (var finding in scan.Findings.OrderBy(finding => finding.Kind))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Line(report, $"  {DescribeWorkshopArtifactKind(finding.Kind)}. {DescribeWorkshopArtifactStatus(finding.Status)}");
+            }
+        }
+    }
+
+    public static string DescribeWorkshopArtifactKind(WorkshopArtifactKind kind) => kind switch
+    {
+        WorkshopArtifactKind.BatteryReportResidue => "Temporary battery-report files",
+        WorkshopArtifactKind.WorkshopReportCopies => "Workshop report copies",
+        WorkshopArtifactKind.PackageStagingResidue => "Package staging folders",
+        WorkshopArtifactKind.ConfiguredLocalAccounts => "Specified local accounts",
+        WorkshopArtifactKind.ConfiguredSmbShares => "Specified local SMB shares",
+        WorkshopArtifactKind.RemoteDesktopSetting => "Local Remote Desktop setting",
+        WorkshopArtifactKind.SolicitedRemoteAssistancePolicy => "Solicited Remote Assistance policy",
+        WorkshopArtifactKind.OfferRemoteAssistancePolicy => "Offer Remote Assistance policy",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
+
+    public static string DescribeWorkshopArtifactStatus(WorkshopArtifactStatus status) => status switch
+    {
+        WorkshopArtifactStatus.Present => "Indication found.",
+        WorkshopArtifactStatus.AbsentInCheckedScope => "No indication in the checked scope.",
+        WorkshopArtifactStatus.TargetsNotConfigured => "No exact names entered.",
+        WorkshopArtifactStatus.AccessDenied => "Access denied.",
+        WorkshopArtifactStatus.UnsafePathOrEntry => "The expected local path or entry could not be verified.",
+        WorkshopArtifactStatus.ScanLimitReached => "The search reached its resource limit.",
+        WorkshopArtifactStatus.TimedOut => "The search reached its time limit.",
+        WorkshopArtifactStatus.Unavailable => "The source was unavailable.",
+        _ => throw new ArgumentOutOfRangeException(nameof(status)),
+    };
 
     public static string DescribeFinalizationRule(FinalizationRuleId rule) => rule switch
     {

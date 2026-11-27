@@ -4,6 +4,7 @@ using ThirdLife.Core.Finalization;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Inventory.Windows;
 using ThirdLife.Persistence;
+using ThirdLife.Reports.WorkshopReport;
 
 namespace ThirdLife.UI.Shell;
 
@@ -45,7 +46,7 @@ internal sealed partial class AuditWorkspace
 
     public string ArtifactScanFindings => Finalization is not { ArtifactScans.Count: > 0 } checklist ? string.Empty :
         string.Join(Environment.NewLine, checklist.ArtifactScans[^1].Findings.Select(finding =>
-            $"{ArtifactSourceLabel(finding.Kind)} · {ArtifactStatusLabel(finding.Status)}"));
+            $"{WorkshopReportRenderer.DescribeWorkshopArtifactKind(finding.Kind)} · {ArtifactStatusLabel(finding.Status)}"));
 
     public Task ScanArtifactsAsync(string[] accountNames, string[] shareNames)
     {
@@ -112,28 +113,14 @@ internal sealed partial class AuditWorkspace
         Publish();
     }
 
-    internal static string ArtifactSourceLabel(WorkshopArtifactKind kind) => kind switch
-    {
-        WorkshopArtifactKind.BatteryReportResidue => "Temporary battery-report files",
-        WorkshopArtifactKind.WorkshopReportCopies => "Protected workshop report copies",
-        WorkshopArtifactKind.PackageStagingResidue => "Package staging folders",
-        WorkshopArtifactKind.ConfiguredLocalAccounts => "Specified local accounts",
-        WorkshopArtifactKind.ConfiguredSmbShares => "Specified local SMB shares",
-        WorkshopArtifactKind.RemoteDesktopSetting => "Local Remote Desktop setting",
-        WorkshopArtifactKind.SolicitedRemoteAssistancePolicy => "Solicited Remote Assistance policy",
-        WorkshopArtifactKind.OfferRemoteAssistancePolicy => "Offer Remote Assistance policy",
-        _ => "Workshop artifact source",
-    };
+    private bool IsSeparateArtifactOrigin(FinalizationChecklist? checklist) => checklist is { ArtifactScans.Count: > 0 } &&
+        (checklist.ArtifactScans[0].Origin == ProvenanceKind.SyntheticFixture) != IsFixtureScenario;
 
-    private static string ArtifactStatusLabel(WorkshopArtifactStatus status) => status switch
-    {
-        WorkshopArtifactStatus.Present => "Indication found. Review in the relevant workshop check.",
-        WorkshopArtifactStatus.AbsentInCheckedScope => "No indication in the checked scope.",
-        WorkshopArtifactStatus.TargetsNotConfigured => "No exact names entered. Review manually.",
-        WorkshopArtifactStatus.AccessDenied => "Access denied. Review manually.",
-        WorkshopArtifactStatus.UnsafePathOrEntry => "The expected local path or entry could not be verified. Review manually.",
-        WorkshopArtifactStatus.ScanLimitReached => "The search reached its resource limit. Review manually.",
-        WorkshopArtifactStatus.TimedOut => "The search reached its time limit. Review manually.",
-        _ => "The source was unavailable. Review manually.",
-    };
+    private static string ArtifactStatusLabel(WorkshopArtifactStatus status) =>
+        WorkshopReportRenderer.DescribeWorkshopArtifactStatus(status) + (status switch
+        {
+            WorkshopArtifactStatus.Present => " Review in the relevant workshop check.",
+            WorkshopArtifactStatus.AbsentInCheckedScope => string.Empty,
+            _ => " Review manually.",
+        });
 }

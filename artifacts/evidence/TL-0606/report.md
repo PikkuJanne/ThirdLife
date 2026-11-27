@@ -48,3 +48,12 @@ host. The Release build and repository validators passed. All 1,411 Quick
 passed with zero skips. Refresh now updates recipient guide and support
 export state whenever the workspace changes. Clean Full remains the
 migration gate for the latest combined source.
+
+## Detector composition
+
+The combined candidate against reviewed main `cefe11e39539ca2a7d691723a14b12f82b17e3f6`
+passed Targeted in 235.269 s. The Release build and repository validators
+passed. All 1,411 Quick .NET tests and 69 selected diagnostics, reports,
+persistence and WPF tests passed with zero skips. The selected WPF pass
+exercised support export, detector and recipient guide state on the same
+Handover stage. No live transfer or guest modification was performed.

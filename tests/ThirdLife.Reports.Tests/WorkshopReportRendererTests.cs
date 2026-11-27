@@ -237,6 +237,33 @@ public sealed class WorkshopReportRendererTests
     }
 
     [Fact]
+    public void TechnicalRecordKeepsEarlierArtifactIndicationsAndCurrentSourceAvailabilityDistinct()
+    {
+        var earlier = Scan(1, "earlier-scope", WorkshopArtifactStatus.Present);
+        var current = Scan(2, "current-scope", WorkshopArtifactStatus.AccessDenied);
+        var checklist = FinalizationChecklist.Evaluate("current-scope", [], artifactScans: [earlier, current]);
+        var review = new WorkshopFinalizationReview(SampleJob.JobId, checklist);
+        var report = WorkshopReportRenderer.RenderTechnicalRecord(Stored(), null, null, [], null, null, new([], review));
+
+        Assert.Contains("A saved workshop artifact indication still needs resolution.", report, StringComparison.Ordinal);
+        Assert.Contains("Earlier or superseded scan", report, StringComparison.Ordinal);
+        Assert.Contains("Current scan", report, StringComparison.Ordinal);
+        Assert.Contains("Synthetic fixture. Detector workshop-artifact-detector-1.", report, StringComparison.Ordinal);
+        Assert.Contains("Package staging folders. Indication found.", report, StringComparison.Ordinal);
+        Assert.Contains("Package staging folders. Access denied.", report, StringComparison.Ordinal);
+        Assert.Contains("Specified local SMB shares. No exact names entered.", report, StringComparison.Ordinal);
+
+        static WorkshopArtifactScan Scan(long sequence, string scope, WorkshopArtifactStatus package) => new(sequence,
+            SampleTime.AddSeconds(sequence), scope, WorkshopArtifactScan.CurrentDetectorRevision, ProvenanceKind.SyntheticFixture,
+            Enum.GetValues<WorkshopArtifactKind>().Select(kind => new WorkshopArtifactFinding(kind, kind switch
+            {
+                WorkshopArtifactKind.PackageStagingResidue => package,
+                WorkshopArtifactKind.ConfiguredSmbShares => WorkshopArtifactStatus.TargetsNotConfigured,
+                _ => WorkshopArtifactStatus.Unavailable,
+            })).ToArray());
+    }
+
+    [Fact]
     public void PreparationRecordsExplainOptionalOmissionsAndPreserveEarlierFailures()
     {
         WorkshopPreparationAction earlier = new("document_editing", true, WorkshopPreparationState.Failed,

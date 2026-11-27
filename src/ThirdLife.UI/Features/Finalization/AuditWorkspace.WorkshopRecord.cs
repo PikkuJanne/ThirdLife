@@ -9,16 +9,19 @@ namespace ThirdLife.UI.Shell;
 
 internal sealed partial class AuditWorkspace
 {
-    private Task<FinalizationChecklist?> ReadFinalizationForReportAsync(JobId jobId, CancellationToken token) =>
-        _store is IFinalizationStore store
-            ? Task.Run(() => store.LoadFinalizationAsync(jobId, token), token)
-            : Task.FromResult<FinalizationChecklist?>(null);
+    private async Task<FinalizationChecklist?> ReadFinalizationForReportAsync(JobId jobId, CancellationToken token)
+    {
+        var checklist = _store is IFinalizationStore store
+            ? await Task.Run(() => store.LoadFinalizationAsync(jobId, token), token)
+            : null;
+        return IsSeparateArtifactOrigin(checklist) ? throw new JobStoreConflictException() : checklist;
+    }
 
     private async Task ConfirmReportEvidenceAsync(JobId jobId, FinalizationChecklist? expected, CancellationToken token)
     {
         var current = await ReadFinalizationForReportAsync(jobId, token);
         if ((expected is null) != (current is null) || expected?.EvidenceVersion != current?.EvidenceVersion ||
-            expected?.History.Count != current?.History.Count)
+            expected?.History.Count != current?.History.Count || expected?.ArtifactScans.Count != current?.ArtifactScans.Count)
         {
             throw new JobStoreConflictException();
         }
