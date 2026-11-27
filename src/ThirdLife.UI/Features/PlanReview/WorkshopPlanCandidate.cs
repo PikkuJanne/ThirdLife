@@ -9,7 +9,10 @@ using ThirdLife.Policy.Versioning;
 namespace ThirdLife.UI.Features.PlanReview;
 
 internal sealed record PlanProfileOption(
-    string DisplayName, ProfileDocument Profile, CatalogDocument Catalog, PolicySnapshot? PackagePolicy = null);
+    string DisplayName, ProfileDocument Profile, CatalogDocument Catalog, PolicySnapshot? PackagePolicy = null)
+{
+    public string ConfigurationExportLabel => Profile.SyntheticData ? $"{DisplayName} (synthetic candidate)" : DisplayName;
+}
 
 internal static class WorkshopPlanCandidate
 {

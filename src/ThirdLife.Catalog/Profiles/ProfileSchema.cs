@@ -19,8 +19,8 @@ public static partial class ProfileSchema
         ArgumentNullException.ThrowIfNull(catalog);
         try
         {
-            using var document = Open(utf8Json, MaximumDocumentBytes, out var contentSha256);
-            return ReadProfile(document.RootElement, catalog, contentSha256);
+            using var document = Open(utf8Json, MaximumDocumentBytes, out var contentSha256, out var bytes);
+            return ReadProfile(document.RootElement, catalog, contentSha256, bytes);
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException)
         {
@@ -28,7 +28,8 @@ public static partial class ProfileSchema
         }
     }
 
-    private static ProfileDocument ReadProfile(JsonElement root, CatalogDocument catalog, string contentSha256)
+    private static ProfileDocument ReadProfile(JsonElement root, CatalogDocument catalog, string contentSha256,
+        ImmutableArray<byte> utf8Json)
     {
         RequireFields(root,
             ["schema_version", "profile_id", "version", "status", "synthetic_data", "classification", "policy", "catalog", "workshop", "recipient"]);
@@ -49,6 +50,7 @@ public static partial class ProfileSchema
             ReadToken(root, "profile_id", LowerKebabPattern(), 64),
             ReadToken(root, "version", SemanticVersionPattern(), 64),
             contentSha256,
+            utf8Json,
             synthetic,
             catalogReference,
             catalog.ContentSha256,
