@@ -16,9 +16,12 @@ from tools.tests.test_verify_development_package import SOURCE, apphost, sha256
 class DevelopmentMsiTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        content = apphost()
         self.input = self.root / "input"
         self.input.mkdir()
+        self.output = self.root / "output"
+        self.write_input(apphost())
+
+    def write_input(self, content):
         with ZipFile(self.input / package.ARCHIVE, "w") as archive:
             archive.writestr(package.APPHOST, content)
         artifact = (self.input / package.ARCHIVE).read_bytes()
@@ -42,7 +45,35 @@ class DevelopmentMsiTests(unittest.TestCase):
             "sbom_sha256": self.sbom_digest,
             "entries": [package.APPHOST],
         }), encoding="utf-8")
-        self.output = self.root / "output"
+
+    def test_rebuilds_identically_and_assigns_new_code_for_changed_payload(self):
+        first = installer.build(self.input, self.output, SOURCE, self.archive_digest, self.sbom_digest, "0.3.0")
+        second = installer.build(self.input, self.root / "rebuild-with-a-longer-directory",
+                                 SOURCE, self.archive_digest, self.sbom_digest, "0.3.0")
+        self.assertEqual(first.read_bytes(), second.read_bytes())
+
+        content = apphost()
+        self.write_input(content[:-1] + bytes([content[-1] ^ 1]))
+        changed = installer.build(self.input, self.root / "changed",
+                                  SOURCE, self.archive_digest, self.sbom_digest, "0.3.0")
+        self.assertNotEqual(self.read_package_code(first), self.read_package_code(changed))
+
+    def read_package_code(self, msi):
+        engine = installer.WindowsInstaller()
+        api = engine.api
+        api.MsiSummaryInfoGetPropertyW.argtypes = [
+            wintypes.UINT, wintypes.UINT, ctypes.POINTER(wintypes.UINT), ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(wintypes.FILETIME), wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD),
+        ]
+        api.MsiSummaryInfoGetPropertyW.restype = wintypes.UINT
+        with engine.open_handle(api.MsiGetSummaryInformationW, 0, str(msi), 0) as summary:
+            value = ctypes.create_unicode_buffer(39)
+            size = wintypes.DWORD(len(value))
+            installer.checked(api.MsiSummaryInfoGetPropertyW(
+                summary, installer.PACKAGE_CODE_PROPERTY, None, None, None, value, ctypes.byref(size)),
+                "read MSI package code")
+            self.assertRegex(value.value, r"^\{[0-9A-F-]{36}\}$")
+            return value.value
 
     def test_writes_a_native_readable_package_with_only_owned_resources(self):
         msi = installer.build(self.input, self.output, SOURCE, self.archive_digest, self.sbom_digest, "0.3.0")
