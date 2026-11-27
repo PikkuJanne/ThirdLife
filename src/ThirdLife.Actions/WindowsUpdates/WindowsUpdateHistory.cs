@@ -151,8 +151,12 @@ public static class WindowsUpdateHistory
             return UpdateRecovery.VerifyInstallation;
         }
 
-        if (history.LastOrDefault()?.Scan is { Status: WindowsUpdateStatus.Succeeded } observed &&
-            history.Any(entry => entry is { Stage: WindowsUpdateStage.InstallCompleted, Operation.Status: WindowsUpdateStatus.Succeeded } &&
+        // A later interrupted or unsuccessful scan cannot clear a known contradiction.
+        // Compare receipts only with a completed inventory that followed them in journal order.
+        var inventory = history.LastOrDefault(entry => entry is
+        { Stage: WindowsUpdateStage.ScanCompleted, Scan.Status: WindowsUpdateStatus.Succeeded });
+        if (inventory?.Scan is { } observed && history.TakeWhile(entry => entry.Id != inventory.Id).Any(entry =>
+                entry is { Stage: WindowsUpdateStage.InstallCompleted, Operation.Status: WindowsUpdateStatus.Succeeded } &&
                 observed.Updates.Any(candidate => candidate.Identity == entry.Approval!.Exact.Identity)))
         {
             return UpdateRecovery.ReviewResult;

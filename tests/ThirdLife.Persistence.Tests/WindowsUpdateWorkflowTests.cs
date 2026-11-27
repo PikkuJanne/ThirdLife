@@ -318,6 +318,43 @@ public sealed class WindowsUpdateWorkflowTests
     }
 
     [Fact]
+    public async Task FailedOrInterruptedScanRetainsReofferedInstalledRevisionUntilNewInventory()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var provider = new FixtureAgent();
+        Job job;
+        SanitizationGateDecision gate;
+        await using (var store = await OpenAsync(workspace))
+        {
+            string policy;
+            (job, gate, policy) = await SeedAsync(store);
+            var workflow = Controlled(store, provider);
+            var offered = await workflow.ScanAsync(job.JobId, gate.DecisionId);
+            var approval = await workflow.ApproveAsync(job.JobId, gate.DecisionId, offered.Id, Update, Operator, policy);
+            provider.AfterInstall = () => provider.Scan = Available();
+            await workflow.ExecuteAsync(job.JobId, approval.Id);
+            Assert.Equal(UpdateRecovery.None, WindowsUpdateHistory.RecoveryBeforePackages(await store.LoadWindowsUpdatesAsync(job.JobId)));
+
+            provider.Scan = Available(Update);
+            var repeated = await workflow.ScanAsync(job.JobId, gate.DecisionId);
+            var interrupted = new WindowsUpdateEntry(Guid.NewGuid(), repeated.Id, job.JobId, gate.DecisionId,
+                Clock.GetUtcNow(), WindowsUpdateStage.ScanStarted, null, null, null);
+            await store.AppendWindowsUpdateAsync(interrupted);
+        }
+
+        await using var reopened = await OpenAsync(workspace);
+        Assert.Equal(UpdateRecovery.ReviewResult, WindowsUpdateHistory.RecoveryBeforePackages(await reopened.LoadWindowsUpdatesAsync(job.JobId)));
+        var observer = new WindowsUpdateWorkflow(reopened, provider, Clock);
+        provider.Scan = new(WindowsUpdateStatus.Offline, [], null);
+        await observer.ScanAsync(job.JobId, gate.DecisionId);
+        Assert.Equal(UpdateRecovery.ReviewResult, WindowsUpdateHistory.RecoveryBeforePackages(await reopened.LoadWindowsUpdatesAsync(job.JobId)));
+        provider.Scan = Available();
+        await observer.ScanAsync(job.JobId, gate.DecisionId);
+        Assert.Equal(UpdateRecovery.None, WindowsUpdateHistory.RecoveryBeforePackages(await reopened.LoadWindowsUpdatesAsync(job.JobId)));
+        Assert.Equal(2, provider.Mutations.Count);
+    }
+
+    [Fact]
     public async Task OtherWindowScanCannotEraseInflightReceiptOrReuseApproval()
     {
         using var workspace = new PersistenceTestWorkspace();
