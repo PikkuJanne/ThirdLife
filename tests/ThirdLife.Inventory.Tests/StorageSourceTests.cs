@@ -266,10 +266,13 @@ public sealed class StorageSourceTests
         Assert.Same(StorageInvalidValue.Instance, StorageWmiValueReader.Read(tooLarge.Pointer, 18, StorageWmiValueKind.UInt16));
         using var negative = new NativeVariant(-1);
         Assert.Same(StorageInvalidValue.Instance, StorageWmiValueReader.Read(negative.Pointer, 18, StorageWmiValueKind.UInt16));
+        Assert.Equal(uint.MaxValue, StorageWmiValueReader.Read(negative.Pointer, 19, StorageWmiValueKind.UInt32));
+        Assert.Same(StorageInvalidValue.Instance, StorageWmiValueReader.Read(negative.Pointer, 18, StorageWmiValueKind.UInt32));
         using var octet = new NativeVariant((byte)255);
         Assert.Equal((byte)255, StorageWmiValueReader.Read(octet.Pointer, 17, StorageWmiValueKind.UInt8));
         using var missing = new NativeVariant(null);
         Assert.Null(StorageWmiValueReader.Read(missing.Pointer, 18, StorageWmiValueKind.UInt16));
+        Assert.Null(StorageWmiValueReader.Read(missing.Pointer, 19, StorageWmiValueKind.UInt32));
     }
 
     [Fact]

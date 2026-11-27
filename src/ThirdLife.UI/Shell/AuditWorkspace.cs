@@ -198,6 +198,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             new PendingRebootProvider(),
             new SecurityBaselineProvider(),
             new StorageProvider(),
+            new SystemDiskHealthProvider(),
             new SystemInventoryProvider(),
         ],
         TimeProvider.System,

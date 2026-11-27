@@ -115,6 +115,32 @@ internal static class StorageWmiNativeMethods
         nint authenticationInfo,
         uint capabilities);
 
+    // WMI security applies to each proxy interface. The boot storage queries must
+    // set packet privacy on the service and enumerator interfaces they actually call.
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [DllImport("ole32.dll", ExactSpelling = true, EntryPoint = "CoSetProxyBlanket")]
+    internal static extern int SetServicesProxyBlanket(
+        [MarshalAs(UnmanagedType.Interface)] IStorageWbemServices proxy,
+        uint authenticationService,
+        uint authorizationService,
+        nint principal,
+        uint authenticationLevel,
+        uint impersonationLevel,
+        nint authenticationInfo,
+        uint capabilities);
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [DllImport("ole32.dll", ExactSpelling = true, EntryPoint = "CoSetProxyBlanket")]
+    internal static extern int SetEnumeratorProxyBlanket(
+        [MarshalAs(UnmanagedType.Interface)] IStorageWbemEnumerator proxy,
+        uint authenticationService,
+        uint authorizationService,
+        nint principal,
+        uint authenticationLevel,
+        uint impersonationLevel,
+        nint authenticationInfo,
+        uint capabilities);
+
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("oleaut32.dll", ExactSpelling = true)]
     internal static extern uint SysStringLen(nint value);

@@ -70,10 +70,11 @@ in the workshop report. Physical host power-cycle evidence remains unobserved.
 
 TL-0510 passed 40 host matrix cases and three controlled candidate cases on
 `ThirdLife-W11`. The guest reopened the exact job, approval and report. Live
-reference verification is held pending trusted system-disk health and
-aggregate restart clearance plus a qualified exact live profile. TL-0511
+reference verification is held pending guest disk health, aggregate restart
+clearance and a qualified exact live profile. The read-only provider tied the
+Windows volume to its disk and observed healthy on the active host. TL-0511
 retains live update and multi-action qualification.
-[M5 matrix](artifacts/e2e/M5-full-profile.md)
+[M5 matrix](artifacts/e2e/M5-full-profile.md) · [System-disk evidence](artifacts/evidence/TL-0510/system-disk-health.md)
 
 TL-0601 adds the workshop checklist to TRACE Handover. It saves attributable
 confirmations, retains earlier results, and requires a recheck after a relevant

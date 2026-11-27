@@ -72,6 +72,7 @@ internal static class WorkshopObservationFields
                 $"reboot.{source}.recovery");
         }
 
+        Add("windows-system-disk-health", EvidenceValueKind.Enum, "storage.system.health_state", "storage.system.health_provider_status");
         Add("windows-storage", EvidenceValueKind.Enum,
             "storage.provider_status", "storage.physical_disk.media_type", "storage.physical_disk.bus_type",
             "storage.physical_disk.reported_health", "storage.physical_disk.collection_status",
