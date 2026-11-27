@@ -25,11 +25,14 @@ if (Test-Path -LiteralPath $path) { throw 'Choose an unused development preview 
 New-Item -ItemType Directory -Path $path | Out-Null
 $payload = Join-Path $path 'payload'
 
-& dotnet restore $project --locked-mode
+# Use fresh build intermediates even if this checkout has existing developer outputs.
+$build = Join-Path $path 'build'
+& dotnet restore $project --locked-mode --artifacts-path $build
 if ($LASTEXITCODE -ne 0) { throw 'Locked restore failed.' }
 # A serial build avoids duplicate project instances writing the same output.
 & dotnet publish $project -c Release --no-restore --self-contained false -m:1 `
-    -p:BuildInParallel=false -p:UseAppHost=true -p:DebugSymbols=false -p:DebugType=None -o $payload
+    -p:BuildInParallel=false -p:UseAppHost=true -p:DebugSymbols=false -p:DebugType=None `
+    "-p:PathMap=$repo=/_/ThirdLife" --artifacts-path $build -o $payload
 if ($LASTEXITCODE -ne 0) { throw 'Development publish failed.' }
 
 $app = Join-Path $payload 'ThirdLife.UI.exe'
