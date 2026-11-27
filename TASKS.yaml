@@ -7039,7 +7039,7 @@ tasks:
   workstream: handover
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: any
@@ -7067,9 +7067,30 @@ tasks:
   verification:
   - Run both handover modes and inspect records for recipient-secret leakage.
   - Test switching modes after partial completion.
-  evidence: []
+  evidence:
+  - summary: TRACE Handover saved the assisted guidance choice only after recipient presence was confirmed and reopened sealed mode with every choice deferred.
+    task: TL-0603
+    command: eng/verify.ps1 -Tier Targeted with Persistence and the focused Handover WPF and workshop report tests
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: Targeted 409.475 s, focused combined WPF three tests in 7 s
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated SQLite and WPF
+    reference: artifacts/evidence/TL-0603/report.md, f39667f1a94bdeb6871fa758476e368fe7d47ca3
+    limitation: Modeled recipient presence and exact local save/reopen. Recipient decisions and setup remain external to feature verification.
+  - summary: Clean migration gate passed the complete governance and deterministic solution suites.
+    task: TL-0603
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 887.559 s with 310 governance regressions and 2571 deterministic .NET tests
+    environment: Clean detached worktree on the active Windows 11 Pro 26H2 native x64 host
+    reference: artifacts/evidence/TL-0603/report.md, f39667f1a94bdeb6871fa758476e368fe7d47ca3
+    limitation: Clean Full covers the exact mode code and migration. Focused combined WPF separately covers the subsequent workshop report integration.
   expected_test_tier: targeted
-  full_test_triggers: []
+  full_test_triggers:
+  - Run Full from a clean checkout for the handover mode history migration.
   extended_test_triggers: []
 - id: TL-0604
   title: Generate the technical workshop record
