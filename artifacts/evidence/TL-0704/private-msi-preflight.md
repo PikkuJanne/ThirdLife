@@ -80,3 +80,23 @@ After the fixture profile unloaded, Secondary Logon was verified stopped
 with its original manual start type. The currently available
 noninteractive route therefore leaves actual lifecycle execution pending.
 [Native logon constraints](https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-createprocesswithlogonw)
+
+A compiled fixture removed the PowerShell script dependency. Secondary
+Logon started its pinned local .NET host, which exited with CoreCLR
+initialization failure `0x80008089`. No installer log or application
+directory existed. The fixture account was removed and Secondary Logon
+returned to its prior manual and stopped state. The unloaded profile
+and protected staging folder
+`C:\ProgramData\ThirdLife-PrivateLifecycle-1cc326a9168a490798f7276f09c75bc2`
+were retained. [Host error reference](https://github.com/dotnet/runtime/blob/main/docs/design/features/host-error-codes.md)
+
+The password-authenticated limited scheduler fixture registered, but
+the demand start left it ready with no run. A short exact task event
+trace reported event 101 and `0x80070569` for the requested logon type.
+The existing guest authority does not grant the fixture that batch
+logon. The owned task and account were verified removed and the
+diagnostic channel returned to disabled. The protected staging folder
+`C:\ProgramData\ThirdLife-PrivateLifecycle-c4ec7034878b4760b56d7dfadd804d91`
+remains with no installer log. A supported standard-user guest session
+is still required for actual installation and application observation.
+[Windows result code](https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--1300-1699-)

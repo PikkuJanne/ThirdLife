@@ -7869,6 +7869,16 @@ tasks:
     environment: Clean detached checkout on the active Windows 11 x64 host, protected original and recovered fixture directories
     reference: artifacts/evidence/TL-0702/guarded-restore-probe.md, ba46627aeccf466c1e9a0c17ce42b28d7cb16304
     limitation: Protected separate-copy readback is verified. The Windows route and attributable native restore remain pending.
+  - summary: Assisted Handover prepares an exact harmless sample after recipient confirmation and verifies a separate protected copy.
+    task: TL-0702
+    command: eng/verify.ps1 -Tier Full -Restore, explicit WPF and Reports targets, and named Extended keyboard/resource cases
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 479.897 s, 319 governance and 2684 .NET tests, plus 8 targeted and 3 Extended cases
+    environment: Clean active Windows 11 x64 source, scoped host volume and isolated protection and WPF fixtures
+    reference: artifacts/evidence/TL-0702/handover-sample.md, e737f799e724ac60eb104db68f5250d1fb152a42
+    limitation: Sample preparation and exact separate-copy readback only. Windows File History execution, restore attribution, and durable current sample continuity remain open.
   notes:
   - The actual recipient controls destination, credentials and recovery material. TL-0710 carries the final security/privacy
     disposition.
