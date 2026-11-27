@@ -442,6 +442,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
                 throw new InvalidOperationException("The job belongs to a separate evidence scenario.");
             }
 
+            var backupSample = await ReadBackupSampleForReportAsync(stored, cancellationToken);
             var assessment = await Task.Run(() => AssessmentOrchestrator.ReadLatest(stored), cancellationToken);
             var summary = SummarizeAssessment(assessment);
             var policy = await FindSavedPolicyAsync(jobId, assessment, cancellationToken);
@@ -449,7 +450,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             var checkpoint = await ReadMaintenanceForReportAsync(jobId, cancellationToken);
             var verification = await ReadProfileVerificationForReportAsync(jobId, cancellationToken);
             var coldBoot = await ReadColdBootVerificationAsync(jobId, cancellationToken);
-            await ConfirmReportEvidenceAsync(jobId, finalization, cancellationToken);
+            await ConfirmReportEvidenceAsync(stored, finalization, backupSample, cancellationToken);
             var now = _timeProvider.GetUtcNow();
             var artifact = await Task.Run(() =>
             {
@@ -457,7 +458,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
                 var preparation = ProjectPreparationRecords(stored, assessment, journals, checkpoint, verification, now, cancellationToken);
                 var content = WorkshopReportRenderer.RenderTechnicalRecord(stored, summary, policy, packages,
                     preparation, ProjectProfileVerification(verification, coldBoot),
-                    ProjectWorkshopRecordDetails(jobId, journals, finalization),
+                    ProjectWorkshopRecordDetails(jobId, journals, finalization, backupSample),
                     cancellationToken);
                 return _reportStore!.Write(jobId, content, cancellationToken);
             }, cancellationToken);

@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Finalization;
+using ThirdLife.Core.Handover;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Repairs;
 using ThirdLife.Policy.Versioning;
@@ -23,8 +24,11 @@ public sealed record WorkshopPlanProvenance(
 
 public sealed record WorkshopFinalizationReview(JobId JobId, FinalizationChecklist Checklist);
 
+public sealed record WorkshopBackupSampleReview(JobId JobId, FileHistorySampleAuditState? State, bool EarlierHandover);
+
 public sealed record WorkshopRecordDetails(IReadOnlyList<WorkshopPlanProvenance> Plans,
-    WorkshopFinalizationReview? Finalization = null);
+    WorkshopFinalizationReview? Finalization = null,
+    WorkshopBackupSampleReview? BackupSample = null);
 
 public static partial class WorkshopReportRenderer
 {
@@ -98,6 +102,33 @@ public static partial class WorkshopReportRenderer
 
     private static bool IsRecordDigest(string value) => value is { Length: 64 } &&
         value.All(static character => char.IsAsciiDigit(character) || character is >= 'a' and <= 'f');
+
+    private static void WriteBackupSampleReview(StringBuilder report, JobId jobId, WorkshopBackupSampleReview? review)
+    {
+        if (review is null) { return; }
+        if (review.JobId != jobId)
+        {
+            throw new ArgumentException("The backup sample belongs to a different job.", nameof(review));
+        }
+
+        Line(report, "");
+        Line(report, "Backup sample");
+        if (review.State.HasValue)
+        {
+            Line(report, review.EarlierHandover ? "Sample evidence is from an earlier handover." : "Sample evidence is for this handover.");
+        }
+        Line(report, review.State switch
+        {
+            FileHistorySampleAuditState.Preparing => "Sample preparation remains unconfirmed.",
+            FileHistorySampleAuditState.Prepared => "A protected harmless sample was prepared.",
+            FileHistorySampleAuditState.PreparationUnavailable => "Sample preparation was unavailable.",
+            FileHistorySampleAuditState.CopyUnavailable => "The protected recovered copy was unavailable.",
+            FileHistorySampleAuditState.CopyMismatch => "The recovered copy did not match the prepared sample.",
+            FileHistorySampleAuditState.CopyMatches => "The separate recovered copy matched the prepared sample.",
+            _ => "Saved sample evidence is unavailable.",
+        });
+        Line(report, "Backup setup remains pending. Windows File History restoration has no verified record.");
+    }
 
     private static void WriteFinalizationReview(StringBuilder report, JobId jobId, WorkshopFinalizationReview? review,
         CancellationToken cancellationToken)
