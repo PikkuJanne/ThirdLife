@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 
 namespace ThirdLife.Inventory.Windows;
@@ -10,6 +11,7 @@ internal sealed class WindowsStorageWmiSource : IStorageWmiSource
     internal const int MaximumEnumerationCalls = 128;
     internal static readonly TimeSpan CollectionDeadline = TimeSpan.FromSeconds(6);
 
+    private const uint RpcPacketPrivacy = 6;
     private static readonly Guid LocatorClassId = new("4590F811-1D3A-11D0-891F-00AA004B2E24");
     private static readonly Guid LocatorInterfaceId = new("DC12A687-737F-11CF-884D-00AA004B2E24");
 
@@ -43,7 +45,29 @@ internal sealed class WindowsStorageWmiSource : IStorageWmiSource
         new("StorageReliabilityCounter", StorageWmiValueKind.Reference),
     ];
 
-    public StorageWmiSnapshot Read(CancellationToken cancellationToken)
+    private static readonly StorageWmiField[] SystemPartitionFields = [new("DiskNumber", StorageWmiValueKind.UInt32)];
+    private static readonly StorageWmiField[] SystemDiskFields =
+    [
+        new("Number", StorageWmiValueKind.UInt32),
+        new("HealthStatus", StorageWmiValueKind.UInt16),
+    ];
+
+    public StorageWmiSnapshot Read(CancellationToken cancellationToken) => Read(null, cancellationToken);
+
+    internal static SystemInventorySourceValue<ushort> ReadSystemDiskHealth(char? driveLetter, CancellationToken cancellationToken)
+    {
+        if (driveLetter is not (>= 'A' and <= 'Z'))
+        {
+            return SystemInventorySourceValue<ushort>.Unavailable();
+        }
+
+        var snapshot = Read(driveLetter, cancellationToken);
+        return snapshot.CleanupComplete
+            ? snapshot.SystemDiskHealth ?? StorageSourceFailures.Field<ushort>(snapshot.PhysicalDisks.CollectionInfo)
+            : SystemInventorySourceValue<ushort>.Unavailable();
+    }
+
+    private static StorageWmiSnapshot Read(char? systemDriveLetter, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!OperatingSystem.IsWindows())
@@ -76,16 +100,20 @@ internal sealed class WindowsStorageWmiSource : IStorageWmiSource
                 throw new StorageWmiInvalidDataException();
             }
 
-            SetReadProxySecurity(services);
-            var physical = Query(services, StorageWmiQuery.PhysicalDisks, started, cancellationToken, ref cleanupComplete);
-            var counters = physical.CollectionInfo.Status == StorageCollectionStatus.Collected
-                ? Query(services, StorageWmiQuery.ReliabilityCounters, started, cancellationToken, ref cleanupComplete)
-                : Empty(StorageSourceFailures.Unavailable);
-            var associations = physical.CollectionInfo.Status == StorageCollectionStatus.Collected &&
-                counters.CollectionInfo.Status == StorageCollectionStatus.Collected
-                ? Query(services, StorageWmiQuery.PhysicalDiskCounterAssociations, started, cancellationToken, ref cleanupComplete)
-                : Empty(StorageSourceFailures.Unavailable);
-            snapshot = new(physical, counters, associations);
+            if (systemDriveLetter.HasValue)
+            {
+                ThrowOnFailure(StorageWmiNativeMethods.SetServicesProxyBlanket(services, 10, 0, 0, RpcPacketPrivacy, 3, 0, 0));
+            }
+            else
+            {
+                SetReadProxySecurity(services);
+            }
+            snapshot = systemDriveLetter is { } driveLetter
+                ? FailureSnapshot(StorageSourceFailures.Unavailable) with
+                {
+                    SystemDiskHealth = ReadSystemDiskHealth(services, driveLetter, started, cancellationToken, ref cleanupComplete),
+                }
+                : ReadPhysicalStorage(services, started, cancellationToken, ref cleanupComplete);
         }
         catch (StorageWmiNativeException error)
         {
@@ -124,7 +152,21 @@ internal sealed class WindowsStorageWmiSource : IStorageWmiSource
         return snapshot with { CleanupComplete = cleanupComplete };
     }
 
-    internal static string QueryText(StorageWmiQuery query) => query switch
+    private static StorageWmiSnapshot ReadPhysicalStorage(IStorageWbemServices services, long started,
+        CancellationToken cancellationToken, ref bool cleanupComplete)
+    {
+        var physical = Query(services, StorageWmiQuery.PhysicalDisks, started, cancellationToken, ref cleanupComplete);
+        var counters = physical.CollectionInfo.Status == StorageCollectionStatus.Collected
+            ? Query(services, StorageWmiQuery.ReliabilityCounters, started, cancellationToken, ref cleanupComplete)
+            : Empty(StorageSourceFailures.Unavailable);
+        var associations = physical.CollectionInfo.Status == StorageCollectionStatus.Collected &&
+            counters.CollectionInfo.Status == StorageCollectionStatus.Collected
+            ? Query(services, StorageWmiQuery.PhysicalDiskCounterAssociations, started, cancellationToken, ref cleanupComplete)
+            : Empty(StorageSourceFailures.Unavailable);
+        return new(physical, counters, associations);
+    }
+
+    internal static string QueryText(StorageWmiQuery query, char? driveLetter = null, uint? diskNumber = null) => query switch
     {
         // ObjectId is projected only so WMI can form the transient routing paths.
         // No ObjectId value or other identifying/display property is read into a snapshot.
@@ -134,15 +176,76 @@ internal sealed class WindowsStorageWmiSource : IStorageWmiSource
             "SELECT ObjectId,Wear,Temperature,ReadErrorsTotal,ReadErrorsUncorrected,WriteErrorsTotal,WriteErrorsUncorrected,PowerOnHours FROM MSFT_StorageReliabilityCounter",
         StorageWmiQuery.PhysicalDiskCounterAssociations =>
             "SELECT PhysicalDisk,StorageReliabilityCounter FROM MSFT_PhysicalDiskToStorageReliabilityCounter",
+        StorageWmiQuery.SystemPartition when driveLetter is >= 'A' and <= 'Z' =>
+            $"SELECT DiskNumber FROM MSFT_Partition WHERE IsBoot = TRUE AND IsOffline = FALSE AND DriveLetter = '{driveLetter}'",
+        StorageWmiQuery.SystemDisk when diskNumber.HasValue => string.Create(CultureInfo.InvariantCulture,
+            $"SELECT Number,HealthStatus FROM MSFT_Disk WHERE Number = {diskNumber.Value} AND IsOffline = FALSE AND IsBoot = TRUE"),
         _ => throw new ArgumentOutOfRangeException(nameof(query)),
     };
+
+    private static SystemInventorySourceValue<ushort> ReadSystemDiskHealth(IStorageWbemServices services,
+        char driveLetter, long started, CancellationToken cancellationToken, ref bool cleanupComplete)
+    {
+        var partition = Query(services, StorageWmiQuery.SystemPartition, started, cancellationToken,
+            ref cleanupComplete, driveLetter);
+        var partitionDisk = ResolveSystemPartitionDisk(partition);
+        if (partitionDisk.Status != SystemInventorySourceStatus.Available || !cleanupComplete)
+        {
+            return partitionDisk.Status switch
+            {
+                SystemInventorySourceStatus.AccessDenied => SystemInventorySourceValue<ushort>.AccessDenied(),
+                SystemInventorySourceStatus.InvalidData => SystemInventorySourceValue<ushort>.InvalidData(),
+                _ => SystemInventorySourceValue<ushort>.Unavailable(),
+            };
+        }
+
+        var diskNumber = partitionDisk.GetRequiredValue();
+        var disk = Query(services, StorageWmiQuery.SystemDisk, started, cancellationToken,
+            ref cleanupComplete, diskNumber: diskNumber);
+        return ResolveSystemDiskHealth(disk, diskNumber);
+    }
+
+    internal static SystemInventorySourceValue<uint> ResolveSystemPartitionDisk(StorageWmiQueryResult partition)
+    {
+        if (partition.CollectionInfo.Status != StorageCollectionStatus.Collected || partition.Rows.Count == 0)
+        {
+            return StorageSourceFailures.Field<uint>(partition.CollectionInfo);
+        }
+
+        return partition.Rows is [var selected] && selected.Fields.GetValueOrDefault("DiskNumber") is uint diskNumber
+            ? SystemInventorySourceValue<uint>.Available(diskNumber)
+            : SystemInventorySourceValue<uint>.InvalidData();
+    }
+
+    internal static SystemInventorySourceValue<ushort> ResolveSystemDiskHealth(StorageWmiQueryResult disk, uint diskNumber)
+    {
+        if (disk.CollectionInfo.Status != StorageCollectionStatus.Collected || disk.Rows.Count == 0)
+        {
+            return StorageSourceFailures.Field<ushort>(disk.CollectionInfo);
+        }
+
+        if (disk.Rows is not [var selected] || !selected.Fields.TryGetValue("Number", out var number) ||
+            number is not uint observedNumber || observedNumber != diskNumber)
+        {
+            return SystemInventorySourceValue<ushort>.InvalidData();
+        }
+
+        return selected.Fields.GetValueOrDefault("HealthStatus") switch
+        {
+            ushort health when health <= 2 => SystemInventorySourceValue<ushort>.Available(health),
+            null or ushort => SystemInventorySourceValue<ushort>.Unavailable(),
+            _ => SystemInventorySourceValue<ushort>.InvalidData(),
+        };
+    }
 
     private static StorageWmiQueryResult Query(
         IStorageWbemServices services,
         StorageWmiQuery query,
         long started,
         CancellationToken cancellationToken,
-        ref bool cleanupComplete)
+        ref bool cleanupComplete,
+        char? driveLetter = null,
+        uint? diskNumber = null)
     {
         IStorageWbemEnumerator? enumerator = null;
         try
@@ -153,14 +256,22 @@ internal sealed class WindowsStorageWmiSource : IStorageWmiSource
                 return Empty(new(StorageCollectionStatus.TimedOut));
             }
 
-            // RETURN_IMMEDIATELY | FORWARD_ONLY | ENSURE_LOCATABLE.
-            ThrowOnFailure(services.ExecQuery("WQL", QueryText(query), 0x130, 0, out enumerator));
+            // RETURN_IMMEDIATELY | FORWARD_ONLY; existing associations also need ENSURE_LOCATABLE.
+            var flags = query is StorageWmiQuery.SystemPartition or StorageWmiQuery.SystemDisk ? 0x30 : 0x130;
+            ThrowOnFailure(services.ExecQuery("WQL", QueryText(query, driveLetter, diskNumber), flags, 0, out enumerator));
             if (enumerator is null)
             {
                 return Empty(StorageSourceFailures.InvalidData);
             }
 
-            SetReadProxySecurity(enumerator);
+            if (query is StorageWmiQuery.SystemPartition or StorageWmiQuery.SystemDisk)
+            {
+                ThrowOnFailure(StorageWmiNativeMethods.SetEnumeratorProxyBlanket(enumerator, 10, 0, 0, RpcPacketPrivacy, 3, 0, 0));
+            }
+            else
+            {
+                SetReadProxySecurity(enumerator);
+            }
             return ReadRows(enumerator, query, started, ref cleanupComplete, Release, cancellationToken);
         }
         catch (StorageWmiNativeException error)
@@ -197,14 +308,20 @@ internal sealed class WindowsStorageWmiSource : IStorageWmiSource
         Func<object?, bool> release,
         CancellationToken cancellationToken)
     {
-        var maximum = query == StorageWmiQuery.PhysicalDisks
-            ? WindowsStorageSource.MaximumDisks
-            : WindowsStorageSource.MaximumRelatedRows;
+        var maximum = query switch
+        {
+            StorageWmiQuery.PhysicalDisks => WindowsStorageSource.MaximumDisks,
+            StorageWmiQuery.SystemPartition or StorageWmiQuery.SystemDisk => 1,
+            _ => WindowsStorageSource.MaximumRelatedRows,
+        };
         var fields = query switch
         {
             StorageWmiQuery.PhysicalDisks => PhysicalFields,
             StorageWmiQuery.ReliabilityCounters => CounterFields,
-            _ => AssociationFields,
+            StorageWmiQuery.PhysicalDiskCounterAssociations => AssociationFields,
+            StorageWmiQuery.SystemPartition => SystemPartitionFields,
+            StorageWmiQuery.SystemDisk => SystemDiskFields,
+            _ => throw new ArgumentOutOfRangeException(nameof(query)),
         };
         var rows = new List<StorageWmiRow>(maximum);
         for (var call = 0; call < MaximumEnumerationCalls; call++)

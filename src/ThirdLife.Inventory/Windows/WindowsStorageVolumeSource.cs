@@ -8,25 +8,49 @@ internal sealed class WindowsStorageVolumeSource : IStorageVolumeSource
 
     public StorageVolumeSnapshot Read(CancellationToken cancellationToken)
     {
+        var status = ReadWindowsDirectory(cancellationToken, out var directoryPath);
+        return directoryPath is null
+            ? StorageSourceFailures.Volume(status)
+            : ReadVolume(directoryPath, cancellationToken, out _);
+    }
+
+    internal static SystemInventorySourceValue<char> ReadSystemDriveLetter(CancellationToken cancellationToken)
+    {
+        var status = ReadWindowsDirectory(cancellationToken, out var directoryPath);
+        if (directoryPath is null)
+        {
+            return StorageSourceFailures.Field<char>(status);
+        }
+
+        status = ResolveFixedVolumePath(directoryPath, cancellationToken, out var volumePath);
+        return volumePath is { Length: 3 }
+            ? SystemInventorySourceValue<char>.Available(char.ToUpperInvariant(volumePath[0]))
+            : StorageSourceFailures.Field<char>(status);
+    }
+
+    private static StorageCollectionInfo ReadWindowsDirectory(CancellationToken cancellationToken, out string? directoryPath)
+    {
+        directoryPath = null;
         cancellationToken.ThrowIfCancellationRequested();
         if (!OperatingSystem.IsWindows())
         {
-            return StorageSourceFailures.Volume(StorageSourceFailures.Unavailable);
+            return StorageSourceFailures.Unavailable;
         }
 
         var directory = new char[MaximumPathCharacters];
         var length = NativeMethods.GetSystemWindowsDirectoryW(directory, MaximumPathCharacters);
         if (length == 0)
         {
-            return Failure();
+            return NativeFailure();
         }
 
         if (length >= MaximumPathCharacters)
         {
-            return StorageSourceFailures.Volume(StorageSourceFailures.InvalidData);
+            return StorageSourceFailures.InvalidData;
         }
 
-        return ReadVolume(new string(directory, 0, checked((int)length)), cancellationToken, out _);
+        directoryPath = new string(directory, 0, checked((int)length));
+        return StorageSourceFailures.Collected;
     }
 
     internal static (ulong? AvailableBytes, string? MountPath) ReadPreparationVolume(string directoryPath)
@@ -108,34 +132,16 @@ internal sealed class WindowsStorageVolumeSource : IStorageVolumeSource
     private static StorageVolumeSnapshot ReadVolume(string directoryPath, CancellationToken cancellationToken, out string? mountPath)
     {
         mountPath = null;
-        if (!IsLocalAbsolutePath(directoryPath))
+        var status = ResolveFixedVolumePath(directoryPath, cancellationToken, out var volumePath);
+        if (volumePath is null)
         {
-            return StorageSourceFailures.Volume(StorageSourceFailures.InvalidData);
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        var volume = new char[MaximumPathCharacters];
-        if (!NativeMethods.GetVolumePathNameW(directoryPath, volume, MaximumPathCharacters))
-        {
-            return Failure();
-        }
-
-        var terminator = Array.IndexOf(volume, '\0');
-        if (terminator < 0)
-        {
-            return StorageSourceFailures.Volume(StorageSourceFailures.InvalidData);
-        }
-
-        var volumePath = new string(volume, 0, terminator);
-        if (!IsLocalAbsolutePath(volumePath) || NativeMethods.GetDriveTypeW(volumePath) != 3)
-        {
-            return StorageSourceFailures.Volume(StorageSourceFailures.Unavailable);
+            return StorageSourceFailures.Volume(status);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         if (!NativeMethods.GetDiskFreeSpaceExW(volumePath, out var callerAvailable, out var callerTotal, out var totalFree))
         {
-            return Failure();
+            return StorageSourceFailures.Volume(NativeFailure());
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -147,11 +153,44 @@ internal sealed class WindowsStorageVolumeSource : IStorageVolumeSource
             SystemInventorySourceValue<ulong>.Available(totalFree));
     }
 
+    private static StorageCollectionInfo ResolveFixedVolumePath(string directoryPath, CancellationToken cancellationToken,
+        out string? volumePath)
+    {
+        volumePath = null;
+        if (!IsLocalAbsolutePath(directoryPath))
+        {
+            return StorageSourceFailures.InvalidData;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var volume = new char[MaximumPathCharacters];
+        if (!NativeMethods.GetVolumePathNameW(directoryPath, volume, MaximumPathCharacters))
+        {
+            return NativeFailure();
+        }
+
+        var terminator = Array.IndexOf(volume, '\0');
+        if (terminator < 0)
+        {
+            return StorageSourceFailures.InvalidData;
+        }
+
+        var path = new string(volume, 0, terminator);
+        if (!IsLocalAbsolutePath(path) || NativeMethods.GetDriveTypeW(path) != 3)
+        {
+            return StorageSourceFailures.Unavailable;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        volumePath = path;
+        return StorageSourceFailures.Collected;
+    }
+
     internal static bool IsLocalAbsolutePath(string path) => path.Length is >= 3 and < MaximumPathCharacters &&
         char.IsAsciiLetter(path[0]) && path[1] == ':' && path[2] == '\\' && !path.Any(char.IsControl);
 
-    private static StorageVolumeSnapshot Failure() => StorageSourceFailures.Volume(
-        StorageSourceFailures.FromNativeError(unchecked((uint)Marshal.GetLastPInvokeError())));
+    private static StorageCollectionInfo NativeFailure() =>
+        StorageSourceFailures.FromNativeError(unchecked((uint)Marshal.GetLastPInvokeError()));
 
     private static class NativeMethods
     {
