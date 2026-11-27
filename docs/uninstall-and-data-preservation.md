@@ -29,6 +29,10 @@ retained ThirdLife jobs and unrelated decoys next to owned roots. It must verify
 normal removal, the separate data choice, repair or reinstall with preserved data,
 locked and denied paths, link/reparse rejection, interruption and later reopening.
 Keep Windows Update, vendor packages, other workspaces and user-owned files
-outside those operations. The current broker-only setup is evidence for its own
-deployment and ACL checks. The lifecycle outcomes remain open.
+outside those operations. The private per-user MSI successfully removed
+its owned files and retained the same populated archived job through
+repair, upgrade, a canceled upgrade and final uninstall. The release
+package and the separate deletion choice still require their own
+verification. The broker deployment has independent ACL evidence.
+[Private populated lifecycle](../artifacts/evidence/TL-0704/populated-job-lifecycle.md)
 [Retention and cleanup](retention-and-cleanup.md)

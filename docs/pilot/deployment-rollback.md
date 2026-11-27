@@ -42,10 +42,20 @@ Use the documented recovery procedure for the exact schema once qualified.
 Preserve the source store and record the last known successful build and
 job state while recovering. [Data locations](../data-locations.md) · [Uninstall contract](../uninstall-and-data-preservation.md)
 
-The exact private MSI lifecycle has a separate engineering record.
-Install, repair, upgrade, downgrade refusal and removal were observed
-with the reviewed package pair. The normal installed window, recovery
-after an interrupted MSI and a populated SQLite lifecycle remain open.
+The reviewed private 0.3.3 and 0.3.6 guest lifecycle preserved a
+populated archived job through cancellation, repair, upgrade and
+uninstall. The installed window and recovery across a changed
+SQLite schema still require their own verification.
+[Exact private lifecycle](../../artifacts/evidence/TL-0704/populated-job-lifecycle.md)
+
+With the earlier 0.3.4 installer, cancellation can restore all old
+files without fully restoring the old product registration. If the
+exact previous files have been independently verified and the job
+store is still at schema 21, use the reviewed previous 0.3.3 package to
+reinstall its registration. Follow with its normal uninstall only
+when application removal is intended. The tested recovery preserved
+the archived job. Keep the job store and exported copies in place
+throughout recovery.
 
 ## Private installer preflight
 
