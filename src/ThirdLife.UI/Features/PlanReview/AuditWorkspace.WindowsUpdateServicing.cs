@@ -42,7 +42,7 @@ internal sealed partial class AuditWorkspace
             WindowsUpdateServicingPolicy.CurrentQualificationPolicySha256(scope.Exact, _timeProvider.GetUtcNow()) == digest) ? saved : null;
 
     public bool ShowsApprovedUpdate => SavedServicingApproval is not null;
-    public bool CanRunApprovedUpdate => CanAssess && ShowsApprovedUpdate;
+    public bool CanRunApprovedUpdate => CanAssess && ShowsApprovedUpdate && !_packagePhaseNeedsRecovery;
     public string ApprovedUpdateScope
     {
         get
@@ -233,6 +233,7 @@ internal sealed partial class AuditWorkspace
             {
                 _servicingUpdate = false;
                 await LoadWindowsUpdateHistoryAsync(saved.JobId);
+                await LoadPackageHistoryAsync(saved.JobId);
             }
         });
     }

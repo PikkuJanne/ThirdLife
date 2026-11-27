@@ -49,7 +49,7 @@ internal sealed partial class AuditWorkspace
     public bool CanCheckPackageRecovery => CanCloseJob && OffersPackageRecoveryCheck;
     public string PackageRecoveryStatus { get; private set; } = string.Empty;
     public bool CanEditPackageOperator => CanEditJob && (PlanReviewDecision is null || ShowsActionSkipChoices);
-    public bool CanInstallPackage => CanEditJob && !_packageNeedsReview && _packageService is not null &&
+    public bool CanInstallPackage => CanEditJob && !HoldsPackageDispatch && !_packageNeedsReview && _packageService is not null &&
         PlanReviewDecision is { Outcome: PlanReviewOutcome.Approved } && _packageApproval is not null &&
         _packageResolution?.Status == PackageResolutionStatus.Ready && CanStartPackagePlan;
 
@@ -336,7 +336,16 @@ internal sealed partial class AuditWorkspace
         catch (JobStoreConflictException)
         {
             await LoadPackageHistoryAsync(approval.Plan.JobId);
-            _planReviewStatus = "The saved approval or attempt changed before dispatch. Review the current package history.";
+            await LoadWindowsUpdateHistoryAsync(approval.Plan.JobId);
+            var saved = await journal.LoadJournalAsync(approval.Plan);
+            if (HoldsPackageDispatch && saved?.ActiveApproval == approval && IsFreshPackageApproval(approval) &&
+                saved.Entries.LastOrDefault(entry => entry.ActionId == request.ActionId) == previous)
+            {
+                _packageApproval = approval;
+            }
+
+            _planReviewStatus = HoldsPackageDispatch ? MaintenancePhaseStatus :
+                "The saved approval or attempt changed before dispatch. Review the current package history.";
             return;
         }
 
@@ -601,6 +610,7 @@ internal sealed partial class AuditWorkspace
     private async Task LoadPackageHistoryAsync(JobId jobId)
     {
         var histories = await LoadPackageJournalsAsync(jobId, CancellationToken.None);
+        _packagePhaseNeedsRecovery = MaintenancePhases.RequiresPackageRecovery(histories);
         RememberPackageRetry(histories);
         var latest = ReadPackageRecords(histories, includeEarlierAttempts: false);
         _packageNeedsReview = latest.Any(NeedsPackageReview);
@@ -663,6 +673,7 @@ internal sealed partial class AuditWorkspace
     {
         StopPackageRetryRefresh();
         _savedPackageRetry = default;
+        _packagePhaseNeedsRecovery = false;
         _packageNeedsReview = false;
         _canInspectSavedPackage = false;
         PackageHistoryText = string.Empty;

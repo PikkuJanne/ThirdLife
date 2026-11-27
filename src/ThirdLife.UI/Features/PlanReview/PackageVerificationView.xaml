@@ -11,6 +11,10 @@
                AutomationProperties.HeadingLevel="Level1" TextWrapping="Wrap" />
     <TextBlock Text="Review saved preparation outcomes and independent checks."
                Style="{DynamicResource Trace.MetaText}" TextWrapping="Wrap" Margin="0,4,0,16" />
+    <TextBlock x:Name="MaintenancePauseMessage" Text="{Binding MaintenancePhaseStatus, NotifyOnTargetUpdated=True}"
+               Visibility="{Binding HasMaintenancePhaseStatus, Converter={StaticResource VerifyVisibility}}"
+               AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" Focusable="True"
+               KeyboardNavigation.IsTabStop="True" TextWrapping="Wrap" Margin="0,0,0,8" />
     <Border Style="{DynamicResource Trace.EvidencePanel}" Margin="0,0,0,16"
             Visibility="{Binding HasWindowsUpdateHistory, Converter={StaticResource VerifyVisibility}}">
       <StackPanel>
