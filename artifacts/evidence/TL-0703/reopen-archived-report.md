@@ -20,7 +20,10 @@ kept the preview empty. Closing the job cleared both its file name
 and open capability. Ten focused report, archive and handover checks
 passed in 10 s.
 
-The product change is 0201da70c450be2b8dfbfabf727251a5fe66c2e4. It reuses the existing publication
-history with no migration. A job with an earlier report that has no
+The product change is 0201da70c450be2b8dfbfabf727251a5fe66c2e4. It reuses
+the existing publication history with no migration. Quick passed
+1,449 tests. The selected checks passed 12 WPF, 30 Reports and six
+exact Persistence cases. The Persistence cases ran directly with
+the Handover review and sign-off test names. A job with an earlier report that has no
 recorded publication receipt still needs output generation through
 TRACE. Scoped job-data deletion remains separate.
