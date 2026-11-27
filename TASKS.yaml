@@ -8022,6 +8022,16 @@ tasks:
   - Run path/data-map tests and compare installer/uninstaller behavior with the documentation.
   - Search the release package for undocumented persistent locations and sibling data access.
   evidence:
+  - summary: Jobs checks exact recorded local report and guide copies against the reopened archived job and its saved checkpoint.
+    task: TL-0703
+    command: eng/verify.ps1 -Tier Targeted with AuditReportTests, AuditJobArchiveTests and HandoverReviewStoreTests, plus focused Reports tests
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 191.029 s for 1449 Quick, eight WPF and five Persistence executions, plus 16 focused Reports executions
+    environment: Active Windows host with isolated synthetic jobs, protected file roots and WPF
+    reference: artifacts/evidence/TL-0703/archived-output-review.md, 585879a817c58eec90c862ccd52e7b678ac80259
+    limitation: The review checks attributable local receipts. Explicit deletion, unrecorded local copies, backup samples and external export dispositions retain their separate scope.
   - summary: The Prepare stage publishes an exact versioned profile, policy and catalog archive through the protected local writer.
     task: TL-0703
     command: eng/verify.ps1 -Tier Targeted -Restore with configuration and shared-writer Reports and UI selections
