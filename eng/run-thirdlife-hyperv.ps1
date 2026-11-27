@@ -2,12 +2,13 @@
 [CmdletBinding(DefaultParameterSetName = 'Run')]
 param(
     [Parameter(Mandatory, ParameterSetName = 'Prepare')][switch] $Prepare,
+    [Parameter(ParameterSetName = 'Prepare')][switch] $WindowsUpdateAssessment,
     [Parameter(ParameterSetName = 'Prepare')][string] $BrokerArtifact =
         (Join-Path ([Environment]::GetFolderPath('ProgramFiles')) 'ThirdLife\Broker\ThirdLife.Broker.exe'),
     [Parameter(ParameterSetName = 'Prepare')][string] $SdkArchive,
     [Parameter(Mandatory, ParameterSetName = 'Run')]
     [ValidateSet('Inspect','Verify','DistinctAccount','Accept','Decline','Interrupt','Timeout','Disconnect','RetainObservation',
-        'ApplicationPreview','ApplicationAccept','ApplicationDecline','ApplicationCancel')]
+        'ApplicationPreview','ApplicationAccept','ApplicationDecline','ApplicationCancel','WindowsUpdateAssessment')]
     [string] $Scenario,
     [Parameter(ParameterSetName = 'Run')][pscredential] $Credential,
     [Parameter(ParameterSetName = 'Run')][switch] $PromptForCredential,
@@ -25,10 +26,11 @@ if ($Scenario -and $Scenario -ine 'Inspect') {
     $Scenario = $scenarioEntry.Name
 }
 $applicationScenario = $Scenario -cin @('ApplicationPreview', 'ApplicationAccept', 'ApplicationDecline', 'ApplicationCancel')
+$updateScenario = $WindowsUpdateAssessment -or $Scenario -ceq 'WindowsUpdateAssessment'
 $requiresApplicationConsent = $applicationScenario -and $Scenario -cne 'ApplicationPreview'
-$evidenceTask = if ($applicationScenario) { 'TL-0313' } else { $profile.task }
-if ($applicationScenario -and $ExpectedVMId -eq [guid]::Empty) {
-    throw 'Bind the application case to the exact VMId returned by Inspect.'
+$evidenceTask = if ($updateScenario) { 'TL-0504' } elseif ($applicationScenario) { 'TL-0313' } else { $profile.task }
+if (($applicationScenario -or ($updateScenario -and -not $Prepare)) -and $ExpectedVMId -eq [guid]::Empty) {
+    throw 'Bind the selected case to the exact VMId returned by Inspect.'
 }
 $repo = Split-Path -Parent $PSScriptRoot
 $driverPath = Join-Path $PSScriptRoot 'run-thirdlife-hyperv-guest.ps1'
@@ -37,7 +39,8 @@ if ($work -ieq $repo -or $work.StartsWith($repo + '\', [StringComparison]::Ordin
     throw 'Store Hyper-V bundles and local run output outside the repository.'
 }
 $id = [guid]::NewGuid().ToString('N')
-$payload = Join-Path $work 'payload.zip'
+$payloadName = if ($updateScenario) { 'windows-update-assessment.zip' } else { 'payload.zip' }
+$payload = Join-Path $work $payloadName
 $sdk = Join-Path $work 'dotnet-sdk-win-x64.zip'
 
 function Assert-Digest([string] $Path, [string] $Algorithm, [string] $Expected) {
@@ -62,8 +65,11 @@ Assert-LocalWorkDirectory
 if ($Prepare) {
     $null = [IO.Directory]::CreateDirectory($work)
     $provisioner = Join-Path $PSScriptRoot 'install-thirdlife-broker.ps1'
-    Assert-Digest $BrokerArtifact SHA256 $profile.brokerSha256
-    Assert-Digest $provisioner SHA256 $profile.provisionerSha256
+    $projects = if ($updateScenario) { 'ThirdLife.Packages.Tests' } else { 'ThirdLife.UI.Tests', 'ThirdLife.Broker.Tests' }
+    if (-not $updateScenario) {
+        Assert-Digest $BrokerArtifact SHA256 $profile.brokerSha256
+        Assert-Digest $provisioner SHA256 $profile.provisionerSha256
+    }
     if (Test-Path -LiteralPath $sdk) {
         Assert-Digest $sdk SHA512 $profile.sdkSha512
     }
@@ -87,23 +93,26 @@ if ($Prepare) {
         $dirty = & git status --porcelain --untracked-files=normal
         if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'Prepare from a committed clean worktree.' }
         if ((& dotnet --version) -ne $profile.sdkVersion -or $LASTEXITCODE -ne 0) { throw 'Wrong host .NET SDK.' }
-        foreach ($project in @('ThirdLife.UI.Tests', 'ThirdLife.Broker.Tests')) {
+        foreach ($project in $projects) {
             & dotnet build "tests/$project/$project.csproj" -c Release --artifacts-path (Join-Path $scratch 'build') `
                 --nologo -p:RestoreLockedMode=true
             if ($LASTEXITCODE -ne 0) { throw "Could not build $project with locked inputs." }
         }
         $content = Join-Path $scratch 'payload'
         $null = [IO.Directory]::CreateDirectory($content)
-        foreach ($project in @('ThirdLife.UI.Tests', 'ThirdLife.Broker.Tests')) {
+        foreach ($project in $projects) {
             $build = Join-Path $scratch "build\bin\$project\release"
             if (-not (Test-Path -LiteralPath (Join-Path $build "$project.dll") -PathType Leaf)) {
                 throw 'An expected test assembly was missing from the isolated host build.'
             }
             Copy-Item -LiteralPath $build -Destination (Join-Path $content $project) -Recurse
         }
-        Copy-Item -LiteralPath $provisioner, $driverPath -Destination $content
-        Copy-Item -LiteralPath $BrokerArtifact -Destination (Join-Path $content 'ThirdLife.Broker.exe')
-        Assert-Digest (Join-Path $content 'ThirdLife.Broker.exe') SHA256 $profile.brokerSha256
+        Copy-Item -LiteralPath $driverPath -Destination $content
+        if (-not $updateScenario) {
+            Copy-Item -LiteralPath $provisioner -Destination $content
+            Copy-Item -LiteralPath $BrokerArtifact -Destination (Join-Path $content 'ThirdLife.Broker.exe')
+            Assert-Digest (Join-Path $content 'ThirdLife.Broker.exe') SHA256 $profile.brokerSha256
+        }
         [IO.File]::WriteAllText((Join-Path $content 'source.txt'), $source)
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         [IO.Compression.ZipFile]::CreateFromDirectory($content, $archive)
@@ -237,7 +246,7 @@ try {
     Assert-Digest $sdk SHA512 $profile.sdkSha512
     $testSource = & git -C $repo rev-parse HEAD
     if ($LASTEXITCODE -ne 0 -or $testSource -cnotmatch '\A[0-9a-f]{40}\z') { throw 'Cannot identify the test source.' }
-    if ($applicationScenario) {
+    if ($applicationScenario -or $updateScenario) {
         $dirty = & git -C $repo status --porcelain --untracked-files=no
         if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'Run the application case from the committed payload checkout.' }
     }
@@ -254,13 +263,13 @@ try {
     Send-GuestArchive $sdk (Join-Path $stage 'sdk.zip')
     $failedPhase = 'Guest provisioning'
     $provisioned = Invoke-Guest Provision 120
-    if (-not $provisioned.ProtectedBrokerVerified -or -not $provisioned.PrivateSdkVerified) {
+    if ((-not $updateScenario -and -not $provisioned.ProtectedBrokerVerified) -or -not $provisioned.PrivateSdkVerified) {
         throw 'Protected guest provisioning did not return its verification result.'
     }
     $failedPhase = 'Interactive scenario'
     Invoke-Guest Start
     $limit = [Diagnostics.Stopwatch]::StartNew()
-    $timeLimit = if ($requiresApplicationConsent) { 300 } else { 160 }
+    $timeLimit = if ($requiresApplicationConsent -or $updateScenario) { 300 } else { 160 }
     $cancelAnnounced = $false
     while ($limit.Elapsed.TotalSeconds -lt $timeLimit) {
         $observed = Invoke-Guest Status 10
@@ -282,8 +291,8 @@ try {
                 Write-Host "The operator selects $windowsChoice on the reviewed ThirdLife.Broker.exe prompt for $Scenario."
             }
         }
-        if ($Scenario -ceq 'ApplicationPreview' -and $announced) {
-            throw 'Unexpected Windows consent during the approval-free application preview.'
+        if (($Scenario -ceq 'ApplicationPreview' -or $updateScenario) -and $announced) {
+            throw 'Unexpected Windows consent during read-only qualification.'
         }
         if ($Scenario -ceq 'ApplicationCancel' -and -not $cancelAnnounced -and
             ($observed.Observations | Where-Object stage -ceq 'AwaitingCancellation')) {
@@ -320,7 +329,7 @@ finally {
             $null = [IO.Directory]::CreateDirectory($work)
             $testResult = if (-not $failedPhase -and $cleaned) { 'passed' }
                 elseif ($observed -and $observed.HasExit) { 'failed' } else { 'unobserved' }
-            $consoleObservation = if ($Scenario -in @('Verify', 'DistinctAccount', 'ApplicationPreview')) { 'not_required' } else { 'collect_separately' }
+            $consoleObservation = if ($updateScenario -or $Scenario -in @('Verify', 'DistinctAccount', 'ApplicationPreview')) { 'not_required' } else { 'collect_separately' }
             $observations = if ($observed) { @($observed.Observations) } else { @() }
             $testFailure = $testExitCode = $taskLastResult = $testNativeErrorCode = $null
             if ($observed) {
@@ -345,6 +354,15 @@ finally {
                 $record.applicationPlan = $applicationPlan
                 $record.consentProcessObserved = $announced
                 $record.brokerRemainingAtLastStatus = if ($observed) { $observed.BrokerRemaining } else { $null }
+            }
+            if ($updateScenario) {
+                foreach ($field in @('brokerSource', 'brokerSha256', 'protectedBrokerVerified')) { $record.Remove($field) }
+                $record.updateAssessment = if ($observed) { $observed.UpdateAssessment } else { $null }
+                if ($provisioned) {
+                    $record.adapterSha256 = $provisioned.adapterSha256
+                    $record.wuapiVersion = $provisioned.wuapiVersion
+                    $record.windowsBuild = $provisioned.windowsBuild
+                }
             }
             $outcome = Join-Path $work "$id.$Scenario.json"
             [IO.File]::WriteAllText($outcome, ($record | ConvertTo-Json -Depth 5))

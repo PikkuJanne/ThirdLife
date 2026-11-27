@@ -366,7 +366,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     {
         _closing = true;
         CancelAssessment();
-        CancelWindowsUpdateScan();
+        CancelWindowsUpdate();
         CancelReport();
         StopPackageRetryRefresh();
         StopWaitingForPackageOnClose();
@@ -631,6 +631,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             (ManualTestService.GetProgress(job), currentRun ?? AssessmentOrchestrator.ReadLatest(job),
                 IsSeparateEvidenceOrigin(job), RepairJournal.GetHistory(job)));
         var jobChanged = Job?.Job.JobId != job.Job.JobId;
+        var previousGate = Gate?.Decision?.DecisionId;
         Job = job;
         if (jobChanged)
         {
@@ -641,6 +642,10 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             ClearReport();
             ClearRepairs();
             ClearRebootRecovery();
+        }
+        else if (job.IsArchived || previousGate != Gate?.Decision?.DecisionId)
+        {
+            ClearWindowsUpdateOffers();
         }
 
         _hasSeparateEvidenceOrigin = separateOrigin;

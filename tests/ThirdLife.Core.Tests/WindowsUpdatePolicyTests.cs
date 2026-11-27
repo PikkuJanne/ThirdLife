@@ -23,6 +23,27 @@ public sealed class WindowsUpdatePolicyTests
     }
 
     [Fact]
+    public void PreparationComparesBothAffectedVolumesAndRequiresKnownPerUpdateSizing()
+    {
+        var exact = new WindowsUpdatePreparation(Security, WindowsUpdateStatus.Succeeded, DateTimeOffset.UnixEpoch,
+            SystemAvailableBytes: 2_048, CacheAvailableBytes: 2_048, CacheSharesSystemVolume: true, RecommendedInstallationBytes: 1_024);
+        Assert.True(exact.HasRecommendedSpace);
+        Assert.False((exact with { CacheAvailableBytes = 2_047 }).HasRecommendedSpace);
+        Assert.False((exact with { SystemAvailableBytes = 2_047 }).HasRecommendedSpace);
+        var separate = exact with { CacheSharesSystemVolume = false, SystemAvailableBytes = 1_024, CacheAvailableBytes = 1_024 };
+        Assert.True(separate.HasRecommendedSpace);
+        Assert.False((separate with { SystemAvailableBytes = 1_023 }).HasRecommendedSpace);
+        Assert.False((separate with { CacheAvailableBytes = 1_023 }).HasRecommendedSpace);
+        Assert.Null((exact with { RecommendedInstallationBytes = null }).HasRecommendedSpace);
+        Assert.Null((exact with { RecommendedInstallationBytes = 0 }).HasRecommendedSpace);
+        Assert.Null((exact with { CacheSharesSystemVolume = null }).HasRecommendedSpace);
+        Assert.Null((exact with { SystemAvailableBytes = null }).HasRecommendedSpace);
+        Assert.Null((exact with { CacheAvailableBytes = null }).HasRecommendedSpace);
+        Assert.Null((exact with { Status = WindowsUpdateStatus.Unavailable }).HasRecommendedSpace);
+        Assert.Null((exact with { Exact = new(Identity, WindowsUpdateClass.Security) }).HasRecommendedSpace);
+    }
+
+    [Fact]
     public void AuthorizationRequiresExactFreshMetadataAndKnownRebootState()
     {
         var unbounded = new WindowsUpdateCandidate(Identity, WindowsUpdateClass.Security);

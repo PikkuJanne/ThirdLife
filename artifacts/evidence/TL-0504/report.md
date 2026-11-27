@@ -63,3 +63,21 @@ The evidence checkpoint passed `eng/verify.ps1 -Tier Targeted` with the Inventor
 TL-0504 remains open for native download, installation, restart and rescan qualification. The current privilege boundary covers no-op broker actions and the reviewed package policy covers one MSI. Neither authorizes Windows servicing. Prepare the WUA-specific authenticated broker and effective policy for the intended Windows environment, including source, firmware exclusion, servicing eligibility, disk and rollback headroom, power, and independent verification. Qualify the composed route in the same-machine guest and obtain the applicable privilege decision before enabling ordinary dispatch. [Broker qualification](../TL-0317/report.md) · [Privilege and application gates](../../../TASKS.yaml)
 
 For a live qualification run, use a suitable offered security or critical CBS update, save the exact action approval and use the applicable Windows consent prompt. Record native download, per-update installation status, any actual restart and the fresh scan under the same job. Previous package or no-op approvals do not extend to Windows Update. No host update installation or restart was requested during this checkpoint.
+
+## Exact offer review in Prepare
+
+After a successful scan, select an update in Prepare and choose **Check selected offer online**. The application reopens the current intake and saved scan before and after asking the configured service for that exact revision. A changed offer, later scan, intake change or cancellation invalidates the result. Reopening the job restores the saved inventory and leaves a fresh network check to the operator. The transient check creates no new approval or journal entry.
+
+The review reports the first eligibility condition observed, pending restart, current servicing support, power and caller-available space at the Windows component store and download cache. A selectable offer also shows what the compiled download and installation would change and how the installed revision would be verified. The check accounts for the transfer and installation recommendation together when both locations share a volume. An absent recommendation is shown as unknown. A rollback reserve still needs its own basis. [WUA installation-space recommendation](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdate-get_recommendedharddiskspace)
+
+The read-only lookup and prepared writer inspect the configured service registration through the same WUA session used for the lookup. The fixed Windows interfaces can also run under Native AOT. The protected broker continues to implement its previously qualified no-op protocol. An authenticated servicing request, independent approval and intent validation, update-specific effective policy and qualified rollback reserve remain engineering prerequisites for a live transaction.
+
+### Repeating the guest assessment
+
+From a clean committed checkout on the active machine, use the shared Hyper-V runner. Inspect returns the identity of the configured running Generation 2 guest. Prepare builds the Packages tests with the locked inputs and verifies the staged SDK. The assessment runs a single read-only test under the interactive limited token. Its local result records bounded offer counts, lookup status, eligibility reason, artifact digest, version and cleanup. It requires no broker provisioning or servicing consent.
+
+```powershell
+$guest = ./eng/run-thirdlife-hyperv.ps1 -Scenario Inspect
+$candidate = ./eng/run-thirdlife-hyperv.ps1 -Prepare -WindowsUpdateAssessment | Select-Object -Last 1
+./eng/run-thirdlife-hyperv.ps1 -Scenario WindowsUpdateAssessment -ExpectedVMId $guest.VMId -PayloadSha256 $candidate.PayloadSha256
+```

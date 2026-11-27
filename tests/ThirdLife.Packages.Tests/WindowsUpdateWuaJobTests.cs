@@ -10,6 +10,44 @@ public sealed class WindowsUpdateWuaJobTests
     private static readonly WindowsUpdateCandidate Exact = new(
         new WindowsUpdateIdentity(new Guid("b9bd0425-cd83-49c9-8074-dba77be79ddf"), 2), WindowsUpdateClass.Security, 500);
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(17)]
+    public void RejectsInvalidServiceCountBeforeReadingRegistrations(int count) =>
+        Assert.False(WuaServiceAuthority.IsBuiltIn(count, _ => throw new InvalidOperationException()));
+
+    [Fact]
+    public void PreparationLookupChecksExactOfferAndSourceBeforeReturningWuaRecommendation()
+    {
+        var cases = new (Session Fixture, WindowsUpdateStatus Expected, long? Bytes)[]
+        {
+            (new Session { Offer = new() { RecommendedHardDiskSpace = 512 }, RebootRequired = true }, WindowsUpdateStatus.Succeeded, 512 * 1_048_576L),
+            (new Session(), WindowsUpdateStatus.Succeeded, null),
+            (new Session { Offer = new() { RecommendedHardDiskSpace = -1 } }, WindowsUpdateStatus.Succeeded, null),
+            (new Session { SearchRows = [] }, WindowsUpdateStatus.ApprovalChanged, null),
+            (new Session { SearchRows = [new(), new()] }, WindowsUpdateStatus.ApprovalChanged, null),
+            (new Session { Offer = new() { MaxDownloadSize = 501 } }, WindowsUpdateStatus.ApprovalChanged, null),
+            (new Session { Services = [] }, WindowsUpdateStatus.Unavailable, null),
+            (new Session { ServicesAfterLookup = [] }, WindowsUpdateStatus.Unavailable, null),
+        };
+        foreach (var (fixture, status, bytes) in cases)
+        {
+            var result = WuaSession.AssessOffer(Exact, CancellationToken.None, fixture.Create);
+            Assert.Equal(Exact, result.Exact);
+            Assert.Equal(status, result.Status);
+            Assert.Equal(bytes, result.RecommendedInstallationBytes);
+            Assert.Null(fixture.Dispatched);
+            if (status == WindowsUpdateStatus.Succeeded)
+            {
+                Assert.NotNull(result.EligibilityReason);
+                Assert.Equal(fixture.RebootRequired, result.RebootRequired);
+                Assert.Contains($"UpdateID='{Exact.Identity.UpdateId:D}' and RevisionNumber=2", fixture.Criteria, StringComparison.Ordinal);
+            }
+            else { Assert.Null(result.EligibilityReason); }
+        }
+    }
+
     [Fact]
     public void IndependentInstalledQueryRequiresMatchingRevisionAndPositiveInstalledProperty()
     {
@@ -71,7 +109,9 @@ public sealed class WindowsUpdateWuaJobTests
         var cases = new[]
         {
             new Session { Services = [valid with { IsManaged = true }] },
+            new Session { Services = [valid with { IsRegisteredWithAU = false }] },
             new Session { Services = [valid with { ServiceID = "7971f918-a847-4430-9279-4a52d1efe18d" }] },
+            new Session { Services = [valid with { ServiceID = "invalid" }] },
             new Session { Services = [valid, valid with { IsDefaultAUService = false }] },
             new Session { Services = [] },
             new Session { ServicesAfterLookup = [valid with { IsScanPackageService = true }] },
@@ -130,7 +170,7 @@ public sealed class WindowsUpdateWuaJobTests
         public Result GetUpdateResult(int index) => index == 0 ? this : throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    public sealed class Session
+    public sealed class Session : IWuaRegistrationSource
     {
         private static readonly Guid CollectionClass = new("13639463-00db-4646-803d-528026140d88");
         public object Create(Guid id) => id == CollectionClass ? new List<WindowsUpdateAgentTests.Update>() : this;
@@ -157,7 +197,13 @@ public sealed class WindowsUpdateWuaJobTests
         public int Cleanups { get; private set; }
         public int Aborts { get; private set; }
         public int PercentComplete { get; init; } = 73;
-        public Session CreateUpdateServiceManager() => this;
+        int IWuaRegistrationSource.Count => Services.Count;
+        WuaServiceRegistration IWuaRegistrationSource.ReadRegistration(int index)
+        {
+            var item = Services[index];
+            return new(item.IsManaged, item.IsDefaultAUService, item.IsRegisteredWithAU,
+                item.IsScanPackageService, Guid.TryParseExact(item.ServiceID, "D", out var id) ? id : null);
+        }
         public Session CreateUpdateSearcher() => this;
         public Session CreateUpdateInstaller() => this;
         public Session CreateUpdateDownloader() => this;
