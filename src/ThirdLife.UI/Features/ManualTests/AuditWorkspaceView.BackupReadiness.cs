@@ -1,11 +1,13 @@
 using System.Globalization;
 using System.Windows;
 using Microsoft.Win32;
+using ThirdLife.Core.Jobs;
 
 namespace ThirdLife.UI.Features.ManualTests;
 
 public partial class AuditWorkspaceView
 {
+    private (JobId JobId, long Sequence)? _backupReadinessContext;
     private string? _lastBackupReadiness;
     internal Func<string?>? SelectBackupDriveForTesting { get; set; }
 
@@ -41,11 +43,19 @@ public partial class AuditWorkspaceView
         return picker.ShowDialog(Window.GetWindow(this)) == true ? picker.FolderName : null;
     }
 
+    private void BackupReadinessInputChanged(object sender, RoutedEventArgs e)
+    {
+        if (_workspace is not null) { Workspace.InvalidateBackupReadiness(); }
+    }
+
     private void RefreshBackupReadiness()
     {
         BackupReadinessRegion.Visibility = VisibleWhen(Workspace.ShowsBackupReadiness);
-        if (!Workspace.ShowsBackupReadiness)
+        (JobId, long)? context = Workspace.ShowsBackupReadiness && Workspace.RecipientHandover is { } handover
+            ? (handover.JobId, handover.Sequence) : null;
+        if (_backupReadinessContext != context)
         {
+            _backupReadinessContext = context;
             BackupScopeMebibytes.Clear();
             BackupRecoveryConfirmed.IsChecked = false;
             SetError(BackupReadinessError, string.Empty);
