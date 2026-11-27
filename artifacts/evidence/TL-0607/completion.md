@@ -34,3 +34,11 @@ Windows host in 232.114 s. All 1,428 Quick .NET tests and 57 selected Core,
 Reports, Persistence and WPF tests passed with zero skips. Formatting,
 repository controls and Release build passed. The clean Full migration gate
 for the final composed source remains to run.
+
+The composed source passed 11 focused WPF checks in 6 s on the active host,
+including the sign-off gate, support archive recovery and Prepare configuration
+export. The main base was `0d4dcb7b9d7a9484dd32048be953846ab183e36a` and the
+recovery source was `d417ea1`. Earlier on `7d08d8d`, the active-host report
+keyboard route and independently invokable Extended maintenance keyboard
+journey both passed in 9 s. Those checks covered fixture journeys and Windows
+focus, with no real device change or assistive-technology perception claim.

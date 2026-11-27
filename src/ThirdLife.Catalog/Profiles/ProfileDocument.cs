@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 
 namespace ThirdLife.Catalog.Profiles;
 
@@ -8,6 +9,7 @@ public sealed class ProfileDocument
         string profileId,
         string version,
         string contentSha256,
+        ImmutableArray<byte> utf8Json,
         bool syntheticData,
         ProfileReference catalog,
         string catalogContentSha256,
@@ -18,6 +20,7 @@ public sealed class ProfileDocument
         ProfileId = profileId;
         Version = version;
         ContentSha256 = contentSha256;
+        Utf8Json = utf8Json;
         SyntheticData = syntheticData;
         Catalog = catalog;
         CatalogContentSha256 = catalogContentSha256;
@@ -29,6 +32,8 @@ public sealed class ProfileDocument
     public string ProfileId { get; }
     public string Version { get; }
     public string ContentSha256 { get; }
+    [JsonIgnore]
+    public ImmutableArray<byte> Utf8Json { get; }
     public bool SyntheticData { get; }
     public ProfileReference Catalog { get; }
     public string CatalogContentSha256 { get; }

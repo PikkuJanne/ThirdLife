@@ -7820,7 +7820,17 @@ tasks:
   verification:
   - Run path/data-map tests and compare installer/uninstaller behavior with the documentation.
   - Search the release package for undocumented persistent locations and sibling data access.
-  evidence: []
+  evidence:
+  - summary: The Prepare stage publishes an exact versioned profile, policy and catalog archive through the protected local writer.
+    task: TL-0703
+    command: eng/verify.ps1 -Tier Targeted -Restore with configuration and shared-writer Reports and UI selections
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 272.300 s, 1418 Quick and 29 selected .NET tests
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated WPF and protected output folders
+    reference: artifacts/evidence/TL-0703/operator-configuration-export.md, f8c5c5a3e03393b2043aefe1fe3b891cc755a215
+    limitation: The verified local archive does not adopt imported inputs. Exact release-package ownership and uninstall/data-preservation verification remain pending under the lifecycle work.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

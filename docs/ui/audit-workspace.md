@@ -112,6 +112,13 @@ qualification. Pilot and public exposure retain their separate decisions.
 [Backend rationale](../adr/0009-winget-backend.md) ·
 [Release interface](../../RELEASE_INTERFACE.md)
 
+## Export a preparation configuration
+
+In **Prepare**, select a configuration under **Configuration export** and
+preview its ZIP. Review the profile version, file list and digests. Choose a
+local folder to save the copy in its protected `ThirdLifeConfiguration`
+subfolder. This workflow is available before opening a job. [Profile and policy export](../profile-policy-export.md)
+
 ## Final cold-boot verification
 
 At the final full-maintenance verification boundary, open **Verify** and choose
