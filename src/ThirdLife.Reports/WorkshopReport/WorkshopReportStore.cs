@@ -229,7 +229,7 @@ public sealed class WorkshopReportStore
         var path = Path.Combine(_rootDirectory, receipt.FileName);
         try
         {
-            using var stream = security.OpenValidatedRecord(path, FileShare.Read);
+            using var stream = security.OpenValidatedRecord(path, FileShare.Read, createRootIfMissing: false);
             if (stream.Length != receipt.ByteLength || stream.Length is <= 0 or > MaximumArtifactBytes)
             {
                 throw new WorkshopReportStoreException(WorkshopReportFailure.ArtifactChanged);
@@ -281,7 +281,7 @@ public sealed class WorkshopReportStore
             var security = new DiagnosticStoreSecurity(_rootDirectory);
             try
             {
-                security.EnsureSafeRoot();
+                security.EnsureSafeRoot(createIfMissing: create);
                 return security;
             }
             catch
