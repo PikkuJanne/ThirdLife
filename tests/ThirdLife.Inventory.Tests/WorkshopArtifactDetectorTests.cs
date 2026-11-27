@@ -4,12 +4,13 @@ using System.Text.Json;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Finalization;
 using ThirdLife.Inventory.Windows;
+using Xunit.Abstractions;
 using Kind = ThirdLife.Core.Finalization.WorkshopArtifactKind;
 using Status = ThirdLife.Core.Finalization.WorkshopArtifactStatus;
 
 namespace ThirdLife.Inventory.Tests;
 
-public sealed class WorkshopArtifactDetectorTests
+public sealed class WorkshopArtifactDetectorTests(ITestOutputHelper output)
 {
     [Fact]
     public async Task OnlyExactConfiguredNamesAreQueriedAndResultContainsNoNames()
@@ -191,6 +192,24 @@ public sealed class WorkshopArtifactDetectorTests
         finally
         {
             directory.SetAccessControl(original);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "ActiveMachine")]
+    public async Task ActiveMachineUsesNativeReadOnlySourcesWithSyntheticAbsentNames()
+    {
+        Assert.Equal(WindowsPlatformEligibility.Supported, WindowsPlatform.CheckCurrent());
+        var syntheticAccount = string.Concat("tl-", Guid.NewGuid().ToString("N").AsSpan(0, 17));
+        var syntheticShare = string.Concat("tl-", Guid.NewGuid().ToString("N"));
+        var findings = await new WorkshopArtifactDetector().DetectAsync([syntheticAccount], [syntheticShare]);
+        Assert.Equal(Enum.GetValues<Kind>(), findings.Select(finding => finding.Kind));
+        Assert.DoesNotContain(findings, finding => finding.Status is Status.Present &&
+            finding.Kind is Kind.ConfiguredLocalAccounts or Kind.ConfiguredSmbShares);
+        Assert.DoesNotContain(findings, finding => finding.Status is Status.TargetsNotConfigured or Status.TimedOut);
+        foreach (var finding in findings)
+        {
+            output.WriteLine($"{finding.Kind} {finding.Status}");
         }
     }
 

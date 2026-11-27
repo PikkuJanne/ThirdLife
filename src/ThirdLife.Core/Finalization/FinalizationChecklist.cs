@@ -1,7 +1,11 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Serialization;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Sanitization;
 
 namespace ThirdLife.Core.Finalization;
 
@@ -12,6 +16,10 @@ public interface IFinalizationStore
     Task SaveFinalizationConfirmationAsync(JobId jobId, FinalizationChecklist expected,
         FinalizationRuleId ruleId, FinalizationOutcome outcome, FinalizationReason? reason,
         OperatorId operatorId, CancellationToken token = default);
+
+    Task SaveFinalizationArtifactScanAsync(JobId jobId, FinalizationChecklist expected,
+        SanitizationGateDecisionId expectedGate, IReadOnlyList<WorkshopArtifactFinding> findings,
+        ProvenanceKind origin, CancellationToken token = default);
 }
 
 // Values and names are persisted. Keep the meaning of historical values stable.
@@ -127,9 +135,9 @@ public sealed record FinalizationRecord
 }
 
 public sealed record FinalizationRow(FinalizationRule Rule, FinalizationOutcome Outcome, FinalizationSource Source,
-    FinalizationRecord? Confirmation, bool NeedsRecheck)
+    FinalizationRecord? Confirmation, bool NeedsRecheck, bool HasBlockingArtifact = false)
 {
-    public bool IsBlocking => Rule.IsRequired && Outcome is FinalizationOutcome.Unknown or FinalizationOutcome.Failed;
+    public bool IsBlocking => Rule.IsRequired && (HasBlockingArtifact || Outcome is FinalizationOutcome.Unknown or FinalizationOutcome.Failed);
 }
 
 public sealed class FinalizationChecklist
@@ -153,21 +161,28 @@ public sealed class FinalizationChecklist
     ]);
 
     private FinalizationChecklist(string? evidenceVersion, ReadOnlyCollection<FinalizationRecord> history,
-        ReadOnlyCollection<FinalizationRow> rows)
+        ReadOnlyCollection<FinalizationRow> rows, ReadOnlyCollection<WorkshopArtifactScan> artifactScans)
     {
         EvidenceVersion = evidenceVersion;
         History = history;
         Rows = rows;
+        ArtifactScans = artifactScans;
     }
 
     public string? EvidenceVersion { get; }
     public IReadOnlyList<FinalizationRecord> History { get; }
     public IReadOnlyList<FinalizationRow> Rows { get; }
+    public IReadOnlyList<WorkshopArtifactScan> ArtifactScans { get; }
     public bool HasBlockingChecks => Rows.Any(row => row.IsBlocking);
     public bool CanRecord => EvidenceVersion is not null && History.Count < MaximumHistoryPerJob;
+    public bool CanScanArtifacts => EvidenceVersion is not null && ArtifactScans.Count < WorkshopArtifactScan.MaximumScansPerJob;
+
+    public string? EvidenceVersionForConfirmation(FinalizationRuleId rule) =>
+        EvidenceVersionForConfirmation(EvidenceVersion, rule, ArtifactScans.Count);
 
     public static FinalizationChecklist Evaluate(string? evidenceVersion, IReadOnlyList<FinalizationRecord> history,
-        FinalizationOutcome restartOutcome = FinalizationOutcome.Unknown)
+        FinalizationOutcome restartOutcome = FinalizationOutcome.Unknown,
+        IReadOnlyList<WorkshopArtifactScan>? artifactScans = null)
     {
         if (evidenceVersion is not null)
         {
@@ -186,6 +201,8 @@ public sealed class FinalizationChecklist
         }
 
         var records = history.ToArray();
+        var scans = CopyArtifactScans(artifactScans);
+        var openIndications = ReadOpenArtifactIndications(scans);
         var latest = new Dictionary<FinalizationRuleId, FinalizationRecord>();
         for (var index = 0; index < records.Length; index++)
         {
@@ -210,12 +227,84 @@ public sealed class FinalizationChecklist
             }
 
             latest.TryGetValue(rule.Id, out var confirmation);
-            var current = confirmation is not null && confirmation.EvidenceVersion == evidenceVersion;
-            rows.Add(new(rule, current ? confirmation!.Outcome : FinalizationOutcome.Unknown,
+            var current = confirmation is not null &&
+                confirmation.EvidenceVersion == EvidenceVersionForConfirmation(evidenceVersion, rule.Id, scans.Length);
+            var outcome = current ? confirmation!.Outcome : FinalizationOutcome.Unknown;
+            var blockingArtifact = openIndications.Any(kind => ArtifactRule(kind) == rule.Id &&
+                (IsFixedCleanupSource(kind) || outcome == FinalizationOutcome.NotApplicable));
+            rows.Add(new(rule, outcome,
                 current ? FinalizationSource.OperatorConfirmation : FinalizationSource.None,
-                confirmation, confirmation is not null && !current));
+                confirmation, confirmation is not null && !current, blockingArtifact));
         }
 
-        return new(evidenceVersion, Array.AsReadOnly(records), rows.AsReadOnly());
+        return new(evidenceVersion, Array.AsReadOnly(records), rows.AsReadOnly(), Array.AsReadOnly(scans));
     }
+
+    private static string? EvidenceVersionForConfirmation(string? evidenceVersion, FinalizationRuleId rule, int scanCount)
+    {
+        if (evidenceVersion is null || scanCount == 0 || rule is not (FinalizationRuleId.WorkshopAccounts or
+            FinalizationRuleId.Shares or FinalizationRuleId.Diagnostics or FinalizationRuleId.Downloads or FinalizationRuleId.RemoteSupport))
+        {
+            return evidenceVersion;
+        }
+
+        var context = string.Create(CultureInfo.InvariantCulture, $"{evidenceVersion}:workshop-artifact-scan:{scanCount}");
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(context)));
+    }
+
+    private static WorkshopArtifactScan[] CopyArtifactScans(IReadOnlyList<WorkshopArtifactScan>? history)
+    {
+        if (history is null || history.Count == 0) { return []; }
+        if (history.Count > WorkshopArtifactScan.MaximumScansPerJob)
+        {
+            throw new ArgumentOutOfRangeException(nameof(history));
+        }
+
+        var scans = history.ToArray();
+        for (var index = 0; index < scans.Length; index++)
+        {
+            if (scans[index]?.Sequence != index + 1 || scans[index].Origin != scans[0].Origin)
+            {
+                throw new ArgumentException("Artifact scan history must be contiguous and attributed to one evidence origin.", nameof(history));
+            }
+        }
+
+        return scans;
+    }
+
+    private static HashSet<WorkshopArtifactKind> ReadOpenArtifactIndications(WorkshopArtifactScan[] scans)
+    {
+        var open = new HashSet<(WorkshopArtifactKind Kind, string Revision)>();
+        foreach (var scan in scans)
+        {
+            foreach (var finding in scan.Findings)
+            {
+                var source = (finding.Kind, scan.DetectorRevision);
+                if (finding.Status == WorkshopArtifactStatus.Present)
+                {
+                    open.Add(source);
+                }
+                else if (finding.Status == WorkshopArtifactStatus.AbsentInCheckedScope &&
+                    IsFixedCleanupSource(finding.Kind))
+                {
+                    // Only unchanged fixed local path detectors have comparable scopes across scans.
+                    open.Remove(source);
+                }
+            }
+        }
+
+        return open.Select(source => source.Kind).ToHashSet();
+    }
+
+    private static bool IsFixedCleanupSource(WorkshopArtifactKind kind) =>
+        kind is WorkshopArtifactKind.BatteryReportResidue or WorkshopArtifactKind.PackageStagingResidue;
+
+    private static FinalizationRuleId ArtifactRule(WorkshopArtifactKind kind) => kind switch
+    {
+        WorkshopArtifactKind.BatteryReportResidue or WorkshopArtifactKind.WorkshopReportCopies => FinalizationRuleId.Diagnostics,
+        WorkshopArtifactKind.PackageStagingResidue => FinalizationRuleId.Downloads,
+        WorkshopArtifactKind.ConfiguredLocalAccounts => FinalizationRuleId.WorkshopAccounts,
+        WorkshopArtifactKind.ConfiguredSmbShares => FinalizationRuleId.Shares,
+        _ => FinalizationRuleId.RemoteSupport,
+    };
 }

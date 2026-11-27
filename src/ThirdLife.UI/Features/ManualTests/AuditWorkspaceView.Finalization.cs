@@ -68,6 +68,7 @@ public partial class AuditWorkspaceView
             if (jobChanged)
             {
                 FinalizationOperatorCode.Clear();
+                ClearArtifactTargets();
                 FinalizationHistoryRegion.IsExpanded = false;
             }
 
@@ -179,7 +180,8 @@ public partial class AuditWorkspaceView
             };
         var requirement = row.IsBlocking ? "Required. Blocks handover."
             : row.Rule.IsRequired ? "Required." : "Advisory.";
-        return $"{requirement} {outcome}";
+        var artifact = row.HasBlockingArtifact ? " A saved artifact indication still requires resolution." : string.Empty;
+        return $"{requirement} {outcome}{artifact}";
     }
 
     private static string DescribeConfirmation(FinalizationRecord record, bool current)
@@ -190,7 +192,8 @@ public partial class AuditWorkspaceView
             $"{state} · {record.RecordedAtUtc.UtcDateTime:yyyy-MM-dd HH:mm:ss} UTC · {record.OperatorId.Value} · {OutcomeLabel(record.Outcome)}{reason}");
     }
 
-    private static string ResultSummary(FinalizationRow row) => row.NeedsRecheck ? "Needs recheck"
+    private static string ResultSummary(FinalizationRow row) => row.HasBlockingArtifact ? "Open artifact indication"
+        : row.NeedsRecheck ? "Needs recheck"
         : row.Outcome switch
         {
             FinalizationOutcome.Passed => "Clear",
@@ -217,15 +220,15 @@ public partial class AuditWorkspaceView
 
     private static string RuleGuidance(FinalizationRuleId rule) => rule switch
     {
-        FinalizationRuleId.WorkshopAccounts => "Check for accounts created for workshop use.",
+        FinalizationRuleId.WorkshopAccounts => "Review known workshop accounts with Windows account management. Remove a workshop account only with authority over that account.",
         FinalizationRuleId.BrowserSessions => "Confirm workshop browser sessions were signed out.",
         FinalizationRuleId.WiFiProfiles => "Check for Wi-Fi profiles added for the workshop.",
         FinalizationRuleId.Credentials => "Confirm workshop credentials are clear. Leave secret values out of the job.",
-        FinalizationRuleId.Shares => "Check for shares created for workshop work.",
+        FinalizationRuleId.Shares => "Review known workshop shares in Windows share management. Confirm whether each workshop share was removed or remains authorized.",
         FinalizationRuleId.TestMedia => "Check that temporary test media is disconnected or removed.",
-        FinalizationRuleId.Diagnostics => "Check where workshop diagnostic exports were saved and retain required records in workshop storage.",
-        FinalizationRuleId.Downloads => "Check for temporary workshop downloads and installer residue.",
-        FinalizationRuleId.RemoteSupport => "Check whether workshop VPN or remote-support access is still enabled.",
+        FinalizationRuleId.Diagnostics => "Review diagnostic exports and temporary battery-report files. Preserve required workshop reports in protected workshop storage.",
+        FinalizationRuleId.Downloads => "Review temporary workshop downloads and package staging. Confirm there is no active or recoverable package operation before handling its files.",
+        FinalizationRuleId.RemoteSupport => "Review Remote Desktop, Remote Assistance, and any workshop VPN or remote-support tools in their Windows or vendor settings.",
         FinalizationRuleId.ClipboardKeyMaterial => "Confirm the workshop cleared temporary clipboard and key material. Leave secret values out of the job.",
         FinalizationRuleId.PendingRestart => "Review independent verification for any restart still required.",
         _ => string.Empty,

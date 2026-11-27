@@ -103,6 +103,33 @@ public class FinalizationChecklistTests
     private static FinalizationRow Row(FinalizationChecklist checklist, FinalizationRuleId rule) =>
         Assert.Single(checklist.Rows, row => row.Rule.Id == rule);
 
+    [Fact]
+    public void ChangedNamedScopeCannotAutomaticallyDismissAPreviousIndication()
+    {
+        var rule = FinalizationRuleId.Shares;
+        var prior = Scan(1, WorkshopArtifactStatus.Present);
+        var current = Scan(2, WorkshopArtifactStatus.AbsentInCheckedScope);
+        var previousReview = FinalizationChecklist.Evaluate(Revision, [], artifactScans: [prior]);
+        var confirmation = new FinalizationRecord(1, rule, FinalizationOutcome.Passed, null,
+            new OperatorId("operator-scope"), DateTimeOffset.UtcNow, previousReview.EvidenceVersionForConfirmation(rule)!);
+        var review = FinalizationChecklist.Evaluate(Revision, [confirmation], artifactScans: [prior, current]);
+        Assert.True(Row(review, rule).NeedsRecheck);
+        Assert.True(Row(review, rule).IsBlocking);
+
+        var rejectedOmission = new FinalizationRecord(2, rule, FinalizationOutcome.NotApplicable,
+            FinalizationReason.NoWorkshopUse, new OperatorId("operator-scope"), DateTimeOffset.UtcNow,
+            review.EvidenceVersionForConfirmation(rule)!);
+        var unchanged = FinalizationChecklist.Evaluate(Revision, [confirmation, rejectedOmission], artifactScans: [prior, current]);
+        Assert.True(Row(unchanged, rule).HasBlockingArtifact);
+        Assert.True(Row(unchanged, rule).IsBlocking);
+        Assert.Equal([prior, current], unchanged.ArtifactScans);
+
+        static WorkshopArtifactScan Scan(long sequence, WorkshopArtifactStatus share) => new(sequence,
+            DateTimeOffset.UtcNow, Revision, WorkshopArtifactScan.CurrentDetectorRevision, ProvenanceKind.SyntheticFixture,
+            Enum.GetValues<WorkshopArtifactKind>().Select(kind => new WorkshopArtifactFinding(kind, kind == WorkshopArtifactKind.ConfiguredSmbShares
+                ? share : WorkshopArtifactStatus.Unavailable)).ToArray());
+    }
+
     private static FinalizationRecord Confirm(long index, FinalizationRuleId rule, FinalizationOutcome outcome,
         FinalizationReason? reason = null) => new(index, rule, outcome, reason, Operator, RecordedAt, Revision);
 }

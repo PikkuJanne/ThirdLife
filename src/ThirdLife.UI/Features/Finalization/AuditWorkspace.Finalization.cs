@@ -94,6 +94,12 @@ internal sealed partial class AuditWorkspace
         try
         {
             checklist = await Task.Run(() => store.LoadFinalizationAsync(job.Job.JobId));
+            if (checklist is { ArtifactScans.Count: > 0 } &&
+                (checklist.ArtifactScans[0].Origin == ProvenanceKind.SyntheticFixture) != IsFixtureScenario)
+            {
+                checklist = null;
+                readFailed = true;
+            }
         }
         catch (JobStoreException)
         {
@@ -132,6 +138,7 @@ internal sealed partial class AuditWorkspace
     {
         Finalization = null;
         _finalizationFeedback = string.Empty;
+        _artifactScanFeedback = string.Empty;
         _finalizationReadFailed = false;
     }
 }
