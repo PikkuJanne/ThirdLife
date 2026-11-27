@@ -21,6 +21,7 @@ using ThirdLife.Packages.WindowsUpdates;
 using ThirdLife.Persistence;
 using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
+using ThirdLife.Reports.RecipientGuide;
 using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.BrokerClient;
 using ThirdLife.UI.Features.PlanReview;
@@ -74,7 +75,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         Func<IBrokerExecutionJournal, ExecutionCoordinator>? fixtureBrokerCoordinator = null,
         Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null,
         Func<DateTimeOffset, PreparationResourceSnapshot>? observePreparationResources = null,
-        IWindowsUpdateAgent? fixtureWindowsUpdates = null)
+        IWindowsUpdateAgent? fixtureWindowsUpdates = null,
+        RecipientGuideStore? recipientGuideStore = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -88,6 +90,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _providers = providers.ToArray();
         _timeProvider = timeProvider;
         _reportStore = reportStore;
+        _recipientGuideStore = recipientGuideStore;
         IsFixtureScenario = _providers.All(static provider =>
             provider.Descriptor.EvidenceOrigin == ProviderEvidenceOrigin.SyntheticFixture);
         if (!IsFixtureScenario && _providers.Any(static provider =>
@@ -204,7 +207,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         TimeProvider.System,
         RegisteredReportStore(),
         packageService: new PilotPackageService(),
-        appendPackageDiagnostic: AppendLocalPackageDiagnosticAsync)
+        appendPackageDiagnostic: AppendLocalPackageDiagnosticAsync,
+        recipientGuideStore: RegisteredRecipientGuideStore())
     {
         UpdateAgent = new WindowsUpdateAgent(),
         UpdateBackend = new ProtectedWindowsUpdateBackend(),

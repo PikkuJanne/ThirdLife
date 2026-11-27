@@ -78,7 +78,7 @@ retains live update and multi-action qualification.
 
 TL-0601 adds the workshop checklist to TRACE Handover. It saves attributable
 confirmations, retains earlier results, and requires a recheck after a relevant
-job or boot change. TL-0602 adds the bounded artifact detector.
+job or boot change.
 [Finalization evidence](artifacts/evidence/TL-0601/report.md)
 
 TL-0604 generates the restricted technical workshop record from saved
@@ -90,6 +90,16 @@ TL-0603 saves assisted or sealed mode in the same job. A mode change requires
 a fresh checklist and preserves earlier confirmations. Sealed mode leaves
 personal choices pending. TL-0605 consumes the saved choices for the guide.
 [Handover mode evidence](artifacts/evidence/TL-0603/report.md)
+
+TL-0605 generates an assisted or sealed recipient guide from saved choices
+and verified facts. The operator previews and saves the exact printable
+copy. Each variant preserved reading order at the tested 200% equivalent
+scale. [Recipient guide evidence](artifacts/evidence/TL-0605/report.md)
+
+TL-0602 saves bounded, read-only workshop residue observations in Handover.
+Entered account and share names stay transient. Unknown and open indications
+remain visible after reopening and in the restricted workshop record.
+[Artifact scan evidence](artifacts/evidence/TL-0602/report.md)
 
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B
 exit remain at TL-0710. [Decision and graph review](docs/reviews/2026-11-27-single-guest-continuation.md)

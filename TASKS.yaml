@@ -6829,6 +6829,16 @@ tasks:
     environment: Active Windows 11 Pro 26H2 native x64 host, standard-user token and local Windows Storage WMI
     reference: artifacts/evidence/TL-0510/system-disk-health.md, 3b5dd745e94435650635e9495184348bcf4e5cd6
     limitation: The provider qualified on the host only. The existing guest and exact live-profile case still require their own evidence and aggregate restart clearance.
+  - summary: An earlier unresolved servicing recovery holds the restart check through Verify and Finalization, including a still-saved historical pass.
+    task: TL-0510
+    command: eng/verify.ps1 -Tier Targeted with ProfileVerificationTests and FullMaintenanceReopensAtEveryBoundaryAndRequiresFreshStateAfterFinalRestart
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 295.294 s with 1382 Quick and 13 selected deterministic .NET cases
+    environment: Active Windows 11 Pro 26H2 native x64 host with controlled update and maintenance evidence
+    reference: artifacts/evidence/TL-0510/restart-recovery.md, 4f9aabb
+    limitation: The production guard preserves historical results and gates unresolved recovery. Native clearance still requires its own positive proof.
   blocked_reason: Whole-device reference verification is held. The OS-disk health provider has active-host evidence.
     Reopen the native reference case with guest disk health, aggregate restart clearance and a qualified exact
     reference profile on ThirdLife-W11. Job Seeker is synthetic and the current live route supports one reviewed
@@ -7000,7 +7010,7 @@ tasks:
   workstream: finalization
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -7029,9 +7039,30 @@ tasks:
   verification:
   - Seed known artifacts and sensitive decoys, run detection, and inspect all stored/exported evidence.
   - Run path traversal, junction/symlink, access-denied, and oversized-directory tests.
-  evidence: []
+  evidence:
+  - summary: Handover saved and reopened bounded residue findings and generated a matching restricted workshop record without retaining entered account or share names.
+    task: TL-0602
+    command: eng/verify.ps1 -Tier Targeted with the Reports and WPF selections in the evidence record
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 271.033 s, 1394 Quick tests and 37 selected report and WPF cases
+    environment: Active Windows 11 Pro 26H2 native x64 host, controlled Handover adapters and guarded SQLite
+    reference: artifacts/evidence/TL-0602/report.md, 13453a4
+    limitation: Active-host narrow reads are separate. Positive native account and share indications, broader remote support and actual cleanup remain unobserved.
+  - summary: Clean Full passed the exact integrated detector and confirmation migrations, corrected report wheel fixture, and deterministic test suite.
+    task: TL-0602
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 502.462 s, 310 governance tests and 2611 deterministic .NET cases
+    environment: Clean detached worktree on the active Windows 11 Pro 26H2 native x64 host
+    reference: artifacts/evidence/TL-0602/report.md, 0c53597f68a188eb14747c14a7c5600061955dbc
+    limitation: Covers schema 17 and the saved history. Native case and actual handover evidence are separate.
   expected_test_tier: targeted
-  full_test_triggers: []
+  full_test_triggers:
+  - Run Full from a clean checkout for the workshop artifact scan migration.
   extended_test_triggers: []
 - id: TL-0603
   title: Support assisted and sealed handover models
@@ -7148,7 +7179,7 @@ tasks:
   workstream: reports
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: any
@@ -7186,7 +7217,27 @@ tasks:
   - Inspect both rendered guides for reading order, headings, responsiveness, and accessible output at 200% zoom. Check
     wording against the product states.
   - Run prohibited-field and hostile-text tests.
-  evidence: []
+  evidence:
+  - summary: TRACE generated and saved the exact recipient guide for both assisted and sealed handover. The preview rejected changed saved facts.
+    task: TL-0605
+    command: eng/verify.ps1 -Tier Targeted -Restore with the Reports and UI selections in the guide evidence
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 269.973 s, 1394 deterministic .NET executions and eight work-selection regressions
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated SQLite and WPF, local printable HTML
+    reference: artifacts/evidence/TL-0605/report.md, 73a64d94bbd1b9c2b38bdcda19bc897b0402dca1
+    limitation: The guide used controlled job facts and modeled recipient choices. Actual transfer and kit adoption retain separate authority.
+  - summary: Both synthetic variants preserved ten headings and reading order with no horizontal overflow or external requests at the tested scale.
+    task: TL-0605
+    command: Isolated Edge reading-order and 200 percent equivalent pixel-scale probe recorded with both rendered variants
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 2.531 s
+    environment: Edge 158.0.4370.45 on the active host, 320 CSS pixel viewport at device pixel ratio 2
+    reference: artifacts/evidence/TL-0605/layout-receipt.json
+    limitation: Physical printing, audible assistive use, recipient comprehension and actual recipient transfer remain unobserved.
   notes:
   - Representative comprehension remains unobserved unless supported by actual evidence. Resolve a consequential ambiguity
     through the D-074 exception only when its conditions apply.

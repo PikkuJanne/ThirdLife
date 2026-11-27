@@ -38,3 +38,25 @@ The wheel fixture now generates and opens an actual report before exercising the
 The governed `eng/verify.ps1 -Tier Targeted` report and WPF selection passed in 271.033 s at source tree `08b0b722f02c94c667d534403142844b2f27e8b5`. Quick passed 1,394 tests. Targeted then passed 30 report checks and seven WPF checks. The Quick WPF selection took 149 s. The run used the active Windows host with the same pinned SDK and Python environment as the detector checkpoint.
 
 The next candidate incorporates reviewed main `244e51dd4e26a10179331877fe5a898fb39f8f4b`, including the system-disk provider, integrated recipient mode and keyboard focus repair. Migration 016 retained its exact SHA-256 and 017 follows it. Bundle and repository validation passed. The Release build passed in 13.99 s. Focused merged checks passed 25 Inventory tests in 0.906 s, four Persistence tests in 3 s, and eight WPF tests in 12 s. The read-only native inventory checks covered both the system-disk typed boundary and the two exact local artifact lookups.
+
+## Clean migration verification
+
+The corrected candidate `0c53597f68a188eb14747c14a7c5600061955dbc` passed
+`eng/verify.ps1 -Tier Full -Restore` on the active Windows 11 host in a
+separate clean detached worktree. Full took 502.462 s. All 310 governance
+tests passed in 332.690 s. All 2,611 deterministic .NET tests across 13
+assemblies passed with zero skips. The locked Release build, formatting,
+both repository validators and the report-wheel regression passed.
+
+The Full filter retains separate scopes for native and Extended tests.
+The exact-name and fixed-path proof remains bounded by the source results
+recorded above. The detector leaves cleanup and whole-device handover to
+their owning workflows.
+
+## Main integration candidate
+
+The candidate against reviewed main `c06e9e145669a36651550e3ab5bd734ee94f7284`
+passed `eng/verify.ps1 -Tier Targeted` in 227.458 s on the active Windows 11
+host. The Release build and repository validators passed. All 1,409 Quick
+.NET tests and 25 selected report and persistence tests passed with zero
+skips. No additional native cleanup or dispatch took place.

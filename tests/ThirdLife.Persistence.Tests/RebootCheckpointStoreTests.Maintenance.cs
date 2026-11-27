@@ -15,13 +15,14 @@ namespace ThirdLife.Persistence.Tests;
 public sealed partial class RebootCheckpointStoreTests
 {
     [Theory]
-    [InlineData(0, false, MaintenancePhase.WindowsUpdates)]
-    [InlineData(1, true, MaintenancePhase.Packages)]
-    [InlineData(2, false, MaintenancePhase.PostPackageChecks)]
-    [InlineData(1, false, MaintenancePhase.FinalRestart)]
-    [InlineData(0, true, MaintenancePhase.FinalVerification)]
+    [InlineData(0, false, MaintenancePhase.WindowsUpdates, false)]
+    [InlineData(1, true, MaintenancePhase.Packages, false)]
+    [InlineData(2, false, MaintenancePhase.PostPackageChecks, false)]
+    [InlineData(1, false, MaintenancePhase.FinalRestart, false)]
+    [InlineData(0, true, MaintenancePhase.FinalVerification, false)]
+    [InlineData(0, false, MaintenancePhase.WindowsUpdates, true)]
     public async Task FullMaintenanceReopensAtEveryBoundaryAndRequiresFreshStateAfterFinalRestart(
-        int servicingRestarts, bool interruptedAfterCommit, MaintenancePhase unexpectedShutdownAt)
+        int servicingRestarts, bool interruptedAfterCommit, MaintenancePhase unexpectedShutdownAt, bool historicalRecovery)
     {
         using var workspace = new PersistenceTestWorkspace();
         var clock = new FixedTimeProvider(IssueTime);
@@ -187,7 +188,7 @@ public sealed partial class RebootCheckpointStoreTests
             [new(plan.Actions[0].CapabilityId, true, ProfileVerificationState.Failed, action.ExactVersion, "0.1.0", action.ActionId,
                 ProfilePackageStatus.Mismatch)],
             [new(new("POL-OS-001"), PolicyRuleState.Unavailable, PolicyRuleReason.EvidenceMissing, true)],
-            null, null, null, 0, 0, WindowsUpdateDisposition.Current, false);
+            null, null, null, 0, 0, WindowsUpdateDisposition.Current, historicalRecovery);
         var result = new ProfileVerificationRecord(current, finalScan.Id, verified.EntryId, saved.Entries.Length, verification);
         await Assert.ThrowsAsync<JobStoreConflictException>(() => handoff.SaveProfileVerificationAsync(result with { ScanId = current.ScanId!.Value }));
         await Assert.ThrowsAsync<JobStoreConflictException>(() => handoff.SaveProfileVerificationAsync(result with { PackageJournalEntryId = applied.EntryId }));
@@ -202,8 +203,11 @@ public sealed partial class RebootCheckpointStoreTests
         Assert.Equal(current, await profileReview.LoadMaintenanceAsync(job));
         var finalization = Assert.IsType<FinalizationChecklist>(await profileReview.LoadFinalizationAsync(job));
         var restart = finalization.Rows.Single(row => row.Rule.Id == FinalizationRuleId.PendingRestart);
-        Assert.Equal(servicingRestarts == 0 ? FinalizationOutcome.Passed : FinalizationOutcome.Failed, restart.Outcome);
-        Assert.Equal(FinalizationSource.AutomatedObservation, restart.Source);
+        var expectedRestart = historicalRecovery ? FinalizationOutcome.Unknown
+            : servicingRestarts == 0 ? FinalizationOutcome.Passed : FinalizationOutcome.Failed;
+        Assert.Equal(expectedRestart, restart.Outcome);
+        Assert.Equal(historicalRecovery ? FinalizationSource.None : FinalizationSource.AutomatedObservation, restart.Source);
+        Assert.Equal(restartState, restored.Record.Result.Checks.Single(check => check.Kind == ProfileCheckKind.PendingRestart).State);
         Assert.Empty(finalization.History);
         Restart();
         Assert.False((await profileReview.LoadProfileVerificationAsync(job))!.IsCurrent);

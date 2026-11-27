@@ -280,7 +280,7 @@
         <Border Style="{DynamicResource Trace.ActionArea}" Margin="0,12,0,12">
           <StackPanel>
             <TextBlock x:Name="HandoverStatus" Text="Device handover is still open" Style="{DynamicResource Trace.AttentionText}" FontWeight="SemiBold" />
-            <TextBlock Text="Complete the required workshop checks and review whole-device cold-boot verification before handover. Recipient-guide generation is pending." Margin="0,4,0,0" />
+            <TextBlock Text="Complete the required workshop checks and review whole-device cold-boot verification before handover." Margin="0,4,0,0" />
           </StackPanel>
         </Border>
         <GroupBox Header="Handover mode" AutomationProperties.Name="Handover mode" Margin="0,0,0,12">
@@ -389,6 +389,24 @@
             </StackPanel>
           </StackPanel>
         </GroupBox>
+    <GroupBox Header="Recipient guide" AutomationProperties.Name="Recipient guide" Margin="0,0,0,12">
+      <StackPanel>
+        <TextBlock Text="Preview the plain-language guide before saving a copy to print or give to the recipient." />
+        <Button x:Name="PreviewRecipientGuideButton" Content="Preview recipient guide" Click="PreviewRecipientGuide"
+                IsEnabled="{Binding CanPreviewRecipientGuide}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+        <TextBlock x:Name="RecipientGuideMessage" Text="{Binding RecipientGuideStatus}" Focusable="True"
+                   KeyboardNavigation.IsTabStop="False" AutomationProperties.Name="{Binding RecipientGuideStatus}"
+                   AutomationProperties.LiveSetting="Polite" Margin="0,8,0,0" />
+        <StackPanel x:Name="RecipientGuidePreviewRegion" Visibility="Collapsed" Margin="0,8,0,0">
+          <TextBox x:Name="RecipientGuidePreviewBox" Text="{Binding RecipientGuidePreview, Mode=OneWay}"
+                   IsReadOnly="True" IsReadOnlyCaretVisible="True" TextWrapping="Wrap"
+                   MinHeight="120" MaxHeight="320" VerticalScrollBarVisibility="Auto"
+                   AutomationProperties.Name="Recipient guide preview" />
+          <Button x:Name="SaveRecipientGuideButton" Content="Save printable guide" Click="SaveRecipientGuide"
+                  IsEnabled="{Binding CanSaveRecipientGuide}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+        </StackPanel>
+      </StackPanel>
+    </GroupBox>
     <GroupBox x:Name="WorkshopReportRegion" Header="Workshop report" AutomationProperties.Name="Workshop report">
       <StackPanel>
         <TextBlock Text="Generate a restricted report from this saved job. Keep it with workshop records." />
