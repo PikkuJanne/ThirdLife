@@ -108,3 +108,28 @@ The controlled channel can wait for consent during setup. Before handoff, the co
 Channel setup can end before an action is sent. The store records that outcome against its own preparing entry. A fresh scan can also settle an interrupted setup atomically, allowing a new review. A committed send intent with a missing or mismatching receipt still requires workshop review after reopening. A backwards wall-clock adjustment preserves the actual observed time of a correlated receipt. Journal sequence records its order.
 
 On 2026-11-27 the intent-binding baseline on the active machine passed 20 SQLite workflow cases in 7 s. At `ce85b22063b48aae9e557dc4dd27efaefc481623`, the same filtered test project passed 30 cases in 10 s. Quick with locked restore passed 1,253 tests in 129.420 s. Review identified that a refused pre-send installation could prevent a fresh approval, and that a deadline or clock change during setup could misstate the result. At `ffee8c6ff03e1d836c7c15c35196d408786b4c86`, the filtered suite passed 36 cases in 13 s. The cases used real SQLite, controlled channels, clocks and update offers. They exercised concurrent decisions, interrupted setup and handoff, migration, replay refusal, receipt mismatch and reopening. After correcting a formatting failure, Quick with locked restore passed 1,253 tests in 122.948 s. The warm Quick target is 120 s.
+
+### Integrated verification on 2026-11-27
+
+The integrated technical source is `710e5a867d15905c471bd8658539be94f6950f8a`. On the active Windows 11 Pro x64 host, the nine focused WPF cases passed in 4.790 s. The integrated Targeted run passed 1,406 cases in 142.383 s with zero skips. It included Quick, 38 action registry cases, 31 WUA adapter cases and 75 persistence cases.
+
+```powershell
+$projects = 'tests/ThirdLife.Actions.Tests/ThirdLife.Actions.Tests.csproj',
+    'tests/ThirdLife.Packages.Tests/ThirdLife.Packages.Tests.csproj',
+    'tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj'
+./eng/verify.ps1 -Tier Targeted -TestProject $projects -Filter '(FullyQualifiedName~WindowsUpdate|FullyQualifiedName~ActionRegistryTests|FullyQualifiedName~MigrationAndCorruptionTests)&Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly'
+```
+
+The separate Extended check terminated owned WPF instances after dispatch intent and reopened the same jobs on schema 009. Both existing `KilledNoOpApplicationReopensTheSameJobAndReconcilesWithoutDispatch` cases passed in 11.601 s. They cover the neighbouring no-op recovery workflow using its controlled backend. WUA-specific interruption and late-result checks used controlled channels and real SQLite. The unelevated `eng/run-ui-smoke.ps1` reached Inspect through UI Automation and exited normally in 1.461 s. Its Release apphost SHA-256 was `f0edbd0344ebf5ec4bc981caac8359d9deb10fde174639dc1b9d6422e4c89868`.
+
+The integrated host run passed all three native WUA cases in 1.2603 minutes. The exact restricted offer recheck took 8.734 s. Windows reported an unsupported installer, uninstall unavailable, no disk recommendation and no pending restart. The separate lookup confirmed a previously installed revision in 7.531 s. The host adapter SHA-256 was `e921dd96ec143c890a6d4b49b2b5036274c3d8c2158bf24976376abf72546bfd`.
+
+The limited-token guest repeated the assessment from the integrated commit. Its single offer still had an unsupported handler, and WUA reported that the revision did not support uninstall. The run took 169.075 s including staging and verified cleanup. Its payload SHA-256 was `f2586854d68549d6d345a154d82f66dbaa49be1a7c122971ff342e48760e3e6d` and adapter SHA-256 was `3683523d1d83ba9f994695344f587dda7c51c6333e540baf5f04ecfcceae8b3d`. Both native environments still reported Windows build 26300.9974 and wuapi.dll 1511.2611.5012.0.
+
+In a clean detached checkout of `710e5a867d15905c471bd8658539be94f6950f8a`, `eng/verify.ps1 -Tier Full -Restore` passed in 411.907 s. All 304 governance tests and 2,348 deterministic .NET tests passed, with zero skips. Locked restore, formatting and the warnings-as-errors Release build passed. The clean Release adapter had SHA-256 `78496902687eafaa96387a7e615d15718af64bd54143095383742cd4f12c9b70`. Its separate native exact-offer test passed in 25.022 s, again finding four offers, zero selectable revisions and an unsupported handler with uninstall unavailable. The worktree remained clean.
+
+The final evidence checkpoint passed `eng/verify.ps1 -Tier Quick` with 1,262 .NET cases in 124.506 s, 4.506 s above the warm target. The Release build took 7.80 s. WPF took 65 s, compared with 61 s on the isolated phase-binding checkpoint and 62 s in integrated Targeted. The technical source and tests match the clean Full candidate. [Integration PR 74](https://github.com/PikkuJanne/ThirdLife/pull/74)
+
+### Remaining work
+
+Implement the protected Windows Update request and native handler for the approved phase and qualify their independent authorization checks. Bind the effective servicing policy to a supported recovery procedure and its disk requirements. Reopen native transaction qualification when the guest offers an eligible security or critical CBS revision. Obtain approval for that exact planned action and applicable Windows consent, record the per-update download and installation receipts, then rescan and independently verify the installed revision after any required restart. TL-0314 governs ordinary privileged dispatch. The offer checks and technical tests confer no servicing authority.
