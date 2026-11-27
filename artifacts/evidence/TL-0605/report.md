@@ -69,3 +69,7 @@ reflow and accessible control properties in these test environments.
 Physical printing, audible screen-reader output, recipient comprehension,
 and a real recipient transfer were outside the observed scope. Pilot
 content adoption and exposure remain at TL-0508 and TL-0611.
+
+The integration trial used main `94ae1a4`. Targeted passed in 279.977 s
+with 1,394 Quick and thirteen selected .NET cases, eight work-selection
+regressions, both validators, formatting and a clean Release build.

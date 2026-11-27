@@ -30,6 +30,8 @@ internal static class StorageWmiValueReader
                 return number is >= ushort.MinValue and <= ushort.MaxValue
                     ? (ushort)number
                     : StorageInvalidValue.Instance;
+            case StorageWmiValueKind.UInt32 when cimType == 19 && variantType == 3:
+                return unchecked((uint)Marshal.ReadInt32(variant, 8));
             case StorageWmiValueKind.UInt64 when cimType == 21 && variantType == 8:
                 var text = ReadBoundedString(Marshal.ReadIntPtr(variant, 8), 20);
                 return TryUInt64(text, out var value) ? value : StorageInvalidValue.Instance;

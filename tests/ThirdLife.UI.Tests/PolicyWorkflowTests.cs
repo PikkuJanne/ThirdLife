@@ -149,7 +149,7 @@ public sealed class PolicyWorkflowTests
         await reopened.GenerateReportAsync();
         await reopened.OpenReportAsync();
         var report = reopened.ReportPreview;
-        Assert.Contains("Schema: workshop-disposition-v2", report, StringComparison.Ordinal);
+        Assert.Contains("Schema: workshop-technical-v3", report, StringComparison.Ordinal);
         Assert.Contains("Saved observations", report, StringComparison.Ordinal);
         Assert.Contains($"Evidence ID {observedId.Value}.", report, StringComparison.Ordinal);
         Assert.Contains($"Policy ID {first.PolicyId}.", report, StringComparison.Ordinal);

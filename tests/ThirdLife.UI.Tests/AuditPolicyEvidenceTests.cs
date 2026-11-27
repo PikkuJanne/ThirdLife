@@ -65,6 +65,72 @@ public sealed class AuditPolicyEvidenceTests
     }
 
     [Theory]
+    [InlineData("healthy", true, true, PolicyRuleState.Met)]
+    [InlineData("warning", true, true, PolicyRuleState.Unmet)]
+    [InlineData("unhealthy", true, true, PolicyRuleState.Unmet)]
+    [InlineData("healthy", false, true, PolicyRuleState.Unavailable)]
+    [InlineData("healthy", true, false, PolicyRuleState.Unavailable)]
+    [InlineData("unrecognized", true, true, PolicyRuleState.Unavailable)]
+    public async Task SystemDiskHealthRequiresTheOwnedBootPartitionObservation(string value, bool inferred, bool owned,
+        PolicyRuleState expectedState)
+    {
+        using var disk = new AuditTestStore();
+        const string key = "storage.system.health_state";
+        var source = owned ? "storage.msft.boot_partition_disk" : "storage.msft.physical_disk.00";
+        var health = inferred
+            ? NormalizedEvidence.Inferred(new EvidenceKey(key), EvidenceValue.FromEnum(value), sourceReference: source)
+            : EnumFact(key, value, source);
+        var provider = new ProjectionProvider("windows-system-disk-health", [health]);
+        await using var workspace = OpenLive(disk, provider);
+        await AssessAsync(workspace);
+        var job = Assert.IsType<StoredJob>(workspace.Job);
+        var assessment = Assert.IsType<AssessmentSnapshot>(workspace.Assessment);
+        var candidate = Assert.IsType<PolicySnapshot>(WorkshopPolicyCandidate.ForDeviceClass(PolicyDeviceClass.Laptop));
+        var projected = AuditPolicyEvidence.Create(job, assessment, SampleTime);
+        var outcome = PolicyEvaluator.Evaluate(candidate.Document, projected, activeCapabilityIds: null).Outcomes
+            .Single(outcome => outcome.Rule.Requirement.RequirementId.Value == "POL-STORAGE-003");
+
+        Assert.Equal(expectedState, outcome.State);
+        if (owned)
+        {
+            Assert.Same(Fact(assessment.Observations, key).Metadata, Fact(projected, key).Metadata);
+        }
+        else
+        {
+            Assert.DoesNotContain(projected, fact => fact.EvidenceKey.Value == key);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, PolicyRuleState.Met)]
+    [InlineData(true, PolicyRuleState.Unavailable)]
+    public async Task FinalVerificationUsesFreshSystemDiskHealth(bool staleObservation, PolicyRuleState expectedState)
+    {
+        using var disk = new AuditTestStore();
+        const string key = "storage.system.health_state";
+        await using var workspace = OpenLive(disk, HealthProvider("warning"));
+        await AssessAsync(workspace);
+        var job = Assert.IsType<StoredJob>(workspace.Job);
+        var original = Assert.IsType<AssessmentSnapshot>(workspace.Assessment);
+        await using var store = await disk.OpenSqliteAsync();
+        var verifier = new AssessmentOrchestrator(store, [HealthProvider("healthy")],
+            staleObservation ? new ClockWithRegressedObservation() : new FixedClock());
+        var fresh = await verifier.VerifyAsync(job.Job.JobId, original.GateDecisionId);
+        var projected = AuditPolicyEvidence.CreateForFinalVerification(job, fresh, original, SampleTime);
+        var health = Fact(projected, key);
+        Assert.Same(Fact(fresh.Observations, key).Metadata, health.Metadata);
+        Assert.NotEqual(Fact(original.Observations, key).Metadata.EvidenceId, health.Metadata.EvidenceId);
+        Assert.Equal(staleObservation ? "provider_value_stale" : null, health.LimitationCode);
+        var candidate = Assert.IsType<PolicySnapshot>(WorkshopPolicyCandidate.ForDeviceClass(PolicyDeviceClass.Laptop));
+        Assert.Equal(expectedState, PolicyEvaluator.Evaluate(candidate.Document, projected, activeCapabilityIds: null).Outcomes
+            .Single(outcome => outcome.Rule.Requirement.RequirementId.Value == "POL-STORAGE-003").State);
+
+        static ProjectionProvider HealthProvider(string value) => new("windows-system-disk-health",
+            [NormalizedEvidence.Inferred(new EvidenceKey(key), EvidenceValue.FromEnum(value),
+                sourceReference: "storage.msft.boot_partition_disk")]);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task FinalProjectionChecksFreshCallerFreeSpaceAndPreservesAttributedGuidedReview(bool staleObservation)

@@ -149,6 +149,8 @@ internal static class AuditPolicyEvidence
                 "os.lifecycle.fresh_through" or "os.lifecycle.evaluated_on" or "os.lifecycle.release" or "os.lifecycle.reason"
                 when IsLifecycle(fact) => fact,
             "os.architecture" when IsOwned(fact, OsProvider, "os.dotnet.os_architecture") => fact,
+            "storage.system.health_state" when IsOwned(fact, "windows-system-disk-health", "storage.msft.boot_partition_disk") =>
+                ProjectStorageHealth(fact),
             "system.architecture" when IsSystemArchitecture(fact) => WithLimit(fact, fact.EvidenceKey, architectureIssue),
             "security.last_successful_sync_utc" when IsOwned(fact, SecurityProvider, "security.w32time.last_successful_sync") =>
                 ProjectTimeSync(fact, evaluatedAtUtc),
@@ -167,6 +169,11 @@ internal static class AuditPolicyEvidence
             _ when IsTrustedDirectFact(fact) => fact,
             _ => null,
         };
+
+    private static Observation ProjectStorageHealth(Observation fact) =>
+        fact.Value is null || (fact.Metadata.EvidenceClassification == EvidenceClassification.Inferred &&
+            fact.Unit is null && fact.Value is { Kind: EvidenceValueKind.Enum, StringValue: "healthy" or "warning" or "unhealthy" })
+            ? fact : WithLimit(fact, fact.EvidenceKey, Malformed);
 
     private static Observation ProjectSecurityEnum(Observation fact, EvidenceClassification expectedClass) =>
         fact.Value is null || (fact.Value.Kind == EvidenceValueKind.Enum && fact.Metadata.EvidenceClassification == expectedClass)

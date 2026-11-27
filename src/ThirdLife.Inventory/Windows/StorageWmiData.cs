@@ -5,6 +5,8 @@ internal enum StorageWmiQuery
     PhysicalDisks,
     ReliabilityCounters,
     PhysicalDiskCounterAssociations,
+    SystemPartition,
+    SystemDisk,
 }
 
 internal enum StorageWmiValueKind
@@ -13,6 +15,7 @@ internal enum StorageWmiValueKind
     Reference,
     UInt8,
     UInt16,
+    UInt32,
     UInt64,
     UInt16Array,
 }
@@ -27,7 +30,8 @@ internal sealed record StorageWmiSnapshot(
     StorageWmiQueryResult PhysicalDisks,
     StorageWmiQueryResult ReliabilityCounters,
     StorageWmiQueryResult Associations,
-    bool CleanupComplete = true);
+    bool CleanupComplete = true,
+    SystemInventorySourceValue<ushort>? SystemDiskHealth = null);
 
 internal interface IStorageWmiSource
 {

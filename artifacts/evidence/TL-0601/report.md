@@ -52,3 +52,35 @@ ActiveMachine M1 case failed its Intake focus assertion before reaching
 Handover. The same assertion failed in isolation on the earlier clean
 `84e47d5` source with unchanged UI and UI test content relative to the
 `7615a33` base. That case stays open as an active-desktop observation.
+
+The Targeted command was `./eng/verify.ps1 -Tier Targeted -TestProject` with
+the Persistence and Verification test projects. It passed in 310.976 s.
+Quick and the related projects passed 1,594 .NET cases with zero skips,
+eight work-selection regressions, both validators, formatting and a Release
+build with zero warnings and errors.
+
+Clean Full used `./eng/verify.ps1 -Tier Full -Restore` on detached
+`be6069969f66b0971fd30454cef74cc9199e912a`. It passed in 700.420 s with
+310 governance regressions in 449.322 s and 2,558 deterministic .NET tests
+across 13 assemblies with zero skips. The workspace remained clean.
+The baseline and candidate checks used the pinned PyYAML dependency and
+the built-in structural validator. The clean pass excludes Native and
+Extended cases under the standard filter.
+
+The clean Release apphost opened unelevated and reached Inspect via external
+UI Automation in 1.421 s. It exited normally in 1.608 s. The apphost SHA-256
+was `946486f1e374d2f694c09081ba59aaf6ecc26912eec7d37c1ec940068d362f04`
+and the UI assembly SHA-256 was
+`1c4d4627416549c5660dee7f339895aa0fae8e04f4c6b3b29693ea80063e404c`.
+The desktop smoke covered startup and navigation. The controlled Handover
+case above covers checklist operation.
+
+The supplementary GitHub Windows check passed the same source.
+[Supplementary check](https://github.com/PikkuJanne/ThirdLife/actions/runs/46035322146/job/140629140243) ·
+[Integration PR](https://github.com/PikkuJanne/ThirdLife/pull/83)
+
+The evidence-only checkpoint passed continuity Quick in 274.025 s with
+1,367 .NET cases and eight work-selection regressions. The 120 s target
+was exceeded while the machine also ran other feature verification. The
+WPF suite took 162 s and the Release build took 22.44 s. The code and
+migration match the clean Full source.

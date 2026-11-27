@@ -7,10 +7,8 @@ not evaluate policy, choose a deployment disposition, diagnose a fault, calculat
 score, or claim remaining device life. The assessment orchestrator remains TL-0112 work.
 
 Physical-disk evidence belongs to `storage.physical_disk.*`. System-volume evidence belongs
-to `storage.system_volume.*`. No disk is inferred to contain Windows, and no health value is
-assigned to the system volume. The older `storage.system.*` pilot fixtures remain synthetic
-future policy inputs; this provider does not give their ambiguous capacity/health names a new
-meaning or change those fixtures.
+to `storage.system_volume.*`. The original `StorageProvider` reports both independently.
+The separate system disk health provider supplies the Windows boot disk fact described below.
 
 ## Sources and privacy
 
@@ -77,6 +75,21 @@ All capacity/free-space units are bytes. Caller-free bytes cannot exceed caller 
 total-free bytes. Total-free bytes may exceed caller capacity when quotas apply. No ratio,
 physical capacity or volume-to-disk mapping is derived from these three values.
 
+## Windows system disk health
+
+`SystemDiskHealthProvider` resolves the local fixed volume that contains the Windows directory.
+It requires a plain drive-letter root. A fixed local `MSFT_Partition` query matches that letter
+to one online boot partition. A second local query checks the exact `MSFT_Disk` number and
+requires one online boot disk. Only a documented health code produces the inferred
+`storage.system.health_state` value. An absent, ambiguous, denied, malformed, or unsupported
+result leaves the rule without health evidence.
+
+The provider sets packet privacy on the local WMI service and enumeration interfaces while
+running with the current unelevated token. It calls no WMI mutation methods. It publishes one
+workshop-restricted health value or limitation, plus bounded provider status on failure.
+Drive letters and disk numbers stay inside the source. The matched Windows disk may be a
+virtual or logical disk. Its health status covers that disk as reported by Windows.
+
 ## Failure and resource semantics
 
 Null, absent, unsupported, denied, malformed or unrepresentable fields remain not available.
@@ -118,6 +131,9 @@ is part of this task.
 - [Quota-aware volume free-space API](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getdiskfreespaceexw)
 - [System Windows directory](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemwindowsdirectoryw)
 - [Volume-path resolution](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getvolumepathnamew)
+- [Boot-partition disk number and drive letter](https://learn.microsoft.com/en-us/windows-hardware/drivers/storage/msft-partition)
+- [Windows disk number and health status](https://learn.microsoft.com/en-us/windows-hardware/drivers/storage/msft-disk)
+- [WMI proxy authentication and packet privacy](https://learn.microsoft.com/en-us/windows/win32/wmisdk/setting-authentication-using-c-)
 - [WMI numeric representations](https://learn.microsoft.com/en-us/windows/win32/wmisdk/numbers)
 - [Bounded WMI enumeration](https://learn.microsoft.com/en-us/windows/win32/api/wbemcli/nf-wbemcli-ienumwbemclassobject-next)
 - [WMI connection limits](https://learn.microsoft.com/en-us/windows/win32/api/wbemcli/nf-wbemcli-iwbemlocator-connectserver)
