@@ -1,0 +1,25 @@
+# TL-0506 read-only security observations
+
+On 2026-11-27 the active Windows 11 x64 host ran the production security provider under a standard token. Inspect starts this provider in the existing sanitization-gated inventory assessment. The journal retains typed observations under the job. The restricted workshop report projects the named fields. Earlier assessments and saved policy decisions retain their source data and policy versions.
+
+| Check | Source and evidence scope |
+|---|---|
+| Firewall, antivirus and UAC health | Three Windows Security Center category queries. A stopped service returns unavailable. Category health establishes neither a particular antivirus identity nor the configuration of each firewall profile. |
+| Defender | A local, read-only projection of service, antivirus, real-time protection and signature freshness. The positive state requires all four observations. Organization approval of a product remains a policy matter. |
+| UAC and Windows Remote Desktop | Native-view DWORD settings. A conflict between UAC configuration and Security Center health stays unresolved. The Remote Desktop switch omits effective network reachability and other remote support products. |
+| Time | Windows NTP client configuration. A recent successful synchronization still needs its own observation. |
+| Ownership and management | Local domain join, MDM registration without requesting the registered user, and device or current-user work-account join. Each positive management signal feeds the existing blocking ownership rule. An empty or partially unavailable set cannot establish ownership clearance. Third-party tools, firmware and other users' work accounts are outside the three probes. |
+| Volume encryption | BitLocker system-volume protection status at collection. An unavailable namespace, denied query, unknown state or missing row yields no protection claim. No key or protector is read. |
+| Restart, activation, TPM, Secure Boot, OS support | The original providers keep ownership of these fields. The existing restart indicators can establish a pending restart. Absence of those indicators leaves final restart clearance unresolved. |
+
+All sources are fixed local Windows interfaces. The provider runs on demand with one worker per instance and a ten-second caller timeout. Its two WMI queries each accept at most one row, use bounded enumeration and release COM objects. A Windows call can outlive the caller timeout. The instance retains admission until cleanup and blocks reuse after a cleanup failure. Registry reads use a fixed four-byte buffer. Domain names, join account details, identities, account names, product text, raw provider messages and encryption keys have no persistent projection. No security setting is changed.
+
+The subset uses the existing candidate ownership rule. The rest of the versioned security policy, recent time synchronization and the operator workflow for unexplained administrator and remote-access review remain TL-0506 engineering. TL-0611 retains the eventual pilot security disposition.
+
+The fixed Windows API contracts are documented by Microsoft. [Security Center](https://learn.microsoft.com/en-us/windows/win32/api/wscapi/nf-wscapi-wscgetsecurityproviderhealth), [domain join](https://learn.microsoft.com/en-us/windows/win32/api/lmjoin/nf-lmjoin-netgetjoininformation), [work account join](https://learn.microsoft.com/en-us/windows/win32/api/lmjoin/nf-lmjoin-netgetaadjoininformation), [MDM registration](https://learn.microsoft.com/en-us/windows/win32/api/mdmregistration/nf-mdmregistration-isdeviceregisteredwithmanagement), [Defender status](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/defender/msft-mpcomputerstatus), [volume protection](https://learn.microsoft.com/en-us/windows/win32/secprov/win32-encryptablevolume).
+
+## Active-host checks
+
+- Baseline at `967ae8d` passed 37 inventory import and reboot-provider checks.
+- `dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName~SecurityBaselineProviderTests|FullyQualifiedName~InventoryReadOnlyBoundaryTests"` passed 28 checks in five seconds. This selection includes one real unelevated Windows source smoke, synthetic positive/negative/unknown and conflicting cases, cleanup admission and the reviewed read-only API boundary. The smoke permits unavailable native values and checks bounded output.
+- Three focused WPF workspace cases exercised stored assessment, projection into the policy evaluator, the UI finding and the restricted report. A correctly attributed management indicator produced do-not-deploy. An untrusted source and an attempted automated clearance could not satisfy ownership.

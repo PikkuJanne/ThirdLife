@@ -57,6 +57,11 @@ internal static class WorkshopObservationFields
         Add("windows-operating-system", EvidenceValueKind.Enum,
             "os.edition", "os.architecture", "os.support_target", "os.family", "os.lifecycle.reason", "os.provider_status");
         Add("windows-operating-system", EvidenceValueKind.WholeNumber, "os.build", "os.edition_code");
+        Add("windows-security-baseline", EvidenceValueKind.Enum, "security.firewall_health", "security.antivirus_health",
+            "security.uac_health", "security.uac_configured", "security.uac_state", "security.remote_desktop_configured",
+            "security.ntp_client_configured", "ownership.domain_join", "ownership.mdm_registration", "ownership.cloud_join",
+            "ownership.lock_state", "security.baseline_provider_status", "security.defender_health",
+            "security.system_volume_protection");
         Add("windows-activation", EvidenceValueKind.Enum, "activation.state", "activation.provider_status");
         Add("windows-pending-reboot", EvidenceValueKind.Enum, "reboot.pending_status", "reboot.provider_status");
         foreach (var source in new[] { "cbs", "windows_update", "file_rename" })
