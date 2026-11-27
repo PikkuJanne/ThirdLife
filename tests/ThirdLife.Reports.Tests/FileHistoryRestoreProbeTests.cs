@@ -1,4 +1,3 @@
-using System.Runtime.Versioning;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -6,7 +5,6 @@ using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Handover;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Reports.Storage;
-using ThirdLife.Reports.WorkshopReport;
 
 namespace ThirdLife.Reports.Tests;
 
@@ -67,6 +65,26 @@ public sealed class FileHistoryRestoreProbeTests
         Assert.Null(fixture.Probe.Observe(fixture.Sample));
     }
 
+    [Fact]
+    public void ExactSamplePreparationIsBoundedAndPreservesEarlierFiles()
+    {
+        if (!OperatingSystem.IsWindows()) { return; }
+        using var fixture = new RestoreFixture();
+        Assert.Equal(FileHistorySamplePreparation.Prepared, fixture.Probe.Prepare(fixture.Sample));
+        Assert.Equal(FileHistorySamplePreparation.Unavailable, fixture.Probe.Prepare(fixture.Sample));
+        for (var index = 1; index < 16; index++)
+        {
+            var additional = fixture.Approval.CreateRestoreSample(fixture.Handover, true, fixture.Destination);
+            Assert.Equal(FileHistorySamplePreparation.Prepared, fixture.Probe.Prepare(additional));
+        }
+
+        var beyondLimit = fixture.Approval.CreateRestoreSample(fixture.Handover, true, fixture.Destination);
+        Assert.Equal(FileHistorySamplePreparation.CapacityReached, fixture.Probe.Prepare(beyondLimit));
+        Assert.Equal(fixture.Sample.CopyContent(), File.ReadAllBytes(Path.Combine(fixture.Original, fixture.Sample.FileName)));
+        Assert.False(File.Exists(Path.Combine(fixture.Original, beyondLimit.FileName)));
+        Assert.Empty(Directory.EnumerateFiles(fixture.Recovered));
+    }
+
     private sealed class RestoreFixture : IDisposable
     {
         private readonly DirectoryInfo _owned = Directory.CreateTempSubdirectory("ThirdLife-restore-proof-");
@@ -88,25 +106,9 @@ public sealed class FileHistoryRestoreProbeTests
             Sample = Approval.CreateRestoreSample(Handover, true, Destination);
         }
 
-        [SupportedOSPlatform("windows")]
         public void Prepare()
         {
-            // The existing report writer provisions a protected root for each isolated fixture.
-            new WorkshopReportStore(Original).Write(_job, "Fixture");
-            new WorkshopReportStore(Recovered).Write(_job, "Fixture");
-            var file = new FileInfo(Path.Combine(Original, Sample.FileName));
-            var security = new DirectoryInfo(Original).GetAccessControl();
-            var rules = security.GetAccessRules(includeExplicit: true, includeInherited: false, typeof(SecurityIdentifier));
-            var fileSecurity = new FileSecurity();
-            fileSecurity.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
-            foreach (FileSystemAccessRule rule in rules)
-            {
-                fileSecurity.AddAccessRule(new FileSystemAccessRule(
-                    rule.IdentityReference, rule.FileSystemRights, rule.AccessControlType));
-            }
-            using var original = file.Create(FileMode.CreateNew, FileSystemRights.FullControl, FileShare.None,
-                4096, FileOptions.None, fileSecurity);
-            original.Write(Sample.CopyContent());
+            Assert.Equal(FileHistorySamplePreparation.Prepared, Probe.Prepare(Sample));
         }
 
         public void Save(string root, byte[] bytes) => File.WriteAllBytes(Path.Combine(root, Sample.FileName), bytes);

@@ -8,6 +8,7 @@ namespace ThirdLife.UI.Features.ManualTests;
 public partial class AuditWorkspaceView
 {
     private (JobId JobId, long Sequence)? _backupReadinessContext;
+    private Guid? _shownBackupReadinessReview;
     private string? _lastBackupReadiness;
     internal Func<string?>? SelectBackupDriveForTesting { get; set; }
 
@@ -48,9 +49,37 @@ public partial class AuditWorkspaceView
         if (_workspace is not null) { Workspace.InvalidateBackupReadiness(); }
     }
 
+    private async void PrepareBackupSample(object sender, RoutedEventArgs e)
+    {
+        if (Workspace.BackupReadinessReviewId is not { } reviewId) { return; }
+        if (BackupSampleConfirmed.IsChecked != true)
+        {
+            SetError(BackupReadinessError, "Confirm the displayed drive and scope with the recipient.");
+            FocusAndReveal(BackupSampleConfirmed);
+            return;
+        }
+        SetError(BackupReadinessError, string.Empty);
+        FocusAndReveal(BackupReadinessMessage);
+        await Workspace.PrepareBackupSampleAsync(reviewId, recipientConfirmed: true);
+    }
+
+    private async void CheckBackupSample(object sender, RoutedEventArgs e)
+    {
+        FocusAndReveal(BackupReadinessMessage);
+        await Workspace.CheckBackupSampleAsync();
+    }
+
     private void RefreshBackupReadiness()
     {
         BackupReadinessRegion.Visibility = VisibleWhen(Workspace.ShowsBackupReadiness);
+        var review = Workspace.BackupReadinessReviewId;
+        if (_shownBackupReadinessReview != review)
+        {
+            _shownBackupReadinessReview = review;
+            BackupSampleConfirmed.IsChecked = false;
+        }
+        BackupSampleRegion.Visibility = VisibleWhen(review.HasValue);
+        BackupPreparedRegion.Visibility = VisibleWhen(Workspace.ShowsBackupSampleCheck);
         (JobId, long)? context = Workspace.ShowsBackupReadiness && Workspace.RecipientHandover is { } handover
             ? (handover.JobId, handover.Sequence) : null;
         if (_backupReadinessContext != context)

@@ -8,6 +8,7 @@ using System.Windows.Media;
 using ThirdLife.Core.Handover;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Persistence;
+using ThirdLife.Reports.Storage;
 using ThirdLife.UI.Features.ManualTests;
 using ThirdLife.UI.Shell;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
@@ -19,6 +20,62 @@ namespace ThirdLife.UI.Tests;
 [Collection(ShellWindowChecks.Name)]
 public sealed class AuditBackupReadinessTests
 {
+    [Fact]
+    [Trait("Category", "ActiveMachine")]
+    [Trait("Category", "Extended")]
+    public async Task PreparesAnIsolatedSampleOnlyAfterTheRecipientConfirmsTheCurrentReview()
+    {
+        var volume = Environment.GetEnvironmentVariable("THIRDLIFE_FILE_HISTORY_TEST_VOLUME");
+        Assert.False(string.IsNullOrWhiteSpace(volume), "Specify the exact test volume root for this observation.");
+        using var disk = new AuditTestStore();
+        var original = Path.Combine(disk.Root, "original");
+        var recovered = Path.Combine(disk.Root, "recovered");
+        var time = TimeProvider.System;
+        await using var workspace = new AuditWorkspace(
+            async token => await SqliteJobStore.OpenForTestingAsync(Path.Combine(disk.Root, "store"),
+                SqliteJobStore.CurrentSchemaVersion, time, null, () => 180_000, () => 10, token).ConfigureAwait(false),
+            [AuditTestProvider.Available("file-history-sample", ProviderEvidenceOrigin.ActiveMachine)], time,
+            backupSampleProbe: new FileHistoryRestoreProbe(original, recovered));
+        await workspace.CreateJobAsync();
+        await workspace.RecordSanitizationAsync(VerifiedSample());
+
+        InHandover(workspace, (window, element) =>
+        {
+            var view = Assert.IsType<AuditWorkspaceView>(element);
+            var mode = Named<ComboBox>(view, "HandoverModeChoice");
+            mode.SelectedValue = HandoverMode.Assisted;
+            Named<TextBox>(view, "HandoverModeOperator").Text = "operator-backup-sample";
+            Invoke(window, Named<Button>(view, "SaveHandoverModeButton"));
+            PumpUntil(window, () => workspace.CanCheckBackupReadiness);
+            Named<TextBox>(view, "BackupScopeMebibytes").Text = "1";
+            Named<CheckBox>(view, "BackupRecoveryConfirmed").IsChecked = true;
+            view.SelectBackupDriveForTesting = () => volume;
+            Invoke(window, Named<Button>(view, "CheckBackupReadinessButton"));
+            PumpUntil(window, () => workspace.CanPrepareBackupSample);
+            var approval = Named<CheckBox>(view, "BackupSampleConfirmed");
+            var prepare = Named<Button>(view, "PrepareBackupSampleButton");
+            Assert.Contains("declared 1 MiB", workspace.BackupReadinessStatus, StringComparison.Ordinal);
+            Invoke(window, prepare);
+            Assert.Same(approval, Keyboard.FocusedElement);
+            Assert.False(Directory.Exists(original));
+            approval.IsChecked = true;
+            Invoke(window, prepare);
+            PumpUntil(window, () => !workspace.IsBusy && workspace.CanCheckBackupSample);
+            Assert.Contains("Backup remains pending", workspace.BackupReadinessStatus, StringComparison.Ordinal);
+            var sample = Assert.Single(Directory.EnumerateFiles(original, "thirdlife-restore-*.txt"));
+            Assert.StartsWith("ThirdLife File History restore sample", File.ReadAllText(sample), StringComparison.Ordinal);
+            Assert.Contains(Path.GetFileName(sample), workspace.BackupSampleRecoveryInstructions, StringComparison.Ordinal);
+            Assert.Empty(Directory.EnumerateFiles(recovered));
+            var checkCopy = Named<Button>(view, "CheckBackupSampleButton");
+            Invoke(window, checkCopy);
+            PumpUntil(window, () => !workspace.IsBusy && workspace.BackupReadinessStatus.Contains("unavailable", StringComparison.Ordinal));
+            File.Copy(sample, Path.Combine(recovered, Path.GetFileName(sample)));
+            Invoke(window, checkCopy);
+            PumpUntil(window, () => !workspace.IsBusy && workspace.BackupReadinessStatus.StartsWith("The separate copy matches", StringComparison.Ordinal));
+            Assert.Contains("Backup remains pending", workspace.BackupReadinessStatus, StringComparison.Ordinal);
+        });
+    }
+
     [Fact]
     [Trait("Category", "ActiveMachine")]
     public async Task AssistedReadinessRequiresRecipientAndRejectsTheSystemVolume()

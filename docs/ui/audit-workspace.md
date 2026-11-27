@@ -263,3 +263,17 @@ root separate from the Windows system volume. TRACE reports whether
 Windows File History prerequisites and the declared capacity are present.
 Backup remains pending until a separately restored harmless sample
 is verified. Sealed handover leaves this choice with the recipient.
+
+After the drive and estimate are shown, confirm the scope with the
+recipient and choose **Prepare harmless restore sample**. TRACE shows
+the generated file and the separate local recovery folder. Any Windows
+File History operation requires the recipient to review the actual
+included libraries and exact destination in Windows. Use its restore-to
+choice to avoid replacing the original.
+
+**Check separate recovered copy** compares the protected original
+and recovered files. The current check reports unavailable, mismatched
+or matching bytes. Backup setup remains pending until an attributable
+Windows restore can be recorded. The current sample review is scoped to
+the open handover session.
+[Private sample locations](../data-locations.md) · [Windows File History](https://support.microsoft.com/en-us/windows/experience/backup-recovery/backup-and-restore-with-file-history)

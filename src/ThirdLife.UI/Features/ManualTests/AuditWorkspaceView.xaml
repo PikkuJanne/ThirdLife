@@ -363,6 +363,17 @@
             <TextBlock x:Name="BackupReadinessMessage" Text="{Binding BackupReadinessStatus}" Focusable="True"
                        KeyboardNavigation.IsTabStop="False" AutomationProperties.Name="{Binding BackupReadinessStatus}"
                        AutomationProperties.LiveSetting="Polite" Margin="0,8,0,0" />
+            <StackPanel x:Name="BackupSampleRegion" Visibility="Collapsed" IsEnabled="{Binding CanPrepareBackupSample}">
+              <CheckBox x:Name="BackupSampleConfirmed" Content="The recipient confirms the displayed drive and scope for this test"
+                        Margin="0,8,0,0" />
+              <Button x:Name="PrepareBackupSampleButton" Content="Prepare harmless restore sample" Click="PrepareBackupSample"
+                      HorizontalAlignment="Left" Margin="0,8,0,0" />
+            </StackPanel>
+            <StackPanel x:Name="BackupPreparedRegion" Visibility="Collapsed" Margin="0,8,0,0">
+              <TextBlock Text="{Binding BackupSampleRecoveryInstructions}" />
+              <Button x:Name="CheckBackupSampleButton" Content="Check separate recovered copy" Click="CheckBackupSample"
+                      IsEnabled="{Binding CanCheckBackupSample}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+            </StackPanel>
             <TextBlock x:Name="BackupReadinessError" Style="{DynamicResource Trace.ErrorText}" AutomationProperties.LiveSetting="Polite" />
           </StackPanel>
         </GroupBox>

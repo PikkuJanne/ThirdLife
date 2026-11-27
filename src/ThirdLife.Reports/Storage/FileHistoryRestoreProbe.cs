@@ -7,10 +7,19 @@ using ThirdLife.Diagnostics.Logging;
 
 namespace ThirdLife.Reports.Storage;
 
-/// <summary>Independently reads the exact harmless sample from two protected directories.</summary>
+public enum FileHistorySamplePreparation
+{
+    Prepared = 1,
+    CapacityReached,
+    Unavailable,
+}
+
+/// <summary>Stages and independently reads the exact harmless sample in two protected directories.</summary>
 public sealed class FileHistoryRestoreProbe
 {
     private const int MaximumSampleBytes = 4096;
+    private const int MaximumPreparedSamples = 16;
+    private const string WriteLockName = ".restore-sample.lock";
     private readonly string _originalDirectory;
     private readonly string _recoveredDirectory;
 
@@ -21,6 +30,41 @@ public sealed class FileHistoryRestoreProbe
         if (string.Equals(_originalDirectory, _recoveredDirectory, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("The restore sample requires two separate directories.");
+        }
+    }
+
+    public FileHistorySamplePreparation Prepare(FileHistoryRestoreSample sample, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!OperatingSystem.IsWindows())
+        {
+            return FileHistorySamplePreparation.Unavailable;
+        }
+
+        try
+        {
+            using var original = new DiagnosticStoreSecurity(_originalDirectory);
+            using var recovered = new DiagnosticStoreSecurity(_recoveredDirectory);
+            recovered.EnsureSafeRoot();
+            using var writeLock = original.TryAcquireExclusiveLock(Path.Combine(_originalDirectory, WriteLockName));
+            if (writeLock is null) { return FileHistorySamplePreparation.Unavailable; }
+            if (Directory.EnumerateFileSystemEntries(_originalDirectory)
+                .Where(entry => !Path.GetFileName(entry).Equals(WriteLockName, StringComparison.Ordinal))
+                .Take(MaximumPreparedSamples).Count() == MaximumPreparedSamples)
+            {
+                return FileHistorySamplePreparation.CapacityReached;
+            }
+
+            var staging = Path.Combine(_originalDirectory, $".sample-{sample.SampleId:N}.tmp");
+            var published = Path.Combine(_originalDirectory, sample.FileName);
+            return ProtectedArtifactPublication.Publish(original, sample.CopyContent(), staging, published, cancellationToken)
+                ? FileHistorySamplePreparation.Prepared : FileHistorySamplePreparation.Unavailable;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SecurityException or
+            DiagnosticContractException or NotSupportedException)
+        {
+            return FileHistorySamplePreparation.Unavailable;
         }
     }
 
