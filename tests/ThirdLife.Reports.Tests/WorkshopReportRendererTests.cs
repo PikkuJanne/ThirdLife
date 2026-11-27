@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Finalization;
+using ThirdLife.Core.Handover;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
 using ThirdLife.Core.Sanitization;
@@ -234,6 +235,24 @@ public sealed class WorkshopReportRendererTests
         Assert.Contains("No checklist result is available. Required workshop checks remain unverified.", missing, StringComparison.Ordinal);
         Assert.Throws<ArgumentException>(() => WorkshopReportRenderer.RenderTechnicalRecord(Stored(), null, null, [],
             null, null, new([], review with { JobId = new("foreign-job") })));
+    }
+
+    [Fact]
+    public void TechnicalRecordKeepsEarlierSampleEvidenceAndBackupReadinessDistinct()
+    {
+        var review = new WorkshopBackupSampleReview(SampleJob.JobId, FileHistorySampleAuditState.CopyMatches, EarlierHandover: true);
+        var report = WorkshopReportRenderer.RenderTechnicalRecord(Stored(), null, null, [], null, null,
+            new([], BackupSample: review));
+        Assert.Contains("Sample evidence is from an earlier handover.", report, StringComparison.Ordinal);
+        Assert.Contains("The separate recovered copy matched the prepared sample.", report, StringComparison.Ordinal);
+        Assert.Contains("Backup setup remains pending.", report, StringComparison.Ordinal);
+
+        var unavailable = WorkshopReportRenderer.RenderTechnicalRecord(Stored(), null, null, [], null, null,
+            new([], BackupSample: review with { State = null }));
+        Assert.Contains("Saved sample evidence is unavailable.", unavailable, StringComparison.Ordinal);
+        Assert.DoesNotContain("Sample evidence is from an earlier handover.", unavailable, StringComparison.Ordinal);
+        Assert.Throws<ArgumentException>(() => WorkshopReportRenderer.RenderTechnicalRecord(Stored(), null, null, [],
+            null, null, new([], BackupSample: review with { JobId = new("foreign-job") })));
     }
 
     [Fact]
