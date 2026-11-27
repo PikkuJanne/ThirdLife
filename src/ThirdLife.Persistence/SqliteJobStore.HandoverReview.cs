@@ -76,7 +76,8 @@ public sealed partial class SqliteJobStore : IHandoverCompletionStore
                 var saved = new SavedProfileVerification(verification.Record, isCurrent);
                 AddHandoverVerificationEvidence(scope, evidence, saved);
                 var ownershipRules = policy.Snapshot.Document.Rules.Where(rule =>
-                    rule.Requirement.EvidenceKey.Value == "ownership.lock_state" && rule.Decision.BlocksReady).ToArray();
+                    rule.Requirement.EvidenceKey.Value == "ownership.lock_state" && rule.Decision.BlocksReady &&
+                    rule.Condition is EqualCondition { Value.StringValue: "clear" } or OneOfCondition { Values: ["clear"] }).ToArray();
                 var ownershipState = ownershipRules.Length == 0 ? HandoverEvidenceState.Unavailable :
                     ownershipRules.All(rule => verification.Record.Result.PolicyFindings.Any(finding =>
                         finding.RuleId == rule.Requirement.RequirementId && finding.State == PolicyRuleState.Met))

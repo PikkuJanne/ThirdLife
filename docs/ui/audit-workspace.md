@@ -112,6 +112,13 @@ qualification. Pilot and public exposure retain their separate decisions.
 [Backend rationale](../adr/0009-winget-backend.md) ·
 [Release interface](../../RELEASE_INTERFACE.md)
 
+## Export a preparation configuration
+
+In **Prepare**, select a configuration under **Configuration export** and
+preview its ZIP. Review the profile version, file list and digests. Choose a
+local folder to save the copy in its protected `ThirdLifeConfiguration`
+subfolder. This workflow is available before opening a job. [Profile and policy export](../profile-policy-export.md)
+
 ## Final cold-boot verification
 
 At the final full-maintenance verification boundary, open **Verify** and choose
@@ -237,3 +244,13 @@ The saved job records an export intent and, when confirmed, publication of the
 exact ZIP. If a ZIP was saved and writing its receipt failed, **Retry saving
 the export record** completes only the receipt. After an interruption, review
 any saved intent with an unconfirmed outcome before sharing a related copy.
+
+## Recipient Toggle Keys
+
+In assisted handover, review Toggle Keys with the recipient for the current
+Windows user. Select the exact preview, enter the workshop operator code,
+and confirm the recipient's choice before applying it. Windows reads the
+setting again after the attempt. A verified attempt offers a new preview of
+the prior setting, with separate approval before restoration. Sealed handover
+leaves these choices pending. An interrupted attempt stays unverified until
+review, and a new action requires a fresh preview and approval.

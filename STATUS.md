@@ -101,5 +101,13 @@ Entered account and share names stay transient. Unknown and open indications
 remain visible after reopening and in the restricted workshop record.
 [Artifact scan evidence](artifacts/evidence/TL-0602/report.md)
 
+TL-0606 previews and publishes the exact sanitized support ZIP. The job retains
+its digest, versions, operator and publication outcome. Unconfirmed exports
+remain explicit after reopening. [Support export evidence](artifacts/evidence/TL-0606/report.md)
+
+TL-0607 gates Handover sign-off on the exact current evidence and verified
+outputs. Sign-off history survives reopening and becomes historical after
+an observed material change. [Completion evidence](artifacts/evidence/TL-0607/completion.md)
+
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B
 exit remain at TL-0710. [Decision and graph review](docs/reviews/2026-11-27-single-guest-continuation.md)

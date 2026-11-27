@@ -20,8 +20,10 @@ namespace ThirdLife.Persistence.Tests;
 
 public sealed partial class RebootCheckpointStoreTests
 {
-    [Fact]
-    public async Task CompleteReviewSurvivesReopenAndRetainsSignOffAfterMaterialChange()
+    [Theory]
+    [InlineData("clear")]
+    [InlineData("managed_attention")]
+    public async Task CompleteReviewSurvivesReopenAndRetainsSignOffAfterMaterialChange(string ownership)
     {
         using var workspace = new PersistenceTestWorkspace();
         var clock = new FixedTimeProvider(IssueTime);
@@ -32,7 +34,7 @@ public sealed partial class RebootCheckpointStoreTests
         HandoverSignOff signed;
         await using (var store = await Open())
         {
-            var policy = HandoverFixturePolicy();
+            var policy = HandoverFixturePolicy(ownership);
             var intake = new SanitizationEvidence(PersistenceTestData.CreateMetadata("evidence-handover-intake",
                 EvidenceClassification.HumanConfirmed, ProvenanceKind.HumanConfirmation, ValueAvailability.Available),
                 SanitizationState.Verified, "external_sanitization", Approver, PersistenceTestData.Timestamp,
@@ -42,7 +44,7 @@ public sealed partial class RebootCheckpointStoreTests
                 Observed("system.architecture", "x64", "handover-architecture"),
                 Observed("operating_system.release", "windows_11", "handover-release"),
                 Observed("operating_system.support_state", "supported", "handover-support"),
-                Observed("ownership.lock_state", "clear", "handover-ownership"),
+                Observed("ownership.lock_state", ownership, "handover-ownership"),
                 new Observation(intake.Metadata, new("sanitization.state"), EvidenceValue.FromEnum("verified"), null, null, Approver),
             };
             await store.CreateJobAsync(job);
@@ -87,6 +89,12 @@ public sealed partial class RebootCheckpointStoreTests
             }
 
             var before = Assert.IsType<HandoverEligibility>(await store.LoadHandoverReviewAsync(job.JobId, verifier));
+            if (ownership != "clear")
+            {
+                Assert.Contains(new HandoverBlocker(HandoverRequirement.Ownership, HandoverBlockReason.EvidenceUnavailable), before.Blockers);
+                await Assert.ThrowsAsync<JobStoreConflictException>(() => store.CompleteHandoverAsync(before, Approver, verifier));
+                return;
+            }
             Assert.Equal(new[] { HandoverRequirement.WorkshopRecord, HandoverRequirement.RecipientGuide,
                 HandoverRequirement.SupportBundleDecision }, before.Blockers.Select(blocker => blocker.Requirement));
             var workshop = new HandoverFileReceipt(new(HandoverOutputKind.WorkshopRecord, before.Scope, "report-v1", new string('1', 64)), "workshop-fixture.txt", 20);
@@ -119,7 +127,7 @@ public sealed partial class RebootCheckpointStoreTests
             SqliteJobStore.CurrentSchemaVersion, clock, null, () => 10_000, () => boot, (_, _) => observation);
     }
 
-    private static PolicySnapshot HandoverFixturePolicy()
+    private static PolicySnapshot HandoverFixturePolicy(string expectedOwnership)
     {
         var candidate = JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "community-laptop-policy.json")))!.AsObject();
         candidate["status"] = "effective";
@@ -127,7 +135,9 @@ public sealed partial class RebootCheckpointStoreTests
         candidate["claim_scope"] = "handover_contract_fixture";
         candidate["effective"]!["status"] = "effective";
         candidate["effective"]!["effective_from_utc"] = IssueTime.AddHours(-1).ToString("O", CultureInfo.InvariantCulture).Replace("+00:00", "Z", StringComparison.Ordinal);
-        candidate["rules"] = new JsonArray(candidate["rules"]!.AsArray().Single(rule => (string?)rule!["id"] == "POL-OWNERSHIP-001")!.DeepClone());
+        var rule = candidate["rules"]!.AsArray().Single(rule => (string?)rule!["id"] == "POL-OWNERSHIP-001")!.DeepClone();
+        rule["condition"]!["value"] = expectedOwnership;
+        candidate["rules"] = new JsonArray(rule);
         return PolicySnapshot.Parse(Encoding.UTF8.GetBytes(candidate.ToJsonString()));
     }
 

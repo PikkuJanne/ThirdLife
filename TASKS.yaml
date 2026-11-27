@@ -7258,7 +7258,7 @@ tasks:
   workstream: diagnostics
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -7290,9 +7290,30 @@ tasks:
   verification:
   - Run seeded-PII, path attack, symlink/junction, huge-input, cancelled-export, and hostile-destination tests.
   - Manually inspect a representative bundle.
-  evidence: []
+  evidence:
+  - summary: TRACE previews both sanitized files, requires exact review, rejects changed facts and records the digest and operator after publication.
+    task: TL-0606
+    command: eng/verify.ps1 -Tier Targeted with Diagnostics, Reports, Persistence and UI selections in the support archive evidence
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 235.269 s, 1411 Quick .NET tests and 69 selected tests
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated WPF and SQLite, protected local synthetic archive
+    reference: artifacts/evidence/TL-0606/report.md, 7af7721aba6135574486acc3286150309463ab66
+    limitation: External forwarding was unobserved. Process interruption can retain an unconfirmed intent until exact archive verification.
+  - summary: Clean detached Full verified migration 018 and the composed diagnostics, detector, guide and workshop record.
+    task: TL-0606
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 620.459 s, 310 governance tests and 2625 .NET tests across 13 projects
+    environment: Active Windows 11 Pro 26H2 native x64 host, clean detached checkout, SDK 10.0.400
+    reference: artifacts/evidence/TL-0606/report.md, 7af7721aba6135574486acc3286150309463ab66
+    limitation: Deterministic Full checks retain separate native and Extended scopes.
   expected_test_tier: targeted
-  full_test_triggers: []
+  full_test_triggers:
+  - data_migration
   extended_test_triggers: []
 - id: TL-0607
   title: Enforce final sign-off and the blocking handover gate
@@ -7300,7 +7321,7 @@ tasks:
   workstream: handover
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -7334,9 +7355,30 @@ tasks:
   - Attempt sign-off with each blocker class, stale verification, missing report, unauthorized exception, and post-sign-off
     mutation.
   - Verify only the complete eligible path succeeds.
-  evidence: []
+  evidence:
+  - summary: Exact protected review and job-store sign-off reject missing, stale, changed and unauthorized proof. The positive fixture reopened current and preserved history after modeled change.
+    task: TL-0607
+    command: eng/verify.ps1 -Tier Targeted and focused Persistence completion and ownership checks documented in the completion evidence
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 232.114 s composed Targeted, 235.106 s final UI delta Targeted, and focused ownership and completion checks
+    environment: Active Windows 11 Pro 26H2 native x64 host, WPF and protected SQLite, controlled profile and boot observations
+    reference: artifacts/evidence/TL-0607/completion.md, b15fcb617f484751b1fee009bcd28326ff626dc3
+    limitation: The successful handover used injected Windows and output facts. Actual eligible-device handover and exposure retain their own prerequisites.
+  - summary: Clean Full verified the composed schema migration and deterministic application, persistence, reporting and security-boundary coverage.
+    task: TL-0607
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 610.655 s, 310 governance and 2668 .NET tests across 13 projects
+    environment: Active Windows 11 Pro 26H2 native x64 host, clean detached checkout, SDK 10.0.400
+    reference: artifacts/evidence/TL-0607/completion.md, b15fcb617f484751b1fee009bcd28326ff626dc3
+    limitation: Separate native and Extended checks retain their named scopes. The final keyboard and ownership deltas have their own focused evidence.
   expected_test_tier: targeted
-  full_test_triggers: []
+  full_test_triggers:
+  - data_migration
   extended_test_triggers: []
 - id: TL-0608
   title: Complete the v0.1 accessibility audit
@@ -7392,6 +7434,16 @@ tasks:
     environment: Active Windows 11 Pro 26H2 native x64 host, isolated jobs and standard-user WPF
     reference: artifacts/evidence/TL-0608/stage-focus.md, 522d90f3f2e585b8ce3b8735582096196836c55d
     limitation: Verified stage-transition repair. The full M6 technical accessibility audit and perceptual scope remain open.
+  - summary: Handover readiness reflows at twice layout scale, uses isolated high-contrast system colors and moves keyboard focus from its announced result to the next actionable field.
+    task: TL-0608
+    command: dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release with AuditHandoverCompletionTests and ShellAccessibilityTests
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 4 s, six WPF tests
+    environment: Active Windows 11 Pro native x64 host, 660 by 520 DIP window, double layout scale, 22-point test text and long German label
+    reference: artifacts/evidence/TL-0608/handover-signoff.md
+    limitation: Scoped programmatic layout and focus observations. Full audit, audible assistive-technology perception and physical DPI change remain open.
   notes:
   - Engineering audit scope cannot establish full perceptual accessibility. TL-0611 carries the accountable pilot accessibility
     disposition.
@@ -7799,7 +7851,17 @@ tasks:
   verification:
   - Run path/data-map tests and compare installer/uninstaller behavior with the documentation.
   - Search the release package for undocumented persistent locations and sibling data access.
-  evidence: []
+  evidence:
+  - summary: The Prepare stage publishes an exact versioned profile, policy and catalog archive through the protected local writer.
+    task: TL-0703
+    command: eng/verify.ps1 -Tier Targeted -Restore with configuration and shared-writer Reports and UI selections
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 272.300 s, 1418 Quick and 29 selected .NET tests
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated WPF and protected output folders
+    reference: artifacts/evidence/TL-0703/operator-configuration-export.md, f8c5c5a3e03393b2043aefe1fe3b891cc755a215
+    limitation: The verified local archive does not adopt imported inputs. Exact release-package ownership and uninstall/data-preservation verification remain pending under the lifecycle work.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

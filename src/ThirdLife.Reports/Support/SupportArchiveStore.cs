@@ -1,4 +1,6 @@
 using System.Security;
+using System.Security.Cryptography;
+using ThirdLife.Core.Support;
 using ThirdLife.Diagnostics;
 using ThirdLife.Diagnostics.Logging;
 using ThirdLife.Diagnostics.Redaction;
@@ -39,13 +41,7 @@ public sealed class SupportArchiveStore
         var staging = Path.Combine(_directory, $".support-{Guid.NewGuid():N}.tmp");
         try
         {
-            var root = Path.GetPathRoot(_directory);
-            if (root is null || root == _directory ||
-                (OperatingSystem.IsWindows() && (root.Length != 3 || root[1] != ':' ||
-                    _directory.AsSpan(2).Contains(':') || new DriveInfo(root).DriveType != DriveType.Fixed)))
-            {
-                throw ExportFailure("support_destination_unavailable", "Use the protected local support folder.");
-            }
+            var root = RequireLocalSupportRoot();
 
             using var security = new DiagnosticStoreSecurity(_directory);
             security.EnsureSafeRoot();
@@ -79,6 +75,52 @@ public sealed class SupportArchiveStore
         {
             throw ExportFailure("support_export_failed", "Could not publish the support archive in the protected local folder.");
         }
+    }
+
+    public SupportArchiveArtifact VerifyPriorPublication(SupportExportAudit intent, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(intent);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (intent.State != SupportExportState.Pending)
+        {
+            throw new ArgumentException("Verification requires an unconfirmed export intent.", nameof(intent));
+        }
+        var name = $"{intent.InternalSupportId}.zip";
+        try
+        {
+            RequireLocalSupportRoot();
+            using var security = new DiagnosticStoreSecurity(_directory);
+            using var stream = security.OpenValidatedRecord(Path.Combine(_directory, name), FileShare.Read, createRootIfMissing: false);
+            var bytes = stream.Length;
+            if (bytes is <= 0 or > SupportArchivePreview.MaximumArchiveBytes ||
+                !CryptographicOperations.FixedTimeEquals(SHA256.HashData(stream), Convert.FromHexString(intent.ContentSha256)))
+            {
+                throw ExportFailure("support_archive_mismatch", "The protected archive no longer matches the exact approved copy.");
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            return new(name, intent.ContentSha256, (int)bytes);
+        }
+        catch (DiagnosticContractException error) when (error.ResultCode.StartsWith("support_", StringComparison.Ordinal))
+        {
+            throw;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or SecurityException or
+            DiagnosticContractException or NotSupportedException)
+        {
+            throw ExportFailure("support_archive_unavailable", "The exact protected archive could not be verified in that location.");
+        }
+    }
+
+    private string RequireLocalSupportRoot()
+    {
+        var root = Path.GetPathRoot(_directory);
+        if (root is null || root == _directory ||
+            (OperatingSystem.IsWindows() && (root.Length != 3 || root[1] != ':' ||
+                _directory.AsSpan(2).Contains(':') || new DriveInfo(root).DriveType != DriveType.Fixed)))
+        {
+            throw ExportFailure("support_destination_unavailable", "Use the protected local support folder.");
+        }
+        return root;
     }
 
     private static DiagnosticContractException ExportFailure(string code, string message) => new(code, message);

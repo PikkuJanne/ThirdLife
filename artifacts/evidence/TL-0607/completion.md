@@ -34,3 +34,36 @@ Windows host in 232.114 s. All 1,428 Quick .NET tests and 57 selected Core,
 Reports, Persistence and WPF tests passed with zero skips. Formatting,
 repository controls and Release build passed. The clean Full migration gate
 for the final composed source remains to run.
+
+The composed source passed 11 focused WPF checks in 6 s on the active host,
+including the sign-off gate, support archive recovery and Prepare configuration
+export. The main base was `0d4dcb7b9d7a9484dd32048be953846ab183e36a` and the
+recovery source was `d417ea1`. Earlier on `7d08d8d`, the active-host report
+keyboard route and independently invokable Extended maintenance keyboard
+journey both passed in 9 s. Those checks covered fixture journeys and Windows
+focus, with no real device change or assistive-technology perception claim.
+
+## Clean migration gate and integration checks
+
+A detached clean checkout at `b15fcb617f484751b1fee009bcd28326ff626dc3`
+passed `eng/verify.ps1 -Tier Full -Restore` in 610.655 s. All 310 governance
+checks passed in 353.047 s, and all 2,668 .NET tests across 13 projects passed
+with zero skips. Restore, formatting, Release build and both validators
+passed. The default Full selection excludes separately invoked native and
+Extended scenarios. The migration bytes and ending schema are unchanged
+in the integration candidate.
+
+Against the merged recovery base `af8861aafb9ebcca96adb2a5f7d03f8efd8ea8eb`,
+the keyboard-accessibility delta passed Targeted in 235.106 s. It passed
+1,437 Quick .NET tests and 16 selected handover, shell accessibility,
+support recovery and configuration tests. A subsequent boundary review
+required the independent policy finding to prove explicitly clear ownership.
+The positive and nonclear-ownership Persistence cases passed with the
+identical exact maintenance/profile setup. A mis-scoped policy alone
+cannot stand in for the product's ownership prerequisite.
+
+The exact integration candidate with the narrow ownership correction passed
+all eight selected Handover and support-audit Persistence tests in 2 s.
+Both clear ownership and a policy that incorrectly considered managed
+ownership satisfactory used the same modeled maintenance setup. The latter
+retained the ownership blocker and rejected completion.

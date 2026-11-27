@@ -28,3 +28,9 @@ adapter. The actual host setting stayed unchanged. A native write and
 restoration for an actual recipient require the corresponding runtime
 consent. The clean migration gate for the final composed source remains
 pending.
+
+The exact composition against reviewed main
+`7590368dbd293ff017069be9cca4d5148b9bae1b` passed Targeted in 234.073 s.
+It exercised all Quick tests plus nine selected Core, SQLite and WPF
+checks, including the current handover sign-off controls and their
+keyboard regression. All selected cases passed with zero skips.
