@@ -124,6 +124,7 @@ internal sealed partial class AuditWorkspace
                 var actor = new OperatorId(operatorCode.Trim());
                 var staged = await Task.Run(() => store.StageFileHistorySampleAsync(approval, sample, actor));
                 _latestBackupSampleAudit = staged;
+                ClearReport();
                 _backupSampleAuditUnavailable = false;
                 var probe = _backupSampleProbe ?? RegisteredBackupSampleProbe();
                 var outcome = probe is null
@@ -218,6 +219,7 @@ internal sealed partial class AuditWorkspace
             {
                 var saved = await Task.Run(() => store.RecordFileHistorySampleAsync(job.Job.JobId, prepared.Audit, outcome, prepared.OperatorId));
                 _latestBackupSampleAudit = saved;
+                if (saved != prepared.Audit) { ClearReport(); }
                 _preparedBackupSample = prepared with { Audit = saved };
                 BackupReadinessStatus = outcome switch
                 {
@@ -241,12 +243,13 @@ internal sealed partial class AuditWorkspace
         return (available, available ? inventory.InspectDestination(volumeRoot) : null);
     });
 
-    private async Task<(FileHistorySampleAudit? Audit, bool Unavailable)> ReadBackupSampleAuditAsync(JobId jobId)
+    private async Task<(FileHistorySampleAudit? Audit, bool Unavailable)> ReadBackupSampleAuditAsync(JobId jobId,
+        CancellationToken token = default)
     {
         if (_store is not IFileHistorySampleAuditStore store) { return (null, false); }
         try
         {
-            var history = await Task.Run(() => store.LoadFileHistorySampleHistoryAsync(jobId));
+            var history = await Task.Run(() => store.LoadFileHistorySampleHistoryAsync(jobId, token), token);
             return (history.Count == 0 ? null : history[^1], false);
         }
         catch (JobStoreException)

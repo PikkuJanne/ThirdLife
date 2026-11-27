@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
@@ -9,6 +10,7 @@ using ThirdLife.Core.Handover;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Persistence;
 using ThirdLife.Reports.Storage;
+using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Features.ManualTests;
 using ThirdLife.UI.Shell;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
@@ -35,6 +37,7 @@ public sealed class AuditBackupReadinessTests
             async token => await SqliteJobStore.OpenForTestingAsync(Path.Combine(disk.Root, "store"),
                 SqliteJobStore.CurrentSchemaVersion, time, null, () => 180_000, () => 10, token).ConfigureAwait(false),
             [AuditTestProvider.Available("file-history-sample", ProviderEvidenceOrigin.ActiveMachine)], time,
+            reportStore: new WorkshopReportStore(Path.Combine(disk.Root, "reports")),
             backupSampleProbe: new FileHistoryRestoreProbe(original, recovered));
         await workspace.CreateJobAsync();
         await workspace.RecordSanitizationAsync(VerifiedSample());
@@ -76,10 +79,17 @@ public sealed class AuditBackupReadinessTests
             var checkCopy = Named<Button>(view, "CheckBackupSampleButton");
             Invoke(window, checkCopy);
             PumpUntil(window, () => !workspace.IsBusy && workspace.BackupReadinessStatus.Contains("unavailable", StringComparison.Ordinal));
+            Invoke(window, Named<Button>(view, "GenerateReportButton"));
+            PumpUntil(window, () => !workspace.IsBusy && workspace.CanOpenReport, () => workspace.ReportStatus);
+            Invoke(window, Named<Button>(view, "OpenReportButton"));
+            PumpUntil(window, () => !workspace.IsBusy && workspace.ReportPreview.Length > 0, () => workspace.ReportStatus);
+            Assert.Contains("The protected recovered copy was unavailable.", workspace.ReportPreview, StringComparison.Ordinal);
             File.Copy(sample, Path.Combine(recovered, Path.GetFileName(sample)));
             Invoke(window, checkCopy);
             PumpUntil(window, () => !workspace.IsBusy && workspace.BackupReadinessStatus.StartsWith("The separate copy matches", StringComparison.Ordinal));
             Assert.Contains("Backup remains pending", workspace.BackupReadinessStatus, StringComparison.Ordinal);
+            Assert.False(workspace.CanOpenReport);
+            Assert.Empty(workspace.ReportPreview);
             var current = Assert.IsType<ThirdLife.Core.Jobs.StoredJob>(workspace.Job);
             Invoke(window, Named<Button>(view, "CloseJobButton"));
             Assert.Null(workspace.Job);
@@ -112,6 +122,15 @@ public sealed class AuditBackupReadinessTests
             Invoke(window, checkCopy);
             PumpUntil(window, () => !workspace.IsBusy && workspace.BackupReadinessStatus.StartsWith("The separate copy matches", StringComparison.Ordinal));
             Assert.Equal(sample, Assert.Single(Directory.EnumerateFiles(original, "thirdlife-restore-*.txt")));
+            Invoke(window, Named<Button>(view, "GenerateReportButton"));
+            PumpUntil(window, () => !workspace.IsBusy && workspace.CanOpenReport, () => workspace.ReportStatus);
+            Invoke(window, Named<Button>(view, "OpenReportButton"));
+            PumpUntil(window, () => !workspace.IsBusy && workspace.ReportPreview.Length > 0, () => workspace.ReportStatus);
+            Assert.Contains("The separate recovered copy matched the prepared sample.", workspace.ReportPreview, StringComparison.Ordinal);
+            Assert.Contains("Backup setup remains pending.", workspace.ReportPreview, StringComparison.Ordinal);
+            Assert.DoesNotContain(Path.GetFileName(sample), workspace.ReportPreview, StringComparison.Ordinal);
+            Assert.DoesNotContain(Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(sample))),
+                workspace.ReportPreview, StringComparison.Ordinal);
         });
 
         var job = Assert.IsType<ThirdLife.Core.Jobs.StoredJob>(workspace.Job);

@@ -157,6 +157,7 @@ public static partial class WorkshopReportRenderer
         if (technicalRecord is not null)
         {
             WriteFinalizationReview(report, job.Job.JobId, technicalRecord.Finalization, cancellationToken);
+            WriteBackupSampleReview(report, job.Job.JobId, technicalRecord.BackupSample);
         }
 
         return report.ToString();
