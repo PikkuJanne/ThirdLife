@@ -29,7 +29,7 @@ $payload = Join-Path $path 'payload'
 if ($LASTEXITCODE -ne 0) { throw 'Locked restore failed.' }
 # A serial build avoids duplicate project instances writing the same output.
 & dotnet publish $project -c Release --no-restore --self-contained false -m:1 `
-    -p:BuildInParallel=false -p:UseAppHost=true -p:DebugSymbols=false -p:DebugType=None -o $payload
+    -p:BuildInParallel=false -p:UseAppHost=true -p:DebugSymbols=false -p:DebugType=None "-p:PathMap=$repo=/_/ThirdLife" -o $payload
 if ($LASTEXITCODE -ne 0) { throw 'Development publish failed.' }
 
 $app = Join-Path $payload 'ThirdLife.UI.exe'
