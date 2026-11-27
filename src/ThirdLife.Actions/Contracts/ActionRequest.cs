@@ -1,3 +1,5 @@
+using ThirdLife.Core.WindowsUpdates;
+
 namespace ThirdLife.Actions.Contracts;
 
 public abstract class ActionRequest
@@ -55,10 +57,26 @@ public sealed class InstallPackageActionRequest : ActionRequest
     public ActionArchitecture Architecture { get; }
 }
 
+public sealed class WindowsUpdateActionRequest : ActionRequest
+{
+    internal WindowsUpdateActionRequest(Guid actionId, ActionKind kind, WindowsUpdateCandidate? exact)
+        : base(actionId)
+    {
+        Kind = kind;
+        Exact = exact;
+    }
+
+    public override ActionKind Kind { get; }
+    public WindowsUpdateCandidate? Exact { get; }
+}
+
 public enum ActionKind
 {
     NoOp = 1,
     InstallPackage,
+    ScanWindowsUpdate,
+    DownloadWindowsUpdate,
+    InstallWindowsUpdate,
 }
 
 public enum ActionScope

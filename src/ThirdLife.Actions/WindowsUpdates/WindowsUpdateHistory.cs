@@ -1,0 +1,227 @@
+using System.Collections.Immutable;
+using ThirdLife.Core.Evidence;
+using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Sanitization;
+using ThirdLife.Core.WindowsUpdates;
+
+namespace ThirdLife.Actions.WindowsUpdates;
+
+public enum WindowsUpdateStage
+{
+    ScanStarted = 1,
+    ScanCompleted,
+    Approved,
+    DownloadChecked,
+    DownloadStarted,
+    DownloadCompleted,
+    InstallChecked,
+    InstallStarted,
+    InstallCompleted,
+    ResourcesDeferred,
+}
+
+public sealed record WindowsUpdateApproval(Guid ScanId, WindowsUpdateCandidate Exact, OperatorId OperatorId, string PolicyDecisionId);
+
+public sealed record WindowsUpdateVerification(Guid InstallReceiptId, WindowsUpdateInstalledObservation Observation);
+
+public sealed record WindowsUpdateEntry(Guid Id, Guid? PreviousId, JobId JobId, SanitizationGateDecisionId GateId,
+    DateTimeOffset OccurredAtUtc, WindowsUpdateStage Stage, WindowsUpdateScan? Scan, WindowsUpdateApproval? Approval,
+    WindowsUpdateOperation? Operation, ulong? BootUptime = null, WindowsUpdateVerification? Verification = null);
+
+public interface IWindowsUpdateJournal
+{
+    Task<ImmutableArray<WindowsUpdateEntry>> LoadWindowsUpdatesAsync(JobId jobId, CancellationToken token = default);
+
+    // The store checks the predecessor, state transition, current job gate and any required
+    // policy in one transaction. It stamps its own boot observation on scans and restart results.
+    Task<WindowsUpdateEntry> AppendWindowsUpdateAsync(WindowsUpdateEntry entry, CancellationToken token = default);
+}
+
+public static class WindowsUpdateHistory
+{
+    public const int MaximumEntries = 128;
+
+    public static WindowsUpdateDisposition Disposition(ImmutableArray<WindowsUpdateEntry> history)
+    {
+        var latest = history.LastOrDefault();
+        if (latest is null)
+        {
+            return WindowsUpdateDisposition.NotCurrent;
+        }
+
+        // A rescan can report applicability after an interruption. It cannot prove what an
+        // interrupted mutation installed, or release that action for replay.
+        for (var index = 0; index < history.Length; index++)
+        {
+            var entry = history[index];
+            if (entry.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted)
+            {
+                var completion = entry.Stage == WindowsUpdateStage.DownloadStarted
+                    ? WindowsUpdateStage.DownloadCompleted : WindowsUpdateStage.InstallCompleted;
+                if (!history.Skip(index + 1).Any(later => later.Stage == completion && later.PreviousId == entry.Id))
+                {
+                    return WindowsUpdateDisposition.ReviewRequired;
+                }
+            }
+
+            if (entry.Stage == WindowsUpdateStage.InstallCompleted && entry.Operation?.Status != WindowsUpdateStatus.Succeeded)
+            {
+                return WindowsUpdateDisposition.ReviewRequired;
+            }
+        }
+
+        var restart = LatestRestartRequirement(history);
+        if (restart is not null && !HasPostRestartScan(history, restart))
+        {
+            return WindowsUpdateDisposition.RestartRequired;
+        }
+
+        if (history.Any(entry => entry.Stage == WindowsUpdateStage.InstallCompleted && !HasInstalledEvidence(history, entry)))
+        {
+            return WindowsUpdateDisposition.ReviewRequired;
+        }
+
+        if (latest.Scan is { Status: WindowsUpdateStatus.Succeeded } observed &&
+            history.Any(entry => entry is { Stage: WindowsUpdateStage.InstallCompleted, Operation.Status: WindowsUpdateStatus.Succeeded } &&
+                observed.Updates.Any(candidate => candidate.Identity == entry.Approval!.Exact.Identity)))
+        {
+            return WindowsUpdateDisposition.ReviewRequired;
+        }
+
+        return latest.Stage == WindowsUpdateStage.ScanCompleted && latest.Scan is { } scan
+            ? WindowsUpdatePolicy.Evaluate(scan, history.Count(entry => entry.Stage == WindowsUpdateStage.DownloadStarted))
+            : WindowsUpdateDisposition.NotCurrent;
+    }
+
+    private static bool HasInstalledEvidence(ImmutableArray<WindowsUpdateEntry> history, WindowsUpdateEntry receipt) =>
+        history.Any(entry => entry.Verification is { Observation: { Status: WindowsUpdateStatus.Succeeded, Installed: true } } verification &&
+            verification.InstallReceiptId == receipt.Id && verification.Observation.Identity == receipt.Approval!.Exact.Identity);
+
+    private static WindowsUpdateEntry? LatestRestartRequirement(ImmutableArray<WindowsUpdateEntry> history) =>
+        history.LastOrDefault(entry => entry.Operation?.RebootRequired == true || entry.Scan?.RebootRequired == true);
+
+    private static bool HasPostRestartScan(ImmutableArray<WindowsUpdateEntry> history, WindowsUpdateEntry restart) =>
+        history.SkipWhile(entry => entry.Id != restart.Id).Skip(1).Any(entry =>
+            entry.Stage == WindowsUpdateStage.ScanCompleted && entry.Scan is { Status: WindowsUpdateStatus.Succeeded, RebootRequired: false } &&
+            entry.BootUptime < restart.BootUptime);
+
+    internal static WindowsUpdateEntry? PendingVerification(ImmutableArray<WindowsUpdateEntry> history, WindowsUpdateScan scan)
+    {
+        // A scan opens under its own current intake and commits one inventory plus at most
+        // one exact installed-state observation. A different intake cannot adopt an old receipt.
+        if (history.LastOrDefault() is not { Stage: WindowsUpdateStage.ScanStarted } started ||
+            scan is not { Status: WindowsUpdateStatus.Succeeded, RebootRequired: false })
+        {
+            return null;
+        }
+
+        var receipt = history.LastOrDefault(entry => entry.Stage == WindowsUpdateStage.InstallCompleted);
+        if (receipt is not { Operation.Status: WindowsUpdateStatus.Succeeded, Approval: not null } ||
+            receipt.GateId != started.GateId || HasInstalledEvidence(history, receipt))
+        {
+            return null;
+        }
+
+        var restart = LatestRestartRequirement(history);
+        // Capture uptime before the network lookup. Only a lower observed uptime establishes
+        // a later boot. A prior qualifying post-boot scan can also supply that observation.
+        if (restart is not null && !(started.BootUptime < restart.BootUptime) &&
+            !HasPostRestartScan(history, restart))
+        {
+            return null;
+        }
+
+        return receipt;
+    }
+
+    public static bool CanAppend(ImmutableArray<WindowsUpdateEntry> history, WindowsUpdateEntry entry)
+    {
+        var terminal = entry.Stage is WindowsUpdateStage.DownloadCompleted or WindowsUpdateStage.InstallCompleted;
+        // An operation receipt is keyed to its exact intent. A concurrent read-only scan can
+        // supersede a displayed approval, but cannot discard an already dispatched result.
+        var prior = terminal ? history.LastOrDefault(row => row.Id == entry.PreviousId) : history.LastOrDefault();
+        if (history.Length >= MaximumEntries || entry.Id == Guid.Empty || entry.JobId is null || entry.GateId is null ||
+            entry.OccurredAtUtc == default || entry.PreviousId != prior?.Id || history.Any(row => row.Id == entry.Id) ||
+            (prior is not null && (entry.JobId != prior.JobId || entry.OccurredAtUtc < prior.OccurredAtUtc)) ||
+            (entry.Stage != WindowsUpdateStage.ScanStarted && entry.GateId != prior?.GateId))
+        {
+            return false;
+        }
+
+        if (entry.Verification is { } verification && (entry.Stage != WindowsUpdateStage.ScanCompleted ||
+                entry.Scan is null || PendingVerification(history, entry.Scan) is not { } receipt ||
+                verification.InstallReceiptId != receipt.Id || verification.Observation?.Identity != receipt.Approval!.Exact.Identity))
+        {
+            return false;
+        }
+
+        var scope = entry.Approval;
+        if (entry.Stage is WindowsUpdateStage.ScanStarted or WindowsUpdateStage.ScanCompleted)
+        {
+            var outstandingIntent = history.LastOrDefault(row => row.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted);
+            var awaitingReceipt = outstandingIntent is not null &&
+                !history.Any(row => row.PreviousId == outstandingIntent.Id &&
+                    row.Stage is WindowsUpdateStage.DownloadCompleted or WindowsUpdateStage.InstallCompleted);
+            var reserved = awaitingReceipt ? 1 : 0;
+            // A concurrent scan cannot consume the two slots needed for the successful
+            // install's final inventory and exact verification after its receipt lands.
+            if (awaitingReceipt && outstandingIntent!.Stage == WindowsUpdateStage.InstallStarted)
+            {
+                reserved += 2;
+            }
+            return scope is null && entry.Operation is null && (entry.Stage == WindowsUpdateStage.ScanStarted
+                ? entry.Scan is null && history.Length <= MaximumEntries - 2 - reserved
+                : entry.Scan is not null && prior?.Stage == WindowsUpdateStage.ScanStarted);
+        }
+
+        if (scope?.Exact is null || scope.OperatorId is null || scope.ScanId == Guid.Empty ||
+            scope.PolicyDecisionId is null ||
+            !scope.PolicyDecisionId.StartsWith("policy-decision-", StringComparison.Ordinal) ||
+            !Guid.TryParseExact(scope.PolicyDecisionId.AsSpan("policy-decision-".Length), "N", out _) ||
+            !WindowsUpdatePolicy.IsSelectable(scope.Exact))
+        {
+            return false;
+        }
+
+        if (entry.Stage == WindowsUpdateStage.Approved)
+        {
+            // Reserve enough room for both mutation phases and the independent final scan.
+            return history.Length <= MaximumEntries - 10 && prior?.Id == scope.ScanId &&
+                prior is { Stage: WindowsUpdateStage.ScanCompleted, Scan: { } scanned } &&
+                Disposition(history) == WindowsUpdateDisposition.ApprovalRequired &&
+                WindowsUpdatePolicy.Matches(scope.Exact, scanned) && entry.Scan is null && entry.Operation is null;
+        }
+
+        if (terminal && history.SkipWhile(row => row.Id != entry.PreviousId).Skip(1)
+                .Any(row => row.Stage is not (WindowsUpdateStage.ScanStarted or WindowsUpdateStage.ScanCompleted)))
+        {
+            return false;
+        }
+
+        if (prior?.Approval != scope)
+        {
+            return false;
+        }
+
+        return entry.Stage switch
+        {
+            WindowsUpdateStage.DownloadChecked => prior.Stage == WindowsUpdateStage.Approved && entry.Scan is not null && entry.Operation is null,
+            WindowsUpdateStage.InstallChecked => prior is
+            {
+                Stage: WindowsUpdateStage.DownloadCompleted,
+                Operation: { Status: WindowsUpdateStatus.Succeeded, RebootRequired: false }
+            } && entry.Scan is not null && entry.Operation is null,
+            WindowsUpdateStage.DownloadStarted => history.Length <= MaximumEntries - 2 && CanStart(prior, WindowsUpdateStage.DownloadChecked, entry),
+            WindowsUpdateStage.InstallStarted => history.Length <= MaximumEntries - 4 && CanStart(prior, WindowsUpdateStage.InstallChecked, entry),
+            WindowsUpdateStage.DownloadCompleted => prior.Stage == WindowsUpdateStage.DownloadStarted && entry.Operation is not null && entry.Scan is null,
+            WindowsUpdateStage.InstallCompleted => prior.Stage == WindowsUpdateStage.InstallStarted && entry.Operation is not null && entry.Scan is null,
+            WindowsUpdateStage.ResourcesDeferred => prior.Stage is WindowsUpdateStage.DownloadChecked or WindowsUpdateStage.InstallChecked &&
+                entry.Operation is null && entry.Scan is null,
+            _ => false,
+        };
+    }
+
+    private static bool CanStart(WindowsUpdateEntry previous, WindowsUpdateStage requiredStage, WindowsUpdateEntry entry) =>
+        previous.Stage == requiredStage && previous.Scan is { } scan && WindowsUpdatePolicy.Matches(entry.Approval!.Exact, scan) &&
+        entry.Operation is null && entry.Scan is null;
+}

@@ -193,6 +193,12 @@ public sealed class ProtocolTests
         Assert.ThrowsAny<ArgumentException>(() => new BrokerRequest(Envelope, Job, Approval, PlanDigest, ImpactDigest, [install]));
         requestWire["actions"] = new JsonArray(JsonNode.Parse(ActionRequestCodec.Serialize(install)));
         Reject(requestWire);
+
+        var update = ActionRegistry.CreateInstallWindowsUpdate(FirstAction, new(new(SecondAction, 1),
+            ThirdLife.Core.WindowsUpdates.WindowsUpdateClass.Security, 1024));
+        Assert.ThrowsAny<ArgumentException>(() => new BrokerRequest(Envelope, Job, Approval, PlanDigest, ImpactDigest, [update]));
+        requestWire["actions"] = new JsonArray(JsonNode.Parse(ActionRequestCodec.Serialize(update)));
+        Reject(requestWire);
     }
 
     [Fact]

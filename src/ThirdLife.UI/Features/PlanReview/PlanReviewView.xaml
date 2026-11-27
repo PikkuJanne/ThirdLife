@@ -145,5 +145,26 @@
         </StackPanel>
       </Border>
     </StackPanel>
+    <GroupBox Header="Windows Update" AutomationProperties.Name="Windows Update" Margin="0,16,0,0"
+              Visibility="{Binding ShowsWindowsUpdates, Converter={StaticResource PlanReviewVisibility}}">
+      <StackPanel>
+        <TextBlock Text="Scan the configured Windows Update service using the network. This build supports inventory only. Update downloads and installation are unavailable."
+                   TextWrapping="Wrap" />
+        <WrapPanel Margin="0,8,0,4">
+          <Button x:Name="ScanWindowsUpdatesButton" Content="Scan for Windows updates" Click="ScanWindowsUpdates"
+                  IsEnabled="{Binding CanScanWindowsUpdates}" Margin="0,0,8,4" />
+          <Button x:Name="CancelWindowsUpdateScanButton" Content="Cancel update scan" Click="CancelWindowsUpdateScan"
+                  IsEnabled="{Binding CanCancelWindowsUpdateScan}" Margin="0,0,0,4"
+                  Visibility="{Binding IsWindowsUpdateScanning, Converter={StaticResource PlanReviewVisibility}}" />
+        </WrapPanel>
+        <TextBlock x:Name="WindowsUpdateMessage" Text="{Binding WindowsUpdateStatusText, NotifyOnTargetUpdated=True}"
+                   TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                   AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
+        <TextBox Text="{Binding WindowsUpdateInventory, Mode=OneWay}" AutomationProperties.Name="Last successful update inventory"
+                 Visibility="{Binding HasWindowsUpdateInventory, Converter={StaticResource PlanReviewVisibility}}"
+                 IsReadOnly="True" IsReadOnlyCaretVisible="True" TextWrapping="Wrap" AcceptsReturn="True"
+                 MaxHeight="200" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,8,0,0" />
+      </StackPanel>
+    </GroupBox>
   </StackPanel>
 </UserControl>

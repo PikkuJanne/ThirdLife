@@ -283,7 +283,7 @@ internal static partial class JournalPlanEncoding
             var encodedRequest = StrictUtf8.GetBytes(item.GetProperty("request").GetRawText());
             var request = ActionRequestCodec.Parse(encodedRequest);
             if (!encodedRequest.AsSpan().SequenceEqual(ActionRequestCodec.Serialize(request)) ||
-                !ids.Add(request.ActionId) || (request is NoOpActionRequest) != synthetic)
+                !ids.Add(request.ActionId) || (synthetic ? request is not NoOpActionRequest : request is not InstallPackageActionRequest))
             {
                 throw new JsonException();
             }

@@ -6108,7 +6108,7 @@ tasks:
   workstream: windows-update
   kind: code
   priority: P0
-  status: backlog
+  status: in_progress
   size: XL
   executor: codex
   environment: windows
@@ -6141,10 +6141,58 @@ tasks:
   - Exercise no-updates, updates-available, download/install failure, service unavailable, reboot-required, and multi-pass
     cases in approved supported Windows environments hosted on the active machine. Distinguish provider behavior from
     fixtures and record exact versions.
-  evidence: []
+  evidence:
+  - summary: Saved and reopened read-only scans and exact controlled actions through the new Windows Update journal.
+    command: eng/verify.ps1 -Tier Targeted with Actions, Broker, Broker.SecurityTests, Packages and Persistence
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64, .NET SDK 10.0.400
+    date: '2026-11-27'
+    duration: 188.392 s, 1833 deterministic cases including Quick
+    reference: artifacts/evidence/TL-0504/report.md, c072d9b4e86a26f45713ab97f72e958badd6d556
+    limitation: Exact approvals, mutations and restart transitions used controlled fixtures. No production servicing authority.
+  - summary: Verified installed-revision evidence, guarded native jobs, migration, interruption and bounded convergence.
+    command: eng/verify.ps1 -Tier Targeted for Packages and Persistence, WindowsUpdate deterministic filter, plus 38 Actions registry cases separately
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64, .NET SDK 10.0.400
+    date: '2026-11-27'
+    duration: 132.687 s, 1298 cases including Quick
+    reference: artifacts/evidence/TL-0504/report.md, ac3c96f1b89169ce8fffb0d4dfefde17b01ae369
+    limitation: The application scan and reopening used isolated SQLite. Controlled installations and lower-uptime post-boot observations exercised recovery.
+  - summary: WUA offered three drivers and one restricted update on the host and one restricted update in the guest. The host independently confirmed a previously installed revision.
+    command: Packages WindowsUpdateAgentTests ActiveMachine cases on host and ActiveMachineScansOnlyTheConfiguredWindowsUpdateService in the limited-token guest
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 x64 host and same-machine Generation 2 guest, build 26300.9974, wuapi.dll 1511.2611.5012.0
+    date: '2026-11-27'
+    duration: 17.962 s on host, 36.745 s guest scan, 167.327 s guest run including staging and cleanup
+    reference: artifacts/evidence/TL-0504/report.md, ac3c96f1b89169ce8fffb0d4dfefde17b01ae369
+    limitation: Both native environments had zero eligible offers and no pending restart. No live download, installation or restart.
+  - summary: Clean detached checkout passed the governed regression, locked restore, Release build and deterministic solution tests.
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean detached worktree on active Windows 11 Pro 26H2 build 26300.9974 native x64
+    date: '2026-11-27'
+    duration: 433.080 s, 304 governance tests and 2317 .NET tests, zero skips
+    reference: artifacts/evidence/TL-0504/report.md, ac3c96f1b89169ce8fffb0d4dfefde17b01ae369
+    limitation: Native WUA observations and the guest run were collected separately. Production update execution remains unqualified.
+  execution_prerequisites:
+  - kind: capability
+    scope: A WUA-specific authenticated ephemeral broker and effective update policy qualified for the exact action, source, servicing, power, storage and rollback requirements.
+  - kind: task
+    task: TL-0314
+    scope: Privilege-boundary decision for ordinary broker-dependent dispatch covering the WUA-specific action and its evidence.
+  - kind: authorization
+    authority: operator
+    scope: Approval for the exact eligible Windows Update identity, revision, class, size and impact in the intended guest, plus the applicable Windows consent.
   notes:
   - Claims cover the actual tested same-machine environments, documented structured interfaces, and separately identified
     fixtures.
+  - The standard-user application can scan and reopen update inventory. Production download and installation are unavailable.
+    The live qualification still owes an eligible offer, native download and installation, restart where required, and a
+    correlated independent installed-revision observation and rescan. The reviewed package policy and MSI approval are outside this scope.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

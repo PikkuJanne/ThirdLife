@@ -81,6 +81,26 @@ public partial class PlanReviewView : UserControl
         }
     }
 
+    private async void ScanWindowsUpdates(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanScanWindowsUpdates)
+        {
+            var hadFocus = ScanWindowsUpdatesButton.IsKeyboardFocused;
+            await workspace.ScanWindowsUpdatesAsync();
+            RestoreFocus(WindowsUpdateMessage, hadFocus);
+        }
+    }
+
+    private void CancelWindowsUpdateScan(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanCancelWindowsUpdateScan)
+        {
+            var hadFocus = CancelWindowsUpdateScanButton.IsKeyboardFocused;
+            workspace.CancelWindowsUpdateScan();
+            RestoreFocus(WindowsUpdateMessage, hadFocus);
+        }
+    }
+
     private void RestoreFocus(FrameworkElement target, bool hadFocus)
     {
         var focused = Keyboard.FocusedElement;

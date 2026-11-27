@@ -9,12 +9,14 @@ using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
 using ThirdLife.Core.Repairs;
 using ThirdLife.Core.Sanitization;
+using ThirdLife.Core.WindowsUpdates;
 using ThirdLife.Diagnostics.Logging;
 using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Inventory.Windows;
 using ThirdLife.Packages;
+using ThirdLife.Packages.WindowsUpdates;
 using ThirdLife.Persistence;
 using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
@@ -69,7 +71,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         PilotPackageService? packageService = null,
         Func<IBrokerExecutionJournal, ExecutionCoordinator>? fixtureBrokerCoordinator = null,
         Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null,
-        Func<DateTimeOffset, PreparationResourceSnapshot>? observePreparationResources = null)
+        Func<DateTimeOffset, PreparationResourceSnapshot>? observePreparationResources = null,
+        IWindowsUpdateAgent? fixtureWindowsUpdates = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -97,6 +100,12 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         }
 
         _fixturePlanPolicy = fixturePlanPolicy;
+        if (fixtureWindowsUpdates is not null && (!IsFixtureScenario || fixtureWindowsUpdates is WindowsUpdateAgent))
+        {
+            throw new ArgumentException("The fixture update agent requires a synthetic workspace.", nameof(fixtureWindowsUpdates));
+        }
+
+        UpdateAgent = fixtureWindowsUpdates;
         if (fixtureBrokerCoordinator is not null && !IsFixtureScenario)
         {
             throw new ArgumentException("A fixture coordinator requires a fixture workspace.", nameof(fixtureBrokerCoordinator));
@@ -182,7 +191,10 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         TimeProvider.System,
         RegisteredReportStore(),
         packageService: new PilotPackageService(),
-        appendPackageDiagnostic: AppendLocalPackageDiagnosticAsync);
+        appendPackageDiagnostic: AppendLocalPackageDiagnosticAsync)
+    {
+        UpdateAgent = new WindowsUpdateAgent(),
+    };
 
     private static WorkshopReportStore? RegisteredReportStore()
     {
@@ -215,6 +227,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         await ApplyJobAsync(stored, refreshPreparation: false);
         if (alreadyOpen)
         {
+            await LoadWindowsUpdateHistoryAsync(id);
             var previousPackageHistory = PackageHistoryText;
             await LoadPackageHistoryAsync(id);
             if (!string.Equals(previousPackageHistory, PackageHistoryText, StringComparison.Ordinal))
@@ -240,6 +253,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ApplyAssessment(null);
         ClearPlanReview(clearSelection: true);
         ClearPackageHistory();
+        ClearWindowsUpdateHistory();
         ClearBrokerHistory();
         ClearPreparationDisposition();
         ClearRebootRecovery();
@@ -352,6 +366,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     {
         _closing = true;
         CancelAssessment();
+        CancelWindowsUpdateScan();
         CancelReport();
         StopPackageRetryRefresh();
         StopWaitingForPackageOnClose();
@@ -506,6 +521,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             _cancellationRequest = Task.CompletedTask;
             _assessmentCancellation?.Dispose();
             _assessmentCancellation = null;
+            _updateCancellation?.Dispose();
+            _updateCancellation = null;
             _reportCancellation?.Dispose();
             _reportCancellation = null;
             _packageCancellation?.Dispose();
@@ -619,6 +636,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         {
             ClearBrokerHistory();
             ClearPackageHistory();
+            ClearWindowsUpdateHistory();
             ClearPreparationDisposition();
             ClearReport();
             ClearRepairs();
@@ -634,6 +652,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         await LoadRebootRecoveryAsync(job.Job.JobId);
         if (jobChanged)
         {
+            await LoadWindowsUpdateHistoryAsync(job.Job.JobId);
             await LoadPackageHistoryAsync(job.Job.JobId);
             await LoadBrokerHistoryAsync(job.Job.JobId, reconcile: true);
         }

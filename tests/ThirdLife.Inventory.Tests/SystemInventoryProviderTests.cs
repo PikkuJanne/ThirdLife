@@ -785,7 +785,8 @@ public sealed class SystemInventoryProviderTests
         var source = new DelegateSystemInventorySource(cancellationToken =>
         {
             entered.TrySetResult(true);
-            release.Wait(cancellationToken);
+            Assert.True(release.Wait(TimeSpan.FromSeconds(30), cancellationToken),
+                "ObserveAsync did not return while its source was blocked.");
             return CompleteSnapshot(BuildMinimalFirmwareTable());
         });
         var provider = new SystemInventoryProvider(source, ProviderEvidenceOrigin.SyntheticFixture);
@@ -793,7 +794,8 @@ public sealed class SystemInventoryProviderTests
         var pending = provider.ObserveAsync().AsTask();
         try
         {
-            await entered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            // A busy worker pool can delay entry. The release gate establishes the ordering.
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
             Assert.False(pending.IsCompleted);
         }
         finally

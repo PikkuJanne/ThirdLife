@@ -27,9 +27,16 @@ qualification and the TL-0314 privilege decision.
 TL-0501 and TL-0502 cover approval-bound scheduling and attributable action
 skips. TL-0503 checks current platform, storage and power before package
 download and dispatch. A late resource deferral survives reopening in Verify
-and the workshop report. TL-0504 is next for structured Windows Update.
+and the workshop report.
 Live multi-action qualification and exact approval remain prerequisites at the
 M5 technical gate, TL-0511.
 [Scheduling evidence](artifacts/evidence/TL-0501/report.md)
 [Action outcome evidence](artifacts/evidence/TL-0502/report.md)
 [Preflight evidence](artifacts/evidence/TL-0503/report.md)
+
+TL-0504 adds Windows Update scans to Prepare and saved results to Verify.
+WUA offered three drivers and one restricted software update on the host,
+and one restricted software update in the guest. The controlled workflow exercises exact approval, installation,
+restart and independent revision verification. Native download and install
+remain open pending an update-specific broker, effective policy, eligible
+offer and exact approval. [Windows Update evidence](artifacts/evidence/TL-0504/report.md)

@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Registry;
+using ThirdLife.Core.WindowsUpdates;
 
 namespace ThirdLife.Actions.Tests;
 
@@ -222,7 +223,7 @@ public sealed class ActionRegistryTests
         var requestTypes = baseType.Assembly.GetTypes()
             .Where(type => !type.IsAbstract && baseType.IsAssignableFrom(type))
             .OrderBy(type => type.Name, StringComparer.Ordinal);
-        Assert.Equal([typeof(InstallPackageActionRequest), typeof(NoOpActionRequest)], requestTypes);
+        Assert.Equal([typeof(InstallPackageActionRequest), typeof(NoOpActionRequest), typeof(WindowsUpdateActionRequest)], requestTypes);
         Assert.All(
             baseType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic),
             constructor => Assert.True(constructor.IsFamilyAndAssembly || constructor.IsPrivate || constructor.IsAssembly));
@@ -239,6 +240,41 @@ public sealed class ActionRegistryTests
             ("Publisher", typeof(string)),
             ("Scope", typeof(ActionScope)),
             ("SourceId", typeof(string)));
+        AssertRequestShape(typeof(WindowsUpdateActionRequest),
+            ("ActionId", typeof(Guid)),
+            ("Exact", typeof(WindowsUpdateCandidate)),
+            ("Kind", typeof(ActionKind)));
+    }
+
+    [Theory]
+    [InlineData(ActionKind.ScanWindowsUpdate, ActionVerification.WindowsUpdateScan)]
+    [InlineData(ActionKind.DownloadWindowsUpdate, ActionVerification.ExactDownloadedUpdateRevision)]
+    [InlineData(ActionKind.InstallWindowsUpdate, ActionVerification.ExactInstalledUpdateRevision)]
+    public void UpdateActionsBindOnlyExactAllowlistedFieldsAndUseASeparateBackend(ActionKind kind, ActionVerification verification)
+    {
+        var exact = new WindowsUpdateCandidate(new WindowsUpdateIdentity(ActionId, 4), WindowsUpdateClass.Security, 700);
+        var request = kind switch
+        {
+            ActionKind.ScanWindowsUpdate => ActionRegistry.CreateScanWindowsUpdate(ActionId),
+            ActionKind.DownloadWindowsUpdate => ActionRegistry.CreateDownloadWindowsUpdate(ActionId, exact),
+            ActionKind.InstallWindowsUpdate => ActionRegistry.CreateInstallWindowsUpdate(ActionId, exact),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+        };
+        var decoded = Assert.IsType<WindowsUpdateActionRequest>(ActionRequestCodec.Parse(ActionRequestCodec.Serialize(request)));
+        Assert.Equal(request.Kind, decoded.Kind);
+        Assert.Equal(request.Exact, decoded.Exact);
+        Assert.Equal(ActionAvailability.WindowsUpdateAgentRequired, ActionRegistry.Describe(decoded).Availability);
+        Assert.Equal(verification, ActionRegistry.Describe(decoded).Verification);
+        var envelope = JsonNode.Parse(ActionRequestCodec.Serialize(request))!.AsObject();
+        var parameters = envelope["parameters"]!.AsObject();
+        RejectRemovedFields(envelope, parameters);
+        parameters["service_url"] = "https://example.invalid/";
+        Reject(envelope.ToJsonString());
+        parameters.Remove("service_url");
+        parameters["classification"] = "driver";
+        Reject(envelope.ToJsonString());
+        Assert.ThrowsAny<ArgumentException>(() => ActionRegistry.CreateInstallWindowsUpdate(ActionId,
+            new WindowsUpdateCandidate(exact.Identity, WindowsUpdateClass.Restricted)));
     }
 
     private static void AssertRequestShape(Type requestType, params (string Name, Type Type)[] expectedProperties)
