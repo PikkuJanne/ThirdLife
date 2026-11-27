@@ -103,10 +103,10 @@ class DevelopmentMsiTests(unittest.TestCase):
                 ("SELECT `Condition` FROM `LaunchCondition` WHERE `Description` = "
                  "'This preview requires Windows 11 client build 26300 on native x64.'",
                  'Installed OR (VersionNT64 AND Msix64 AND MsiNTProductType = 1 AND TL_NATIVE_BUILD = "26300")'),
-                ("SELECT `Action` FROM `CustomAction`", "ResetNativeBuild"),
-                ("SELECT `Type` FROM `CustomAction`", "51"),
-                ("SELECT `Source` FROM `CustomAction`", "TL_NATIVE_BUILD"),
-                ("SELECT `Target` FROM `CustomAction`", "unavailable"),
+                ("SELECT `Action` FROM `CustomAction` WHERE `Action`='ResetNativeBuild'", "ResetNativeBuild"),
+                ("SELECT `Type` FROM `CustomAction` WHERE `Action`='ResetNativeBuild'", "51"),
+                ("SELECT `Source` FROM `CustomAction` WHERE `Action`='ResetNativeBuild'", "TL_NATIVE_BUILD"),
+                ("SELECT `Target` FROM `CustomAction` WHERE `Action`='ResetNativeBuild'", "unavailable"),
                 ("SELECT `Property` FROM `AppSearch` WHERE `Signature_`='NativeBuildFromRegistry'", "TL_NATIVE_BUILD"),
                 ("SELECT `Root` FROM `RegLocator` WHERE `Signature_`='NativeBuildFromRegistry'", "2"),
                 ("SELECT `Key` FROM `RegLocator` WHERE `Signature_`='NativeBuildFromRegistry'",
@@ -119,6 +119,16 @@ class DevelopmentMsiTests(unittest.TestCase):
                 ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='InstallExecute'", "6550"),
                 ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='RemoveExistingProducts'", "6575"),
                 ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='InstallFinalize'", "6600"),
+                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='ClearRelatedPreview'", "5"),
+                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='ClearNewerPreview'", "10"),
+                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='FindRelatedProducts'", "25"),
+                ("SELECT `Target` FROM `CustomAction` WHERE `Action`='ClearRelatedPreview'",
+                 "[ThirdLifeEmptyUpgradeList]"),
+                ("SELECT `Target` FROM `CustomAction` WHERE `Action`='ClearNewerPreview'",
+                 "[ThirdLifeEmptyUpgradeList]"),
+                ("SELECT `Target` FROM `CustomAction` WHERE `Action`='UseExactUpgradeFiles'", "amus"),
+                ("SELECT `Condition` FROM `InstallExecuteSequence` WHERE `Action`='UseExactUpgradeFiles'",
+                 "RELATEDPREVIEW AND NOT Installed"),
             ]:
                 with self.subTest(query=query):
                     self.assertEqual(expected, self.read_cell(engine, database, query))
