@@ -46,6 +46,45 @@ public sealed partial class RebootCheckpointStoreTests
     }
 
     [Fact]
+    public async Task StampedPackageRebootRequiresALaterBootSequenceEvenWhenUptimeChanges()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var clock = new FixedTimeProvider(IssueTime);
+        uint? boot = 17;
+        ulong uptime = 9_000;
+        JournalEntry applied;
+        RebootResumeCandidate issued;
+        await using (var store = await Open())
+        {
+            applied = await SaveAppliedAsync(store, "package-boot-sequence", needsRestart: true, packageBackend: true);
+            issued = Assert.IsType<PackageRebootCandidate>(await store.LoadPackageRebootCheckpointAsync(applied)).Candidate;
+            Assert.Equal(boot, issued.Checkpoint.PackageBootSession);
+        }
+
+        await using var reopened = await Open();
+        var verification = VerifyPackage(applied, JournalCheckpoint.PackageRebootVerification, clock.GetUtcNow());
+        uptime = 1_000;
+        foreach (var unavailableOrEarlier in new uint?[] { null, 16, 17 })
+        {
+            boot = unavailableOrEarlier;
+            var checkpoint = Assert.IsType<PackageRebootCandidate>(await reopened.LoadPackageRebootCheckpointAsync(applied));
+            Assert.Equal(issued.Checkpoint, checkpoint.Candidate.Checkpoint);
+            Assert.False(checkpoint.CanVerify);
+            Assert.False(await reopened.RecordPackageRebootVerificationAsync(verification, issued.Token, issued.Checkpoint.Id));
+        }
+
+        boot = 18;
+        uptime = 12_000;
+        Assert.True((await reopened.LoadPackageRebootCheckpointAsync(applied))?.CanVerify);
+        Assert.True(await reopened.RecordPackageRebootVerificationAsync(verification, issued.Token, issued.Checkpoint.Id));
+        Assert.Equal(verification, (await reopened.LoadJournalAsync(applied.Plan))?.Entries[^1]);
+        Assert.Null(await reopened.LoadPackageRebootCheckpointAsync(applied));
+
+        Task<SqliteJobStore> Open() => SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot,
+            SqliteJobStore.CurrentSchemaVersion, clock, null, () => uptime, () => boot);
+    }
+
+    [Fact]
     public async Task PackageRecoveryRejectsStaleGatesExpiryWrongAttemptsAndGenericAppend()
     {
         using var workspace = new PersistenceTestWorkspace();

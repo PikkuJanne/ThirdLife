@@ -26,17 +26,20 @@ internal static partial class JournalPlanEncoding
 
     public static (SanitizationGateDecisionId Gate, ImmutableArray<JournalAction> Actions, bool IsCurrentPolicyPlan,
         string CatalogSha256, string ProfileSha256, string PolicySha256, string EvidenceSha256, bool SyntheticData,
-        ActionSchedule? Schedule) ReadPlan(JournalPlanKey key, byte[] bytes)
+        ActionSchedule? Schedule, int? ReviewedEvidenceCount) ReadPlan(JournalPlanKey key, byte[] bytes)
     {
         using var document = Open(bytes);
         var root = document.RootElement;
         RequireCanonical(root, bytes);
         var schemaVersion = ReadString(root.GetProperty("schema_version"));
-        var hasSchedule = schemaVersion == PlanIdentity.ScheduledVersion;
-        RequireFields(root, hasSchedule
+        var fullMaintenance = schemaVersion == PlanIdentity.MaintenanceVersion;
+        var hasSchedule = fullMaintenance || schemaVersion == PlanIdentity.ScheduledVersion;
+        RequireFields(root, fullMaintenance
+            ? ["schema_version", "subject", "decision", "blocked_reason", "actions", "recipient_choices", "schedule", "reviewed_evidence_count", "maintenance_phases"]
+            : hasSchedule
             ? ["schema_version", "subject", "decision", "blocked_reason", "actions", "recipient_choices", "schedule"]
             : ["schema_version", "subject", "decision", "blocked_reason", "actions", "recipient_choices"]);
-        if (schemaVersion is not (PlanIdentity.CurrentVersion or PlanIdentity.LegacyVersion or PlanIdentity.ScheduledVersion) ||
+        if (schemaVersion is not (PlanIdentity.CurrentVersion or PlanIdentity.LegacyVersion or PlanIdentity.ScheduledVersion or PlanIdentity.MaintenanceVersion) ||
             root.GetProperty("blocked_reason").ValueKind != JsonValueKind.Null)
         {
             throw new JsonException();
@@ -65,7 +68,14 @@ internal static partial class JournalPlanEncoding
         var capabilities = ReadActiveCapabilities(subject.GetProperty("active_capability_ids"));
         var actions = ReadActions(root.GetProperty("actions"), capabilities, synthetic);
         var schedule = hasSchedule ? ReadSchedule(key, actions, root.GetProperty("schedule")) : null;
-        return (gate, actions, schemaVersion != PlanIdentity.LegacyVersion, catalog, profile, policy, evidence, synthetic, schedule);
+        int? evidenceCount = fullMaintenance ? ReadInt(root.GetProperty("reviewed_evidence_count")) : null;
+        if (fullMaintenance && (evidenceCount is < 1 or > 10_000 || schedule!.Steps.Any(step => step.Phase != MaintenancePhases.PackagePhase) ||
+            actions.Any(action => action.Request is not InstallPackageActionRequest) ||
+            !root.GetProperty("maintenance_phases").EnumerateArray().Select(ReadString).SequenceEqual(MaintenancePhases.ReviewedSequence)))
+        {
+            throw new JsonException();
+        }
+        return (gate, actions, schemaVersion != PlanIdentity.LegacyVersion, catalog, profile, policy, evidence, synthetic, schedule, evidenceCount);
     }
 
     private static ActionSchedule ReadSchedule(JournalPlanKey key, ImmutableArray<JournalAction> actions, JsonElement value)

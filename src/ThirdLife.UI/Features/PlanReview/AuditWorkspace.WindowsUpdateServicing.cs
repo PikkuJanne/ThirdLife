@@ -32,7 +32,7 @@ internal sealed partial class AuditWorkspace
     public bool ShowsUpdatePolicyEvaluation => _reviewedUpdate is { DecisionId: null } && HasWindowsUpdatePreview;
     public bool CanEvaluateUpdatePolicy => CanAssess && ShowsUpdatePolicyEvaluation && CurrentAssessmentRestriction is null;
     public bool ShowsUpdateApproval => _reviewedUpdate?.DecisionId is not null && HasWindowsUpdatePreview;
-    public bool CanApproveWindowsUpdate => ShowsUpdateApproval && CanAssess && !string.IsNullOrWhiteSpace(_updateOperator);
+    public bool CanApproveWindowsUpdate => ShowsUpdateApproval && CanAssess && AllowsMaintenanceUpdates && !string.IsNullOrWhiteSpace(_updateOperator);
 
     private WindowsUpdateEntry? SavedServicingApproval => _updateHistory.LastOrDefault() is
     { Stage: WindowsUpdateStage.Approved, Approval: { Actions: not null } scope } saved &&
@@ -42,7 +42,7 @@ internal sealed partial class AuditWorkspace
             WindowsUpdateServicingPolicy.CurrentQualificationPolicySha256(scope.Exact, _timeProvider.GetUtcNow()) == digest) ? saved : null;
 
     public bool ShowsApprovedUpdate => SavedServicingApproval is not null;
-    public bool CanRunApprovedUpdate => CanAssess && ShowsApprovedUpdate && !_packagePhaseNeedsRecovery;
+    public bool CanRunApprovedUpdate => CanAssess && ShowsApprovedUpdate && !_packagePhaseNeedsRecovery && AllowsMaintenanceUpdates;
     public string ApprovedUpdateScope
     {
         get

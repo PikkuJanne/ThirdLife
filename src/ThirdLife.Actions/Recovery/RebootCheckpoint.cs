@@ -21,7 +21,8 @@ public sealed record RebootCheckpoint
         Guid correlationId,
         DateTimeOffset issuedAtUtc,
         DateTimeOffset expiresAtUtc,
-        ulong? packageBootUptime = null)
+        ulong? packageBootUptime = null,
+        uint? packageBootSession = null)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(id, Guid.Empty);
         ArgumentOutOfRangeException.ThrowIfEqual(actionId, Guid.Empty);
@@ -43,6 +44,11 @@ public sealed record RebootCheckpoint
         IssuedAtUtc = issuedAtUtc.ToUniversalTime();
         ExpiresAtUtc = expiresAtUtc.ToUniversalTime();
         PackageBootUptime = packageBootUptime;
+        if (packageBootSession.HasValue && !packageBootUptime.HasValue)
+        {
+            throw new ArgumentException("Only package checkpoints carry a boot sequence.", nameof(packageBootSession));
+        }
+        PackageBootSession = packageBootSession;
     }
 
     public Guid Id { get; }
@@ -57,6 +63,9 @@ public sealed record RebootCheckpoint
     /// <summary>Kernel interrupt time in 100 ns ticks at the durable package restart result.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ulong? PackageBootUptime { get; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public uint? PackageBootSession { get; }
 
     public bool IsCurrent(DateTimeOffset now) => now >= IssuedAtUtc && now < ExpiresAtUtc;
 
@@ -99,6 +108,10 @@ public sealed record RebootCheckpoint
             if (PackageBootUptime is { } uptime)
             {
                 writer.WriteNumber("package_boot_uptime", uptime);
+            }
+            if (PackageBootSession is { } session)
+            {
+                writer.WriteNumber("package_boot_session", session);
             }
             writer.WriteEndObject();
         }

@@ -176,6 +176,7 @@ public sealed partial class SqliteJobStore : IBrokerExecutionJournal
         JournalPlanSnapshot plan, JournalApproval approval, JournalEntry entry, CancellationToken token)
     {
         var updates = await ReadWindowsUpdatesAsync(transaction, plan.Key.JobId, token).ConfigureAwait(false);
+        await RequireMaintenancePackageDispatchAsync(transaction, plan, approval, updates, token).ConfigureAwait(false);
         if (WindowsUpdateHistory.RecoveryBeforePackages(updates) != UpdateRecovery.None ||
             await HasUnreconciledJournalActionAsync(connection, transaction, plan.Key, token).ConfigureAwait(false))
         {

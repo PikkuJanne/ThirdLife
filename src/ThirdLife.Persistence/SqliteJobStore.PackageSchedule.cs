@@ -2,13 +2,22 @@ using System.Collections.Immutable;
 using Microsoft.Data.Sqlite;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
+using ThirdLife.Actions.Planning;
 
 namespace ThirdLife.Persistence;
 
 public sealed partial class SqliteJobStore : IPackageScheduleJournal
 {
-    public async Task<JournalWriteResult> RecordPackageScheduleApprovalAsync(JournalApproval approval, ImmutableArray<JournalEntry> entries,
-        CancellationToken cancellationToken = default)
+    public Task<JournalWriteResult> RecordPackageScheduleApprovalAsync(JournalApproval approval, ImmutableArray<JournalEntry> entries,
+        CancellationToken cancellationToken = default) =>
+        RecordPackageApprovalAsync(approval, entries, fullMaintenance: false, cancellationToken);
+
+    public Task<JournalWriteResult> RecordMaintenanceApprovalAsync(JournalApproval approval, ImmutableArray<JournalEntry> entries,
+        CancellationToken token = default) =>
+        RecordPackageApprovalAsync(approval, entries, fullMaintenance: true, token);
+
+    private async Task<JournalWriteResult> RecordPackageApprovalAsync(JournalApproval approval, ImmutableArray<JournalEntry> entries,
+        bool fullMaintenance, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(approval);
         ThrowIfDisposed();
@@ -23,7 +32,7 @@ public sealed partial class SqliteJobStore : IPackageScheduleJournal
             var key = approval.Plan;
             _layout.ValidateJobDirectory(key.JobId);
             var plan = await RequireJournalPlanAsync(connection, transaction, key, token).ConfigureAwait(false);
-            if (plan.Schedule is not { } schedule || !JournalStateMachine.IsScheduledPackagePlan(plan) ||
+            if (plan.FullMaintenance != fullMaintenance || plan.Schedule is not { } schedule || !JournalStateMachine.IsScheduledPackagePlan(plan) ||
                 entries.Length > schedule.Steps.Length ||
                 entries.Any(entry => entry is not { Checkpoint: JournalCheckpoint.PackagePlanApproval, State: JournalState.Approved } ||
                     entry.Plan != key || entry.ApprovalId != approval.ApprovalId) ||
@@ -72,6 +81,15 @@ public sealed partial class SqliteJobStore : IPackageScheduleJournal
                 await InsertJournalEntryAsync(connection, transaction, entry, token).ConfigureAwait(false);
             }
 
+            var maintenance = await ReadMaintenanceAsync(transaction, key.JobId, token).ConfigureAwait(false);
+            if (fullMaintenance)
+            {
+                await StartMaintenanceAsync(transaction, plan, approval, maintenance, token).ConfigureAwait(false);
+            }
+            else if (maintenance is { Phase: not MaintenancePhase.FinalVerification })
+            {
+                throw new JobStoreConflictException();
+            }
             outcome = JournalWriteResult.Recorded;
         }, cancellationToken).ConfigureAwait(false);
         return outcome;

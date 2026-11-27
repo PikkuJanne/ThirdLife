@@ -43,7 +43,8 @@ public sealed record WindowsUpdateVerification(Guid InstallReceiptId, WindowsUpd
 
 public sealed record WindowsUpdateEntry(Guid Id, Guid? PreviousId, JobId JobId, SanitizationGateDecisionId GateId,
     DateTimeOffset OccurredAtUtc, WindowsUpdateStage Stage, WindowsUpdateScan? Scan, WindowsUpdateApproval? Approval,
-    WindowsUpdateOperation? Operation, ulong? BootUptime = null, WindowsUpdateVerification? Verification = null);
+    WindowsUpdateOperation? Operation, ulong? BootUptime = null, WindowsUpdateVerification? Verification = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] uint? BootSession = null);
 
 public interface IWindowsUpdateJournal
 {
@@ -175,7 +176,10 @@ public static class WindowsUpdateHistory
     private static bool HasPostRestartScan(ImmutableArray<WindowsUpdateEntry> history, WindowsUpdateEntry restart) =>
         history.SkipWhile(entry => entry.Id != restart.Id).Skip(1).Any(entry =>
             entry.Stage == WindowsUpdateStage.ScanCompleted && entry.Scan is { Status: WindowsUpdateStatus.Succeeded, RebootRequired: false } &&
-            entry.BootUptime < restart.BootUptime);
+            IsLaterBoot(entry, restart));
+
+    private static bool IsLaterBoot(WindowsUpdateEntry current, WindowsUpdateEntry previous) =>
+        previous.BootSession is { } prior ? current.BootSession > prior : current.BootUptime < previous.BootUptime;
 
     internal static WindowsUpdateEntry? PendingVerification(ImmutableArray<WindowsUpdateEntry> history, WindowsUpdateScan scan)
     {
@@ -195,9 +199,8 @@ public static class WindowsUpdateHistory
         }
 
         var restart = LatestRestartRequirement(history);
-        // Capture uptime before the network lookup. Only a lower observed uptime establishes
-        // a later boot. A prior qualifying post-boot scan can also supply that observation.
-        if (restart is not null && !(started.BootUptime < restart.BootUptime) &&
+        // Records from earlier schemas have uptime only. Use the boot session when both observations have one.
+        if (restart is not null && !IsLaterBoot(started, restart) &&
             !HasPostRestartScan(history, restart))
         {
             return null;

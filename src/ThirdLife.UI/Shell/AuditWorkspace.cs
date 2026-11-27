@@ -408,11 +408,12 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             var summary = SummarizeAssessment(assessment);
             var policy = await FindSavedPolicyAsync(jobId, assessment, cancellationToken);
             var journals = await ReadPreparationJournalsAsync(jobId, cancellationToken);
+            var checkpoint = await ReadMaintenanceForReportAsync(jobId, cancellationToken);
             var now = _timeProvider.GetUtcNow();
             var artifact = await Task.Run(() =>
             {
                 var packages = ReadPackageRecords(journals, includeEarlierAttempts: true);
-                var preparation = ProjectPreparationRecords(stored, assessment, journals, now, cancellationToken);
+                var preparation = ProjectPreparationRecords(stored, assessment, journals, checkpoint, now, cancellationToken);
                 var content = WorkshopReportRenderer.RenderWithPackageRecords(stored, summary, policy, packages,
                     preparation, cancellationToken);
                 return _reportStore!.Write(jobId, content, cancellationToken);
@@ -666,6 +667,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             await LoadPackageHistoryAsync(job.Job.JobId);
             await LoadBrokerHistoryAsync(job.Job.JobId, reconcile: true);
         }
+
+        if (!jobChanged && refreshPreparation) { await LoadMaintenanceCheckpointAsync(job.Job.JobId); }
 
         if (refreshPreparation)
         {

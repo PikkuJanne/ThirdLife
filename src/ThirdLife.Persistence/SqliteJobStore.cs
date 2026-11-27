@@ -34,6 +34,8 @@ public sealed partial class SqliteJobStore : IJobStore
     private readonly TimeProvider _timeProvider;
     private readonly IJobStoreFaultInjector? _faultInjector;
     private readonly Func<ulong?> _readBootUptime;
+    private readonly Func<uint?> _readBootSession;
+    private readonly bool _supportsMaintenance;
     private bool _disposed;
 
     private SqliteJobStore(
@@ -44,7 +46,9 @@ public sealed partial class SqliteJobStore : IJobStore
         string databaseEngineVersion,
         TimeProvider timeProvider,
         IJobStoreFaultInjector? faultInjector,
-        Func<ulong?> readBootUptime)
+        Func<ulong?> readBootUptime,
+        Func<uint?> readBootSession,
+        int schemaVersion)
     {
         _layout = layout;
         _databaseGuard = databaseGuard;
@@ -54,6 +58,8 @@ public sealed partial class SqliteJobStore : IJobStore
         _timeProvider = timeProvider;
         _faultInjector = faultInjector;
         _readBootUptime = readBootUptime;
+        _readBootSession = readBootSession;
+        _supportsMaintenance = schemaVersion >= 12;
         _jsonOptions = DomainJson.CreateStrictOptions();
     }
 
@@ -68,6 +74,7 @@ public sealed partial class SqliteJobStore : IJobStore
             TimeProvider.System,
             faultInjector: null,
             readBootUptime: null,
+            readBootSession: null,
             cancellationToken);
 
     internal static Task<SqliteJobStore> OpenAsync(
@@ -79,6 +86,7 @@ public sealed partial class SqliteJobStore : IJobStore
             TimeProvider.System,
             faultInjector: null,
             readBootUptime: null,
+            readBootSession: null,
             cancellationToken);
 
     public async Task CreateJobAsync(Job job, CancellationToken cancellationToken = default)
@@ -474,7 +482,7 @@ public sealed partial class SqliteJobStore : IJobStore
         TimeProvider timeProvider,
         IJobStoreFaultInjector? faultInjector,
         CancellationToken cancellationToken = default) =>
-        OpenInternalAsync(rootPath, maximumMigrationVersion, timeProvider, faultInjector, readBootUptime: null, cancellationToken);
+        OpenInternalAsync(rootPath, maximumMigrationVersion, timeProvider, faultInjector, readBootUptime: null, readBootSession: null, cancellationToken);
 
     internal static Task<SqliteJobStore> OpenForTestingAsync(
         string rootPath,
@@ -483,7 +491,17 @@ public sealed partial class SqliteJobStore : IJobStore
         IJobStoreFaultInjector? faultInjector,
         Func<ulong?> readBootUptime,
         CancellationToken cancellationToken = default) =>
-        OpenInternalAsync(rootPath, maximumMigrationVersion, timeProvider, faultInjector, readBootUptime, cancellationToken);
+        OpenForTestingAsync(rootPath, maximumMigrationVersion, timeProvider, faultInjector, readBootUptime, () => null, cancellationToken);
+
+    internal static Task<SqliteJobStore> OpenForTestingAsync(
+        string rootPath,
+        int maximumMigrationVersion,
+        TimeProvider timeProvider,
+        IJobStoreFaultInjector? faultInjector,
+        Func<ulong?> readBootUptime,
+        Func<uint?> readBootSession,
+        CancellationToken cancellationToken = default) =>
+        OpenInternalAsync(rootPath, maximumMigrationVersion, timeProvider, faultInjector, readBootUptime, readBootSession, cancellationToken);
 
     private static async Task<SqliteJobStore> OpenInternalAsync(
         string rootPath,
@@ -491,6 +509,7 @@ public sealed partial class SqliteJobStore : IJobStore
         TimeProvider timeProvider,
         IJobStoreFaultInjector? faultInjector,
         Func<ulong?>? readBootUptime,
+        Func<uint?>? readBootSession,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -579,7 +598,9 @@ public sealed partial class SqliteJobStore : IJobStore
                 engineVersion,
                 timeProvider,
                 faultInjector,
-                readBootUptime ?? WindowsBootUptime.Read);
+                readBootUptime ?? WindowsBootUptime.Read,
+                readBootSession ?? WindowsBootUptime.ReadBootSession,
+                maximumMigrationVersion);
             databaseGuard = null;
             journalGuard = null;
             connection = null;

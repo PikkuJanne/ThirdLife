@@ -52,6 +52,14 @@ internal sealed record PlanReviewDecision(PlanReviewOutcome Outcome, PlanReviewS
 
 internal static class PlanReviewPresentation
 {
+    internal const string FullMaintenanceReview =
+        "1. Scan Windows Update. Each eligible revision requires separate approval.\n" +
+        "2. Restart in Windows when required, reopen this job and rescan. Review any remaining updates after three servicing passes. The schedule allows up to three restarts before the final restart.\n" +
+        "3. Install the exact package shown here and verify its installed identity and launch.\n" +
+        "4. Check the saved package results and current installed version.\n" +
+        "5. Save your work and restart Windows for the final check. Reopen this job to confirm the new boot and check the system again.\n" +
+        "6. Continue to independent final verification. You can close the job at any boundary and return using its job ID.";
+
     public static PlanReviewSnapshot Describe(ProposedPlan plan)
     {
         var impact = ImpactEstimator.Estimate(plan);
@@ -86,6 +94,11 @@ internal static class PlanReviewPresentation
             {
                 AppendSchedule(details, plan, impact);
             }
+        }
+
+        if (plan.FullMaintenance)
+        {
+            details.AppendLine().AppendLine("Full maintenance schedule").AppendLine(FullMaintenanceReview);
         }
 
         if (!plan.RecipientChoices.IsEmpty)

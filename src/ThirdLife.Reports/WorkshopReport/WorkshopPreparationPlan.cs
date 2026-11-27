@@ -34,12 +34,27 @@ public sealed record WorkshopPreparationAction(
     OperatorId? SkipOperator,
     PolicyExceptionRecord? Exception);
 
+public enum WorkshopMaintenancePhase
+{
+    Unconfirmed,
+    WindowsUpdates,
+    Packages,
+    PostPackageChecks,
+    FinalRestart,
+    FinalVerification,
+}
+
+public enum WorkshopMaintenanceIssue { PackageMismatch, PackageUnavailable }
+
+public sealed record WorkshopMaintenanceCheckpoint(WorkshopMaintenancePhase Phase, WorkshopMaintenanceIssue? LastIssue);
+
 public sealed record WorkshopPreparationPlan(
     JobId JobId,
     string PlanSha256,
     bool SyntheticData,
     Disposition? CurrentDisposition,
-    IReadOnlyList<WorkshopPreparationAction> Actions);
+    IReadOnlyList<WorkshopPreparationAction> Actions,
+    WorkshopMaintenanceCheckpoint? Maintenance = null);
 
 public static partial class WorkshopReportRenderer
 {
@@ -55,6 +70,36 @@ public static partial class WorkshopReportRenderer
         (Disposition.DoNotDeploy, _) => "Do not deploy. Review the current plan's blocking action outcomes.",
         _ => throw new ArgumentOutOfRangeException(nameof(disposition)),
     };
+
+    public static string DescribePreparationSummary(WorkshopPreparationPlan? plan)
+    {
+        var actions = DescribePreparationDisposition(plan?.CurrentDisposition, plan?.SyntheticData == true);
+        if (plan?.Maintenance is not { } checkpoint) { return actions; }
+        var progress = DescribeMaintenanceCheckpoint(checkpoint);
+        return plan.CurrentDisposition == Disposition.ReadyToPrepare
+            ? $"The package action requirements have been met. {progress}" : $"{actions} {progress}";
+    }
+
+    private static string DescribeMaintenanceCheckpoint(WorkshopMaintenanceCheckpoint checkpoint)
+    {
+        var phase = checkpoint.Phase switch
+        {
+            WorkshopMaintenancePhase.WindowsUpdates => "The full maintenance schedule is awaiting Windows Update review and any required restarts.",
+            WorkshopMaintenancePhase.Packages => "The full maintenance schedule is at the package phase.",
+            WorkshopMaintenancePhase.PostPackageChecks => "Post-package checks are pending before the final restart.",
+            WorkshopMaintenancePhase.FinalRestart => "The final restart checkpoint is saved. A later boot and fresh system checks still require confirmation.",
+            WorkshopMaintenancePhase.FinalVerification => "The final restart was confirmed. Independent final verification is pending.",
+            WorkshopMaintenancePhase.Unconfirmed => "The saved maintenance phase could not be confirmed for this plan.",
+            _ => throw new ArgumentOutOfRangeException(nameof(checkpoint)),
+        };
+        return checkpoint.LastIssue switch
+        {
+            null => phase,
+            WorkshopMaintenanceIssue.PackageMismatch => $"{phase} The last installed-package check found a mismatch.",
+            WorkshopMaintenanceIssue.PackageUnavailable => $"{phase} The last installed-package check could not read the current version.",
+            _ => throw new ArgumentOutOfRangeException(nameof(checkpoint)),
+        };
+    }
 
     public static string DescribePreparationAction(WorkshopPreparationAction action)
     {
@@ -94,7 +139,7 @@ public static partial class WorkshopReportRenderer
         Line(report, "");
         Line(report, "Preparation action disposition");
         var current = plans.SingleOrDefault(plan => plan.CurrentDisposition is not null);
-        Line(report, DescribePreparationDisposition(current?.CurrentDisposition, current?.SyntheticData == true));
+        Line(report, DescribePreparationSummary(current));
         Line(report, "Whole-device acceptance still requires applicable device checks, cold-boot verification and finalization.");
         foreach (var plan in plans)
         {
@@ -102,6 +147,7 @@ public static partial class WorkshopReportRenderer
             Line(report, "");
             var scope = plan.CurrentDisposition is null ? "Earlier or no longer applicable plan" : "Current plan";
             Line(report, $"{scope}{(plan.SyntheticData ? " (synthetic test)" : "")}. Plan SHA-256 {SafeCode(plan.PlanSha256)}.");
+            if (plan != current && plan.Maintenance is { } checkpoint) { Line(report, DescribeMaintenanceCheckpoint(checkpoint)); }
             if (plan.Actions.Count == 0)
             {
                 Line(report, "There are no skipped, failed or unresolved actions to list for this earlier plan.");

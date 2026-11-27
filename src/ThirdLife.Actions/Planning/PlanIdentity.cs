@@ -16,6 +16,7 @@ internal static class PlanIdentity
     internal const string CurrentVersion = "thirdlife.plan.v2";
     internal const string LegacyVersion = "thirdlife.plan.v1";
     internal const string ScheduledVersion = "thirdlife.plan.v3";
+    internal const string MaintenanceVersion = "thirdlife.plan.v4";
     private static readonly JsonSerializerOptions EvidenceJson = DomainJson.CreateStrictOptions();
 
     public static string PlanHash(
@@ -24,14 +25,14 @@ internal static class PlanIdentity
         PlanBlockReason? reason,
         ImmutableArray<PlannedAction> actions,
         ImmutableArray<ProfileRecipientChoice> choices,
-        ImmutableArray<ScheduledAction> schedule) =>
-        Convert.ToHexStringLower(SHA256.HashData(WritePlan(subject, decision, reason, actions, choices, schedule).WrittenSpan));
+        ImmutableArray<ScheduledAction> schedule, bool fullMaintenance) =>
+        Convert.ToHexStringLower(SHA256.HashData(WritePlan(subject, decision, reason, actions, choices, schedule, fullMaintenance).WrittenSpan));
 
     public static byte[] PlanBytes(ProposedPlan plan) =>
         WritePlan(
             new PlanSubject(plan.JobId, plan.GateDecisionId, plan.ProfileSha256, plan.CatalogSha256, plan.PolicySha256,
-                plan.EvidenceSha256, plan.SyntheticData, plan.ActiveCapabilityIds),
-            plan.PolicyDecision, plan.BlockedReason, plan.Actions, plan.RecipientChoices, plan.Schedule).WrittenSpan.ToArray();
+                plan.EvidenceSha256, plan.SyntheticData, plan.ActiveCapabilityIds, plan.ReviewedEvidenceCount),
+            plan.PolicyDecision, plan.BlockedReason, plan.Actions, plan.RecipientChoices, plan.Schedule, plan.FullMaintenance).WrittenSpan.ToArray();
 
     private static ArrayBufferWriter<byte> WritePlan(
         PlanSubject subject,
@@ -39,13 +40,13 @@ internal static class PlanIdentity
         PlanBlockReason? reason,
         ImmutableArray<PlannedAction> actions,
         ImmutableArray<ProfileRecipientChoice> choices,
-        ImmutableArray<ScheduledAction> schedule)
+        ImmutableArray<ScheduledAction> schedule, bool fullMaintenance)
     {
         var buffer = new ArrayBufferWriter<byte>();
         using (var writer = new Utf8JsonWriter(buffer))
         {
             writer.WriteStartObject();
-            writer.WriteString("schema_version", schedule.IsEmpty ? CurrentVersion : ScheduledVersion);
+            writer.WriteString("schema_version", fullMaintenance ? MaintenanceVersion : schedule.IsEmpty ? CurrentVersion : ScheduledVersion);
             WriteSubject(writer, subject);
             WriteDecision(writer, decision);
             if (reason is { } blocked)
@@ -77,6 +78,14 @@ internal static class PlanIdentity
             if (!schedule.IsEmpty)
             {
                 WriteSchedule(writer, schedule);
+            }
+
+            if (fullMaintenance)
+            {
+                writer.WriteNumber("reviewed_evidence_count", subject.EvidenceCount);
+                writer.WriteStartArray("maintenance_phases");
+                foreach (var phase in MaintenancePhases.ReviewedSequence) { writer.WriteStringValue(phase); }
+                writer.WriteEndArray();
             }
 
             writer.WriteEndObject();

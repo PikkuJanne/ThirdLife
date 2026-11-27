@@ -27,7 +27,8 @@ public static class PlanDiff
         var changes = ImmutableArray.CreateBuilder<PlanChange>();
         if (approved.JobId != current.JobId || approved.GateDecisionId != current.GateDecisionId ||
             approved.ProfileSha256 != current.ProfileSha256 || approved.PolicySha256 != current.PolicySha256 ||
-            approved.EvidenceSha256 != current.EvidenceSha256 || approved.SyntheticData != current.SyntheticData)
+            approved.EvidenceSha256 != current.EvidenceSha256 || approved.SyntheticData != current.SyntheticData ||
+            (approved.FullMaintenance && current.FullMaintenance && approved.ReviewedEvidenceCount != current.ReviewedEvidenceCount))
         {
             changes.Add(new(PlanChangeKind.ReviewContext, "The job, approved intake, profile, policy or evidence context changed."));
         }
@@ -63,7 +64,7 @@ public static class PlanDiff
             changes.Add(new(PlanChangeKind.ActionOrder, "The order of the preparation actions changed."));
         }
 
-        if (!ActionSchedule.SameSteps(approved.Schedule, current.Schedule))
+        if (approved.FullMaintenance != current.FullMaintenance || !ActionSchedule.SameSteps(approved.Schedule, current.Schedule))
         {
             changes.Add(new(PlanChangeKind.ActionSchedule, "The preparation phases, dependencies or scheduled actions changed."));
         }

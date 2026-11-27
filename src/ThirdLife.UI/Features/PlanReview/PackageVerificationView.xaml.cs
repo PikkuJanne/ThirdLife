@@ -54,6 +54,26 @@ public partial class PackageVerificationView : UserControl
         }
     }
 
+    private void CancelMaintenanceCheck(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanCancelWindowsUpdate)
+        {
+            var hadFocus = CancelMaintenanceCheckButton.IsKeyboardFocused;
+            workspace.CancelWindowsUpdate();
+            RestoreFocus(MaintenancePauseMessage, hadFocus);
+        }
+    }
+
+    private async void ContinueMaintenance(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanContinueMaintenance)
+        {
+            var hadFocus = ContinueMaintenanceButton.IsKeyboardFocused;
+            await workspace.ContinueMaintenanceAsync();
+            RestoreFocus(MaintenancePauseMessage, hadFocus);
+        }
+    }
+
     private void RestoreFocus(FrameworkElement preferred, bool hadFocus)
     {
         var focused = Keyboard.FocusedElement;
