@@ -6,6 +6,7 @@ using System.Windows.Input;
 using ThirdLife.Core.Finalization;
 using ThirdLife.Core.Handover;
 using ThirdLife.Persistence;
+using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Shell;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
 using static ThirdLife.UI.Tests.AuditFinalizationTests;
@@ -60,10 +61,13 @@ public sealed class AuditRecipientHandoverTests
                 Named<TextBox>(view, "FinalizationOperatorCode").Text = actor;
                 Invoke(window, Named<Button>(view, "SaveFinalizationButton"));
                 PumpUntil(window, () => !workspace.IsBusy && workspace.Finalization?.History.Count == 1);
+                Invoke(window, Named<Button>(view, "GenerateReportButton"));
+                PumpUntil(window, () => !workspace.IsBusy && workspace.ReportArtifact is not null);
 
                 modeInput.SelectedValue = HandoverMode.Sealed;
                 Invoke(window, modeButton);
                 PumpUntil(window, () => !workspace.IsBusy && workspace.RecipientHandover?.Handover?.Mode == HandoverMode.Sealed);
+                Assert.Null(workspace.ReportArtifact);
                 Assert.False(Named<StackPanel>(view, "RecipientChoiceFields").IsVisible);
                 Assert.Contains("Backup · Pending", Named<TextBlock>(view, "RecipientChoicesSummary").Text, StringComparison.Ordinal);
                 Assert.Equal(AutomationLiveSetting.Polite,
@@ -87,6 +91,6 @@ public sealed class AuditRecipientHandoverTests
             async token => await SqliteJobStore.OpenForTestingAsync(Path.Combine(disk.Root, "store"),
                 SqliteJobStore.CurrentSchemaVersion, clock, faultInjector: null, () => 180_000, () => 10, token)
                 .ConfigureAwait(false),
-            [AuditTestProvider.Available("recipient-handover-ui")], clock);
+            [AuditTestProvider.Available("recipient-handover-ui")], clock, new WorkshopReportStore(Path.Combine(disk.Root, "reports")));
     }
 }

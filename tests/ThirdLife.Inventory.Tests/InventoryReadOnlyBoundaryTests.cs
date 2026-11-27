@@ -86,21 +86,41 @@ public sealed class InventoryReadOnlyBoundaryTests
             (typeof(BatteryReportFiles), "shell32.dll", "SHGetKnownFolderPath"),
             (typeof(BatteryReportFiles), "ole32.dll", "CoTaskMemFree"),
         };
+        var typedStorageProxies = new Dictionary<string, Type>(StringComparer.Ordinal)
+        {
+            [nameof(StorageWmiNativeMethods.SetServicesProxyBlanket)] = typeof(IStorageWbemServices),
+            [nameof(StorageWmiNativeMethods.SetEnumeratorProxyBlanket)] = typeof(IStorageWbemEnumerator),
+        };
         var imports = typeof(OperatingSystemProvider).Assembly.GetTypes()
             .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
             .Select(method => (Method: method, Import: method.GetCustomAttribute<DllImportAttribute>()))
             .Where(item => item.Import is not null).ToArray();
-        Assert.Equal(allowed.Count, imports.Length);
+        Assert.Equal(allowed.Count + typedStorageProxies.Count, imports.Length);
         foreach (var (method, import) in imports)
         {
             var declaringType = method.DeclaringType!;
             var owner = declaringType.DeclaringType ?? declaringType;
-            Assert.Contains((owner, import!.Value, import.EntryPoint ?? method.Name), allowed);
+            if (typedStorageProxies.Remove(method.Name, out var proxyType))
+            {
+                Assert.Equal(typeof(StorageWmiNativeMethods), owner);
+                Assert.Equal("ole32.dll", import!.Value);
+                Assert.Equal("CoSetProxyBlanket", import.EntryPoint);
+                var proxy = method.GetParameters()[0];
+                Assert.Equal(proxyType, proxy.ParameterType);
+                Assert.Equal(UnmanagedType.Interface, proxy.GetCustomAttribute<MarshalAsAttribute>()!.Value);
+            }
+            else
+            {
+                Assert.True(allowed.Remove((owner, import!.Value, import.EntryPoint ?? method.Name)),
+                    $"Unexpected import {owner.Name}.{method.Name}.");
+            }
             Assert.False(method.IsPublic);
             Assert.False(declaringType.IsVisible);
             Assert.True(import.ExactSpelling);
             Assert.Equal(DllImportSearchPath.System32, method.GetCustomAttribute<DefaultDllImportSearchPathsAttribute>()!.Paths);
         }
+        Assert.Empty(allowed);
+        Assert.Empty(typedStorageProxies);
     }
 
     [Fact]

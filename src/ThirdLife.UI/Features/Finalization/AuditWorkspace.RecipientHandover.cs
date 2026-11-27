@@ -54,6 +54,7 @@ internal sealed partial class AuditWorkspace
             try
             {
                 await Task.Run(() => save(store, expected, actor));
+                ClearReport();
                 _handoverModeFeedback = feedback;
             }
             catch (JobStoreConflictException)
