@@ -85,22 +85,18 @@ public sealed class AuditAccessibilityProbe : IDisposable
 
     public uint WindowDpi => GetDpiForWindow(new IntPtr(window.Current.NativeWindowHandle));
 
-    public System.Windows.Point MoveWheelPointer(System.Windows.Rect bounds)
+    public int[] MoveWheelPointer(int x, int y)
     {
-        var point = new CursorPoint
-        {
-            X = (int)Math.Round(bounds.X + bounds.Width / 2),
-            Y = (int)Math.Round(bounds.Y + bounds.Height / 3)
-        };
+        var point = new CursorPoint { X = x, Y = y };
         RequireOwnedPoint(point);
         if (!GetPhysicalCursorPos(out CursorPoint original) || !SetPhysicalCursorPos(point.X, point.Y))
             throw new InvalidOperationException("The physical cursor could not be positioned for the owned fixture.");
-        return new System.Windows.Point(original.X, original.Y);
+        return new[] { original.X, original.Y };
     }
 
-    public void RestoreWheelPointer(System.Windows.Point point)
+    public void RestoreWheelPointer(int[] point)
     {
-        if (!SetPhysicalCursorPos((int)point.X, (int)point.Y))
+        if (!SetPhysicalCursorPos(point[0], point[1]))
             throw new InvalidOperationException("The original physical cursor position could not be restored.");
     }
 
@@ -207,7 +203,9 @@ function Measure-FractionalWheel {
         }
     } 'vertical overflow in the populated Intake fixture'
     $scroll = $viewport.GetCurrentPattern([Windows.Automation.ScrollPattern]::Pattern)
-    $cursor = $probe.MoveWheelPointer($viewport.Current.BoundingRectangle)
+    $bounds = $viewport.Current.BoundingRectangle
+    $cursor = $probe.MoveWheelPointer(
+        [int]($bounds.X + $bounds.Width / 2), [int]($bounds.Y + $bounds.Height / 3))
     try {
         $scroll.SetScrollPercent(-1, 0)
         $null = Wait-For { $scroll.Current.VerticalScrollPercent -eq 0 } 'wheel baseline'
