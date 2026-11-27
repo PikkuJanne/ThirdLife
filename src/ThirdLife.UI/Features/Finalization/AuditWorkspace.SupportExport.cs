@@ -16,11 +16,11 @@ internal sealed partial class AuditWorkspace
     private CancellationTokenSource? _supportCancellation;
     private FrozenSupportPreview? _supportPreview;
     private PendingSupportCompletion? _supportCompletion;
-    private int _pendingSupportExports;
+    public IReadOnlyList<SupportExportAudit> PendingSupportExports { get; private set; } = [];
 
     public string SupportExportStatus { get; private set; } = "Open a workshop job to preview a support archive.";
-    public string SupportHistoryStatus => _pendingSupportExports == 0 ? string.Empty :
-        $"There are {_pendingSupportExports} saved support export intents with unconfirmed outcomes. Review them before sharing any related copy.";
+    public string SupportHistoryStatus => PendingSupportExports.Count == 0 ? string.Empty :
+        $"There are {PendingSupportExports.Count} saved support export intents with unconfirmed outcomes. Review them before sharing any related copy.";
     public SupportArchivePreview? SupportPreview => _supportPreview?.Archive;
     public string SupportPreviewSummary => SupportPreview is { } preview
         ? $"{preview.ArchiveByteCount} ZIP bytes. SHA-256 {preview.ArchiveSha256}." : string.Empty;
@@ -29,6 +29,8 @@ internal sealed partial class AuditWorkspace
         _supportCompletion is null && _supportPreview?.JobId == Job?.Job.JobId;
     public bool CanRetrySupportAudit => CanCloseJob && !_hasSeparateEvidenceOrigin &&
         _store is ISupportExportAuditStore && _supportCompletion?.JobId == Job?.Job.JobId;
+    public bool CanRecoverSupportExport => CanEditJob && _store is ISupportExportAuditStore &&
+        _supportCompletion is null && PendingSupportExports.Count != 0;
     public bool CanCancelSupport => _supportCancellation is { IsCancellationRequested: false };
 
     public Task CreateSupportPreviewAsync()
@@ -85,6 +87,38 @@ internal sealed partial class AuditWorkspace
         }
 
         return RunAsync(async () => await RecordPublishedSupportAsync(store, pending), refreshFinalization: false);
+    }
+
+    public Task RecoverSupportExportAsync(SupportExportAudit pending, string operatorCode, string directory)
+    {
+        if (!CanRecoverSupportExport || !PendingSupportExports.Contains(pending) || Job is not { } job ||
+            _store is not ISupportExportAuditStore store)
+        {
+            return Task.CompletedTask;
+        }
+
+        var jobId = job.Job.JobId;
+        return RunSupportAsync("Verifying the exact saved archive in the chosen local folder.", async token =>
+        {
+            var actor = new OperatorId(operatorCode.Trim());
+            var current = await Task.Run(() => store.LoadSupportExportsAsync(jobId, token), token);
+            if (!current.Contains(pending)) { throw new JobStoreConflictException(); }
+            var destination = new SupportArchiveStore(Path.Combine(directory, SupportFolderName));
+            SupportArchiveArtifact verified;
+            try
+            {
+                verified = await Task.Run(() => destination.VerifyPriorPublication(pending, token), token);
+            }
+            catch (DiagnosticContractException error)
+            {
+                SupportExportStatus = $"{error.Message} The export outcome remains unconfirmed.";
+                return;
+            }
+            var observed = new SupportExportAudit(pending.InternalSupportId, pending.SchemaVersion, pending.ManifestVersion,
+                pending.ContentSha256, _timeProvider.GetUtcNow(), pending.OperatorId, SupportExportState.Published, pending.ReviewVersion, actor);
+            _supportCompletion = new(jobId, observed, verified.FileName);
+            await RecordPublishedSupportAsync(store, _supportCompletion);
+        });
     }
 
     public void CancelSupport()
@@ -162,7 +196,10 @@ internal sealed partial class AuditWorkspace
             await Task.Run(() => store.RecordSupportExportAsync(pending.JobId, pending.Audit));
             _supportCompletion = null;
             ClearReport();
-            SupportExportStatus = $"Saved {pending.FileName} in {SupportFolderName} and recorded the support export.";
+            ClearHandoverReview();
+            SupportExportStatus = pending.Audit.RecoveryOperatorId is null
+                ? $"Saved {pending.FileName} in {SupportFolderName} and recorded the support export."
+                : $"Verified the existing {pending.FileName} and recorded recovery of the support export.";
         }
         catch (JobStoreException)
         {
@@ -197,7 +234,7 @@ internal sealed partial class AuditWorkspace
             var history = await Task.Run(() => store.LoadSupportExportsAsync(jobId));
             if (Job?.Job.JobId == jobId)
             {
-                _pendingSupportExports = history.Count(row => row.State == SupportExportState.Pending);
+                PendingSupportExports = Array.AsReadOnly(history.Where(row => row.State == SupportExportState.Pending).ToArray());
             }
         }
         catch (JobStoreException)
@@ -215,7 +252,7 @@ internal sealed partial class AuditWorkspace
     {
         _supportPreview = null;
         _supportCompletion = null;
-        _pendingSupportExports = 0;
+        PendingSupportExports = [];
         SupportExportStatus = "Open a workshop job to preview a support archive.";
     }
 

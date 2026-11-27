@@ -2,7 +2,9 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Support;
 using ThirdLife.Diagnostics;
 using ThirdLife.Diagnostics.Redaction;
 using ThirdLife.Reports.Support;
@@ -137,6 +139,25 @@ public sealed class WorkshopReportStoreTests
 
         Assert.Throws<OperationCanceledException>(() => store.Write(Job, Report, cancellation.Token));
         Assert.False(Directory.Exists(directory.ReportRoot));
+    }
+
+    [Fact]
+    public void VerificationOfPriorSupportPublicationRejectsChangedBytes()
+    {
+        using var directory = new FixtureDirectory();
+        var preview = SupportArchivePreview.Create([], DateTimeOffset.UtcNow);
+        var store = new SupportArchiveStore(directory.ReportRoot);
+        var intent = new SupportExportAudit(preview.InternalSupportId, SupportArchivePreview.SchemaVersion,
+            SupportArchivePreview.ManifestVersion, preview.ArchiveSha256, DateTimeOffset.UtcNow, new OperatorId("operator-export-test"),
+            SupportExportState.Pending);
+        var saved = store.Export(preview, preview.ArchiveSha256);
+        Assert.Equal(saved, store.VerifyPriorPublication(intent));
+        var existing = Path.Combine(directory.ReportRoot, saved.FileName);
+        var content = File.ReadAllBytes(existing);
+        content[0] ^= 0xff;
+        File.WriteAllBytes(existing, content);
+        var error = Assert.Throws<DiagnosticContractException>(() => store.VerifyPriorPublication(intent));
+        Assert.Equal("support_archive_mismatch", error.ResultCode);
     }
 
     [Fact]

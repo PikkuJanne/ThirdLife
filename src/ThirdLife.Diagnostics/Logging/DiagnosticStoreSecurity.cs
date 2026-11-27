@@ -29,7 +29,7 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
         }
     }
 
-    public void EnsureSafeRoot()
+    public void EnsureSafeRoot(bool createIfMissing = true)
     {
         ValidateExistingPathComponents(_rootPath);
         if (File.Exists(_rootPath))
@@ -39,11 +39,11 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
 
         if (OperatingSystem.IsWindows())
         {
-            EnsureSafeWindowsRoot();
+            EnsureSafeWindowsRoot(createIfMissing);
         }
         else
         {
-            EnsureSafePortableRoot();
+            EnsureSafePortableRoot(createIfMissing);
         }
     }
 
@@ -159,9 +159,9 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
         }
     }
 
-    public FileStream OpenValidatedRecord(string path, FileShare share)
+    public FileStream OpenValidatedRecord(string path, FileShare share, bool createRootIfMissing = true)
     {
-        EnsureSafeRoot();
+        EnsureSafeRoot(createRootIfMissing);
         EnsureContained(path);
         var stream = new FileStream(
             path,
@@ -261,10 +261,11 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
     }
 
     [SupportedOSPlatform("windows")]
-    private void EnsureSafeWindowsRoot()
+    private void EnsureSafeWindowsRoot(bool createIfMissing)
     {
         if (!Directory.Exists(_rootPath))
         {
+            if (!createIfMissing) { throw UnsafeStore(); }
             new DirectoryInfo(_rootPath).Create(CreateDirectorySecurity());
         }
 
@@ -297,10 +298,11 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
     }
 
     [UnsupportedOSPlatform("windows")]
-    private void EnsureSafePortableRoot()
+    private void EnsureSafePortableRoot(bool createIfMissing)
     {
         if (!Directory.Exists(_rootPath))
         {
+            if (!createIfMissing) { throw UnsafeStore(); }
             Directory.CreateDirectory(_rootPath);
             File.SetUnixFileMode(
                 _rootPath,
