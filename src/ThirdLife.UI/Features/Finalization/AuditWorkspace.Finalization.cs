@@ -142,6 +142,10 @@ internal sealed partial class AuditWorkspace
         try
         {
             await LoadFinalizationAsync();
+            if (Job is { } job)
+            {
+                await RefreshSupportAuditAsync(job.Job.JobId);
+            }
         }
         finally
         {

@@ -281,6 +281,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ClearPolicyView();
         ClearReport();
         ClearFinalization();
+        ClearSupportExport();
         Status = "Job closed. Reopen it by its workshop job ID.";
         Publish();
     }
@@ -395,6 +396,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         CancelProfileVerification();
         CancelReport();
         CancelArtifactScan();
+        CancelSupport();
         StopPackageRetryRefresh();
         StopWaitingForPackageOnClose();
         CancelBrokerExecution();
@@ -567,6 +569,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             _postBootVerificationRunning = false;
             _reportCancellation?.Dispose();
             _reportCancellation = null;
+            _supportCancellation?.Dispose();
+            _supportCancellation = null;
             _packageCancellation?.Dispose();
             _packageCancellation = null;
             _packageAttemptProgress = null;
@@ -691,6 +695,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         if (jobChanged)
         {
             ClearFinalization();
+            ClearSupportExport();
             ClearBrokerHistory();
             ClearPackageHistory();
             ClearWindowsUpdateHistory();

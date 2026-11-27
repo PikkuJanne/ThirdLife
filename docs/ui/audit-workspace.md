@@ -205,3 +205,21 @@ bytes are preserved. Rendering is capped at 1,048,576 characters. The store limi
 each artifact to 8 MiB and the folder to 64 files and 64 MiB, with a 4 MiB free-space
 reserve. It does not delete published reports automatically. Explicit retention and
 job deletion remain with the later lifecycle work.
+
+## Sanitized support archive
+
+In **Handover**, choose **Preview support archive**. Review the two tabs,
+the total ZIP size and the exact archive digest. The preview displays the
+contents of both files. The support schema uses fixed check and package
+outcomes, versions and available generic hardware.
+
+Record your workshop operator code and confirm the reviewed archive. Choose
+a local location for the protected `ThirdLifeSupport` folder. ThirdLife
+checks that the reviewed facts still match before publishing. A changed job
+requires a fresh preview and approval. Use any exported copy only for its
+support case and review its retention after the case closes.
+
+The saved job records an export intent and, when confirmed, publication of the
+exact ZIP. If a ZIP was saved and writing its receipt failed, **Retry saving
+the export record** completes only the receipt. After an interruption, review
+any saved intent with an unconfirmed outcome before sharing a related copy.
