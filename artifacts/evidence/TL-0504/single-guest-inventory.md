@@ -25,6 +25,8 @@ The SQLite cases exercise exact approval and phase intent, changed revision or c
 
 Technical source `85ffc412c5e56824580383720457b31dcd94a4c9` passed all six focused UI status and inventory tests in one second and all 11 Core update-policy tests in 202 ms. They cover distinct explanations for empty and ineligible scans, unrecorded historical reasons and recovery precedence. These durations are the test assemblies' reported execution times.
 
+The verifier identified two test initializer lines that needed standard formatting. The corrected technical source `5a817a0f96e7eaafb013c6e76f1f54e35bd3df8b` passed Targeted in 184.701 seconds with 1,319 test executions and zero skips. This run used the command above with Core and UI selected, including the full Quick selection. Formatting and the warnings-as-errors Release build passed.
+
 ## ThirdLife-W11 observation
 
 The integrated assessment source was `68537173b38d84b58eb8b2b7f2c59622432b341b`. On 2026-11-27 the existing guest ran Windows build 26300.9974 and wuapi.dll 1511.2611.5012.0. The limited-token `WindowsUpdateAssessment` passed in 226.146 seconds including verified cleanup. WUA offered one revision and zero selectable revisions. The exact lookup reported `UnsupportedHandler` and uninstall unavailable. Prepare saved the captured native inventory, reopened the same isolated job and retained the exclusion. The journal had zero action approvals and zero dispatches. The fixture intake, current guest facts and later controlled Verify text check have distinct provenance.
