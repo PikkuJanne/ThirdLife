@@ -22,7 +22,8 @@ lifecycle checks, partner exposure and stable freeze remain open.
 [Deployment](docs/pilot/deployment-rollback.md) ·
 [Operator runbook](docs/pilot/operator-runbook.md) ·
 [Support and incidents](docs/pilot/support-and-incident.md) ·
-[Metrics and evidence](docs/pilot/metrics-export.md)
+[Metrics and evidence](docs/pilot/metrics-export.md) ·
+[Support](docs/support.md) · [Known limitations](docs/known-limitations.md)
 
 ## 1. Product identity
 
