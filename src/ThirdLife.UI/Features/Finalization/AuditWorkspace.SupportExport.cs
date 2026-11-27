@@ -38,11 +38,12 @@ internal sealed partial class AuditWorkspace
         return RunSupportAsync("Preparing the sanitized support preview.", async token =>
         {
             _supportPreview = null;
+            var scope = await ReadPublicationScopeAsync(jobId, token);
             var inputs = await ReadSupportInputsAsync(jobId, token);
             var now = _timeProvider.GetUtcNow();
             var archive = await Task.Run(() => SupportArchivePreview.Create(inputs.Facts, inputs.Checks, inputs.PackageOutcomes,
                 now, token), token);
-            _supportPreview = new(jobId, inputs.Version, archive);
+            _supportPreview = new(jobId, inputs.Version, archive, scope?.Version);
             SupportExportStatus = "Review both files and confirm this exact archive before choosing a protected local folder.";
         });
     }
@@ -68,9 +69,10 @@ internal sealed partial class AuditWorkspace
             }
 
             var destination = new SupportArchiveStore(Path.Combine(directory, SupportFolderName));
-            var intent = SupportAudit(preview, actor, SupportExportState.Pending);
+            var intent = SupportAudit(preview, actor, SupportExportState.Pending, frozen.HandoverReviewVersion);
             await Task.Run(() => auditStore.StageSupportExportAsync(frozen.JobId, intent, token), token);
             _supportPreview = null;
+            ClearHandoverReview();
             await PublishSupportExportAsync(frozen, destination, intent, auditStore, token);
         });
     }
@@ -128,7 +130,7 @@ internal sealed partial class AuditWorkspace
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            await RecordUnpublishedSupportAsync(auditStore, frozen.JobId, frozen.Archive, intent.OperatorId,
+            await RecordUnpublishedSupportAsync(auditStore, frozen, intent.OperatorId,
                 "Export cancelled before publication.");
             return;
         }
@@ -137,7 +139,7 @@ internal sealed partial class AuditWorkspace
             if (error.ResultCode is "support_destination_unavailable" or "support_preview_changed" or
                 "support_capacity" or "support_file_exists")
             {
-                await RecordUnpublishedSupportAsync(auditStore, frozen.JobId, frozen.Archive, intent.OperatorId, error.Message);
+                await RecordUnpublishedSupportAsync(auditStore, frozen, intent.OperatorId, error.Message);
             }
             else
             {
@@ -148,7 +150,7 @@ internal sealed partial class AuditWorkspace
             return;
         }
 
-        var completion = SupportAudit(frozen.Archive, intent.OperatorId, SupportExportState.Published);
+        var completion = SupportAudit(frozen.Archive, intent.OperatorId, SupportExportState.Published, frozen.HandoverReviewVersion);
         _supportCompletion = new(frozen.JobId, completion, artifact.FileName);
         await RecordPublishedSupportAsync(auditStore, _supportCompletion);
     }
@@ -170,13 +172,13 @@ internal sealed partial class AuditWorkspace
         await RefreshSupportAuditAsync(pending.JobId);
     }
 
-    private async Task RecordUnpublishedSupportAsync(ISupportExportAuditStore store, JobId jobId,
-        SupportArchivePreview preview, OperatorId actor, string status)
+    private async Task RecordUnpublishedSupportAsync(ISupportExportAuditStore store, FrozenSupportPreview frozen,
+        OperatorId actor, string status)
     {
         try
         {
-            var receipt = SupportAudit(preview, actor, SupportExportState.NotPublished);
-            await Task.Run(() => store.RecordSupportExportAsync(jobId, receipt));
+            var receipt = SupportAudit(frozen.Archive, actor, SupportExportState.NotPublished, frozen.HandoverReviewVersion);
+            await Task.Run(() => store.RecordSupportExportAsync(frozen.JobId, receipt));
             SupportExportStatus = $"{status} Create a fresh preview to try again.";
         }
         catch (JobStoreException)
@@ -184,7 +186,7 @@ internal sealed partial class AuditWorkspace
             SupportExportStatus = $"{status} The saved intent needs review.";
         }
 
-        await RefreshSupportAuditAsync(jobId);
+        await RefreshSupportAuditAsync(frozen.JobId);
     }
 
     private async Task RefreshSupportAuditAsync(JobId jobId)
@@ -204,9 +206,10 @@ internal sealed partial class AuditWorkspace
         }
     }
 
-    private SupportExportAudit SupportAudit(SupportArchivePreview preview, OperatorId actor, SupportExportState state) =>
+    private SupportExportAudit SupportAudit(SupportArchivePreview preview, OperatorId actor, SupportExportState state,
+        string? reviewVersion) =>
         new(preview.InternalSupportId, SupportArchivePreview.SchemaVersion, SupportArchivePreview.ManifestVersion,
-            preview.ArchiveSha256, _timeProvider.GetUtcNow(), actor, state);
+            preview.ArchiveSha256, _timeProvider.GetUtcNow(), actor, state, reviewVersion);
 
     private void ClearSupportExport()
     {
@@ -216,6 +219,7 @@ internal sealed partial class AuditWorkspace
         SupportExportStatus = "Open a workshop job to preview a support archive.";
     }
 
-    private sealed record FrozenSupportPreview(JobId JobId, SupportInputVersion Version, SupportArchivePreview Archive);
+    private sealed record FrozenSupportPreview(JobId JobId, SupportInputVersion Version, SupportArchivePreview Archive,
+        string? HandoverReviewVersion);
     private sealed record PendingSupportCompletion(JobId JobId, SupportExportAudit Audit, string FileName);
 }

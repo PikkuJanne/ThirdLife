@@ -33,6 +33,29 @@ public sealed class WorkshopReportStoreTests
     }
 
     [Fact]
+    public void ReopenedStoreVerifiesExactReceiptAndRejectsChangedBytesOrDestination()
+    {
+        using var directory = new FixtureDirectory();
+        var saved = new WorkshopReportStore(directory.ReportRoot).Write(Job, Report);
+        var reopened = new WorkshopReportStore(directory.ReportRoot);
+        reopened.VerifyReceipt(saved.Receipt);
+
+        TheFailure(WorkshopReportFailure.ReadFailed, () => reopened.VerifyReceipt(saved.Receipt with
+        {
+            FileName = "..\\" + saved.FileName,
+        }));
+        TheFailure(WorkshopReportFailure.ReadFailed, () => reopened.VerifyReceipt(saved.Receipt with
+        {
+            Sha256 = "invalid-digest",
+        }));
+        TheFailure(WorkshopReportFailure.ReadFailed, () => new WorkshopReportStore(directory.ReportRoot,
+            Guid.NewGuid, printableRecipientGuide: true).VerifyReceipt(saved.Receipt));
+
+        File.WriteAllText(Path.Combine(directory.ReportRoot, saved.FileName), Report.Replace("café", "safé", StringComparison.Ordinal));
+        TheFailure(WorkshopReportFailure.ArtifactChanged, () => reopened.VerifyReceipt(saved.Receipt));
+    }
+
+    [Fact]
     public void CollisionPreservesTheExistingReportAndCapability()
     {
         using var directory = new FixtureDirectory();
@@ -208,7 +231,7 @@ public sealed class WorkshopReportStoreTests
         Assert.Equal(Report, File.ReadAllText(alias));
     }
 
-    private static void TheFailure(WorkshopReportFailure failure, Func<object> operation) =>
+    private static void TheFailure(WorkshopReportFailure failure, Action operation) =>
         Assert.Equal(failure, Assert.Throws<WorkshopReportStoreException>(operation).Failure);
 
     private sealed class FixtureDirectory : IDisposable
