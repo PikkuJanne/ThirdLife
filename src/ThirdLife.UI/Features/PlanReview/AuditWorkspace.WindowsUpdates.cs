@@ -114,9 +114,20 @@ internal sealed partial class AuditWorkspace
             WindowsUpdateDisposition.RestartRequired => "Windows reported a required restart. Rescan after the next confirmed restart.",
             WindowsUpdateDisposition.ApprovalRequired => "The configured service offered applicable updates. Review the saved inventory in Prepare.",
             WindowsUpdateDisposition.PassLimitReached => "The three-pass update limit was reached. Review remaining updates.",
+            WindowsUpdateDisposition.NoEligibleOffers when latest.Scan is { } excluded => DescribeIneligibleInventory(excluded),
             WindowsUpdateDisposition.ReviewRequired => "Update evidence needs workshop review before further preparation.",
             _ => "Update currency is unknown. Run a fresh scan and review the saved evidence.",
         };
+    }
+
+    private static string DescribeIneligibleInventory(WindowsUpdateScan scan)
+    {
+        var count = scan.Updates.Count;
+        var offered = count == 1 ? "The configured service offered one applicable revision."
+            : $"The configured service offered {count} applicable revisions.";
+        var detail = count == 1 && scan.EligibilityReasons is { } reasons
+            ? DescribeEligibility(reasons[0]) : "Review the saved inventory in Prepare.";
+        return $"{offered} None met the servicing requirements in this scan. {detail}";
     }
 
     public string WindowsUpdateInventory { get; private set; } = string.Empty;
@@ -181,10 +192,14 @@ internal sealed partial class AuditWorkspace
         try
         {
             _updateHistory = await Task.Run(() => journal.LoadWindowsUpdatesAsync(jobId));
+            _updateRecovery = WindowsUpdateHistory.RecoveryBeforePackages(_updateHistory);
             var lastInventory = _updateHistory.LastOrDefault(entry => entry.Scan is { Status: WindowsUpdateStatus.Succeeded });
             if (lastInventory?.Scan is not { } scan) { return; }
-            var rows = scan.Updates.Select(DescribeUpdate);
-            WindowsUpdateInventory = $"Inventory saved at {lastInventory.OccurredAtUtc:u} with {scan.Updates.Count} applicable, nonhidden offers." +
+            var rows = scan.Updates.Select((update, index) => scan.EligibilityReasons is { } reasons && update.Classification == WindowsUpdateClass.Restricted
+                ? $"{DescribeUpdate(update)}. {DescribeEligibility(reasons[index])}" : DescribeUpdate(update));
+            var eligibility = scan.Updates.Count > 0 && !scan.Updates.Any(WindowsUpdatePolicy.IsSelectable)
+                ? " None met the servicing requirements in this scan." : string.Empty;
+            WindowsUpdateInventory = $"Inventory saved at {lastInventory.OccurredAtUtc:u} with {scan.Updates.Count} applicable, nonhidden offers.{eligibility}" +
                 (scan.Updates.Count == 0 ? string.Empty : Environment.NewLine + string.Join(Environment.NewLine, rows));
             if (lastInventory.Stage == WindowsUpdateStage.ScanCompleted && lastInventory.Id == _updateHistory[^1].Id)
             {
@@ -216,6 +231,7 @@ internal sealed partial class AuditWorkspace
     private void ClearWindowsUpdateHistory()
     {
         _updateHistory = [];
+        _updateRecovery = UpdateRecovery.None;
         _updateHistoryUnavailable = false;
         WindowsUpdateInventory = string.Empty;
         ClearWindowsUpdateOffers();

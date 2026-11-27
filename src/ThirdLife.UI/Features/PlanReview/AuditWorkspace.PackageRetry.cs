@@ -17,7 +17,7 @@ internal sealed partial class AuditWorkspace
     public bool ShowPackageRetry => CanUsePackageRecovery && RetryProfile is not null &&
         SavedPackageRetry.Status is PackageRetryStatus.Ready or PackageRetryStatus.CoolingDown;
 
-    public bool CanRetryPackage => CanReviewPlan && ShowPackageRetry && !_packageNeedsReview &&
+    public bool CanRetryPackage => CanReviewPlan && ShowPackageRetry && !_packageNeedsReview && !HoldsPackageDispatch &&
         SavedPackageRetry.Status == PackageRetryStatus.Ready;
 
     public string PackageRetryStatusText => SavedPackageRetry.Status switch
@@ -25,6 +25,7 @@ internal sealed partial class AuditWorkspace
         PackageRetryStatus.CoolingDown when ShowPackageRetry => "Wait briefly before retrying the saved package attempt.",
         PackageRetryStatus.Ready when CanRetryPackage => "You can retry the saved package. ThirdLife will check the current plan and approval first.",
         PackageRetryStatus.Ready when ShowPackageRetry && IsBusy => "Wait for the current job operation to finish before retrying.",
+        PackageRetryStatus.Ready when ShowPackageRetry && HoldsPackageDispatch => MaintenancePhaseStatus,
         PackageRetryStatus.Ready when ShowPackageRetry && _packageNeedsReview => "Check the saved package state before retrying.",
         PackageRetryStatus.Ready when ShowPackageRetry => "A current assessment and matching intake decision are required before retrying.",
         PackageRetryStatus.Exhausted => "This saved job has reached its package attempt limit. Review its history.",

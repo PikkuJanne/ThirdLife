@@ -7,6 +7,15 @@ using ThirdLife.Core.WindowsUpdates;
 
 namespace ThirdLife.Actions.WindowsUpdates;
 
+public enum UpdateRecovery
+{
+    None,
+    ReviewResult,
+    Restart,
+    VerifyInstallation,
+    Servicing,
+}
+
 public enum WindowsUpdateStage
 {
     ScanStarted = 1,
@@ -69,9 +78,35 @@ public static class WindowsUpdateHistory
             return WindowsUpdateDisposition.NotCurrent;
         }
 
+        var recovery = InspectRecovery(history, out var downloadAttempts);
+        if (recovery == UpdateRecovery.Restart) { return WindowsUpdateDisposition.RestartRequired; }
+        if (recovery != UpdateRecovery.None) { return WindowsUpdateDisposition.ReviewRequired; }
+
+        return latest.Stage == WindowsUpdateStage.ScanCompleted && latest.Scan is { } scan
+            ? WindowsUpdatePolicy.Evaluate(scan, downloadAttempts)
+            : WindowsUpdateDisposition.NotCurrent;
+    }
+
+    // An outstanding mutation or restart holds the package phase. Merely finding offers
+    // outside the update policy does not block independent package preparation.
+    public static UpdateRecovery RecoveryBeforePackages(ImmutableArray<WindowsUpdateEntry> history)
+    {
+        var recovery = InspectRecovery(history, out _);
+        if (recovery != UpdateRecovery.None) { return recovery; }
+        var latest = history.LastOrDefault();
+        var betweenPhases = latest is
+        { Stage: WindowsUpdateStage.DownloadCompleted, Operation: { Status: WindowsUpdateStatus.Succeeded, RebootRequired: false } };
+        var checkedPhase = latest is
+        { Stage: WindowsUpdateStage.DownloadChecked or WindowsUpdateStage.InstallChecked, Scan: { } scan, Approval: { } approval } &&
+            WindowsUpdatePolicy.Matches(approval.Exact, scan);
+        return betweenPhases || checkedPhase ? UpdateRecovery.Servicing : UpdateRecovery.None;
+    }
+
+    private static UpdateRecovery InspectRecovery(ImmutableArray<WindowsUpdateEntry> history, out int downloadAttempts)
+    {
         // A rescan can report applicability after an interruption. It cannot prove what an
         // interrupted mutation installed, or release that action for replay.
-        var downloadAttempts = 0;
+        downloadAttempts = 0;
         for (var index = 0; index < history.Length; index++)
         {
             var entry = history[index];
@@ -82,7 +117,7 @@ public static class WindowsUpdateHistory
                 if (!history.Skip(index + 1).Any(later => later.PreviousId == entry.Id && later.Stage is
                     WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted or WindowsUpdateStage.DispatchNotSent))
                 {
-                    return WindowsUpdateDisposition.ReviewRequired;
+                    return UpdateRecovery.ReviewResult;
                 }
             }
             if (entry.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted)
@@ -93,7 +128,7 @@ public static class WindowsUpdateHistory
                     (later.Stage == completion || later.Stage == WindowsUpdateStage.BrokerRefused));
                 if (receipt is null)
                 {
-                    return WindowsUpdateDisposition.ReviewRequired;
+                    return UpdateRecovery.ReviewResult;
                 }
                 if (entry.Stage == WindowsUpdateStage.DownloadStarted && receipt.Stage != WindowsUpdateStage.BrokerRefused) { downloadAttempts++; }
             }
@@ -101,31 +136,33 @@ public static class WindowsUpdateHistory
             if (entry.Stage == WindowsUpdateStage.DispatchUnconfirmed ||
                 (entry.Stage == WindowsUpdateStage.InstallCompleted && entry.Operation?.Status != WindowsUpdateStatus.Succeeded))
             {
-                return WindowsUpdateDisposition.ReviewRequired;
+                return UpdateRecovery.ReviewResult;
             }
         }
 
         var restart = LatestRestartRequirement(history);
         if (restart is not null && !HasPostRestartScan(history, restart))
         {
-            return WindowsUpdateDisposition.RestartRequired;
+            return UpdateRecovery.Restart;
         }
 
         if (history.Any(entry => entry.Stage == WindowsUpdateStage.InstallCompleted && !HasInstalledEvidence(history, entry)))
         {
-            return WindowsUpdateDisposition.ReviewRequired;
+            return UpdateRecovery.VerifyInstallation;
         }
 
-        if (latest.Scan is { Status: WindowsUpdateStatus.Succeeded } observed &&
-            history.Any(entry => entry is { Stage: WindowsUpdateStage.InstallCompleted, Operation.Status: WindowsUpdateStatus.Succeeded } &&
+        // A later interrupted or unsuccessful scan cannot clear a known contradiction.
+        // Compare receipts only with a completed inventory that followed them in journal order.
+        var inventory = history.LastOrDefault(entry => entry is
+        { Stage: WindowsUpdateStage.ScanCompleted, Scan.Status: WindowsUpdateStatus.Succeeded });
+        if (inventory?.Scan is { } observed && history.TakeWhile(entry => entry.Id != inventory.Id).Any(entry =>
+                entry is { Stage: WindowsUpdateStage.InstallCompleted, Operation.Status: WindowsUpdateStatus.Succeeded } &&
                 observed.Updates.Any(candidate => candidate.Identity == entry.Approval!.Exact.Identity)))
         {
-            return WindowsUpdateDisposition.ReviewRequired;
+            return UpdateRecovery.ReviewResult;
         }
 
-        return latest.Stage == WindowsUpdateStage.ScanCompleted && latest.Scan is { } scan
-            ? WindowsUpdatePolicy.Evaluate(scan, downloadAttempts)
-            : WindowsUpdateDisposition.NotCurrent;
+        return UpdateRecovery.None;
     }
 
     private static bool HasInstalledEvidence(ImmutableArray<WindowsUpdateEntry> history, WindowsUpdateEntry receipt) =>

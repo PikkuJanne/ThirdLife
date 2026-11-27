@@ -8,6 +8,7 @@ public enum WindowsUpdateDisposition
     ApprovalRequired,
     Current,
     PassLimitReached,
+    NoEligibleOffers,
 }
 
 public static class WindowsUpdatePolicy
@@ -43,7 +44,7 @@ public static class WindowsUpdatePolicy
 
         if (!fresh.Updates.Any(IsSelectable))
         {
-            return WindowsUpdateDisposition.ReviewRequired;
+            return WindowsUpdateDisposition.NoEligibleOffers;
         }
 
         return completedPasses >= MaximumPasses

@@ -38,15 +38,22 @@ M5 technical gate, TL-0511.
 [Action outcome evidence](artifacts/evidence/TL-0502/report.md)
 [Preflight evidence](artifacts/evidence/TL-0503/report.md)
 
-PR 75 integrated the TL-0504 typed Windows Update broker, exact phase approval,
-policy and storage checks, durable intent/receipts and independent verification.
-ThirdLife-W11 offered one unsupported software revision and zero eligible revisions.
-Live download, installation, any required restart and subsequent verification of a
-ThirdLife-installed revision remain unobserved. Reopen this case for an eligible
-revision on that guest with an effective review, measured reserve and exact authority.
-[Windows Update evidence](artifacts/evidence/TL-0504/report.md)
+TL-0504 engineering is complete. It uses a typed broker request, independent phase authorization, an exact
+servicing policy, measured storage checks, durable receipts and installed-state
+verification. The existing guest offered one revision with an unsupported handler.
+Prepare saved and reopened the reason with zero approvals and zero dispatches.
+No live download or installation occurred. TL-0511 requires an eligible revision
+on ThirdLife-W11, reviewed recovery and space, exact authorization, native receipts,
+an independent installed-state check and a rescan after any required restart.
+[Update verification](artifacts/evidence/TL-0504/single-guest-inventory.md)
 
-Continue the saved no-eligible-offer workflow, TL-0505 restart coordination and
-TL-0506 read-only security observations. TL-0511 retains its native servicing
-evidence requirement. TL-0611 retains pilot input adoption and exposure decisions.
-[Single-guest correction](docs/reviews/2026-11-27-single-guest-continuation.md)
+TL-0505 pauses same-job package or update dispatch while the other operation has
+unresolved recovery. Continue the reviewed full-profile schedule through
+post-package checks and the final restart. TL-0506 now collects read-only security
+and management findings. Continue its versioned security rules, recent time
+synchronization evidence and attributable administrator and remote-access review.
+[Maintenance evidence](artifacts/evidence/TL-0505/report.md) ·
+[Security evidence](artifacts/evidence/TL-0506/report.md)
+
+Pilot adoption and exposure remain at TL-0611. Standalone release and Team B
+exit remain at TL-0710. [Decision and graph review](docs/reviews/2026-11-27-single-guest-continuation.md)

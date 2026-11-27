@@ -7,6 +7,7 @@ using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Policy.Decisions;
+using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
 using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.Features.Disposition;
@@ -58,6 +59,29 @@ public sealed class AuditPolicyEvidenceTests
         Assert.DoesNotContain(projected, fact => fact.EvidenceKey.Value is "ownership.lock_state" or
             "storage.system.health_state" or "processor.windows_11_eligibility" or "function.network");
         Assert.Equal(projected.Count, projected.Select(fact => fact.Metadata.EvidenceId).Distinct().Count());
+    }
+
+    [Theory]
+    [InlineData("security.management_indicators", "management_indicated", true)]
+    [InlineData("security.management_indicators", "clear", false)]
+    [InlineData("unrelated.source", "management_indicated", false)]
+    public async Task ManagementCanBlockThroughItsNamedSourceButCannotClearOwnership(
+        string source, string value, bool expectedBlock)
+    {
+        using var disk = new AuditTestStore();
+        var security = new ProjectionProvider("windows-security-baseline",
+            [EnumFact("ownership.lock_state", value, source)]);
+        await using var workspace = OpenLive(disk, security);
+        await AssessAsync(workspace);
+        var projected = AuditPolicyEvidence.Create(workspace.Job!, workspace.Assessment!, SampleTime);
+        var ownership = projected.SingleOrDefault(fact => fact.EvidenceKey.Value == "ownership.lock_state");
+        Assert.Equal(expectedBlock, ownership is not null);
+        var candidate = Assert.IsType<PolicySnapshot>(WorkshopPolicyCandidate.ForDeviceClass(PolicyDeviceClass.Laptop));
+        var decision = DispositionEngine.Evaluate(candidate.Document, projected, activeCapabilityIds: null);
+        Assert.Equal(expectedBlock ? Disposition.DoNotDeploy : Disposition.HumanReviewRequired, decision.Disposition);
+        Assert.Contains(workspace.Findings, item => item.DisplayName == "Ownership review");
+        var report = WorkshopReportRenderer.Render(workspace.Job!);
+        Assert.Contains("Unresolved management or ownership blocks handover.", report);
     }
 
     [Fact]

@@ -33,6 +33,40 @@ public sealed class WindowsUpdateStatusTests
     }
 
     [Fact]
+    public void VerifyDistinguishesSavedIneligibleOffersFromRecoveryAndUnknownHistoricalReasons()
+    {
+        var prepared = Preparing(WindowsUpdateStage.InstallPreparing);
+        var excluded = new WindowsUpdateCandidate(new(Guid.NewGuid(), 3), WindowsUpdateClass.Restricted, 2048);
+        var scan = prepared with
+        {
+            Id = Guid.NewGuid(),
+            PreviousId = null,
+            Stage = WindowsUpdateStage.ScanCompleted,
+            Approval = null,
+            Scan = new(WindowsUpdateStatus.Succeeded, [excluded], false, [WindowsUpdateEligibilityReason.UnsupportedHandler])
+        };
+        var status = AuditWorkspace.DescribeSavedWindowsUpdate([scan]);
+        Assert.Contains("offered one applicable revision", status);
+        Assert.Contains("None met the servicing requirements", status);
+        Assert.Contains("required component-based servicing handler", status);
+        var historical = scan with { Scan = new(WindowsUpdateStatus.Succeeded, [excluded], false) };
+        Assert.Contains("None met the servicing requirements", AuditWorkspace.DescribeSavedWindowsUpdate([historical]));
+        Assert.DoesNotContain("handler", AuditWorkspace.DescribeSavedWindowsUpdate([historical]));
+        var pendingRestart = scan with { Scan = new(WindowsUpdateStatus.Succeeded, [excluded], true) };
+        Assert.Contains("required restart", AuditWorkspace.DescribeSavedWindowsUpdate([pendingRestart]));
+        var sent = prepared with { Stage = WindowsUpdateStage.InstallStarted };
+        Assert.Contains("needs workshop review", AuditWorkspace.DescribeSavedWindowsUpdate([sent, scan]));
+        var receipt = prepared with
+        {
+            Id = Guid.NewGuid(),
+            PreviousId = sent.Id,
+            Stage = WindowsUpdateStage.InstallCompleted,
+            Operation = new(WindowsUpdateStatus.Succeeded, false)
+        };
+        Assert.Contains("needs workshop review", AuditWorkspace.DescribeSavedWindowsUpdate([sent, receipt, scan]));
+    }
+
+    [Fact]
     public void LaterScanAndUncertainInstallRetainTheirOwnStatus()
     {
         var prepared = Preparing(WindowsUpdateStage.InstallPreparing);

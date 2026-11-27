@@ -4,13 +4,95 @@ using ThirdLife.Actions.Execution;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
 using ThirdLife.Actions.Recovery;
+using ThirdLife.Actions.WindowsUpdates;
 using ThirdLife.Core.Evidence;
+using ThirdLife.Core.Jobs;
+using ThirdLife.Core.WindowsUpdates;
 
 namespace ThirdLife.Persistence.Tests;
 
 public sealed partial class RebootCheckpointStoreTests
 {
     private static readonly OperatorId PackageScheduleActor = new("actor-package-schedule-fixture");
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task MaintenancePausesApprovedPackageAtEachUpdateRestartAcrossReopen(int requiredRestarts)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var clock = new FixedTimeProvider(IssueTime);
+        ulong uptime = 90_000;
+        JournalPlanSnapshot plan;
+        JournalApproval approval;
+        await using (var prepared = await OpenPackageAsync(workspace, clock, () => uptime))
+        {
+            plan = await OpenPackageScheduleAsync(prepared, "maintenance", ids => [new(ids[0], 1, [])], 1);
+            approval = new(Guid.NewGuid(), plan.Key, Approver, Guid.NewGuid(), clock.GetUtcNow());
+            await prepared.RecordPackageScheduleApprovalAsync(approval, ScheduledApprovalEntries(plan, approval));
+        }
+
+        var actionId = plan.Schedule!.Steps[0].ActionId;
+        var provider = new WindowsUpdateWorkflowTests.FixtureAgent();
+        for (var pass = 0; pass < requiredRestarts; pass++)
+        {
+            await using (var before = await OpenPackageAsync(workspace, clock, () => uptime))
+            {
+                var workflow = new WindowsUpdateWorkflow(before, provider, clock);
+                provider.Scan = new(WindowsUpdateStatus.Succeeded, [], true);
+                await workflow.ScanAsync(plan.Key.JobId, plan.GateDecisionId);
+            }
+            await using var reopened = await OpenPackageAsync(workspace, clock, () => uptime);
+            var waiting = new WindowsUpdateWorkflow(reopened, provider, clock);
+            // A changed pending flag on the same boot cannot clear the earlier restart.
+            provider.Scan = new(WindowsUpdateStatus.Succeeded, [], false);
+            await waiting.ScanAsync(plan.Key.JobId, plan.GateDecisionId);
+            await Assert.ThrowsAsync<JobStoreConflictException>(() => reopened.AppendJournalEntryAsync(
+                ScheduledPackageStart(approval, actionId, clock.GetUtcNow())));
+            var saved = Assert.IsType<JournalHistory>(await reopened.LoadJournalAsync(plan.Key));
+            Assert.Equal(approval, saved.ActiveApproval);
+            Assert.Equal(JournalState.Approved, saved.StateOf(actionId));
+            uptime /= 2;
+            await waiting.ScanAsync(plan.Key.JobId, plan.GateDecisionId);
+        }
+
+        await using var resumed = await OpenPackageAsync(workspace, clock, () => uptime);
+        var last = new WindowsUpdateWorkflow(resumed, provider, clock);
+        // A known ineligible offer alone is independent of the reviewed package route.
+        provider.Scan = new(WindowsUpdateStatus.Succeeded,
+            [new(new(Guid.NewGuid(), 1), WindowsUpdateClass.Restricted, 128)], false);
+        await last.ScanAsync(plan.Key.JobId, plan.GateDecisionId);
+        Assert.Equal(JournalWriteResult.Recorded, await resumed.AppendJournalEntryAsync(
+            ScheduledPackageStart(approval, actionId, clock.GetUtcNow())));
+        Assert.Empty(provider.Mutations);
+        Assert.True(MaintenancePhases.RequiresPackageRecovery(await resumed.LoadJobJournalsAsync(plan.Key.JobId)));
+    }
+
+    [Fact]
+    public async Task UnresolvedPackageFromEarlierIntakeBlocksUpdateChannelButAllowsReadOnlyScan()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var clock = new FixedTimeProvider(IssueTime);
+        JournalEntry package;
+        await using (var store = await OpenAsync(workspace, clock))
+        {
+            package = await SaveAppliedAsync(store, "phase-crossing", needsRestart: true, packageBackend: true);
+        }
+        await using var reopened = await OpenAsync(workspace, clock);
+        var prior = Assert.IsType<StoredJob>(await reopened.LoadJobAsync(package.Plan.JobId));
+        var (job, gate, policy) = await WindowsUpdateWorkflowTests.SeedAsync(reopened, prior.Job);
+        var provider = new WindowsUpdateWorkflowTests.FixtureAgent();
+        var workflow = new WindowsUpdateWorkflow(reopened, provider, provider, (_, _) => Task.FromResult(true), clock);
+        var scan = await workflow.ScanAsync(job.JobId, gate.DecisionId);
+        var exact = Assert.Single(scan.Scan!.Updates);
+        var approval = await workflow.ApproveAsync(job.JobId, gate.DecisionId, scan.Id, exact, Approver, policy);
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => workflow.ExecuteAsync(job.JobId, approval.Id));
+        Assert.Empty(provider.Prepared);
+        Assert.Empty(provider.Mutations);
+        Assert.Equal(approval, (await reopened.LoadWindowsUpdatesAsync(job.JobId))[^1]);
+        Assert.Equal(package, (await reopened.LoadJournalAsync(package.Plan))?.Entries[^1]);
+    }
 
     [Fact]
     public async Task PackageScheduleApprovalAndIndependentVerificationSurviveReopen()

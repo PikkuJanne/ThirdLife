@@ -78,12 +78,12 @@ if ($RunId -cnotmatch '\A[0-9a-f]{32}\z') { throw 'Invalid run identifier.' }
 $nativeAssessment = $Scenario -ceq 'WindowsUpdateBrokerAssessment'
 $updateRefusal = $Scenario -ceq 'WindowsUpdateBrokerRefusal'
 $updateScenario = $Scenario -ceq 'WindowsUpdateAssessment' -or $nativeAssessment
-$updateAssembly = if ($nativeAssessment) { 'ThirdLife.Broker.Tests' } else { 'ThirdLife.Packages.Tests' }
+$updateAssembly = if ($nativeAssessment) { 'ThirdLife.Broker.Tests' } else { 'ThirdLife.UI.Tests' }
 if ($updateScenario) {
     $expectedUpdateTest = if ($nativeAssessment) {
         'ThirdLife.Broker.Tests.NativeWindowsUpdateTests.NativeExactLookupRejectsMissingRevisionAndChecksARealRestrictedOfferWhenAvailable'
     }
-    else { 'ThirdLife.Packages.Tests.WindowsUpdateAgentTests.ActiveMachineAssessesOneExactOfferedRevisionWithoutMutation' }
+    else { 'ThirdLife.UI.Tests.WindowsUpdateInventoryTests.ActiveMachineReopensConfiguredUpdateInventoryWithoutServicing' }
     if ($Mode -in @('Start','Status','RunTest') -and $TestName -cne $expectedUpdateTest) {
         throw 'The Windows Update case requires the exact read-only assessment test.'
     }
@@ -315,7 +315,7 @@ switch ($Mode) {
         $verification = [ordered]@{ ProtectedBrokerVerified = -not $updateScenario; PrivateSdkVerified = $true }
         if ($updateScenario) {
             $adapter = if ($nativeAssessment) { Join-Path $stage 'payload\ThirdLife.Broker.Tests\ThirdLife.Broker.dll' }
-                else { Join-Path $stage 'payload\ThirdLife.Packages.Tests\ThirdLife.Packages.dll' }
+                else { Join-Path $stage 'payload\ThirdLife.UI.Tests\ThirdLife.Packages.dll' }
             $wuapi = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path ([Environment]::SystemDirectory) 'wuapi.dll'))
             $verification.adapterSha256 = (Get-FileHash -LiteralPath $adapter -Algorithm SHA256).Hash.ToLowerInvariant()
             $verification.wuapiVersion = "$($wuapi.FileMajorPart).$($wuapi.FileMinorPart).$($wuapi.FileBuildPart).$($wuapi.FilePrivatePart)"
@@ -369,6 +369,11 @@ exit `$LASTEXITCODE
             throw 'The scheduled test did not receive its required token and basic-console session.'
         }
         Initialize-PrivateDotNet $results
+        if ($Scenario -ceq 'WindowsUpdateAssessment') {
+            # Keep the limited-token job database and temporary test files within run cleanup.
+            $env:TEMP = $results
+            $env:TMP = $results
+        }
         if (-not $updateScenario) {
             $env:THIRDLIFE_TL0311_REVIEWED_BROKER_SHA256 = $BrokerHash
             $env:THIRDLIFE_TL0311_CONSENT_REHEARSAL = $Scenario.ToLowerInvariant()
@@ -502,6 +507,9 @@ exit `$LASTEXITCODE
                             }
                         }
                         if (-not $updateAssessment) { $passed = $false; $testFailure = 'OfferCountsUnavailable' }
+                        elseif (!$stdout.InnerText.Contains('Reopened the captured native inventory; scan records=2, approvals=0, dispatches=0.')) {
+                            $passed = $false; $testFailure = 'SavedInventoryObservationMissing'
+                        }
                         elseif ($offered -gt 0) {
                             $states = 'Succeeded|ApprovalChanged|Unavailable|Offline|AccessDenied|ServiceUnavailable|TimedOut|Partial'
                             $reasons = 'Eligible|Driver|UnsupportedUpdateType|UnknownDownloadSize|UnsupportedHandler|Beta|SourceMedia|LicenceAcceptance|BrowseOnly|Mandatory|Inapplicable|Bundle|UnknownInstallationBehavior|Interactive|AmbiguousClassification|OutsideApprovedClasses'
@@ -518,6 +526,11 @@ exit `$LASTEXITCODE
                                 else { $passed = $false; $testFailure = 'RemovalObservationMissing' }
                             }
                             else { $passed = $false; $testFailure = 'ExactAssessmentUnavailable' }
+                        }
+                        if ($passed) {
+                            $updateAssessment.reopened = $true
+                            $updateAssessment.approvals = 0
+                            $updateAssessment.dispatches = 0
                         }
                     }
                     if (-not $passed -and $classifyFailure) {
