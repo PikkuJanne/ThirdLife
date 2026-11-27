@@ -8022,6 +8022,26 @@ tasks:
   - Run path/data-map tests and compare installer/uninstaller behavior with the documentation.
   - Search the release package for undocumented persistent locations and sibling data access.
   evidence:
+  - summary: The guarded rollback journal change passed clean cumulative verification including all 236 Persistence cases.
+    task: TL-0703
+    command: eng/verify.ps1 -Tier Full -Restore in a clean detached checkout
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 500.907 s for 322 repository and 2691 .NET tests
+    environment: Active Windows host, clean detached checkout and locked restore
+    reference: artifacts/evidence/TL-0703/rollback-journal-residue.md, 6af7c2709eabc21a85222ed99907c30898291694
+    limitation: Default deterministic Full scope. Named native and release qualifications remain in the existing gate records.
+  - summary: Guarded SQLite commits empty the persistent rollback journal while preserving its registered file identity.
+    task: TL-0703
+    command: eng/verify.ps1 -Tier Targeted with job-store integration, transaction interruption, migration and path selections
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 244.444 s for 1449 Quick, eight work selection and 94 Persistence executions
+    environment: Active Windows host with the native winsqlite3 engine and isolated synthetic jobs
+    reference: artifacts/evidence/TL-0703/rollback-journal-residue.md, 6af7c2709eabc21a85222ed99907c30898291694
+    limitation: Scoped to normal guarded commits and observed rollback and recovery cases. Explicit job removal and named recovery copies are separate engineering.
   - summary: Jobs checks exact recorded local report and guide copies against the reopened archived job and its saved checkpoint.
     task: TL-0703
     command: eng/verify.ps1 -Tier Targeted with AuditReportTests, AuditJobArchiveTests and HandoverReviewStoreTests, plus focused Reports tests
