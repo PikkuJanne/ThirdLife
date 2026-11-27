@@ -56,3 +56,7 @@ workshop report to a required checklist recheck.
 The report-integration Quick passed in 288.222 s with 1,379 .NET cases
 and eight work-selection regressions. The 120 s target was exceeded
 while other branch checks ran. WPF took 126 s.
+
+With the system-disk provider from main `4eb5f4f`, the repository
+validators and ten focused application tests for handover mode, the
+workshop record and disk policy projection passed. Test time was 10 s.
