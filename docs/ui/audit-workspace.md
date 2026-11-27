@@ -180,6 +180,19 @@ Selecting a different job or saving a new finalization result clears the open
 action and preview. Earlier copies remain in the protected workshop report
 folder. Generate a fresh copy when newer evidence is available.
 
+## Recipient guide
+
+Save the job's assisted or sealed handover mode, then choose **Preview
+recipient guide**. The guide uses the saved guidance choices and current
+independent software checks. It shows pending choices and unavailable
+evidence in plain language.
+
+Review the preview, then choose **Save printable guide**. ThirdLife
+rechecks the underlying facts and writes the reviewed HTML to the protected
+`%LOCALAPPDATA%\ThirdLife\SetupCore\RecipientGuides` folder. Open the
+saved file in a browser to read or print it. A changed mode or set of facts
+requires a new preview. The operator controls whether to share the copy.
+
 The destination is the protected per-user directory
 `%LOCALAPPDATA%\ThirdLife\SetupCore\WorkshopReports`. The report uses opaque
 filenames and an explicit restricted workshop format. The generated copy may contain

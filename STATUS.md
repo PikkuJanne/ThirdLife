@@ -91,5 +91,10 @@ a fresh checklist and preserves earlier confirmations. Sealed mode leaves
 personal choices pending. TL-0605 consumes the saved choices for the guide.
 [Handover mode evidence](artifacts/evidence/TL-0603/report.md)
 
+TL-0605 generates an assisted or sealed recipient guide from saved choices
+and verified facts. The operator previews and saves the exact printable
+copy. Each variant preserved reading order at the tested 200% equivalent
+scale. [Recipient guide evidence](artifacts/evidence/TL-0605/report.md)
+
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B
 exit remain at TL-0710. [Decision and graph review](docs/reviews/2026-11-27-single-guest-continuation.md)

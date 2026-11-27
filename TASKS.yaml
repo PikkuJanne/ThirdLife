@@ -7158,7 +7158,7 @@ tasks:
   workstream: reports
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: any
@@ -7196,7 +7196,27 @@ tasks:
   - Inspect both rendered guides for reading order, headings, responsiveness, and accessible output at 200% zoom. Check
     wording against the product states.
   - Run prohibited-field and hostile-text tests.
-  evidence: []
+  evidence:
+  - summary: TRACE generated and saved the exact recipient guide for both assisted and sealed handover. The preview rejected changed saved facts.
+    task: TL-0605
+    command: eng/verify.ps1 -Tier Targeted -Restore with the Reports and UI selections in the guide evidence
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 269.973 s, 1394 deterministic .NET executions and eight work-selection regressions
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated SQLite and WPF, local printable HTML
+    reference: artifacts/evidence/TL-0605/report.md, 73a64d94bbd1b9c2b38bdcda19bc897b0402dca1
+    limitation: The guide used controlled job facts and modeled recipient choices. Actual transfer and kit adoption retain separate authority.
+  - summary: Both synthetic variants preserved ten headings and reading order with no horizontal overflow or external requests at the tested scale.
+    task: TL-0605
+    command: Isolated Edge reading-order and 200 percent equivalent pixel-scale probe recorded with both rendered variants
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 2.531 s
+    environment: Edge 158.0.4370.45 on the active host, 320 CSS pixel viewport at device pixel ratio 2
+    reference: artifacts/evidence/TL-0605/layout-receipt.json
+    limitation: Physical printing, audible assistive use, recipient comprehension and actual recipient transfer remain unobserved.
   notes:
   - Representative comprehension remains unobserved unless supported by actual evidence. Resolve a consequential ambiguity
     through the D-074 exception only when its conditions apply.
