@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
+using ThirdLife.Core.Jobs;
 using ThirdLife.Packages;
 using ThirdLife.Reports.WorkshopReport;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
@@ -42,6 +43,16 @@ public sealed partial class PackageSetupTests
         Assert.Contains("The operator skipped this package action", reopened.ReportPreview, StringComparison.Ordinal);
         Assert.Contains("document_editing (essential)", reopened.ReportPreview, StringComparison.Ordinal);
         Assert.Contains("Workshop operator code fixture-skip-operator", reopened.ReportPreview, StringComparison.Ordinal);
+        await using (var store = await disk.OpenSqliteAsync())
+        {
+            var journal = Assert.Single(await store.LoadJobJournalsAsync(new JobId(jobId)));
+            Assert.Contains($"Catalog SHA-256 {journal.Plan.CatalogSha256}.", reopened.ReportPreview, StringComparison.Ordinal);
+            Assert.Contains($"Profile SHA-256 {journal.Plan.ProfileSha256}.", reopened.ReportPreview, StringComparison.Ordinal);
+            Assert.Contains($"Policy SHA-256 {journal.Plan.PolicySha256}.", reopened.ReportPreview, StringComparison.Ordinal);
+            Assert.Contains($"Operator approval {Assert.Single(journal.Approvals).ApprovalId:D} at",
+                reopened.ReportPreview, StringComparison.Ordinal);
+        }
+
         Assert.Contains("Human review required", reopened.ReportPreview, StringComparison.Ordinal);
         Assert.DoesNotContain("Independent verification confirmed", reopened.ReportPreview, StringComparison.Ordinal);
 
