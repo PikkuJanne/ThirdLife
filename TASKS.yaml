@@ -8052,6 +8052,16 @@ tasks:
     environment: Clean active Windows 11 x64 checkout with isolated WPF and SQLite job fixtures
     reference: artifacts/evidence/TL-0703/reversible-job-archive.md, a8edc835da69e1cac6356bee87dbc6fae567f8d8
     limitation: Verified reversible archive and restore only. Exact installed removal and the separate job-data deletion choice remain open.
+  - summary: TRACE reopens the exact recorded workshop report for the archived job and refuses changed file bytes.
+    task: TL-0703
+    command: Focused Release WPF report, job archive, and handover tests
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 10 selected tests in 10 s
+    environment: Active Windows 11 Pro 26H2 native x64 host, protected SQLite fixture and isolated report directory
+    reference: artifacts/evidence/TL-0703/reopen-archived-report.md, 0201da70c450be2b8dfbfabf727251a5fe66c2e4
+    limitation: Reopens existing protected publication receipts. Job-data deletion and legacy copies without a receipt remain separate.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
