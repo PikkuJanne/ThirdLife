@@ -52,11 +52,27 @@ test time. The test command was
 | UI and report | Both focused WPF cases and both focused reports passed. The WPF cases exercised UI Automation, polite status, reopen within the same boot, a modeled warm Windows restart, and a modeled orderly next session with a saved successful or failed launch probe. A new scan and probe ran once per post-boot pass. |
 | Cold-boot store | Four focused persistence cases passed in three seconds of test time. They cover missing, ambiguous, hybrid, restart, stale and mismatched evidence, changed job and review, copied-store authentication, a failed launch and migration of a saved preboot result from schema 13 to 14. |
 | Existing guest cold start | All five Extended stages passed on `ThirdLife-W11`. The guest reopened the same checkpoint in boot 8 and held it pending. Hyper-V observed the guest power off and start in 53.466 s. Boot 9 admitted a fresh scan and launch probe, retained the approved package version, and reopened the same job, approval and workshop record. Package and inventory results came from controlled inputs. [Guest procedure and evidence](guest.md) |
+| Targeted, including Quick | `eng/verify.ps1 -Tier Targeted -TestProject` with Actions, Inventory, Persistence, Verification, Reports, Packages and UI passed in 264.312 s. The verifier ran 1,939 deterministic .NET tests with zero skips, eight work-contract regressions, both repository validators, formatting and a Release build with zero warnings and errors. |
+| Continuity Quick | `eng/verify.ps1 -Tier Quick` passed 1,353 .NET tests and the eight work-contract regressions in 171.171 s. It exceeded the 120 s target by 51.171 s while the clean Full governance suite ran on the same host. WPF took 96 s versus 83 s in Targeted, and the Release build took 11.95 s versus 5.39 s. The preceding TL-0507 Quick measured 157.490 s under concurrent governance. |
+| Clean Full | `eng/verify.ps1 -Tier Full -Restore` passed in 456.691 s from the clean detached implementation checkpoint. It passed 310 governance regressions and 2,541 deterministic .NET cases across 13 assemblies with zero skips. Locked restore, formatting and the Release build succeeded with zero build warnings or errors. |
 
 The first combined Release build found a name collision between an Extended test
 helper and a WPF type. Renaming the helper resolved the test build. The first Quick
 format check found import ordering and line-wrapping differences in the new code.
-The corrected gate is recorded with the final source.
+The corrected Targeted and Quick runs passed the formatting check.
+
+The application and guest tests used base `891936e`. Implementation checkpoint
+`881150ea8eeddefc2d8e68af9d21ee3290656fda` differs from the staged guest
+production source only in import order and formatting. The guest scenario source
+matches the test case in that checkpoint.
+
+The clean Release shell opened unelevated and reached Inspect through external
+UI Automation in 1.111 s. It exited normally in 1.290 s. The apphost SHA-256
+was `c526f756eae00b81a6f726015c382b6f3b2641cb126f6fc7e151895fac857948`.
+The UI assembly SHA-256 was
+`1b473980a99069ea70081ea904a004eba1f6d4f7272f7b104b61c449c8c1c1f1`.
+The legacy shell's script policy stopped the first invocation. The active
+PowerShell shell ran `eng/run-ui-smoke.ps1` under its existing policy.
 
 The product's applicable physical-device checks and finalization remain required
 for handover under D-033. The physical host power cycle remains unobserved and

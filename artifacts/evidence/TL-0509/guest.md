@@ -5,7 +5,8 @@
 The Extended scenario ran on 27 November 2026 in the existing
 `ThirdLife-W11` Hyper-V guest on the active Codex machine. The guest ran
 Windows 11 Pro 26H2, build 26300.9974, native x64. PowerShell Direct bound
-each stage to the same VM. The test used native Windows boot and System
+each stage to the same VM and ran the isolated test host under the existing
+guest administrator account. The test used native Windows boot and System
 event records and the production AuditWorkspace and protected SQLite
 paths. Package registration, installer behavior, launch probes, Windows
 Update and the separate profile collection used controlled inputs in an
@@ -72,10 +73,21 @@ Win32_OperatingSystem reported the new Windows boot at 13:43:58.057 UTC.
 The process-independent job and checkpoint bindings matched in all
 respective phases. Each of the five exact test invocations passed one case.
 
+The warm transition had ordered event record IDs, but Windows stamped the
+Kernel-General startup 1.252 seconds earlier than shutdown. That time
+ordering would leave a cold-boot request unqualified. The warm test
+stage preceded the cold-boot request.
+
 The host removed and verified the absence of the guest test payload,
 private SDK and isolated fixture store after retaining the results. The
 same VM remained running. The run used the existing guest state and
 performed no checkpoint creation or restoration.
+
+The preserved private host receipt set is about 16 KB and includes the
+hash-verified source delta from the implementation checkpoint. The task's
+host temporary staging directory, `%TEMP%\ThirdLife-TL0509-Host`, retains
+about 8.7 MB of archived payloads and run copies after the execution
+policy rejected the host cleanup command.
 
 ## Scope
 
