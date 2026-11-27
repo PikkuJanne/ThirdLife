@@ -24,7 +24,11 @@ bounded flat payload and AMD64 apphost. A mismatch stops package use. Keep
 the reported package identity and review it against the evidence before
 selecting another copy. This check reports the identity of a private
 development build. Signature and distribution approval are controlled at
-candidate freeze.
+candidate freeze. For the companion private MSI, add
+`--installer-directory`, `--installer-sha256` and `--installer-version`
+to the same command. Use the version and MSI digest from the separate
+reviewed record. The preflight checks the MSI bytes and its receipt
+against the ZIP, SBOM and source before any installer execution.
 
 For an authorized engineering smoke check, unpack the verified archive
 into a fresh local directory and run `ThirdLife.UI.exe` under the standard

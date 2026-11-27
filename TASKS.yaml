@@ -8477,6 +8477,26 @@ tasks:
     environment: Active Windows 11 Pro 26H2 native x64 host, clean detached checkout
     reference: artifacts/evidence/TL-0708/private-reproducibility.md, 71ec3b3bda6229d62b38263cb8422606d954e975
     limitation: Exact same-machine private artifact verification. Installed lifecycle used separately identified packages.
+  - summary: The private package command now checks the exact reviewed MSI and its receipt alongside the ZIP and SBOM.
+    task: TL-0708
+    command: tools.verify_development_package with installer directory, independently reviewed digest and version
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 11 focused verifier and authoring checks in 1.014 s, exact preview startup in 1.404 s
+    environment: Active Windows 11 Pro 26H2 native x64 host and two clean detached build checkouts
+    reference: artifacts/evidence/TL-0708/reviewed-msi-preflight.md, d1b34441f95081e58857703950ec2727c90e088c
+    limitation: Private exact 0.3.7 package preflight and unelevated unpacked startup. Guest MSI lifecycle covers distinct 0.3.6 artifacts.
+  - summary: Clean Full verification of exact MSI provenance preflight and corrected source-fixture copying.
+    task: TL-0708
+    command: eng/verify.ps1 -Tier Full -Restore in a dedicated clean checkout
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 696.369 s, 322 repository checks and 2689 .NET tests
+    environment: Active Windows 11 Pro 26H2 native x64 host, dedicated detached checkout
+    reference: artifacts/evidence/TL-0708/reviewed-msi-preflight.md, d1b34441f95081e58857703950ec2727c90e088c
+    limitation: Private preflight scope. Candidate signing and installed release qualification remain separate.
   notes:
   - TL-0710 governs actual distribution and portfolio-transition consent.
   expected_test_tier: full

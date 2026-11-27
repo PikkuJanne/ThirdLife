@@ -145,6 +145,26 @@ class DevelopmentMsiTests(unittest.TestCase):
             self.assertEqual(259, api.MsiViewFetch(view, ctypes.byref(second)))
             return value.value
 
+    def test_preflight_binds_exact_installer_and_receipt_to_reviewed_package(self):
+        msi = installer.build(self.input, self.output, SOURCE, self.archive_digest, self.sbom_digest, "0.3.0")
+        reviewed = sha256(msi.read_bytes())
+        package.verify_installer(self.output, SOURCE, self.archive_digest, self.sbom_digest, reviewed, "0.3.0")
+
+        with self.assertRaisesRegex(ValueError, "independently supplied digest"):
+            package.verify_installer(self.output, SOURCE, self.archive_digest, self.sbom_digest,
+                                     "0" * 64, "0.3.0")
+        with self.assertRaisesRegex(ValueError, "receipt does not match"):
+            package.verify_installer(self.output, SOURCE, self.archive_digest, self.sbom_digest,
+                                     reviewed, "0.3.1")
+
+        receipt_path = self.output / package.INSTALLER_RECEIPT
+        receipt = json.loads(receipt_path.read_bytes())
+        receipt["app_archive_sha256"] = "0" * 64
+        receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "receipt does not match"):
+            package.verify_installer(self.output, SOURCE, self.archive_digest, self.sbom_digest,
+                                     reviewed, "0.3.0")
+
     def test_refuses_unreviewed_input_before_creating_an_output_directory(self):
         with self.assertRaisesRegex(ValueError, "independently supplied digest"):
             installer.build(self.input, self.output, SOURCE, "0" * 64, self.sbom_digest, "0.3.0")

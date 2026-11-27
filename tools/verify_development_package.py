@@ -1,4 +1,4 @@
-"""Verify a private ThirdLife development package before opening its payload."""
+"""Verify a private ThirdLife development package and its optional per-user installer."""
 
 from __future__ import annotations
 
@@ -18,8 +18,11 @@ RECEIPT = "development-package-manifest.json"
 ARCHIVE = "thirdlife-development-preview-x64.zip"
 APPHOST = "ThirdLife.UI.exe"
 SBOM = "thirdlife-development-preview.cdx.json"
+INSTALLER = "ThirdLife-SetupCore-Private-x64.msi"
+INSTALLER_RECEIPT = "installer-receipt.json"
 MAX_ARCHIVE = 32 * 1024 * 1024
 MAX_PAYLOAD = 128 * 1024 * 1024
+MAX_INSTALLER = MAX_PAYLOAD + 8 * 1024 * 1024
 MAX_ENTRIES = 128
 MEMBER_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,95}\.(?:dll|exe|json)")
 
@@ -118,18 +121,61 @@ def verify(directory: Path, source: str, archive_sha256: str, sbom_sha256: str) 
     return verify_payload(archive, receipt.get("entries"), receipt.get("apphost_sha256"))
 
 
+def require_installer_version(version: str) -> None:
+    match = re.fullmatch(r"([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,5})", version)
+    if not match or any(str(int(value)) != value or int(value) > limit
+                        for value, limit in zip(match.groups(), (255, 255, 65535), strict=True)):
+        raise ValueError("Supply a three-part Windows Installer product version.")
+
+
+def verify_installer(directory: Path, source: str, archive_sha256: str, sbom_sha256: str,
+                     installer_sha256: str, version: str) -> None:
+    require_installer_version(version)
+    if not re.fullmatch(r"[0-9a-f]{64}", installer_sha256):
+        raise ValueError("The reviewed installer digest must be a lowercase hexadecimal value.")
+
+    installer = read_bounded(directory / INSTALLER, MAX_INSTALLER)
+    if hashlib.sha256(installer).hexdigest() != installer_sha256:
+        raise ValueError("The installer does not match the independently supplied digest.")
+    if not installer.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
+        raise ValueError("The installer does not have a Windows compound-file header.")
+
+    receipt = read_json(read_bounded(directory / INSTALLER_RECEIPT, 32 * 1024))
+    expected = {
+        "classification": "private_unsigned_development_installer",
+        "source": source,
+        "app_archive_sha256": archive_sha256,
+        "sbom_sha256": sbom_sha256,
+        "version": version,
+        "msi_sha256": installer_sha256,
+    }
+    if any(receipt.get(name) != value for name, value in expected.items()):
+        raise ValueError("The installer receipt does not match the reviewed version and package.")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
     parser.add_argument("--source", required=True, help="Reviewed full Git revision from a separate record")
     parser.add_argument("--archive-sha256", required=True, help="Reviewed archive digest from a separate record")
     parser.add_argument("--sbom-sha256", required=True, help="Reviewed SBOM digest from a separate record")
+    parser.add_argument("--installer-directory", type=Path, help="Directory holding the private MSI and installer receipt")
+    parser.add_argument("--installer-sha256", help="Reviewed installer digest from a separate record")
+    parser.add_argument("--installer-version", help="Reviewed three-part Windows Installer product version")
     args = parser.parse_args()
+    installer_inputs = (args.installer_directory, args.installer_sha256, args.installer_version)
+    if any(value is not None for value in installer_inputs) and any(value is None for value in installer_inputs):
+        parser.error("Supply --installer-directory, --installer-sha256 and --installer-version together.")
     try:
         count = verify(args.directory, args.source, args.archive_sha256, args.sbom_sha256)
+        if args.installer_directory is not None:
+            verify_installer(args.installer_directory, args.source, args.archive_sha256, args.sbom_sha256,
+                             args.installer_sha256, args.installer_version)
     except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, zlib.error) as error:
         parser.exit(1, f"Package verification failed: {error}\n")
     print(f"OK: private development package for {args.source}, {count} checked entries, AMD64 apphost")
+    if args.installer_directory is not None:
+        print(f"OK: private MSI {args.installer_version} matches the reviewed installer digest and package receipt")
     return 0
 
 

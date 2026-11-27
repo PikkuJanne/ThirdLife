@@ -51,11 +51,14 @@ IGNORED_COPY_NAMES = {
     ".git",
     ".venv",
     ".cache",
+    ".codex-attachments",
+    ".codex-worktrees",
     ".pytest_cache",
     "__pycache__",
     "artifacts",
     "bin",
     "obj",
+    "testresults",
 }
 
 
@@ -63,7 +66,7 @@ def _copy_ignore(_directory: str, names: list[str]) -> set[str]:
     return {
         name
         for name in names
-        if name in IGNORED_COPY_NAMES
+        if name.casefold() in IGNORED_COPY_NAMES
         or name.endswith((".pyc", ".pyo", ".docx"))
     }
 
@@ -90,6 +93,13 @@ def repository_copy() -> Iterator[Path]:
         }.items():
             replace_review_value(root, field, value)
         yield root
+
+
+class RepositoryFixtureCopyTests(unittest.TestCase):
+    def test_copy_excludes_generated_test_results_and_local_attachments(self) -> None:
+        generated = {"TestResults", "tEsTrEsUlTs", ".codex-worktrees", ".codex-attachments"}
+        ignored = _copy_ignore(str(REPOSITORY_ROOT), sorted(generated | {"src", "tools", "TASKS.yaml"}))
+        self.assertEqual(ignored, generated)
 
 
 def read_matrix(root: Path) -> list[dict[str, str]]:
