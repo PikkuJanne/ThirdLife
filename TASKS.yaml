@@ -7859,6 +7859,16 @@ tasks:
     environment: Active Windows 11 native x64 host, unelevated test process
     reference: artifacts/evidence/TL-0608/backup-readiness-controls.md, b1f34ee516e3c8ace141caf576b67fd172f1d8e6
     limitation: Native volume binding and capacity only. No setup, backup, restore, or write to that volume was invoked by the provider.
+  - summary: Exact sample generation and bounded independent restore-copy verification with distinct protected file identities.
+    task: TL-0702
+    command: eng/verify.ps1 -Tier Full -Restore and targeted Core, Reports and Diagnostics selections
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 484.795 s, 319 governance and 2683 .NET tests, plus targeted selections
+    environment: Clean detached checkout on the active Windows 11 x64 host, protected original and recovered fixture directories
+    reference: artifacts/evidence/TL-0702/guarded-restore-probe.md, ba46627aeccf466c1e9a0c17ce42b28d7cb16304
+    limitation: Protected separate-copy readback is verified. The Windows route and attributable native restore remain pending.
   notes:
   - The actual recipient controls destination, credentials and recovery material. TL-0710 carries the final security/privacy
     disposition.

@@ -20,5 +20,9 @@ restored into a separate verified location. A later volume, context or
 scope change requires a fresh review. The candidate covers the domain and
 the read-only destination adapter. The combined launcher write and test
 command was rejected by automatic approval review as blocked by policy.
-The release candidate still needs the registered launch path, protected
-restore probe, and live backup/restore with exact destination authorization.
+The separate read-only restore probe opens only the generated sample name
+under the two registered protected directories. It rejects shared file
+identity and compares bounded bytes from each file. An observed match
+requires separate Windows restore attribution before the model can record
+a verified restore. The release candidate still needs a qualified launch
+path and live backup and restore with exact destination authorization.
