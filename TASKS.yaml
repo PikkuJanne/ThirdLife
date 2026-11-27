@@ -6541,6 +6541,16 @@ tasks:
     summary: The production agent returned four applicable offers outside the servicing scope and no Windows Update restart flag.
     command: dotnet test tests/ThirdLife.Packages.Tests -c Release --no-build --no-restore --filter FullyQualifiedName~ActiveMachineScansOnlyTheConfiguredWindowsUpdateService
     limitation: The configured service offered one restricted revision and three drivers. The read-only scan provides no native installation or whole-device clearance evidence.
+  - type: test
+    tier: full
+    date: '2026-11-27'
+    duration_seconds: 427.138
+    result: passed
+    environment: clean detached checkout on active Windows 11 Pro 26H2 native x64 host, build 26300.9974
+    reference: artifacts/evidence/TL-0507/report.md, 8e91fc0162949291d01a6826d9ca41617013303e
+    summary: Passed all 310 governance regressions and 2,528 deterministic .NET cases across 13 assemblies with locked restore and zero build warnings.
+    command: eng/verify.ps1 -Tier Full -Restore
+    limitation: The default Full filter excludes native provider smoke and Extended scenarios. This is engineering evidence and leaves cold-boot and live servicing qualification open.
   notes:
   - The exact reviewed package profile and the separate laptop candidate baseline retain their own digests. Cold-boot re-verification and launch probes belong to TL-0509.
   - The unresolved aggregate restart, system-disk attribution, ownership and guided-review requirements continue to hold readiness when their scoped evidence is missing.
