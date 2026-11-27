@@ -27,3 +27,12 @@ exact Persistence cases. The Persistence cases ran directly with
 the Handover review and sign-off test names. A job with an earlier report that has no
 recorded publication receipt still needs output generation through
 TRACE. Scoped job-data deletion remains separate.
+
+The dedicated clean Full run on
+8440ae0cd7e6797a8c348ce5094396d30e443595 passed 320 repository checks
+and 2,689 .NET tests in 706.774 s. The earlier attempt shared this
+test checkout with a private build and failed in the copied
+supply-chain fixtures. Its package artifacts stay ignored in their
+local worktree. The Focused rerun used exact Handover Persistence
+test names after the earlier selections matched zero tests and a
+guest-only fixture, respectively.
