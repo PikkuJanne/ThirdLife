@@ -6111,7 +6111,7 @@ tasks:
   workstream: windows-update
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: XL
   executor: codex
   environment: windows
@@ -6275,6 +6275,15 @@ tasks:
     duration: 226.146 s including staging and verified cleanup
     reference: artifacts/evidence/TL-0504/single-guest-inventory.md, 68537173b38d84b58eb8b2b7f2c59622432b341b
     limitation: One real offer and zero selectable revisions. Native inventory was saved through an isolated synthetic intake. Positive servicing, restart and retry scenarios used controlled providers.
+  - summary: Clean integrated Full verified the saved exclusion reason and recovery safeguards alongside the maintenance and security changes.
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean detached worktree on the active Windows 11 Pro x64 host build 26300.9974, .NET SDK 10.0.400 and configured Python 3.14.7
+    date: '2026-11-27'
+    duration: 446.842 s including 310 governance checks and 2458 deterministic .NET cases in 13 assemblies, zero skips
+    reference: artifacts/evidence/TL-0504/single-guest-inventory.md, 91c0153bd03228a45fd15f3e585a4eb27c01d72c
+    limitation: Engineering scope is complete. Native download, installation, independent confirmation of that installed revision, rescan and restart if required remain explicit capabilities at TL-0511.
   execution_prerequisites:
   - kind: capability
     scope: Live servicing requires an exact eligible security or critical CBS revision offered to ThirdLife-W11, a reviewed protected v2 broker and an effective review binding the revision, organization policy, supported recovery and measured storage reserve.

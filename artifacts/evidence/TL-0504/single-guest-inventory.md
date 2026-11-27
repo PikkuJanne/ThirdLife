@@ -38,3 +38,30 @@ The integrated assessment source was `68537173b38d84b58eb8b2b7f2c59622432b341b`.
 | Local runner receipt | `215432a8a76a458f4d0ea2b5da517611e73e7f5185a00829f79e1da212b38b4c` |
 
 The observation concerns applicability at that scan. Native download, installation, independently observed installed identity/revision, rescan and any required restart remain open at TL-0511. Reopen on this guest when a selectable security or critical CBS offer is available and an exact, effective review binds its recovery method, measured space and route authority. Apply the normal plan approval, per-phase authorization and Windows consent to that actual transaction.
+
+## Integrated Windows verification
+
+On 2026-11-27 a clean detached checkout of
+`91c0153bd03228a45fd15f3e585a4eb27c01d72c` passed
+`eng/verify.ps1 -Tier Full -Restore` on the active Windows 11 Pro x64 host in
+446.842 s. The 310 governance tests took 305.871 s. Locked restore, formatting,
+warnings-as-errors build and all 2,458 deterministic .NET tests in 13 assemblies
+passed with zero skips. The checkout remained clean. An earlier candidate was
+retired from its Full run during discovery for the corrected post-install
+recovery guard and test formatting. The completed Full run covers both.
+
+The combined Quick selection passed 1,308 cases. The independent owned-process
+UI interruption selection exercised `KilledPackageApplicationReopens`,
+`KilledNoOpApplicationReopensTheSameJobAndReconcilesWithoutDispatch` and
+`TerminatedOwned` on the preceding integrated recovery build. All five passed
+in 32 s with isolated jobs and fixture backends. On the same final source tree
+as the completed Full run, `eng/run-ui-smoke.ps1` reached Inspect through UI
+Automation and closed the unelevated application normally in 1.549 s.
+The independent guest receipt above remains the native update observation.
+
+The implementation meets TL-0504's engineering criteria. The empty effective
+review catalog leaves native servicing closed. TL-0511 retains actual native
+download, installation and independently confirmed installed revision and
+rescan with any required restart. Ordinary dispatch still requires TL-0314.
+
+The final task disposition passed the five continuation/checkpoint tests in 0.459 s. The warm Quick run passed all 1,308 selected tests in 129.510 s, 9.510 s above the 120 s target, with 67 s in WPF. The earlier concurrent cold run took 167.885 s. [Integration PR 77](https://github.com/PikkuJanne/ThirdLife/pull/77)

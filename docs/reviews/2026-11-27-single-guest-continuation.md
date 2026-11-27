@@ -17,7 +17,7 @@ servicing, repair and authorized checkpoint refresh remain permitted on that sam
 Historical Sandbox evidence keeps its original provenance; its launch instructions are
 superseded prospectively. A clean source checkout does not require a fresh Windows install.
 
-The existing task schema and selector are retained. All task IDs and previous evidence entries are retained. TL-0504 is in progress for saved rejection-reason coverage. The redundant `blocked_reason: null` on completed TL-0010 was
+The existing task schema and selector are retained. All task IDs and previous evidence entries are retained. The correction initially reopened TL-0504 for saved rejection-reason coverage. The subsequent engineering evidence and native limitation are recorded in TASKS.yaml. The redundant `blocked_reason: null` on completed TL-0010 was
 removed to conform to its existing optional string schema.
 
 | Task | Engineering correction | Retained execution/exposure obligation |

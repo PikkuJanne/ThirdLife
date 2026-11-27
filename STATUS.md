@@ -38,7 +38,7 @@ M5 technical gate, TL-0511.
 [Action outcome evidence](artifacts/evidence/TL-0502/report.md)
 [Preflight evidence](artifacts/evidence/TL-0503/report.md)
 
-TL-0504 uses a typed broker request, independent phase authorization, an exact
+TL-0504 engineering is complete. It uses a typed broker request, independent phase authorization, an exact
 servicing policy, measured storage checks, durable receipts and installed-state
 verification. The existing guest offered one revision with an unsupported handler.
 Prepare saved and reopened the reason with zero approvals and zero dispatches.
