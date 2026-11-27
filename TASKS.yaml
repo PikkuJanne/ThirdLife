@@ -7818,7 +7818,17 @@ tasks:
     successful-restore, and sealed-handover tests.
   - Execute and verify supported backup and harmless restore on an approved isolated destination or disposable virtual
     disk on the active machine. Verify credential isolation, cleanup, and truthful unsupported or deferred outcomes.
-  evidence: []
+  evidence:
+  - summary: Assisted File History readiness, exact capacity and recovery checks, and distinct pending and restore-proof states.
+    task: TL-0702
+    command: eng/verify.ps1 -Tier Targeted -Restore with File History, recipient settings and handover completion filters
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 218.210 s, 1446 Quick and 9 selected .NET tests
+    environment: Active Windows 11 native x64 host, unelevated WPF and controlled domain fixtures
+    reference: artifacts/evidence/TL-0702/readiness.md, c9446391db4d742e9aa464c901c755cd40f51569
+    limitation: Read-only native interface prerequisites and system-volume rejection were observed. Launcher, protected restore probe and live backup and restore remain pending.
   notes:
   - The actual recipient controls destination, credentials and recovery material. TL-0710 carries the final security/privacy
     disposition.

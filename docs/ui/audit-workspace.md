@@ -254,3 +254,12 @@ setting again after the attempt. A verified attempt offers a new preview of
 the prior setting, with separate approval before restoration. Sealed handover
 leaves these choices pending. An interrupted attempt stays unverified until
 review, and a new action requires a fresh preview and approval.
+
+## Backup readiness
+
+In assisted Handover, enter the estimated backup size and confirm the
+recipient is present and controls recovery. Choose a ready local drive
+root separate from the Windows system volume. TRACE reports whether
+Windows File History prerequisites and the declared capacity are present.
+Backup remains pending until a separately restored harmless sample
+is verified. Sealed handover leaves this choice with the recipient.
