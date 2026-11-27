@@ -7497,6 +7497,16 @@ tasks:
   notes:
   - Engineering audit scope cannot establish full perceptual accessibility. TL-0611 carries the accountable pilot accessibility
     disposition.
+  - summary: The external Windows wheel and keyboard journey passed at 240 DPI after verified WPF pointer activation.
+    task: TL-0608
+    command: eng/run-m1-audit-journey.ps1 -VerifyAccessibility and -VerifyAccessibility -KeyboardOnly
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 14.438 s full external input journey, 12.144 s keyboard-only, 5 routed WPF checks in 4 s
+    environment: Active Windows 11 Pro 26H2 native x64 host, clean Release fixture, 240 DPI window
+    reference: artifacts/audits/v0.1-accessibility.md, e1281fbe7e4acd428fd1d861b8326a2dd88ab71e
+    limitation: Programmatic Windows input and UI Automation observations at the measured scale. Audible perception and wider assistive-technology cases remain open.
   expected_test_tier: extended
   full_test_triggers: []
   extended_test_triggers:
