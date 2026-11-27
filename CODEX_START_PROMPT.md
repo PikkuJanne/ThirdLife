@@ -18,7 +18,8 @@ licensing requests. Ordinary supported servicing and repair of the same guest re
 ## 2. Outcome execution prompt
 
 ```text
-Work toward the assigned ThirdLife Setup Core outcome. Start with DEVELOPMENT_WORKFLOW.md,
+Continue the standing ThirdLife Setup Core engineering assignment across tasks and milestones.
+Start with DEVELOPMENT_WORKFLOW.md,
 verify remote, branch, worktree, HEAD, upstream, divergence and main, and fetch safely.
 Preserve unrelated work and use an isolated checkout when helpful.
 
@@ -56,8 +57,10 @@ recipient choices, pilot/public consent and enforced repository controls remain 
 Run Quick during iteration, Targeted for changed risks, and Full or named Extended only
 when triggered. Use real entry points. Runtime evidence is from the active Codex machine.
 Remote CI is supplementary. Commit, push and integrate coherent checkpoints with concise
-evidence and the next executable action. Pause only at a true blocker, required decision
-or the end of the assigned outcome.
+evidence. Begin the next authorized implementation-ready task in the same session after a
+task, checkpoint or scoped deferral. Handoff when the authorized outcome is complete, the
+owner asks to stop, or the live graph and reasonable alternatives offer no meaningful
+permitted work.
 ```
 
 ## 3. Focused defect prompt

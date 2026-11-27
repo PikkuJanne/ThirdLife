@@ -42,7 +42,7 @@ For each meaningful checkpoint:
 2. Run the applicable checks from `TESTING.md`. Record any gate or qualification still outstanding. Full applies when triggered by a major shared contract, migration, dependency, release or cumulative integration change.
 3. Commit, push and open or update the applicable pull request. Respect enforced review, access and merge policies. Verify base/head and inspect the remote commit and merge result.
 4. Preserve inactive branch history and evidence. Before closing a superseded pull request or deleting a branch, verify ancestry and unique intended content, record the disposition, and obtain owner approval for the retirement. Never delete the only copy of work.
-5. Verify the worktree and upstream SHAs. Update the continuation with an exact next action and any true external blocker. Keep working toward the authorized outcome when a next step is available.
+5. Verify the worktree and upstream SHAs. Update the continuation with the exact next action and any scoped blocker. Start the next authorized implementation-ready task in the same session after a task, checkpoint or deferral. Select across milestones using the live graph and actual component dependencies.
 
 ## 3. Evidence and handoff
 
@@ -56,6 +56,10 @@ docs/adr/
 ```
 
 Keep automated results, actual observations, unavailable behavior, reported defects and decisions distinct. Reuse unchanged relevant evidence with its provenance. Codex owns preparation, technical verification, diagnosis, repair and cleanup. Actual authority for an action remains a prerequisite for that action. Prepare candidates before decisions where safe, with zero routine owner QA or technical sign-off.
+
+A rejected cleanup leaves the denied operation stopped. Keep the verified location and stated rejection reason in the local execution record, exclude the residue from the checkpoint, and use a separate output location where needed and permitted. Escalate the affected operation only if retained residue causes a demonstrated problem that permitted alternatives cannot resolve.
+
+Routine reports and checkpoints are progress updates. Handoff when the authorized outcome is complete, the owner asks to stop, or no meaningful permitted work remains after checking the live graph and reasonable alternatives.
 
 A handoff names the observed outcome, exact tested source and artifact, branch/commit/push/merge state, test tiers, limitations and next executable action. When independent engineering is complete and execution remains unavailable, record precisely which action is blocked and how to reopen it.
 

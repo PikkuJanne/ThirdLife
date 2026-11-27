@@ -4,6 +4,7 @@ using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
 using ThirdLife.Actions.WindowsUpdates;
+using ThirdLife.Core.Finalization;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.WindowsUpdates;
 using ThirdLife.Policy.Evaluation;
@@ -177,8 +178,10 @@ public sealed partial class RebootCheckpointStoreTests
         Assert.Null(await handoff.LoadProfileVerificationAsync(job));
         var start = clock.GetUtcNow();
         var finalScan = await Scan(handoff, false);
+        var restartState = servicingRestarts == 0 ? ProfileVerificationState.Passed : ProfileVerificationState.Failed;
         var verification = new ProfileVerificationResult(start, clock.GetUtcNow(), false, plan.ProfileSha256, new string('b', 64),
-            Enum.GetValues<ProfileCheckKind>().Select(kind => new ProfileVerificationCheck(kind, ProfileVerificationState.Unavailable,
+            Enum.GetValues<ProfileCheckKind>().Select(kind => new ProfileVerificationCheck(kind,
+                kind == ProfileCheckKind.PendingRestart ? restartState : ProfileVerificationState.Unavailable,
                 kind is not (ProfileCheckKind.SystemVolumeCapacity or ProfileCheckKind.PhysicalStorageEvidence or ProfileCheckKind.AudioOutput or
                     ProfileCheckKind.Camera or ProfileCheckKind.Microphone))).ToImmutableArray(),
             [new(plan.Actions[0].CapabilityId, true, ProfileVerificationState.Failed, action.ExactVersion, "0.1.0", action.ActionId,
@@ -197,8 +200,15 @@ public sealed partial class RebootCheckpointStoreTests
         Assert.Equal(verification.Capabilities.AsEnumerable(), restored.Record.Result.Capabilities.AsEnumerable());
         Assert.False(restored.Record.Result.ProfileChecksPassed);
         Assert.Equal(current, await profileReview.LoadMaintenanceAsync(job));
+        var finalization = Assert.IsType<FinalizationChecklist>(await profileReview.LoadFinalizationAsync(job));
+        var restart = finalization.Rows.Single(row => row.Rule.Id == FinalizationRuleId.PendingRestart);
+        Assert.Equal(servicingRestarts == 0 ? FinalizationOutcome.Passed : FinalizationOutcome.Failed, restart.Outcome);
+        Assert.Equal(FinalizationSource.AutomatedObservation, restart.Source);
+        Assert.Empty(finalization.History);
         Restart();
         Assert.False((await profileReview.LoadProfileVerificationAsync(job))!.IsCurrent);
+        var afterBoot = Assert.IsType<FinalizationChecklist>(await profileReview.LoadFinalizationAsync(job));
+        Assert.Equal(FinalizationOutcome.Unknown, afterBoot.Rows.Single(row => row.Rule.Id == FinalizationRuleId.PendingRestart).Outcome);
         await Scan(profileReview, false);
         Assert.False((await profileReview.LoadProfileVerificationAsync(job))!.IsCurrent);
         Assert.Equal(approval, (await profileReview.LoadJournalAsync(plan.Key))!.ActiveApproval);
