@@ -119,11 +119,13 @@ def author_tables(path: Path, payload: dict[str, bytes], version: str) -> list[s
             ("AppSearch", "", 50), ("LaunchConditions", "", 100),
             ("CostInitialize", "", 800), ("FileCost", "", 900), ("CostFinalize", "", 1000),
             ("InstallValidate", "", 1400), ("InstallInitialize", "", 1500),
-            ("RemoveExistingProducts", "", 1550), ("ProcessComponents", "", 1600),
+            ("ProcessComponents", "", 1600),
             ("UnpublishFeatures", "", 1800), ("RemoveRegistryValues", "", 2600),
             ("RemoveFiles", "", 3500), ("InstallFiles", "", 4000), ("WriteRegistryValues", "", 5000),
             ("RegisterUser", "", 6000), ("RegisterProduct", "", 6100),
-            ("PublishFeatures", "", 6300), ("PublishProduct", "", 6400), ("InstallFinalize", "", 6600),
+            ("PublishFeatures", "", 6300), ("PublishProduct", "", 6400),
+            # Keep the previous product registered through the replacement file transaction.
+            ("InstallExecute", "", 6550), ("RemoveExistingProducts", "", 6575), ("InstallFinalize", "", 6600),
         ]),
     ]
 

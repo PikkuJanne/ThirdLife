@@ -116,6 +116,9 @@ class DevelopmentMsiTests(unittest.TestCase):
                 ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='ResetNativeBuild'", "40"),
                 ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='AppSearch'", "50"),
                 ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='LaunchConditions'", "100"),
+                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='InstallExecute'", "6550"),
+                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='RemoveExistingProducts'", "6575"),
+                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='InstallFinalize'", "6600"),
             ]:
                 with self.subTest(query=query):
                     self.assertEqual(expected, self.read_cell(engine, database, query))
