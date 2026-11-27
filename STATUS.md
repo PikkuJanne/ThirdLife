@@ -116,9 +116,11 @@ prerequisites. Exact setting changes and live backup and restore remain pending.
 [Toggle Keys](artifacts/evidence/TL-0701/toggle-keys.md) · [Backup readiness](artifacts/evidence/TL-0702/readiness.md)
 
 The private ZIP launched unelevated and saved the exact reviewed synthetic
-configuration through the native folder picker. The standalone installed
-lifecycle awaits a supported standard-user guest session.
-[Private candidate](artifacts/evidence/TL-0706/private-interface.md) · [Guest MSI evidence](artifacts/evidence/TL-0704/private-msi-preflight.md)
+configuration through the native folder picker. The corrected private
+MSIs passed install, repair, upgrade, downgrade refusal and uninstall
+under a standard-user guest fixture. The installed window observation
+awaits a desktop with its Windows first-use privacy choices resolved.
+[Private candidate](artifacts/evidence/TL-0706/private-interface.md) · [Guest MSI evidence](artifacts/evidence/TL-0704/interactive-lifecycle.md)
 
 The current Handover resumes the same protected harmless sample after
 a fresh recipient review and saves the current operator's copy result.

@@ -8096,6 +8096,16 @@ tasks:
     environment: Clean Windows 11 native x64 host checkout and existing ThirdLife-W11 read-only preflight
     reference: artifacts/evidence/TL-0704/private-msi-preflight.md, 6ee0ba7d932520111fe5c8dc17e8efd9693fea9f
     limitation: Package authoring and guest preflight only. The verified standard-user launch, installed lifecycle, data-preservation, signatures and release scope remain pending.
+  - summary: Corrected native build admission and verified the private per-user Windows Installer lifecycle in ThirdLife-W11.
+    task: TL-0704
+    command: Clean Full locked run, focused MSI and ZIP verification, and standard-user interactive native fixture for install, repair, upgrade, downgrade refusal and removal
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 488.785 s Full, 319 repository checks and 2688 .NET cases, plus 9 package regressions and the exact guest sequence
+    environment: Active Windows 11 x64 host and existing Windows 11 Pro native x64 guest build 26300.9974
+    reference: artifacts/evidence/TL-0704/interactive-lifecycle.md, 00b305b1a075727d788a5a084bf5e3e7cafcf67b
+    limitation: Private lifecycle and synthetic file preservation only. Windows first-use choices limited installed window observation. Interrupted recovery, populated SQLite preservation, signed identity and release remain open.
   notes:
   - Record precise tested environment and data-preservation boundaries. TL-0710 carries actual release disposition.
   expected_test_tier: full

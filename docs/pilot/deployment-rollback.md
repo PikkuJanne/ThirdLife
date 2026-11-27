@@ -42,10 +42,10 @@ Use the documented recovery procedure for the exact schema once qualified.
 Preserve the source store and record the last known successful build and
 job state while recovering. [Data locations](../data-locations.md) · [Uninstall contract](../uninstall-and-data-preservation.md)
 
-The installer and its upgrade, repair, rollback and removal behavior
-still require qualification on the existing `ThirdLife-W11`. Keep this
-deployment procedure scoped to private unpack-and-run verification until
-the installer and the data-preservation paths have passed.
+The exact private MSI lifecycle has a separate engineering record.
+Install, repair, upgrade, downgrade refusal and removal were observed
+with the reviewed package pair. The normal installed window, recovery
+after an interrupted MSI and a populated SQLite lifecycle remain open.
 
 ## Private installer preflight
 
@@ -61,8 +61,8 @@ python -m tools.build_development_msi $packageDirectory $newOutputDirectory `
 
 The output includes the MSI, its exact receipt and the local authoring
 inputs. The package targets Windows 11 client build 26300 on native x64.
-The Windows Installer preflight verified and opened the two exact private
-versions on ThirdLife-W11. Installed lifecycle and native app launch are
-pending. Use the staged runtime only for the scoped qualification process.
-The proven unpack-and-run procedure remains available for engineering.
-[Installer preflight evidence](../../artifacts/evidence/TL-0704/private-msi-preflight.md)
+The corrected 0.3.2 and 0.3.3 pair used a standard-user fixture on the
+existing guest. The 0.3.3 desktop payload also opened Inspect unelevated
+from its independently verified unpacked ZIP on the host. Use the staged
+runtime for the scoped qualification process.
+[Guest MSI lifecycle](../../artifacts/evidence/TL-0704/interactive-lifecycle.md)
