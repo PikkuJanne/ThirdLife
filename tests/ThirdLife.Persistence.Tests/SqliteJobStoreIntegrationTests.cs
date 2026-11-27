@@ -79,6 +79,37 @@ public sealed class SqliteJobStoreIntegrationTests
     }
 
     [Fact]
+    public async Task CommittedWritesEmptyTheRollbackJournalWhilePreservingItsIdentity()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob();
+        var evidence = PersistenceTestData.CreateObservation("journal-retention");
+        string journalPath;
+        WindowsFileIdentity.FileIdentity journalIdentity;
+        await using (var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+            journalPath = string.Concat(store.DatabasePath, "-journal");
+            using var journal = File.OpenHandle(journalPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            journalIdentity = WindowsFileIdentity.GetIdentity(journal);
+
+            await store.CreateJobAsync(job);
+            await store.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, [evidence]));
+            Assert.Equal(0L, RandomAccess.GetLength(journal));
+            using var stillRegistered = File.OpenHandle(journalPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            Assert.Equal(journalIdentity, WindowsFileIdentity.GetIdentity(stillRegistered));
+        }
+
+        await using var reopened = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        var stored = Assert.IsType<StoredJob>(await reopened.LoadJobAsync(job.JobId));
+        Assert.Equal(evidence, Assert.Single(stored.Observations));
+        await reopened.SetArchiveStateAsync(job.JobId, true, PersistenceTestData.Timestamp);
+        using var reopenedJournal = File.OpenHandle(journalPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        Assert.Equal(0L, RandomAccess.GetLength(reopenedJournal));
+        Assert.Equal(journalIdentity, WindowsFileIdentity.GetIdentity(reopenedJournal));
+        Assert.True(Assert.IsType<StoredJob>(await reopened.LoadJobAsync(job.JobId)).IsArchived);
+    }
+
+    [Fact]
     public async Task DuplicateEvidenceRollsBackTheWholeBatchAndCheckpoint()
     {
         using var workspace = new PersistenceTestWorkspace();
