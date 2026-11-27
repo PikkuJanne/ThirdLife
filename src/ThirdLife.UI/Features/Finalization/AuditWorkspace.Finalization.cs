@@ -1,5 +1,6 @@
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Finalization;
+using ThirdLife.Core.Handover;
 using ThirdLife.Persistence;
 
 namespace ThirdLife.UI.Shell;
@@ -115,6 +116,8 @@ internal sealed partial class AuditWorkspace
         }
 
         var handover = await ReadRecipientHandoverAsync(job);
+        var backupSample = !IsFixtureScenario && handover?.Handover?.Mode == HandoverMode.Assisted
+            ? await ReadBackupSampleAuditAsync(job.Job.JobId) : default;
         if (ReferenceEquals(Job, job) && version == _finalizationReadVersion)
         {
             if (readFailed || job.IsArchived || checklist?.EvidenceVersion != Finalization?.EvidenceVersion &&
@@ -129,6 +132,7 @@ internal sealed partial class AuditWorkspace
             }
 
             RecipientHandover = handover;
+            (_latestBackupSampleAudit, _backupSampleAuditUnavailable) = backupSample;
             Finalization = checklist;
             _completedFinalizationReadVersion = version;
             _finalizationReadFailed = readFailed;

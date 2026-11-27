@@ -45,6 +45,7 @@ public sealed partial class SqliteJobStore : IJobStore
     private readonly bool _supportsSupportExportAudit;
     private readonly bool _supportsHandoverCompletion;
     private readonly bool _supportsToggleKeysAudit;
+    private readonly bool _supportsFileHistorySampleAudit;
     private bool _disposed;
 
     private SqliteJobStore(
@@ -79,6 +80,7 @@ public sealed partial class SqliteJobStore : IJobStore
         _supportsSupportExportAudit = schemaVersion >= 18;
         _supportsHandoverCompletion = schemaVersion >= 19;
         _supportsToggleKeysAudit = schemaVersion >= 20;
+        _supportsFileHistorySampleAudit = schemaVersion >= 21;
         _jsonOptions = DomainJson.CreateStrictOptions();
     }
 

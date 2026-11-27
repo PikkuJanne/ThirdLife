@@ -366,9 +366,12 @@
             <StackPanel x:Name="BackupSampleRegion" Visibility="Collapsed" IsEnabled="{Binding CanPrepareBackupSample}">
               <CheckBox x:Name="BackupSampleConfirmed" Content="The recipient confirms the displayed drive and scope for this test"
                         Margin="0,8,0,0" />
+              <Label Target="{Binding ElementName=BackupSampleOperator}" Content="Restore sample operator code" />
+              <TextBox x:Name="BackupSampleOperator" MaxLength="64" AutomationProperties.Name="Restore sample operator code" />
               <Button x:Name="PrepareBackupSampleButton" Content="Prepare harmless restore sample" Click="PrepareBackupSample"
                       HorizontalAlignment="Left" Margin="0,8,0,0" />
             </StackPanel>
+            <TextBlock x:Name="BackupSampleJournalMessage" Text="{Binding BackupSampleJournalStatus}" Visibility="Collapsed" Margin="0,8,0,0" />
             <StackPanel x:Name="BackupPreparedRegion" Visibility="Collapsed" Margin="0,8,0,0">
               <TextBlock Text="{Binding BackupSampleRecoveryInstructions}" />
               <Button x:Name="CheckBackupSampleButton" Content="Check separate recovered copy" Click="CheckBackupSample"
