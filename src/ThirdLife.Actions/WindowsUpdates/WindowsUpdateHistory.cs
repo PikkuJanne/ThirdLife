@@ -19,6 +19,10 @@ public enum WindowsUpdateStage
     InstallStarted,
     InstallCompleted,
     ResourcesDeferred,
+    DownloadPreparing,
+    InstallPreparing,
+    DispatchNotSent,
+    DispatchUnconfirmed,
 }
 
 public sealed record WindowsUpdateApproval(Guid ScanId, WindowsUpdateCandidate Exact, OperatorId OperatorId, string PolicyDecisionId,
@@ -38,14 +42,19 @@ public interface IWindowsUpdateJournal
     // policy in one transaction. It stamps its own boot observation on scans and restart results.
     Task<WindowsUpdateEntry> AppendWindowsUpdateAsync(WindowsUpdateEntry entry, CancellationToken token = default);
 
-    // Reopen the saved phase, original approval and current policy/intake in one local read transaction.
-    Task<bool> IsWindowsUpdateDispatchCurrentAsync(WindowsUpdateEntry intent, CancellationToken token = default) =>
-        Task.FromResult(false);
+    // Atomically revalidate scope and claim the exact, once-only send intent after channel setup.
+    Task<WindowsUpdateEntry?> TryStartWindowsUpdateDispatchAsync(WindowsUpdateEntry intent, CancellationToken token = default) =>
+        Task.FromResult<WindowsUpdateEntry?>(null);
 }
 
 public static class WindowsUpdateHistory
 {
     public const int MaximumEntries = 128;
+    public static readonly TimeSpan DispatchWindow = TimeSpan.FromMinutes(2);
+
+    public static bool IsPhaseTerminal(WindowsUpdateStage stage) =>
+        stage is WindowsUpdateStage.DownloadCompleted or WindowsUpdateStage.InstallCompleted or WindowsUpdateStage.DispatchNotSent
+            or WindowsUpdateStage.DispatchUnconfirmed;
 
     public static WindowsUpdateDisposition Disposition(ImmutableArray<WindowsUpdateEntry> history)
     {
@@ -60,6 +69,16 @@ public static class WindowsUpdateHistory
         for (var index = 0; index < history.Length; index++)
         {
             var entry = history[index];
+            if (entry.Stage is WindowsUpdateStage.DownloadPreparing or WindowsUpdateStage.InstallPreparing)
+            {
+                // Preparing a channel can never send an action. A later send claim or a known
+                // refusal must settle this exact preparation before a fresh approval is admitted.
+                if (!history.Skip(index + 1).Any(later => later.PreviousId == entry.Id && later.Stage is
+                    WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted or WindowsUpdateStage.DispatchNotSent))
+                {
+                    return WindowsUpdateDisposition.ReviewRequired;
+                }
+            }
             if (entry.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted)
             {
                 var completion = entry.Stage == WindowsUpdateStage.DownloadStarted
@@ -70,7 +89,8 @@ public static class WindowsUpdateHistory
                 }
             }
 
-            if (entry.Stage == WindowsUpdateStage.InstallCompleted && entry.Operation?.Status != WindowsUpdateStatus.Succeeded)
+            if (entry.Stage == WindowsUpdateStage.DispatchUnconfirmed ||
+                (entry.Stage == WindowsUpdateStage.InstallCompleted && entry.Operation?.Status != WindowsUpdateStatus.Succeeded))
             {
                 return WindowsUpdateDisposition.ReviewRequired;
             }
@@ -142,13 +162,13 @@ public static class WindowsUpdateHistory
 
     public static bool CanAppend(ImmutableArray<WindowsUpdateEntry> history, WindowsUpdateEntry entry)
     {
-        var terminal = entry.Stage is WindowsUpdateStage.DownloadCompleted or WindowsUpdateStage.InstallCompleted;
+        var terminal = IsPhaseTerminal(entry.Stage);
         // An operation receipt is keyed to its exact intent. A concurrent read-only scan can
         // supersede a displayed approval, but cannot discard an already dispatched result.
         var prior = terminal ? history.LastOrDefault(row => row.Id == entry.PreviousId) : history.LastOrDefault();
         if (history.Length >= MaximumEntries || entry.Id == Guid.Empty || entry.JobId is null || entry.GateId is null ||
             entry.OccurredAtUtc == default || entry.PreviousId != prior?.Id || history.Any(row => row.Id == entry.Id) ||
-            (prior is not null && (entry.JobId != prior.JobId || entry.OccurredAtUtc < prior.OccurredAtUtc)) ||
+            (prior is not null && (entry.JobId != prior.JobId || (!terminal && entry.OccurredAtUtc < prior.OccurredAtUtc))) ||
             (entry.Stage != WindowsUpdateStage.ScanStarted && entry.GateId != prior?.GateId))
         {
             return false;
@@ -164,10 +184,10 @@ public static class WindowsUpdateHistory
         var scope = entry.Approval;
         if (entry.Stage is WindowsUpdateStage.ScanStarted or WindowsUpdateStage.ScanCompleted)
         {
-            var outstandingIntent = history.LastOrDefault(row => row.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted);
+            var outstandingIntent = history.LastOrDefault(row => row.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted
+                or WindowsUpdateStage.DownloadPreparing or WindowsUpdateStage.InstallPreparing);
             var awaitingReceipt = outstandingIntent is not null &&
-                !history.Any(row => row.PreviousId == outstandingIntent.Id &&
-                    row.Stage is WindowsUpdateStage.DownloadCompleted or WindowsUpdateStage.InstallCompleted);
+                !history.Any(row => row.PreviousId == outstandingIntent.Id && IsPhaseTerminal(row.Stage));
             var reserved = awaitingReceipt ? 1 : 0;
             // A concurrent scan cannot consume the two slots needed for the successful
             // install's final inventory and exact verification after its receipt lands.
@@ -220,6 +240,12 @@ public static class WindowsUpdateHistory
             } && entry.Scan is not null && entry.Operation is null,
             WindowsUpdateStage.DownloadStarted => history.Length <= MaximumEntries - 2 && CanStart(prior, WindowsUpdateStage.DownloadChecked, entry),
             WindowsUpdateStage.InstallStarted => history.Length <= MaximumEntries - 4 && CanStart(prior, WindowsUpdateStage.InstallChecked, entry),
+            WindowsUpdateStage.DownloadPreparing => history.Length <= MaximumEntries - 4 && CanPrepare(prior, WindowsUpdateStage.DownloadChecked, entry),
+            WindowsUpdateStage.InstallPreparing => history.Length <= MaximumEntries - 5 && CanPrepare(prior, WindowsUpdateStage.InstallChecked, entry),
+            WindowsUpdateStage.DispatchNotSent => prior.Stage is WindowsUpdateStage.DownloadPreparing or WindowsUpdateStage.InstallPreparing &&
+                entry.Operation is { ProgressPercent: null, Status: not WindowsUpdateStatus.Succeeded } && entry.Scan is null,
+            WindowsUpdateStage.DispatchUnconfirmed => prior.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted &&
+                entry.Operation is { ProgressPercent: null, RebootRequired: null, Status: WindowsUpdateStatus.Partial } && entry.Scan is null,
             WindowsUpdateStage.DownloadCompleted => prior.Stage == WindowsUpdateStage.DownloadStarted && entry.Operation is not null && entry.Scan is null,
             WindowsUpdateStage.InstallCompleted => prior.Stage == WindowsUpdateStage.InstallStarted && entry.Operation is not null && entry.Scan is null,
             WindowsUpdateStage.ResourcesDeferred => prior.Stage is WindowsUpdateStage.DownloadChecked or WindowsUpdateStage.InstallChecked &&
@@ -228,9 +254,15 @@ public static class WindowsUpdateHistory
         };
     }
 
-    private static bool CanStart(WindowsUpdateEntry previous, WindowsUpdateStage requiredStage, WindowsUpdateEntry entry) =>
+    private static bool CanPrepare(WindowsUpdateEntry previous, WindowsUpdateStage requiredStage, WindowsUpdateEntry entry) =>
         previous.Stage == requiredStage && previous.Scan is { } scan && WindowsUpdatePolicy.Matches(entry.Approval!.Exact, scan) &&
-        (entry.Approval.Actions is not { } actions ||
+        entry.Approval.Actions is not null && entry.Scan is null && entry.Operation is null;
+
+    private static bool CanStart(WindowsUpdateEntry previous, WindowsUpdateStage requiredStage, WindowsUpdateEntry entry) =>
+        // Schema 7/8 recorded the send intent directly after the check. Keep those rows readable.
+        (previous.Stage == requiredStage && previous.Scan is { } scan && WindowsUpdatePolicy.Matches(entry.Approval!.Exact, scan) ||
+            previous.Stage == (requiredStage == WindowsUpdateStage.DownloadChecked ? WindowsUpdateStage.DownloadPreparing : WindowsUpdateStage.InstallPreparing)) &&
+        (entry.Approval!.Actions is not { } actions ||
             entry.Id == (requiredStage == WindowsUpdateStage.DownloadChecked ? actions.Download.ActionId : actions.Install.ActionId)) &&
         entry.Operation is null && entry.Scan is null;
 }

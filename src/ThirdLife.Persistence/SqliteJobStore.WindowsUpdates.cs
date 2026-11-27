@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using ThirdLife.Actions.WindowsUpdates;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.WindowsUpdates;
 using ThirdLife.Policy.Schema;
 
 namespace ThirdLife.Persistence;
@@ -17,32 +18,15 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
         return ReadJournalTransactionAsync((transaction, ct) => ReadWindowsUpdatesAsync(transaction, jobId, ct), token);
     }
 
-    public Task<bool> IsWindowsUpdateDispatchCurrentAsync(WindowsUpdateEntry intent, CancellationToken token = default)
+    public async Task<WindowsUpdateEntry?> TryStartWindowsUpdateDispatchAsync(WindowsUpdateEntry intent, CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(intent);
-        return ReadJournalTransactionAsync(async (transaction, ct) =>
+        if (intent.Stage is not (WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted))
         {
-            if (intent.Stage is not (WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted) ||
-                intent.Approval?.Actions is not { } actions || !actions.MatchesCurrentActions(intent.Approval.Exact))
-            {
-                return false;
-            }
-
-            var history = await ReadWindowsUpdatesAsync(transaction, intent.JobId, ct).ConfigureAwait(false);
-            if (history.LastOrDefault() != intent || !history.Any(entry => entry is { Stage: WindowsUpdateStage.Approved } &&
-                entry.Id == actions.ApprovalId && entry.GateId == intent.GateId && entry.Approval == intent.Approval))
-            {
-                return false;
-            }
-
-            try
-            {
-                await RequireExpectedSanitizationGateAsync(_connection, transaction, intent.JobId, intent.GateId, ct).ConfigureAwait(false);
-                await RequireWindowsUpdateFixturePolicyAsync(_connection, transaction, intent, ct).ConfigureAwait(false);
-                return true;
-            }
-            catch (JobStoreConflictException) { return false; }
-        }, token);
+            return null;
+        }
+        try { return await AppendWindowsUpdateAsync(intent, token).ConfigureAwait(false); }
+        catch (JobStoreConflictException) { return null; }
     }
 
     public async Task<WindowsUpdateEntry> AppendWindowsUpdateAsync(WindowsUpdateEntry entry, CancellationToken token = default)
@@ -54,47 +38,90 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
         {
             _layout.ValidateJobDirectory(entry.JobId);
             var history = await ReadWindowsUpdatesAsync(transaction, entry.JobId, ct).ConfigureAwait(false);
-            if (entry.BootUptime is not null || entry.OccurredAtUtc > _timeProvider.GetUtcNow() ||
-                !WindowsUpdateHistory.CanAppend(history, entry))
+            if (entry.BootUptime is not null || entry.OccurredAtUtc > _timeProvider.GetUtcNow())
             {
                 throw new JobStoreConflictException();
             }
 
+            // A fresh scan may already have closed the unsent preparation while its owner was
+            // waiting. Return that durable outcome without appending over a newer scan or approval.
+            if (entry is
+                {
+                    Stage: WindowsUpdateStage.DispatchNotSent, Scan: null, Verification: null,
+                    Operation: { ProgressPercent: null, Status: not WindowsUpdateStatus.Succeeded }
+                } &&
+                history.LastOrDefault(row => row.Stage == WindowsUpdateStage.DispatchNotSent &&
+                    row.PreviousId == entry.PreviousId && row.GateId == entry.GateId && row.Approval == entry.Approval) is { } settled)
+            {
+                recorded = settled;
+                return;
+            }
+
             // Preserve the result of an authorized, already-journaled mutation even if intake
             // changes during the provider call. Every new intent requires the current allowing gate.
-            if (entry.Stage is not (WindowsUpdateStage.DownloadCompleted or WindowsUpdateStage.InstallCompleted))
+            if (!WindowsUpdateHistory.IsPhaseTerminal(entry.Stage))
             {
                 await RequireExpectedSanitizationGateAsync(connection, transaction, entry.JobId, entry.GateId, ct)
                     .ConfigureAwait(false);
             }
 
-            if (entry.Stage is WindowsUpdateStage.Approved or WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted)
+            if (entry.Stage == WindowsUpdateStage.ScanStarted && history.LastOrDefault() is
+                { Stage: WindowsUpdateStage.DownloadPreparing or WindowsUpdateStage.InstallPreparing } preparing && entry.PreviousId == preparing.Id)
             {
-                if (entry.Approval?.Actions?.MatchesCurrentActions(entry.Approval.Exact) != true)
+                var unsent = new WindowsUpdateEntry(Guid.NewGuid(), preparing.Id, entry.JobId, preparing.GateId, entry.OccurredAtUtc,
+                    WindowsUpdateStage.DispatchNotSent, null, preparing.Approval, new(WindowsUpdateStatus.ApprovalChanged, null));
+                if (!WindowsUpdateHistory.CanAppend(history, unsent)) { throw new JobStoreConflictException(); }
+                await InsertWindowsUpdateAsync(connection, transaction, history.Length + 1, unsent, ct).ConfigureAwait(false);
+                history = history.Add(unsent);
+                entry = entry with { PreviousId = unsent.Id };
+            }
+            if (!WindowsUpdateHistory.CanAppend(history, entry)) { throw new JobStoreConflictException(); }
+
+            if (entry.Stage is WindowsUpdateStage.Approved or WindowsUpdateStage.DownloadPreparing or WindowsUpdateStage.InstallPreparing
+                or WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted)
+            {
+                if (entry.Approval?.Actions?.MatchesCurrentActions(entry.Approval.Exact) != true ||
+                    (entry.Stage == WindowsUpdateStage.Approved && history.Length > WindowsUpdateHistory.MaximumEntries - 12))
                 {
                     throw new JobStoreConflictException();
                 }
                 await RequireWindowsUpdateFixturePolicyAsync(connection, transaction, entry, ct).ConfigureAwait(false);
+                if (entry.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted)
+                {
+                    var prepared = history[^1];
+                    var expected = entry.Stage == WindowsUpdateStage.DownloadStarted ? WindowsUpdateStage.DownloadPreparing : WindowsUpdateStage.InstallPreparing;
+                    var now = _timeProvider.GetUtcNow();
+                    if (prepared.Stage != expected || now < prepared.OccurredAtUtc || now - prepared.OccurredAtUtc >= WindowsUpdateHistory.DispatchWindow)
+                    {
+                        throw new JobStoreConflictException();
+                    }
+                }
             }
 
             recorded = entry.Stage == WindowsUpdateStage.ScanStarted || entry.Scan is not null || entry.Operation?.RebootRequired == true
                 ? entry with { BootUptime = _readBootUptime() } : entry;
-            var payload = SerializePayload(recorded, WindowsUpdateRecordBytes);
-            await using var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = """
-                INSERT INTO windows_update_journal(job_id, sequence, entry_id, gate_id, payload_json, payload_sha256)
-                VALUES ($job_id, $sequence, $id, $gate, $json, $hash);
-                """;
-            command.Parameters.AddWithValue("$job_id", entry.JobId.Value);
-            command.Parameters.AddWithValue("$sequence", history.Length + 1);
-            command.Parameters.AddWithValue("$id", entry.Id.ToString("D"));
-            command.Parameters.AddWithValue("$gate", entry.GateId.Value);
-            command.Parameters.AddWithValue("$json", payload.Json);
-            command.Parameters.AddWithValue("$hash", payload.Sha256);
-            await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+            await InsertWindowsUpdateAsync(connection, transaction, history.Length + 1, recorded, ct).ConfigureAwait(false);
         }, token).ConfigureAwait(false);
         return recorded!;
+    }
+
+    private async Task InsertWindowsUpdateAsync(SqliteConnection connection, SqliteTransaction transaction, int sequence,
+        WindowsUpdateEntry entry, CancellationToken token)
+    {
+        var payload = SerializePayload(entry, WindowsUpdateRecordBytes);
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO windows_update_journal(job_id, sequence, entry_id, gate_id, payload_json, payload_sha256)
+            VALUES ($job_id, $sequence, $id, $gate, $json, $hash);
+            """;
+        command.Parameters.AddWithValue("$job_id", entry.JobId.Value);
+        command.Parameters.AddWithValue("$sequence", sequence);
+        command.Parameters.AddWithValue("$id", entry.Id.ToString("D"));
+        command.Parameters.AddWithValue("$gate", entry.GateId.Value);
+        command.Parameters.AddWithValue("$json", payload.Json);
+        command.Parameters.AddWithValue("$hash", payload.Sha256);
+        await command.ExecuteNonQueryAsync(token).ConfigureAwait(false);
     }
 
     private async Task RequireWindowsUpdateFixturePolicyAsync(SqliteConnection connection, SqliteTransaction transaction,
