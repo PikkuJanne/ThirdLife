@@ -23,6 +23,7 @@ using ThirdLife.Persistence;
 using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
 using ThirdLife.Reports.RecipientGuide;
+using ThirdLife.Reports.Storage;
 using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.BrokerClient;
 using ThirdLife.UI.Features.Finalization;
@@ -78,7 +79,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null,
         Func<DateTimeOffset, PreparationResourceSnapshot>? observePreparationResources = null,
         IWindowsUpdateAgent? fixtureWindowsUpdates = null,
-        RecipientGuideStore? recipientGuideStore = null, IRecipientToggleKeys? fixtureToggleKeys = null)
+        RecipientGuideStore? recipientGuideStore = null, IRecipientToggleKeys? fixtureToggleKeys = null,
+        FileHistoryRestoreProbe? backupSampleProbe = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -93,6 +95,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _timeProvider = timeProvider;
         _reportStore = reportStore;
         _recipientGuideStore = recipientGuideStore;
+        _backupSampleProbe = backupSampleProbe;
         IsFixtureScenario = _providers.All(static provider =>
             provider.Descriptor.EvidenceOrigin == ProviderEvidenceOrigin.SyntheticFixture);
         if (!IsFixtureScenario && _providers.Any(static provider =>
