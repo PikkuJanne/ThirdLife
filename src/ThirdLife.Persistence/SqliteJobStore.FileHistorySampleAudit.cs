@@ -36,11 +36,15 @@ public sealed partial class SqliteJobStore : IFileHistorySampleAuditStore
     }
 
     public async Task<FileHistorySampleAudit> RecordFileHistorySampleAsync(JobId jobId, FileHistorySampleAudit expected,
-        FileHistorySampleAuditState outcome, CancellationToken token = default)
+        FileHistorySampleAuditState outcome, OperatorId actor, CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(jobId);
         ArgumentNullException.ThrowIfNull(expected);
-        if (!expected.CanRecord(outcome)) { throw new ArgumentException("The current sample cannot record that outcome.", nameof(outcome)); }
+        ArgumentNullException.ThrowIfNull(actor);
+        if (!expected.CanRecord(outcome) || expected.State == FileHistorySampleAuditState.Preparing && expected.OperatorId != actor)
+        {
+            throw new ArgumentException("The current sample cannot record that outcome for this operator.", nameof(outcome));
+        }
 
         FileHistorySampleAudit? recorded = null;
         await ExecuteWriteAsync(async (_, transaction, ct) =>
@@ -51,13 +55,13 @@ public sealed partial class SqliteJobStore : IFileHistorySampleAuditStore
             {
                 throw new JobStoreConflictException();
             }
-            if (outcome == expected.State)
+            if (outcome == expected.State && actor == expected.OperatorId)
             {
                 recorded = expected;
                 return;
             }
             if (history.Count >= MaximumFileHistorySampleEvents) { throw new JobStoreConflictException(); }
-            recorded = new(expected.SampleId, expected.HandoverSequence, expected.Sha256, expected.ByteLength, expected.OperatorId,
+            recorded = new(expected.SampleId, expected.HandoverSequence, expected.Sha256, expected.ByteLength, actor,
                 _timeProvider.GetUtcNow(), outcome);
             await AppendFileHistorySampleAsync(transaction, jobId, history.Count + 1, recorded, ct).ConfigureAwait(false);
         }, token).ConfigureAwait(false);
@@ -109,7 +113,8 @@ public sealed partial class SqliteJobStore : IFileHistorySampleAuditStore
                 ? sampleIds.Add(audit.SampleId)
                 : previous is not null && previous.CanRecord(audit.State) && previous.SampleId == audit.SampleId &&
                     previous.HandoverSequence == audit.HandoverSequence && previous.Sha256 == audit.Sha256 &&
-                    previous.ByteLength == audit.ByteLength && previous.OperatorId == audit.OperatorId;
+                    previous.ByteLength == audit.ByteLength &&
+                    (previous.State != FileHistorySampleAuditState.Preparing || previous.OperatorId == audit.OperatorId);
             if (!valid) { throw new JobStoreCorruptionException("store_payload_mismatch"); }
             previous = audit;
         }

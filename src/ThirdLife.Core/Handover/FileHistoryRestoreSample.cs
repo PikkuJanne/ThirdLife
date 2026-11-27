@@ -7,10 +7,14 @@ public sealed class FileHistoryRestoreSample
 {
     private readonly byte[] _content;
 
-    internal FileHistoryRestoreSample(Guid reviewId)
+    internal FileHistoryRestoreSample(Guid reviewId) : this(reviewId, Guid.NewGuid())
+    {
+    }
+
+    internal FileHistoryRestoreSample(Guid reviewId, Guid sampleId)
     {
         ReviewId = reviewId;
-        SampleId = Guid.NewGuid();
+        SampleId = sampleId;
         FileName = $"thirdlife-restore-{SampleId:N}.txt";
         _content = Encoding.ASCII.GetBytes($"ThirdLife File History restore sample\r\n{SampleId:N}\r\n");
         Sha256 = Convert.ToHexStringLower(SHA256.HashData(_content));

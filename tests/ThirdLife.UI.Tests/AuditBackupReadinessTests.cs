@@ -70,6 +70,8 @@ public sealed class AuditBackupReadinessTests
             var sample = Assert.Single(Directory.EnumerateFiles(original, "thirdlife-restore-*.txt"));
             Assert.StartsWith("ThirdLife File History restore sample", File.ReadAllText(sample), StringComparison.Ordinal);
             Assert.Contains(Path.GetFileName(sample), workspace.BackupSampleRecoveryInstructions, StringComparison.Ordinal);
+            Assert.Contains("original in a library", workspace.BackupSampleRecoveryInstructions, StringComparison.Ordinal);
+            Assert.Contains("choose Restore to", workspace.BackupSampleRecoveryInstructions, StringComparison.Ordinal);
             Assert.Empty(Directory.EnumerateFiles(recovered));
             var checkCopy = Named<Button>(view, "CheckBackupSampleButton");
             Invoke(window, checkCopy);
@@ -79,13 +81,37 @@ public sealed class AuditBackupReadinessTests
             PumpUntil(window, () => !workspace.IsBusy && workspace.BackupReadinessStatus.StartsWith("The separate copy matches", StringComparison.Ordinal));
             Assert.Contains("Backup remains pending", workspace.BackupReadinessStatus, StringComparison.Ordinal);
             var current = Assert.IsType<ThirdLife.Core.Jobs.StoredJob>(workspace.Job);
-            workspace.CloseJob();
-            var reopen = workspace.OpenJobAsync(current.Job.JobId.Value);
-            PumpUntil(window, () => reopen.IsCompletedSuccessfully && !workspace.IsBusy && workspace.ShowsBackupReadiness);
+            Invoke(window, Named<Button>(view, "CloseJobButton"));
+            Assert.Null(workspace.Job);
+            Named<TextBox>(view, "JobIdInput").Text = current.Job.JobId.Value;
+            Invoke(window, Named<Button>(view, "OpenJobButton"));
+            var stages = Named<ListBox>(window, "StageList");
+            PumpUntil(window, () => !workspace.IsBusy && workspace.Job?.Job.JobId == current.Job.JobId &&
+                stages.SelectedItem is not null, () => workspace.OperationError);
+            Assert.IsType<MainWindow>(window).ShowStage(ShellStage.Handover);
             var savedMessage = Named<TextBlock>(view, "BackupSampleJournalMessage");
-            Assert.True(savedMessage.IsVisible);
+            PumpUntil(window, () => savedMessage.IsVisible && savedMessage.Text.Length != 0);
             Assert.Contains("This handover recorded a matching separate sample copy. Backup remains pending.", savedMessage.Text, StringComparison.Ordinal);
             Assert.False(workspace.CanCheckBackupSample);
+            Named<TextBox>(view, "BackupScopeMebibytes").Text = "1";
+            Named<CheckBox>(view, "BackupRecoveryConfirmed").IsChecked = true;
+            Invoke(window, Named<Button>(view, "CheckBackupReadinessButton"));
+            PumpUntil(window, () => workspace.CanReopenBackupSample);
+            var resume = Named<Button>(view, "ReopenBackupSampleButton");
+            Invoke(window, resume);
+            Assert.Same(approval, Keyboard.FocusedElement);
+            Assert.False(workspace.CanCheckBackupSample);
+            approval.IsChecked = true;
+            Invoke(window, resume);
+            Assert.Same(operatorCode, Keyboard.FocusedElement);
+            Assert.False(workspace.CanCheckBackupSample);
+            operatorCode.Text = "operator-resumed-sample";
+            Invoke(window, resume);
+            PumpUntil(window, () => !workspace.IsBusy && workspace.CanCheckBackupSample);
+            Assert.Contains("Reopened the saved harmless sample", workspace.BackupReadinessStatus, StringComparison.Ordinal);
+            Invoke(window, checkCopy);
+            PumpUntil(window, () => !workspace.IsBusy && workspace.BackupReadinessStatus.StartsWith("The separate copy matches", StringComparison.Ordinal));
+            Assert.Equal(sample, Assert.Single(Directory.EnumerateFiles(original, "thirdlife-restore-*.txt")));
         });
 
         var job = Assert.IsType<ThirdLife.Core.Jobs.StoredJob>(workspace.Job);
@@ -93,8 +119,10 @@ public sealed class AuditBackupReadinessTests
             SqliteJobStore.CurrentSchemaVersion, time, null, () => 180_000, () => 10);
         var saved = await reopened.LoadFileHistorySampleHistoryAsync(job.Job.JobId);
         Assert.Equal(new[] { FileHistorySampleAuditState.Preparing, FileHistorySampleAuditState.Prepared,
-            FileHistorySampleAuditState.CopyUnavailable, FileHistorySampleAuditState.CopyMatches },
+            FileHistorySampleAuditState.CopyUnavailable, FileHistorySampleAuditState.CopyMatches, FileHistorySampleAuditState.CopyMatches },
             saved.Select(entry => entry.State));
+        Assert.Equal("operator-backup-sample", saved[3].OperatorId.Value);
+        Assert.Equal("operator-resumed-sample", saved[4].OperatorId.Value);
         Assert.Single(saved.Select(entry => entry.SampleId).Distinct());
     }
 

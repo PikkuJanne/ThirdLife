@@ -51,28 +51,43 @@ public partial class AuditWorkspaceView
 
     private async void PrepareBackupSample(object sender, RoutedEventArgs e)
     {
-        if (Workspace.BackupReadinessReviewId is not { } reviewId) { return; }
-        if (BackupSampleConfirmed.IsChecked != true)
-        {
-            SetError(BackupReadinessError, "Confirm the displayed drive and scope with the recipient.");
-            FocusAndReveal(BackupSampleConfirmed);
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(BackupSampleOperator.Text))
-        {
-            SetError(BackupReadinessError, "Enter your workshop operator code for the sample record.");
-            FocusAndReveal(BackupSampleOperator);
-            return;
-        }
-        SetError(BackupReadinessError, string.Empty);
-        FocusAndReveal(BackupReadinessMessage);
-        await Workspace.PrepareBackupSampleAsync(reviewId, recipientConfirmed: true, BackupSampleOperator.Text);
+        if (!TryReadConfirmedBackupSampleReview(out var reviewId, out var operatorCode)) { return; }
+        await Workspace.PrepareBackupSampleAsync(reviewId, recipientConfirmed: true, operatorCode);
     }
 
     private async void CheckBackupSample(object sender, RoutedEventArgs e)
     {
         FocusAndReveal(BackupReadinessMessage);
         await Workspace.CheckBackupSampleAsync();
+    }
+
+    private async void ReopenBackupSample(object sender, RoutedEventArgs e)
+    {
+        if (!TryReadConfirmedBackupSampleReview(out var reviewId, out var operatorCode)) { return; }
+        await Workspace.ReopenBackupSampleAsync(reviewId, recipientConfirmed: true, operatorCode);
+    }
+
+    private bool TryReadConfirmedBackupSampleReview(out Guid reviewId, out string operatorCode)
+    {
+        reviewId = Guid.Empty;
+        operatorCode = BackupSampleOperator.Text;
+        if (Workspace.BackupReadinessReviewId is not { } current) { return false; }
+        if (BackupSampleConfirmed.IsChecked != true)
+        {
+            SetError(BackupReadinessError, "Confirm the displayed drive and scope with the recipient.");
+            FocusAndReveal(BackupSampleConfirmed);
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(operatorCode))
+        {
+            SetError(BackupReadinessError, "Enter your workshop operator code for the sample record.");
+            FocusAndReveal(BackupSampleOperator);
+            return false;
+        }
+        reviewId = current;
+        SetError(BackupReadinessError, string.Empty);
+        FocusAndReveal(BackupReadinessMessage);
+        return true;
     }
 
     private void RefreshBackupReadiness()
@@ -86,6 +101,7 @@ public partial class AuditWorkspaceView
             BackupSampleOperator.Clear();
         }
         BackupSampleRegion.Visibility = VisibleWhen(review.HasValue);
+        ReopenBackupSampleButton.Visibility = VisibleWhen(Workspace.CanReopenBackupSample);
         BackupPreparedRegion.Visibility = VisibleWhen(Workspace.ShowsBackupSampleCheck);
         BackupSampleJournalMessage.Visibility = VisibleWhen(Workspace.BackupSampleJournalStatus.Length != 0);
         (JobId, long)? context = Workspace.ShowsBackupReadiness && Workspace.RecipientHandover is { } handover

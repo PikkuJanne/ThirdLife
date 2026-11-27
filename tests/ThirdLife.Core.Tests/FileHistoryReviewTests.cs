@@ -69,6 +69,28 @@ public sealed class FileHistoryReviewTests
         Assert.Equal(FileHistoryRestoreOutcome.Verified, approval.EvaluateRestore(handover, true, Destination, sample, observed, true));
     }
 
+    [Fact]
+    public void FreshApprovedReviewReopensOnlyTheExactPreparedSample()
+    {
+        var handover = Handover(HandoverMode.Assisted);
+        var review = Assert.IsType<FileHistoryReview>(FileHistoryReview.Inspect(handover, true, Destination, 1, true).Review);
+        var original = review.Approve(review.ReviewId, true).CreateRestoreSample(handover, true, Destination);
+        var fresh = Assert.IsType<FileHistoryReview>(FileHistoryReview.Inspect(handover, true, Destination, 1, true).Review);
+        var approval = fresh.Approve(fresh.ReviewId, true);
+        var prepared = new FileHistorySampleAudit(original.SampleId, handover.Sequence, original.Sha256,
+            original.ByteLength, Actor, Recorded, FileHistorySampleAuditState.Prepared);
+        var sample = Assert.IsType<FileHistoryRestoreSample>(approval.ReopenRestoreSample(handover, true, Destination, prepared));
+        Assert.True(sample.IsFor(approval));
+        Assert.Equal(original.CopyContent(), sample.CopyContent());
+        Assert.Null(approval.ReopenRestoreSample(Handover(HandoverMode.Sealed), true, Destination, prepared));
+        var badDigest = new FileHistorySampleAudit(original.SampleId, handover.Sequence, new string('a', 64),
+            original.ByteLength, Actor, Recorded, FileHistorySampleAuditState.Prepared);
+        Assert.Null(approval.ReopenRestoreSample(handover, true, Destination, badDigest));
+        var incomplete = new FileHistorySampleAudit(original.SampleId, handover.Sequence, original.Sha256,
+            original.ByteLength, Actor, Recorded, FileHistorySampleAuditState.Preparing);
+        Assert.Null(approval.ReopenRestoreSample(handover, true, Destination, incomplete));
+    }
+
     private static SavedRecipientHandover Handover(HandoverMode mode) => SavedRecipientHandover.Evaluate(new JobId("job-file-history"),
         false, [new(1, mode, null, null, false, Actor, Recorded)]);
 }
