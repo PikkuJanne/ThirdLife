@@ -7747,7 +7747,17 @@ tasks:
   - Run adapter unit/integration tests for supported, unavailable, denied, applied, verified, reversed, and resume states.
   - Verify keyboard entry, automation and announcement signals, scaling, permitted setting changes, reversal and sealed
     handover in the approved environment. Confirm restoration of test state.
-  evidence: []
+  evidence:
+  - summary: Current-user Toggle Keys review, recipient consent, protected intent, independent readback, restoration and sealed handover.
+    task: TL-0701
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 521.818 s, 310 governance and 2676 .NET tests
+    environment: Clean detached checkout on active Windows 11 native x64 host, isolated fixtures
+    reference: artifacts/evidence/TL-0701/toggle-keys.md, dd69090554665a87c7e145b81a3bcf5710e4382a
+    limitation: Native current-user reads passed. Actual recipient change and restoration remain pending exact runtime consent. The applied and restored test states used a controlled adapter.
   notes:
   - Recipient choice and consent remain explicit in the product. TL-0710 carries any final scope decision.
   expected_test_tier: targeted
