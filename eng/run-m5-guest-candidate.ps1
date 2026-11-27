@@ -54,10 +54,13 @@ $started = [DateTime]::UtcNow
 $timer = [Diagnostics.Stopwatch]::StartNew()
 $lease = [Threading.Mutex]::new($false, ('ThirdLifeVerification-' + $vm.Id.ToString('N')))
 $ownsLease = $false
+$connection = [PowerShell]::Create()
 
-function Invoke-DirectCommand([string] $Command, [hashtable] $Parameters, [int] $TimeoutSeconds) {
-    $operation = [PowerShell]::Create()
+function Invoke-DirectCommand([string] $Command, [hashtable] $Parameters, [int] $TimeoutSeconds, [PowerShell] $Engine) {
+    $ownsEngine = $null -eq $Engine
+    $operation = if ($ownsEngine) { [PowerShell]::Create() } else { $Engine }
     try {
+        $operation.Commands.Clear()
         $null = $operation.AddCommand($Command).AddParameters($Parameters).AddParameter('ErrorAction', 'Stop')
         $pending = $operation.BeginInvoke()
         if (-not $pending.AsyncWaitHandle.WaitOne([TimeSpan]::FromSeconds($TimeoutSeconds))) {
@@ -67,7 +70,7 @@ function Invoke-DirectCommand([string] $Command, [hashtable] $Parameters, [int] 
         $operation.EndInvoke($pending) | ForEach-Object { $_.PSObject.BaseObject }
     }
     finally {
-        if ($operation.InvocationStateInfo.State -ne 'Stopping') { $operation.Dispose() }
+        if ($ownsEngine -and $operation.InvocationStateInfo.State -ne 'Stopping') { $operation.Dispose() }
     }
 }
 
@@ -87,7 +90,7 @@ try {
     [IO.Compression.ZipFile]::CreateFromDirectory($output, $payload)
     if ((Get-Item -LiteralPath $payload).Length -gt 48MB) { throw 'The staged test payload exceeds 48 MiB.' }
     $payloadHash = (Get-FileHash -LiteralPath $payload).Hash.ToLowerInvariant()
-    $session = Invoke-DirectCommand 'New-PSSession' @{ VMId = $vm.Id; Credential = $credential } 20
+    $session = Invoke-DirectCommand 'New-PSSession' @{ VMId = $vm.Id; Credential = $credential } 20 $connection
     $guestPath = Invoke-Guest 20 @($profile.computer, $stage) {
         param($computer, $name)
         $system = Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
@@ -162,7 +165,7 @@ finally {
         if ($session -and $guestPath) {
             if ($session.State -ne 'Opened') {
                 Remove-PSSession $session
-                $session = Invoke-DirectCommand 'New-PSSession' @{ VMId = $vm.Id; Credential = $credential } 20
+                $session = Invoke-DirectCommand 'New-PSSession' @{ VMId = $vm.Id; Credential = $credential } 20 $connection
             }
             Invoke-Guest 30 @($guestPath, $stage) {
                 param($path, $name)
@@ -178,6 +181,7 @@ finally {
     }
     finally {
         if ($session) { Remove-PSSession $session }
+        if ($connection.InvocationStateInfo.State -ne 'Stopping') { $connection.Dispose() }
         if ($ownsLease) { $lease.ReleaseMutex() }
         $lease.Dispose()
         [IO.File]::Delete($payload)
