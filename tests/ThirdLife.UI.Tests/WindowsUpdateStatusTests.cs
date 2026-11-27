@@ -39,7 +39,10 @@ public sealed class WindowsUpdateStatusTests
         var excluded = new WindowsUpdateCandidate(new(Guid.NewGuid(), 3), WindowsUpdateClass.Restricted, 2048);
         var scan = prepared with
         {
-            Id = Guid.NewGuid(), PreviousId = null, Stage = WindowsUpdateStage.ScanCompleted, Approval = null,
+            Id = Guid.NewGuid(),
+            PreviousId = null,
+            Stage = WindowsUpdateStage.ScanCompleted,
+            Approval = null,
             Scan = new(WindowsUpdateStatus.Succeeded, [excluded], false, [WindowsUpdateEligibilityReason.UnsupportedHandler])
         };
         var status = AuditWorkspace.DescribeSavedWindowsUpdate([scan]);
@@ -55,7 +58,9 @@ public sealed class WindowsUpdateStatusTests
         Assert.Contains("needs workshop review", AuditWorkspace.DescribeSavedWindowsUpdate([sent, scan]));
         var receipt = prepared with
         {
-            Id = Guid.NewGuid(), PreviousId = sent.Id, Stage = WindowsUpdateStage.InstallCompleted,
+            Id = Guid.NewGuid(),
+            PreviousId = sent.Id,
+            Stage = WindowsUpdateStage.InstallCompleted,
             Operation = new(WindowsUpdateStatus.Succeeded, false)
         };
         Assert.Contains("needs workshop review", AuditWorkspace.DescribeSavedWindowsUpdate([sent, receipt, scan]));
