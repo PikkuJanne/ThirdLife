@@ -7509,7 +7509,17 @@ tasks:
   - Inspect Windows 11 native-x64 artifact targets, entry-point guards and planned install, upgrade, repair and removal constraints.
   - Trace every high-risk threat to code and test evidence or a documented blocker. Identify findings requiring an accountable
     disposition at TL-0611.
-  evidence: []
+  evidence:
+  - summary: Reviewed the current privileged, job-store, ownership, artifact, support and dependency boundaries with focused automated checks.
+    task: TL-0609
+    command: eng/verify.ps1 -Tier Targeted -Restore with broker, diagnostics, persistence, reports and installer selections in the audit
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 236.623 s, 1437 Quick .NET tests and 150 selected security cases
+    environment: Active Windows 11 Pro 26H2 native x64 host with the locked SDK and isolated fixtures
+    reference: artifacts/audits/v0.1-security-privacy.md, 7590368dbd293ff017069be9cca4d5148b9bae1b
+    limitation: Scoped technical checkpoint. Exact frozen package, signing, licence/distribution and remaining named native observations retain their own gates.
   notes:
   - Codex technical inspection cannot establish independent security or privacy review. Accountable acceptance of pilot
     scope occurs at TL-0611.
