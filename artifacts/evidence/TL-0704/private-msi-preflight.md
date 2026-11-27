@@ -100,3 +100,7 @@ diagnostic channel returned to disabled. The protected staging folder
 remains with no installer log. A supported standard-user guest session
 is still required for actual installation and application observation.
 [Windows result code](https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--1300-1699-)
+
+The later interactive fixture located and corrected the Windows
+Installer launch condition and observed the exact private lifecycle.
+[Interactive lifecycle follow-up](interactive-lifecycle.md)

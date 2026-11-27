@@ -63,6 +63,13 @@ shown in its preview.
 
 ## 3. Install, update, repair, and remove
 
+The private 0.3.2 and 0.3.3 MSI pair passed native per-user install,
+repair, upgrade, downgrade refusal and removal on ThirdLife-W11.
+The installed files matched their reviewed bytes and the synthetic
+job-directory and adjacent sentinels were preserved. The installed
+window observation and frozen release information remain open.
+[Private lifecycle](artifacts/evidence/TL-0704/interactive-lifecycle.md)
+
 Qualify install, upgrade, repair and removal against D-005. Record the exact Windows 11 edition, release, build, native x64 architecture, tested artifact and limits. Document at `TL-0706`:
 
 - normal UI or command path;

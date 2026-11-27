@@ -60,7 +60,7 @@ class DevelopmentMsiTests(unittest.TestCase):
         ]
         api.MsiRecordGetStringW.restype = wintypes.UINT
         with engine.open_handle(api.MsiOpenDatabaseW, str(msi), None) as database:
-            for table in ("CustomAction", "RemoveFile", "ServiceInstall", "ServiceControl"):
+            for table in ("RemoveFile", "ServiceInstall", "ServiceControl"):
                 self.assertEqual(2, api.MsiDatabaseIsTablePersistentW(database, table))
             for query, expected in [
                 ("SELECT `FileName` FROM `File`", f"F001.exe|{package.APPHOST}"),
@@ -71,7 +71,20 @@ class DevelopmentMsiTests(unittest.TestCase):
                 ("SELECT `Value` FROM `Property` WHERE `Property`='REBOOT'", "ReallySuppress"),
                 ("SELECT `Condition` FROM `LaunchCondition` WHERE `Description` = "
                  "'This preview requires Windows 11 client build 26300 on native x64.'",
-                 "Installed OR (VersionNT64 = 1000 AND Msix64 AND WindowsBuild = 26300 AND MsiNTProductType = 1)"),
+                 'Installed OR (VersionNT64 AND Msix64 AND MsiNTProductType = 1 AND TL_NATIVE_BUILD = "26300")'),
+                ("SELECT `Action` FROM `CustomAction`", "ResetNativeBuild"),
+                ("SELECT `Type` FROM `CustomAction`", "51"),
+                ("SELECT `Source` FROM `CustomAction`", "TL_NATIVE_BUILD"),
+                ("SELECT `Target` FROM `CustomAction`", "unavailable"),
+                ("SELECT `Property` FROM `AppSearch` WHERE `Signature_`='NativeBuildFromRegistry'", "TL_NATIVE_BUILD"),
+                ("SELECT `Root` FROM `RegLocator` WHERE `Signature_`='NativeBuildFromRegistry'", "2"),
+                ("SELECT `Key` FROM `RegLocator` WHERE `Signature_`='NativeBuildFromRegistry'",
+                 r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"),
+                ("SELECT `Name` FROM `RegLocator` WHERE `Signature_`='NativeBuildFromRegistry'", "CurrentBuildNumber"),
+                ("SELECT `Type` FROM `RegLocator` WHERE `Signature_`='NativeBuildFromRegistry'", "18"),
+                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='ResetNativeBuild'", "40"),
+                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='AppSearch'", "50"),
+                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='LaunchConditions'", "100"),
             ]:
                 with self.subTest(query=query):
                     self.assertEqual(expected, self.read_cell(engine, database, query))
