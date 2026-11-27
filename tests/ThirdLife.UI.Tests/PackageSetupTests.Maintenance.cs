@@ -20,6 +20,67 @@ namespace ThirdLife.UI.Tests;
 
 public sealed partial class PackageSetupTests
 {
+    [Fact]
+    [Trait("Category", "Extended")]
+    public async Task OfflineMaintenancePreservesTheApprovedJobAndResumesAfterReopen()
+    {
+        using var disk = new AuditTestStore();
+        var clock = new FixedClock();
+        var runtime = new FixtureInstaller(PackageInstallStatus.Applied, register: true);
+        var service = new PilotPackageService(runtime);
+        var agent = new MaintenanceScanFixture { Status = WindowsUpdateStatus.Offline };
+        string jobId;
+        MaintenanceCheckpoint approved;
+
+        await using (var workspace = Open())
+        {
+            await PrepareInitialPackagePlanAsync(workspace);
+            jobId = workspace.JobId;
+            workspace.IncludeFullMaintenance = true;
+            await workspace.BuildPlanReviewAsync();
+            workspace.PackageOperatorCode = "fixture-operator";
+            await workspace.ApprovePlanReviewAsync();
+            approved = await ReadCheckpointAsync(jobId);
+            Assert.True(workspace.CanContinueMaintenance, workspace.OperationError);
+            await workspace.ContinueMaintenanceAsync();
+            Assert.Equal(1, agent.Scans);
+            Assert.Contains("network connection", workspace.MaintenancePhaseStatus);
+            Assert.False(workspace.CanInstallPackage);
+        }
+
+        await using var reopened = Open();
+        await reopened.OpenJobAsync(jobId);
+        Assert.Contains("network connection", reopened.MaintenancePhaseStatus);
+        Assert.False(reopened.CanInstallPackage);
+        var deferred = await ReadCheckpointAsync(jobId);
+        Assert.Equal(approved.Plan, deferred.Plan);
+        Assert.Equal(approved.ApprovalId, deferred.ApprovalId);
+        Assert.Equal(0, runtime.InstallCalls);
+        Assert.Equal(1, agent.Scans);
+
+        agent.Status = WindowsUpdateStatus.Succeeded;
+        await reopened.ContinueMaintenanceAsync();
+        Assert.Equal(2, agent.Scans);
+        Assert.Contains("Package phase", reopened.MaintenancePhaseStatus);
+        var resumed = await ReadCheckpointAsync(jobId);
+        Assert.Equal(MaintenancePhase.Packages, resumed.Phase);
+        Assert.Equal(approved.Plan, resumed.Plan);
+        Assert.Equal(approved.ApprovalId, resumed.ApprovalId);
+        Assert.Equal(0, runtime.InstallCalls);
+
+        AuditWorkspace Open() => OpenMaintenanceWorkspace(disk, clock, service, agent, OpenStore);
+
+        Task<SqliteJobStore> OpenStore(CancellationToken token) => SqliteJobStore.OpenForTestingAsync(
+            Path.Combine(disk.Root, "store"), SqliteJobStore.CurrentSchemaVersion, clock, null, () => 10_000UL,
+            readBootSession: () => 7, cancellationToken: token);
+
+        async Task<MaintenanceCheckpoint> ReadCheckpointAsync(string id)
+        {
+            await using var store = await OpenStore(default);
+            return Assert.IsType<MaintenanceCheckpoint>(await store.LoadMaintenanceAsync(new JobId(id)));
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

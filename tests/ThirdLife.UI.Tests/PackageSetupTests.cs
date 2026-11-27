@@ -42,7 +42,6 @@ public sealed partial class PackageSetupTests
     [InlineData(PackageVerificationStatus.ExecutableMissing, JournalResult.PackageProbeExecutableMissing, "reviewed executable was missing")]
     [InlineData(PackageVerificationStatus.ExecutableUntrusted, JournalResult.PackageProbeExecutableUntrusted, "failed its launch trust check")]
     [InlineData(PackageVerificationStatus.LaunchFailed, JournalResult.PackageProbeLaunchFailed, "could not be started")]
-    [InlineData(PackageVerificationStatus.ExitedEarly, JournalResult.PackageProbeExitedEarly, "closed before the launch check completed")]
     [InlineData(PackageVerificationStatus.TimedOut, JournalResult.PackageProbeTimedOut, "launch check reached its time limit")]
     [InlineData(PackageVerificationStatus.Cancelled, JournalResult.PackageProbeCancelled, "verification was cancelled")]
     [InlineData(PackageVerificationStatus.CleanupUnconfirmed, JournalResult.PackageProbeCleanupUnconfirmed, "Cleanup of the launch check could not be confirmed")]
@@ -51,6 +50,13 @@ public sealed partial class PackageSetupTests
         CheckPackageJournalAsync(new FixtureInstaller(PackageInstallStatus.Applied, register: true) { ProbeStatus = probeStatus },
             probeStatus == PackageVerificationStatus.Passed ? JournalState.Verified : JournalState.RequiresReview,
             expectedResult, expectedReport, probeCalls: 1);
+
+    [Fact]
+    public Task MatchingRegistrationWithAnEarlyLaunchExitStaysUnverified() =>
+        CheckPackageJournalAsync(new FixtureInstaller(PackageInstallStatus.Applied, register: true)
+        { ProbeStatus = PackageVerificationStatus.ExitedEarly },
+            JournalState.RequiresReview, JournalResult.PackageProbeExitedEarly,
+            "closed before the launch check completed", probeCalls: 1);
 
     [Theory]
     [InlineData(null, JournalResult.PackageDetectionAbsent, "registration was not found")]
