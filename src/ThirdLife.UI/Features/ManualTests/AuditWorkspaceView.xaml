@@ -488,12 +488,12 @@
         <TextBlock x:Name="HandoverCompletionMessage" Text="{Binding HandoverCompletionStatus}" Focusable="True"
                    KeyboardNavigation.IsTabStop="False" AutomationProperties.Name="{Binding HandoverCompletionStatus}"
                    AutomationProperties.LiveSetting="Polite" Margin="0,8,0,0" />
-        <ItemsControl ItemsSource="{Binding HandoverBlockers}" AutomationProperties.Name="Handover requirements to review">
+        <ItemsControl ItemsSource="{Binding HandoverBlockers}" Focusable="False" AutomationProperties.Name="Handover requirements to review">
           <ItemsControl.ItemTemplate>
             <DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" /></DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <ItemsControl ItemsSource="{Binding HandoverOutputSummary}" AutomationProperties.Name="Reviewed handover outputs">
+        <ItemsControl ItemsSource="{Binding HandoverOutputSummary}" Focusable="False" AutomationProperties.Name="Reviewed handover outputs">
           <ItemsControl.ItemTemplate>
             <DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" /></DataTemplate>
           </ItemsControl.ItemTemplate>

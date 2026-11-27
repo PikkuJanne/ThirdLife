@@ -25,3 +25,8 @@ Reports, Persistence and WPF tests with zero skips. The approved privacy
 contract remains the original committed contract. The recovery record uses
 its protected operator-attribution and time fields without adding any
 personal destination path to the audit or archive.
+
+The integration candidate on main `0d4dcb7b9d7a9484dd32048be953846ab183e36a`
+passed Quick in 185.370 s with 1,419 .NET tests. WPF consumed 104 s of the
+wall time. The cumulative source includes the verified Prepare configuration
+export and a single protected write implementation.
