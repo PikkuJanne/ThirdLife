@@ -110,6 +110,11 @@ internal sealed partial class AuditWorkspace
                 _finalizationFeedback = string.Empty;
             }
 
+            if (_recipientGuide is { } preview && preview.HandoverSequence != handover?.Sequence)
+            {
+                ClearRecipientGuide("The saved handover changed. Preview the guide again.");
+            }
+
             RecipientHandover = handover;
             Finalization = checklist;
             _finalizationReadFailed = readFailed;

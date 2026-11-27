@@ -82,6 +82,7 @@ internal sealed partial class AuditWorkspace
 
     private void ClearHandoverMode()
     {
+        ClearRecipientGuide();
         RecipientHandover = null;
         _handoverModeFeedback = string.Empty;
     }
