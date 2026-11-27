@@ -1,10 +1,16 @@
 [CmdletBinding()]
-param([switch] $VerifyAccessibility)
+param(
+    [switch] $VerifyAccessibility,
+    [switch] $KeyboardOnly
+)
 
 # An external keyboard driver for the Release fixture. Only the nonce-bound window receives input.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Windows.Forms
+if ($KeyboardOnly -and -not $VerifyAccessibility) {
+    throw 'Use -KeyboardOnly with -VerifyAccessibility to run keyboard and announcement checks independently.'
+}
 
 if ($VerifyAccessibility) {
     Add-Type -ReferencedAssemblies UIAutomationClient.dll, UIAutomationTypes.dll, WindowsBase.dll, System.Threading.dll -TypeDefinition @'
@@ -25,15 +31,17 @@ public sealed class AuditAccessibilityProbe : IDisposable
     private struct Input { public uint Type; public MouseInput Mouse; }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct Point { public int X, Y; }
+    private struct CursorPoint { public int X, Y; }
 
     [DllImport("user32.dll")] private static extern uint SendInput(uint count, Input[] inputs, int size);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr handle);
     [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr handle, uint flags);
-    [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(Point point);
+    [DllImport("user32.dll")] private static extern IntPtr WindowFromPhysicalPoint(CursorPoint point);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetCursorPos(out Point point);
+    private static extern bool GetPhysicalCursorPos(out CursorPoint point);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetPhysicalCursorPos(int x, int y);
 
     private readonly AutomationElement window;
     private readonly AutomationEventHandler listener;
@@ -77,12 +85,33 @@ public sealed class AuditAccessibilityProbe : IDisposable
 
     public uint WindowDpi => GetDpiForWindow(new IntPtr(window.Current.NativeWindowHandle));
 
-    public void Wheel(int delta)
+    public int[] MoveWheelPointer(int x, int y)
+    {
+        var point = new CursorPoint { X = x, Y = y };
+        RequireOwnedPoint(point);
+        if (!GetPhysicalCursorPos(out CursorPoint original) || !SetPhysicalCursorPos(point.X, point.Y))
+            throw new InvalidOperationException("The physical cursor could not be positioned for the owned fixture.");
+        return new[] { original.X, original.Y };
+    }
+
+    public void RestoreWheelPointer(int[] point)
+    {
+        if (!SetPhysicalCursorPos(point[0], point[1]))
+            throw new InvalidOperationException("The original physical cursor position could not be restored.");
+    }
+
+    private void RequireOwnedPoint(CursorPoint point)
     {
         IntPtr owned = new IntPtr(window.Current.NativeWindowHandle);
-        if (GetForegroundWindow() != owned || !GetCursorPos(out Point cursor) ||
-            GetAncestor(WindowFromPoint(cursor), 2) != owned)
-            throw new InvalidOperationException("Wheel input requires the pointer over the foreground fixture.");
+        if (GetForegroundWindow() != owned || GetAncestor(WindowFromPhysicalPoint(point), 2) != owned)
+            throw new InvalidOperationException("Wheel input requires a point over the foreground fixture.");
+    }
+
+    public void Wheel(int delta)
+    {
+        if (!GetPhysicalCursorPos(out CursorPoint cursor))
+            throw new InvalidOperationException("The current physical cursor position could not be read.");
+        RequireOwnedPoint(cursor);
         var input = new Input();
         input.Mouse.Delta = delta;
         input.Mouse.Flags = 0x0800;
@@ -167,13 +196,17 @@ function Assert-Announcement([string] $Id, [string] $Message) {
 }
 
 function Measure-FractionalWheel {
-    $viewport = Find-FixtureElement 'ShellScroll'
+    $viewport = Wait-For {
+        $candidate = Find-FixtureElement 'ShellScroll'
+        if ($candidate -and $candidate.GetCurrentPattern([Windows.Automation.ScrollPattern]::Pattern).Current.VerticallyScrollable) {
+            $candidate
+        }
+    } 'vertical overflow in the populated Intake fixture'
     $scroll = $viewport.GetCurrentPattern([Windows.Automation.ScrollPattern]::Pattern)
     $bounds = $viewport.Current.BoundingRectangle
-    $cursor = [Windows.Forms.Cursor]::Position
+    $cursor = $probe.MoveWheelPointer(
+        [int]($bounds.X + $bounds.Width / 2), [int]($bounds.Y + $bounds.Height / 3))
     try {
-        [Windows.Forms.Cursor]::Position = [Drawing.Point]::new(
-            [int]($bounds.X + $bounds.Width / 2), [int]($bounds.Y + $bounds.Height / 3))
         $scroll.SetScrollPercent(-1, 0)
         $null = Wait-For { $scroll.Current.VerticalScrollPercent -eq 0 } 'wheel baseline'
         $probe.Wheel(-120)
@@ -191,7 +224,7 @@ function Measure-FractionalWheel {
         }
         $result.wheel = @{ detent_percent = $detent; fractional_percent = $partial }
     }
-    finally { [Windows.Forms.Cursor]::Position = $cursor }
+    finally { $probe.RestoreWheelPointer($cursor) }
 }
 
 $startInfo = [Diagnostics.ProcessStartInfo]::new()
@@ -229,7 +262,7 @@ try {
         $probe = [AuditAccessibilityProbe]::new($window)
         $result.live_region_events = @()
         $result.window_dpi = $probe.WindowDpi
-        Measure-FractionalWheel
+        $result.wheel_requested = -not $KeyboardOnly
     }
     Move-TabTo 'CreateJobButton'
     Send-At 'CreateJobButton' '{ENTER}'
@@ -240,6 +273,10 @@ try {
         throw 'The new job must still require explicit external confirmation.'
     }
     $result.steps += 'created_job_requires_explicit_confirmation'
+    if ($VerifyAccessibility -and -not $KeyboardOnly) {
+        Measure-FractionalWheel
+        $result.steps += 'populated_intake_fractional_wheel'
+    }
 
     Move-TabTo 'ExternalRecordConfirmed'
     Send-At 'ExternalRecordConfirmed' '{ENTER}'

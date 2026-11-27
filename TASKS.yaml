@@ -7474,6 +7474,16 @@ tasks:
     environment: Active Windows 11 native x64 host, isolated WPF resources and 2x layout
     reference: artifacts/evidence/TL-0608/backup-readiness-controls.md, b1f34ee516e3c8ace141caf576b67fd172f1d8e6
     limitation: Synthetic scale, WPF focus and announcement signals. Complete candidate accessibility audit, physical DPI and audible checks remain open.
+  - summary: Current external keyboard and UI Automation journey with a separately recorded native wheel result.
+    task: TL-0608
+    command: eng/run-m1-audit-journey.ps1 -VerifyAccessibility -KeyboardOnly and targeted WheelScrollingTests
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 8.828 s for the external journey and 5 routed wheel checks in 3 s
+    environment: Active unelevated Windows 11 native x64 test window reporting 240 DPI
+    reference: artifacts/audits/v0.1-accessibility.md, e3260f97a2ec72cb0a1aa10ae7000f9ed957b566
+    limitation: Keyboard journey and three UI Automation announcements observed. External first wheel detent still times out even with vertical overflow and physical coordinates. Audible perception remains unobserved.
   notes:
   - Engineering audit scope cannot establish full perceptual accessibility. TL-0611 carries the accountable pilot accessibility
     disposition.

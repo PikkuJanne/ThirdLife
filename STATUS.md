@@ -115,10 +115,16 @@ Keys. Native observations cover unelevated reads and File History destination
 prerequisites. Exact setting changes and live backup and restore remain pending.
 [Toggle Keys](artifacts/evidence/TL-0701/toggle-keys.md) · [Backup readiness](artifacts/evidence/TL-0702/readiness.md)
 
-The integrated private development ZIP has a source-bound integrity verifier and
-an unelevated startup observation. The pilot runbook is a draft and the standalone
-installer lifecycle remains open.
-[Private package and runbook](artifacts/evidence/TL-0610/development-integrity.md)
+The private ZIP launched unelevated and saved the exact reviewed synthetic
+configuration through the native folder picker. The standalone installed
+lifecycle awaits a supported standard-user guest session.
+[Private candidate](artifacts/evidence/TL-0706/private-interface.md) · [Guest MSI evidence](artifacts/evidence/TL-0704/private-msi-preflight.md)
+
+The current Handover resumes the same protected harmless sample after
+a fresh recipient review and saves the current operator's copy result.
+The keyboard journey passed at 240 DPI. Native Windows restoration
+and the external wheel observation remain open.
+[Sample resume](artifacts/evidence/TL-0702/reopen-sample.md) · [Accessibility audit](artifacts/audits/v0.1-accessibility.md)
 
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B
 exit remain at TL-0710. [Decision and graph review](docs/reviews/2026-11-27-single-guest-continuation.md)
