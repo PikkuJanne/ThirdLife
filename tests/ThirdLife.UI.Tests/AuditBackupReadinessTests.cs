@@ -79,11 +79,16 @@ public sealed class AuditBackupReadinessTests
             PumpUntil(window, () => !workspace.IsBusy && workspace.BackupReadinessStatus.StartsWith("The separate copy matches", StringComparison.Ordinal));
             Assert.Contains("Backup remains pending", workspace.BackupReadinessStatus, StringComparison.Ordinal);
             var current = Assert.IsType<ThirdLife.Core.Jobs.StoredJob>(workspace.Job);
-            workspace.CloseJob();
-            var reopen = workspace.OpenJobAsync(current.Job.JobId.Value);
-            PumpUntil(window, () => reopen.IsCompletedSuccessfully && !workspace.IsBusy && workspace.ShowsBackupReadiness);
+            Invoke(window, Named<Button>(view, "CloseJobButton"));
+            Assert.Null(workspace.Job);
+            Named<TextBox>(view, "JobIdInput").Text = current.Job.JobId.Value;
+            Invoke(window, Named<Button>(view, "OpenJobButton"));
+            var stages = Named<ListBox>(window, "StageList");
+            PumpUntil(window, () => !workspace.IsBusy && workspace.Job?.Job.JobId == current.Job.JobId &&
+                stages.SelectedItem is not null, () => workspace.OperationError);
+            Assert.IsType<MainWindow>(window).ShowStage(ShellStage.Handover);
             var savedMessage = Named<TextBlock>(view, "BackupSampleJournalMessage");
-            Assert.True(savedMessage.IsVisible);
+            PumpUntil(window, () => savedMessage.IsVisible && savedMessage.Text.Length != 0);
             Assert.Contains("This handover recorded a matching separate sample copy. Backup remains pending.", savedMessage.Text, StringComparison.Ordinal);
             Assert.False(workspace.CanCheckBackupSample);
         });
