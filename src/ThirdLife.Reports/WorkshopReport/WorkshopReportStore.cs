@@ -1,6 +1,7 @@
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
+using ThirdLife.Core.Handover;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Diagnostics;
 using ThirdLife.Diagnostics.Logging;
@@ -54,7 +55,7 @@ public sealed class WorkshopReportArtifact
     public WorkshopReportReceipt Receipt { get; }
 }
 
-/// <summary>Retains protected report copies and opens only verified artifacts issued by this store.</summary>
+/// <summary>Retains protected report copies and verifies exact bytes before opening a saved file.</summary>
 public sealed class WorkshopReportStore
 {
     public const int MaximumArtifactBytes = 8 * 1024 * 1024;
@@ -171,9 +172,28 @@ public sealed class WorkshopReportStore
             throw new WorkshopReportStoreException(WorkshopReportFailure.ReadFailed);
         }
 
+        return ReadText(artifact.Receipt, cancellationToken);
+    }
+
+    public string ReadSavedReport(JobId jobId, HandoverFileReceipt saved, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(jobId);
+        ArgumentNullException.ThrowIfNull(saved);
+        if (saved.Output.Kind != HandoverOutputKind.WorkshopRecord || saved.Output.Scope.JobId != jobId)
+        {
+            throw new WorkshopReportStoreException(WorkshopReportFailure.ReadFailed);
+        }
+
+        var receipt = new WorkshopReportReceipt(saved.FileName, saved.ByteLength, saved.Output.Sha256);
+        ValidateReceipt(receipt);
+        return ReadText(receipt, cancellationToken);
+    }
+
+    private string ReadText(WorkshopReportReceipt receipt, CancellationToken cancellationToken)
+    {
         try
         {
-            return Utf8.GetString(ReadVerifiedBytes(artifact.Receipt, cancellationToken));
+            return Utf8.GetString(ReadVerifiedBytes(receipt, cancellationToken));
         }
         catch (DecoderFallbackException)
         {
@@ -182,6 +202,12 @@ public sealed class WorkshopReportStore
     }
 
     public void VerifyReceipt(WorkshopReportReceipt receipt, CancellationToken cancellationToken = default)
+    {
+        ValidateReceipt(receipt);
+        ReadVerifiedBytes(receipt, cancellationToken);
+    }
+
+    private void ValidateReceipt(WorkshopReportReceipt receipt)
     {
         ArgumentNullException.ThrowIfNull(receipt);
         var name = receipt.FileName;
@@ -194,8 +220,6 @@ public sealed class WorkshopReportStore
         {
             throw new WorkshopReportStoreException(WorkshopReportFailure.ReadFailed);
         }
-
-        ReadVerifiedBytes(receipt, cancellationToken);
     }
 
     private byte[] ReadVerifiedBytes(WorkshopReportReceipt receipt, CancellationToken cancellationToken)
