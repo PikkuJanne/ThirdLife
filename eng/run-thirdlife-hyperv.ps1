@@ -85,7 +85,7 @@ if ($Prepare) {
     $null = [IO.Directory]::CreateDirectory($work)
     $provisioner = Join-Path $PSScriptRoot 'install-thirdlife-broker.ps1'
     $projects = if ($updateRefusal) { 'ThirdLife.UI.Tests' } elseif ($nativeAssessment) { 'ThirdLife.Broker.Tests' }
-        elseif ($updateScenario) { 'ThirdLife.Packages.Tests' } else { 'ThirdLife.UI.Tests', 'ThirdLife.Broker.Tests' }
+        elseif ($updateScenario) { 'ThirdLife.UI.Tests' } else { 'ThirdLife.UI.Tests', 'ThirdLife.Broker.Tests' }
     if (-not $updateScenario) {
         if (-not $updateRefusal) { Assert-Digest $BrokerArtifact SHA256 $profile.brokerSha256 }
         Assert-Digest $provisioner SHA256 $profile.provisionerSha256

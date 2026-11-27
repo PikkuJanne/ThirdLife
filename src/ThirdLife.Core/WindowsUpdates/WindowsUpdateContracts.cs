@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ThirdLife.Core.WindowsUpdates;
 
 public enum WindowsUpdateClass
@@ -62,12 +64,18 @@ public sealed record WindowsUpdateCandidate
 
 public sealed class WindowsUpdateScan
 {
-    public WindowsUpdateScan(WindowsUpdateStatus status, IReadOnlyList<WindowsUpdateCandidate> updates, bool? rebootRequired)
+    public WindowsUpdateScan(WindowsUpdateStatus status, IReadOnlyList<WindowsUpdateCandidate> updates, bool? rebootRequired,
+        IReadOnlyList<WindowsUpdateEligibilityReason>? eligibilityReasons = null)
     {
         ArgumentNullException.ThrowIfNull(updates);
         var count = updates.Count;
         ArgumentOutOfRangeException.ThrowIfGreaterThan(count, WindowsUpdatePolicy.MaximumUpdates);
+        if (eligibilityReasons is not null && eligibilityReasons.Count != count)
+        {
+            throw new ArgumentException("A scan must retain one observed reason per offer.", nameof(eligibilityReasons));
+        }
         var copy = new WindowsUpdateCandidate[count];
+        var reasons = eligibilityReasons is null ? null : new WindowsUpdateEligibilityReason[count];
         var seen = new HashSet<Guid>();
         for (var index = 0; index < copy.Length; index++)
         {
@@ -78,15 +86,33 @@ public sealed class WindowsUpdateScan
             }
 
             copy[index] = candidate;
+            if (reasons is not null)
+            {
+                var reason = DomainValue.RequireDefined(eligibilityReasons![index], nameof(eligibilityReasons));
+                var consistent = candidate.Classification switch
+                {
+                    WindowsUpdateClass.Security or WindowsUpdateClass.Critical => WindowsUpdatePolicy.IsSelectable(candidate) &&
+                        reason == WindowsUpdateEligibilityReason.Eligible,
+                    WindowsUpdateClass.Driver => reason == WindowsUpdateEligibilityReason.Driver,
+                    WindowsUpdateClass.Other => reason == WindowsUpdateEligibilityReason.OutsideApprovedClasses,
+                    _ => reason is not (WindowsUpdateEligibilityReason.Eligible or WindowsUpdateEligibilityReason.Driver or
+                        WindowsUpdateEligibilityReason.OutsideApprovedClasses),
+                };
+                if (!consistent) { throw new ArgumentException("An offer and its observed reason disagree.", nameof(eligibilityReasons)); }
+                reasons[index] = reason;
+            }
         }
 
         Status = DomainValue.RequireDefined(status, nameof(status));
         Updates = Array.AsReadOnly(copy);
+        EligibilityReasons = reasons is null ? null : Array.AsReadOnly(reasons);
         RebootRequired = rebootRequired;
     }
 
     public WindowsUpdateStatus Status { get; }
     public IReadOnlyList<WindowsUpdateCandidate> Updates { get; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<WindowsUpdateEligibilityReason>? EligibilityReasons { get; }
     public bool? RebootRequired { get; }
 }
 

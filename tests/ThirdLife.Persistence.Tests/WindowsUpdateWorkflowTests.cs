@@ -24,6 +24,43 @@ public sealed class WindowsUpdateWorkflowTests
     private static readonly OperatorId Operator = new("operator-synthetic-workshop");
 
     [Fact]
+    public async Task MigratingScanKeepsAnUnrecordedRestrictionUnknownAndRejectsOlderReaders()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        Job job;
+        SanitizationGateDecision gate;
+        string decision;
+        var restricted = new WindowsUpdateCandidate(Update.Identity, WindowsUpdateClass.Restricted, 1024);
+        var provider = new FixtureAgent { Scan = Available(restricted) };
+        await using (var prior = await SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot, 10, Clock, null))
+        {
+            (job, gate, decision) = await SeedAsync(prior);
+            await Controlled(prior, provider).ScanAsync(job.JobId, gate.DecisionId);
+        }
+        await using (var current = await OpenAsync(workspace))
+        {
+            provider.Scan = new WindowsUpdateScan(WindowsUpdateStatus.Succeeded, [restricted], false, [WindowsUpdateEligibilityReason.UnsupportedHandler]);
+            var workflow = Controlled(current, provider);
+            var scan = await workflow.ScanAsync(job.JobId, gate.DecisionId);
+            foreach (var attempted in new[] { restricted, Update })
+            {
+                Assert.Null(await current.FindWindowsUpdatePolicyAsync(job.JobId, gate.DecisionId, scan.Id, attempted, null));
+                await Assert.ThrowsAsync<JobStoreConflictException>(() => workflow.ApproveAsync(job.JobId, gate.DecisionId, scan.Id,
+                    attempted, Operator, decision));
+            }
+            var history = await current.LoadWindowsUpdatesAsync(job.JobId);
+            Assert.All(history, entry => Assert.Null(entry.Approval));
+            var saved = history.Where(e => e.Scan is not null).Select(e => e.Scan!).ToArray();
+            Assert.Equal(2, saved.Length);
+            Assert.Null(saved[0].EligibilityReasons);
+            Assert.Equal(WindowsUpdateEligibilityReason.UnsupportedHandler, Assert.Single(saved[1].EligibilityReasons!));
+        }
+        await Assert.ThrowsAsync<JobStoreVersionException>(() => SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot, 10, Clock, null));
+        Assert.Empty(provider.Mutations);
+        Assert.Empty(provider.Prepared);
+    }
+
+    [Fact]
     public async Task VersionNineFixtureDecisionCannotAuthorizeAServicingPolicyDigest()
     {
         using var workspace = new PersistenceTestWorkspace();

@@ -78,6 +78,21 @@ public sealed class WindowsUpdatePolicyTests
     }
 
     [Fact]
+    public void SavedEligibilityFindingsAreBoundedImmutableAndSeparateFromApproval()
+    {
+        var restricted = new WindowsUpdateCandidate(Identity, WindowsUpdateClass.Restricted, 2048);
+        var reasons = new[] { WindowsUpdateEligibilityReason.UnsupportedHandler };
+        var scan = new WindowsUpdateScan(WindowsUpdateStatus.Succeeded, [restricted], false, reasons);
+        reasons[0] = WindowsUpdateEligibilityReason.Eligible;
+        Assert.Equal(WindowsUpdateEligibilityReason.UnsupportedHandler, Assert.Single(scan.EligibilityReasons!));
+        Assert.False(WindowsUpdatePolicy.Matches(restricted, scan));
+        Assert.Throws<ArgumentException>(() => new WindowsUpdateScan(WindowsUpdateStatus.Succeeded, [restricted], false, reasons));
+        Assert.Throws<ArgumentException>(() => new WindowsUpdateScan(WindowsUpdateStatus.Succeeded, [Security], false, []));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new WindowsUpdateScan(WindowsUpdateStatus.Succeeded, [restricted], false,
+            [(WindowsUpdateEligibilityReason)999]));
+    }
+
+    [Fact]
     public void StoredScanIsImmutableBoundedUnambiguousAndRoundTrips()
     {
         var input = new[] { Security };
