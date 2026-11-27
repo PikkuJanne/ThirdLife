@@ -18,6 +18,9 @@
                    AutomationProperties.HeadingLevel="Level2" TextWrapping="Wrap" />
         <TextBlock x:Name="SavedUpdateResult" Text="{Binding WindowsUpdateStatusText}" Margin="0,4,0,0"
                    Focusable="True" KeyboardNavigation.IsTabStop="True" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding WindowsUpdateVerificationText}" Margin="0,4,0,0"
+                   Visibility="{Binding HasWindowsUpdateVerification, Converter={StaticResource VerifyVisibility}}"
+                   Focusable="True" KeyboardNavigation.IsTabStop="True" TextWrapping="Wrap" />
       </StackPanel>
     </Border>
     <Border Style="{DynamicResource Trace.EvidencePanel}" Margin="0,0,0,16"

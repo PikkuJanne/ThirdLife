@@ -27,6 +27,51 @@ public sealed class WindowsUpdateAgentTests(ITestOutputHelper output)
     }
 
     [Fact]
+    [Trait("Category", "ActiveMachine")]
+    public async Task ActiveMachineObservesExactInstalledRevisionThroughIndependentSearch()
+    {
+        var exact = ReadHistoricalCandidate();
+        var historicalCandidate = exact is not null;
+        exact ??= new WindowsUpdateIdentity(new Guid("bf830723-5bf7-489d-ae31-6bfcfc0927d3"), 1);
+        var timer = Stopwatch.StartNew();
+        var observation = await new WindowsUpdateAgent().ObserveInstalledAsync(exact, CancellationToken.None);
+        output.WriteLine($"WUA installed-only lookup status={observation.Status}, historicalCandidate={historicalCandidate}, " +
+            $"positive={observation.Installed == true}, elapsed={timer.Elapsed}.");
+        Assert.Equal(exact, observation.Identity);
+        Assert.NotEqual(WindowsUpdateStatus.Failed, observation.Status);
+        if (observation.Installed.HasValue)
+        {
+            Assert.True(historicalCandidate);
+            Assert.True(observation.Installed);
+            Assert.Equal(WindowsUpdateStatus.Succeeded, observation.Status);
+        }
+    }
+
+    // A history row selects the read-only test input. Only the independent
+    // installed-only query above may report a positive observation.
+    private static WindowsUpdateIdentity? ReadHistoricalCandidate()
+    {
+        using var scope = new ComScope();
+        dynamic session = scope.Create(new Guid("4cb43d7f-7eee-4906-8698-60da1c38f2fe"));
+        dynamic searcher = scope.Own(session.CreateUpdateSearcher());
+        int count = Math.Min(8, (int)searcher.GetTotalHistoryCount());
+        if (count <= 0) { return null; }
+        dynamic rows = scope.Own(searcher.QueryHistory(0, count));
+        for (var i = 0; i < count; i++)
+        {
+            dynamic row = scope.Own(rows[i]);
+            if ((int)row.Operation != 1 || (int)row.ResultCode != 2) { continue; }
+            dynamic identity = scope.Own(row.UpdateIdentity);
+            if (Guid.TryParseExact((string)identity.UpdateID, "D", out Guid id) && id != Guid.Empty &&
+                (int)identity.RevisionNumber > 0)
+            {
+                return new WindowsUpdateIdentity(id, (int)identity.RevisionNumber);
+            }
+        }
+        return null;
+    }
+
+    [Fact]
     public async Task OrdinaryAdapterNeverInvokesAWriterAndCancelledScanMakesNoNativeCall()
     {
         var adapter = new WindowsUpdateAgent();

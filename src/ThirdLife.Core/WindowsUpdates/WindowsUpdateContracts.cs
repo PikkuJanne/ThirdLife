@@ -106,9 +106,30 @@ public sealed record WindowsUpdateOperation
     public int? ProgressPercent { get; }
 }
 
+public sealed record WindowsUpdateInstalledObservation
+{
+    public WindowsUpdateInstalledObservation(WindowsUpdateStatus status, WindowsUpdateIdentity identity, bool? installed)
+    {
+        if (installed.HasValue && status != WindowsUpdateStatus.Succeeded)
+        {
+            throw new ArgumentException("An installed-state fact requires a successful lookup.", nameof(installed));
+        }
+        Status = DomainValue.RequireDefined(status, nameof(status));
+        Identity = identity ?? throw new ArgumentNullException(nameof(identity));
+        Installed = installed;
+    }
+
+    public WindowsUpdateStatus Status { get; }
+    public WindowsUpdateIdentity Identity { get; }
+    public bool? Installed { get; }
+}
+
 public interface IWindowsUpdateAgent
 {
     Task<WindowsUpdateScan> ScanAsync(CancellationToken cancellationToken);
     Task<WindowsUpdateOperation> DownloadAsync(WindowsUpdateCandidate exact, CancellationToken cancellationToken);
     Task<WindowsUpdateOperation> InstallAsync(WindowsUpdateCandidate exact, CancellationToken cancellationToken);
+    Task<WindowsUpdateInstalledObservation> ObserveInstalledAsync(WindowsUpdateIdentity exact, CancellationToken cancellationToken) =>
+        Task.FromResult(new WindowsUpdateInstalledObservation(
+            cancellationToken.IsCancellationRequested ? WindowsUpdateStatus.Cancelled : WindowsUpdateStatus.Unavailable, exact, null));
 }

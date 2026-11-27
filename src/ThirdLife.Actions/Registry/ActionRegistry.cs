@@ -43,6 +43,7 @@ public static partial class ActionRegistry
     {
         Kind = ActionKind.DownloadWindowsUpdate,
         Privilege = ActionPrivilege.Elevated,
+        Verification = ActionVerification.ExactDownloadedUpdateRevision,
         Rollback = ActionRollback.ManualReview,
         Idempotency = ActionIdempotency.ReobserveBeforeRetry,
     };
@@ -51,6 +52,7 @@ public static partial class ActionRegistry
     {
         Kind = ActionKind.InstallWindowsUpdate,
         Reboot = ActionReboot.MayRequire,
+        Verification = ActionVerification.ExactInstalledUpdateRevision,
     };
 
     public static NoOpActionRequest CreateNoOp(Guid actionId)

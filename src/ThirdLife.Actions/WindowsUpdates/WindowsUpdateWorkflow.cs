@@ -39,7 +39,35 @@ public sealed class WindowsUpdateWorkflow
     private async Task<WindowsUpdateEntry> CompleteScanAsync(WindowsUpdateEntry started, CancellationToken token)
     {
         var scan = await ObserveAsync(token).ConfigureAwait(false);
-        return await AppendAsync(started, WindowsUpdateStage.ScanCompleted, scan: scan, token: CancellationToken.None).ConfigureAwait(false);
+        WindowsUpdateVerification? verification = null;
+        if (scan is { Status: WindowsUpdateStatus.Succeeded, RebootRequired: false })
+        {
+            var history = await _journal.LoadWindowsUpdatesAsync(started.JobId, CancellationToken.None).ConfigureAwait(false);
+            if (history.LastOrDefault()?.Id == started.Id && WindowsUpdateHistory.PendingVerification(history, scan) is { } receipt)
+            {
+                var exact = receipt.Approval!.Exact.Identity;
+                WindowsUpdateInstalledObservation observed;
+                try
+                {
+                    observed = await _agent.ObserveInstalledAsync(exact, token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    observed = new(WindowsUpdateStatus.Cancelled, exact, null);
+                }
+
+                if (observed.Identity != exact)
+                {
+                    observed = new(WindowsUpdateStatus.ApprovalChanged, exact, null);
+                }
+
+                verification = new(receipt.Id, observed);
+            }
+        }
+
+        var completed = new WindowsUpdateEntry(Guid.NewGuid(), started.Id, started.JobId, started.GateId,
+            _clock.GetUtcNow(), WindowsUpdateStage.ScanCompleted, scan, null, null, Verification: verification);
+        return await _journal.AppendWindowsUpdateAsync(completed, CancellationToken.None).ConfigureAwait(false);
     }
 
     internal async Task<WindowsUpdateEntry> ApproveAsync(JobId jobId, SanitizationGateDecisionId gateId, Guid displayedScanId,

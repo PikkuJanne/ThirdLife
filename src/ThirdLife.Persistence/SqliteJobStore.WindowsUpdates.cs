@@ -45,7 +45,7 @@ public sealed partial class SqliteJobStore : IWindowsUpdateJournal
                 await RequireWindowsUpdateFixturePolicyAsync(connection, transaction, entry, ct).ConfigureAwait(false);
             }
 
-            recorded = entry.Scan is not null || entry.Operation?.RebootRequired == true
+            recorded = entry.Stage == WindowsUpdateStage.ScanStarted || entry.Scan is not null || entry.Operation?.RebootRequired == true
                 ? entry with { BootUptime = _readBootUptime() } : entry;
             var payload = SerializePayload(recorded, WindowsUpdateRecordBytes);
             await using var command = connection.CreateCommand();

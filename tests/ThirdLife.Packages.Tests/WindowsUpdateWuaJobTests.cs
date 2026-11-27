@@ -10,6 +10,33 @@ public sealed class WindowsUpdateWuaJobTests
     private static readonly WindowsUpdateCandidate Exact = new(
         new WindowsUpdateIdentity(new Guid("b9bd0425-cd83-49c9-8074-dba77be79ddf"), 2), WindowsUpdateClass.Security, 500);
 
+    [Fact]
+    public void IndependentInstalledQueryRequiresMatchingRevisionAndPositiveInstalledProperty()
+    {
+        var installed = new WindowsUpdateAgentTests.Update { IsInstalled = true };
+        var cases = new (Session Fixture, WindowsUpdateIdentity Query, WindowsUpdateStatus Status, bool? Installed)[]
+        {
+            (new Session { Offer = installed }, Exact.Identity, WindowsUpdateStatus.Succeeded, true),
+            (new Session { Offer = installed }, new(Exact.Identity.UpdateId, 3), WindowsUpdateStatus.Partial, null),
+            (new Session { Offer = installed }, new(Guid.NewGuid(), 2), WindowsUpdateStatus.Partial, null),
+            (new Session(), Exact.Identity, WindowsUpdateStatus.Partial, null),
+            (new Session { SearchRows = [] }, Exact.Identity, WindowsUpdateStatus.Succeeded, null),
+            (new Session { SearchRows = [installed, installed] }, Exact.Identity, WindowsUpdateStatus.Partial, null),
+            (new Session { ServicesAfterLookup = [] }, Exact.Identity, WindowsUpdateStatus.Unavailable, null),
+        };
+        foreach (var (fixture, query, status, fact) in cases)
+        {
+            var observation = WuaSession.ObserveInstalled(query, CancellationToken.None, fixture.Create);
+            Assert.Equal(query, observation.Identity);
+            Assert.Equal(status, observation.Status);
+            Assert.Equal(fact, observation.Installed);
+            Assert.StartsWith("IsInstalled=1 and UpdateID=", fixture.Criteria, StringComparison.Ordinal);
+            Assert.True(fixture.Online);
+            Assert.Null(fixture.Dispatched);
+        }
+        Assert.Throws<ArgumentException>(() => new WindowsUpdateInstalledObservation(WindowsUpdateStatus.Partial, Exact.Identity, true));
+    }
+
     [Theory]
     [InlineData(false, false, 2, WindowsUpdateStatus.Succeeded)]
     [InlineData(true, true, 2, WindowsUpdateStatus.Succeeded)]
@@ -124,6 +151,7 @@ public sealed class WindowsUpdateWuaJobTests
         public bool ForceQuiet { get; set; }
         public string? ClientApplicationID { get; set; }
         public List<WindowsUpdateAgentTests.Update> Updates { get; set; } = [];
+        public List<WindowsUpdateAgentTests.Update>? SearchRows { get; init; }
         public string? Criteria { get; private set; }
         public string? Dispatched { get; private set; }
         public int Cleanups { get; private set; }
@@ -142,7 +170,7 @@ public sealed class WindowsUpdateWuaJobTests
         }
         public Session EndSearch(Session job)
         {
-            Updates = [Offer];
+            Updates = SearchRows ?? [Offer];
             if (ServicesAfterLookup is not null) { Services = ServicesAfterLookup; }
             return this;
         }

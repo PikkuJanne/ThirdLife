@@ -65,12 +65,29 @@ internal sealed partial class AuditWorkspace
                 };
             }
 
-            return $"{when} · {outcome}";
+            var capacity = _updateHistory.Length > WindowsUpdateHistory.MaximumEntries - 2
+                ? " This job's update journal is full. Its saved history remains available for review." : string.Empty;
+            return $"{when} · {outcome}{capacity}";
         }
     }
 
     public string WindowsUpdateInventory { get; private set; } = string.Empty;
     public bool HasWindowsUpdateInventory => WindowsUpdateInventory.Length != 0;
+
+    public string WindowsUpdateVerificationText
+    {
+        get
+        {
+            var last = _updateHistory.LastOrDefault(entry => entry.Verification is not null);
+            if (last?.Verification?.Observation is not { } check) { return string.Empty; }
+            var observation = check is { Status: WindowsUpdateStatus.Succeeded, Installed: true }
+                ? "Windows reported this exact revision installed."
+                : "Windows could not confirm installation of this exact revision.";
+            return $"Installed-state check at {last.OccurredAtUtc:u} for {check.Identity.UpdateId:D}, revision {check.Identity.Revision}. {observation}";
+        }
+    }
+
+    public bool HasWindowsUpdateVerification => _updateHistory.Any(entry => entry.Verification is not null);
 
     public Task ScanWindowsUpdatesAsync()
     {

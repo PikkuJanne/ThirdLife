@@ -247,10 +247,10 @@ public sealed class ActionRegistryTests
     }
 
     [Theory]
-    [InlineData(ActionKind.ScanWindowsUpdate)]
-    [InlineData(ActionKind.DownloadWindowsUpdate)]
-    [InlineData(ActionKind.InstallWindowsUpdate)]
-    public void UpdateActionsBindOnlyExactAllowlistedFieldsAndUseASeparateBackend(ActionKind kind)
+    [InlineData(ActionKind.ScanWindowsUpdate, ActionVerification.WindowsUpdateScan)]
+    [InlineData(ActionKind.DownloadWindowsUpdate, ActionVerification.ExactDownloadedUpdateRevision)]
+    [InlineData(ActionKind.InstallWindowsUpdate, ActionVerification.ExactInstalledUpdateRevision)]
+    public void UpdateActionsBindOnlyExactAllowlistedFieldsAndUseASeparateBackend(ActionKind kind, ActionVerification verification)
     {
         var exact = new WindowsUpdateCandidate(new WindowsUpdateIdentity(ActionId, 4), WindowsUpdateClass.Security, 700);
         var request = kind switch
@@ -264,6 +264,7 @@ public sealed class ActionRegistryTests
         Assert.Equal(request.Kind, decoded.Kind);
         Assert.Equal(request.Exact, decoded.Exact);
         Assert.Equal(ActionAvailability.WindowsUpdateAgentRequired, ActionRegistry.Describe(decoded).Availability);
+        Assert.Equal(verification, ActionRegistry.Describe(decoded).Verification);
         var envelope = JsonNode.Parse(ActionRequestCodec.Serialize(request))!.AsObject();
         var parameters = envelope["parameters"]!.AsObject();
         RejectRemovedFields(envelope, parameters);

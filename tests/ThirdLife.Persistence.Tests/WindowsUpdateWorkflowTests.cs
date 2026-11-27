@@ -102,6 +102,9 @@ public sealed class WindowsUpdateWorkflowTests
         await Assert.ThrowsAsync<JobStoreConflictException>(() => workflow.ApproveAsync(job.JobId, gate.DecisionId,
             scan.Id, scan.Scan!.Updates.Single(), Operator, policy));
         Assert.Equal(6, provider.Mutations.Count);
+        Assert.Equal(3, provider.VerificationQueries.Count);
+        Assert.Equal(history.Where(row => row.Stage == WindowsUpdateStage.InstallCompleted).Select(row => row.Id),
+            history.Where(row => row.Verification is not null).Select(row => row.Verification!.InstallReceiptId));
         Assert.All(history.Where(e => e.Stage == WindowsUpdateStage.InstallCompleted), e => Assert.Equal(100, e.Operation!.ProgressPercent));
     }
 
@@ -196,9 +199,13 @@ public sealed class WindowsUpdateWorkflowTests
         provider.Scan = Available();
         await observer.ScanAsync(job.JobId, gate.DecisionId);
         Assert.Equal(WindowsUpdateDisposition.RestartRequired, WindowsUpdateHistory.Disposition(await reopened.LoadWindowsUpdatesAsync(job.JobId)));
+        Assert.Empty(provider.VerificationQueries);
         uptime = 1_000;
         await observer.ScanAsync(job.JobId, gate.DecisionId);
-        Assert.Equal(WindowsUpdateDisposition.Current, WindowsUpdateHistory.Disposition(await reopened.LoadWindowsUpdatesAsync(job.JobId)));
+        var verifiedHistory = await reopened.LoadWindowsUpdatesAsync(job.JobId);
+        Assert.Equal(WindowsUpdateDisposition.Current, WindowsUpdateHistory.Disposition(verifiedHistory));
+        Assert.Equal(Update.Identity, Assert.Single(provider.VerificationQueries));
+        Assert.True(verifiedHistory[^1].Verification!.Observation.Installed);
         Assert.Equal(2, provider.Mutations.Count);
     }
 
@@ -254,6 +261,65 @@ public sealed class WindowsUpdateWorkflowTests
         Assert.Empty(provider.Mutations);
     }
 
+    [Theory]
+    [InlineData("superseded")]
+    [InlineData("empty")]
+    [InlineData("unavailable")]
+    [InlineData("cancelled")]
+    [InlineData("wrong-revision")]
+    public async Task DisappearedOfferRequiresPositiveExactInstalledStateAndReadOnlyRecovery(string scenario)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        Job job;
+        SanitizationGateDecision gate;
+        Guid receiptId;
+        var provider = new FixtureAgent();
+        provider.AfterInstall = () => provider.Scan = scenario == "superseded"
+            ? Available(new WindowsUpdateCandidate(new(Update.Identity.UpdateId, Update.Identity.Revision + 1), Update.Classification)) : Available();
+        provider.InstalledObservation = exact => scenario switch
+        {
+            "cancelled" => throw new OperationCanceledException(),
+            "unavailable" => new(WindowsUpdateStatus.Unavailable, exact, null),
+            "wrong-revision" => new(WindowsUpdateStatus.Succeeded, new(exact.UpdateId, exact.Revision + 1), true),
+            _ => new(WindowsUpdateStatus.Succeeded, exact, null),
+        };
+        await using (var store = await OpenAsync(workspace))
+        {
+            string policy;
+            (job, gate, policy) = await SeedAsync(store);
+            var workflow = Controlled(store, provider);
+            var scan = await workflow.ScanAsync(job.JobId, gate.DecisionId);
+            var approval = await workflow.ApproveAsync(job.JobId, gate.DecisionId, scan.Id, Update, Operator, policy);
+            await workflow.ExecuteAsync(job.JobId, approval.Id);
+            var history = await store.LoadWindowsUpdatesAsync(job.JobId);
+            var receipt = Assert.Single(history.Where(row => row.Stage == WindowsUpdateStage.InstallCompleted));
+            receiptId = receipt.Id;
+            var verification = history[^1].Verification!;
+            Assert.Equal(receiptId, verification.InstallReceiptId);
+            Assert.Equal(Update.Identity, verification.Observation.Identity);
+            Assert.Null(verification.Observation.Installed);
+            Assert.Equal(scenario switch
+            {
+                "cancelled" => WindowsUpdateStatus.Cancelled,
+                "unavailable" => WindowsUpdateStatus.Unavailable,
+                "wrong-revision" => WindowsUpdateStatus.ApprovalChanged,
+                _ => WindowsUpdateStatus.Succeeded,
+            }, verification.Observation.Status);
+            Assert.Equal(WindowsUpdateDisposition.ReviewRequired, WindowsUpdateHistory.Disposition(history));
+        }
+
+        await using var reopened = await OpenAsync(workspace);
+        var observer = new WindowsUpdateWorkflow(reopened, provider, Clock);
+        provider.Scan = Available();
+        provider.InstalledObservation = exact => new(WindowsUpdateStatus.Succeeded, exact, true);
+        var confirmed = await observer.ScanAsync(job.JobId, gate.DecisionId);
+        Assert.Equal(receiptId, confirmed.Verification!.InstallReceiptId);
+        Assert.Equal(new(WindowsUpdateStatus.Succeeded, Update.Identity, true), confirmed.Verification.Observation);
+        Assert.Equal(WindowsUpdateDisposition.Current, WindowsUpdateHistory.Disposition(await reopened.LoadWindowsUpdatesAsync(job.JobId)));
+        Assert.Equal(2, provider.VerificationQueries.Count);
+        Assert.Equal(2, provider.Mutations.Count);
+    }
+
     private static WindowsUpdateScan Available(params WindowsUpdateCandidate[] updates) => new(WindowsUpdateStatus.Succeeded, updates, false);
 
     private static Task<SqliteJobStore> OpenAsync(PersistenceTestWorkspace workspace, Func<ulong?>? boot = null) =>
@@ -300,6 +366,9 @@ public sealed class WindowsUpdateWorkflowTests
         internal int Scans { get; private set; }
         internal WindowsUpdateScan Scan { get; set; } = Available(Update);
         internal List<WindowsUpdateCandidate> Mutations { get; } = [];
+        internal List<WindowsUpdateIdentity> VerificationQueries { get; } = [];
+        internal Func<WindowsUpdateIdentity, WindowsUpdateInstalledObservation> InstalledObservation { get; set; } =
+            exact => new(WindowsUpdateStatus.Succeeded, exact, true);
         internal WindowsUpdateOperation DownloadResult { get; set; } = new(WindowsUpdateStatus.Succeeded, false, 100);
         internal WindowsUpdateOperation InstallResult { get; set; } = new(WindowsUpdateStatus.Succeeded, false, 100);
         internal Action? AfterDownload { get; set; }
@@ -311,6 +380,13 @@ public sealed class WindowsUpdateWorkflowTests
         {
             Scans++;
             return Task.FromResult(Scan);
+        }
+
+        public Task<WindowsUpdateInstalledObservation> ObserveInstalledAsync(WindowsUpdateIdentity exact, CancellationToken cancellationToken)
+        {
+            VerificationQueries.Add(exact);
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(InstalledObservation(exact));
         }
 
         public Task<WindowsUpdateOperation> DownloadAsync(WindowsUpdateCandidate exact, CancellationToken cancellationToken)

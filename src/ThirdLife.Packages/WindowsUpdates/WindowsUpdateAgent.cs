@@ -13,6 +13,13 @@ public sealed class WindowsUpdateAgent : IWindowsUpdateAgent
     public Task<WindowsUpdateScan> ScanAsync(CancellationToken cancellationToken) =>
         RunAsync(WuaSession.Scan, status => new WindowsUpdateScan(status, [], null), ScanTimeout, cancellationToken);
 
+    public Task<WindowsUpdateInstalledObservation> ObserveInstalledAsync(WindowsUpdateIdentity exact, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(exact);
+        return RunAsync(token => WuaSession.ObserveInstalled(exact, token),
+            status => new WindowsUpdateInstalledObservation(status, exact, null), ScanTimeout, cancellationToken);
+    }
+
     // WUA restricts downloading and installing. The ordinary UI has no qualified
     // privileged route. Keep both entry points closed even if the process is elevated.
     public Task<WindowsUpdateOperation> DownloadAsync(WindowsUpdateCandidate exact, CancellationToken cancellationToken) =>

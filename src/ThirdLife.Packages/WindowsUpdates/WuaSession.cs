@@ -51,8 +51,7 @@ internal static class WuaSession
         dynamic session = NewSession(scope);
         if (!HasWindowsUpdateAuthority(scope, session)) { return new(WindowsUpdateStatus.Unavailable, null); }
         // Only strongly typed GUID and revision can reach this fixed criteria template.
-        string criteria = FormattableString.Invariant(
-            $"{Applicable} and UpdateID='{exact.Identity.UpdateId:D}' and RevisionNumber={exact.Identity.Revision}");
+        string criteria = $"{Applicable} and {IdentityCriteria(exact.Identity)}";
         dynamic result = Search(scope, session, criteria, token);
         CheckSearch(scope, result);
         dynamic updates = scope.Own(result.Updates);
@@ -96,6 +95,31 @@ internal static class WuaSession
         }
         finally { job.CleanUp(); }
     }
+
+    internal static WindowsUpdateInstalledObservation ObserveInstalled(WindowsUpdateIdentity exact, CancellationToken token,
+        Func<Guid, object>? activate = null)
+    {
+        using var scope = new ComScope(activate);
+        dynamic session = NewSession(scope);
+        if (!HasWindowsUpdateAuthority(scope, session)) { return new(WindowsUpdateStatus.Unavailable, exact, null); }
+        dynamic result = Search(scope, session, $"IsInstalled=1 and {IdentityCriteria(exact)}", token);
+        CheckSearch(scope, result);
+        dynamic updates = scope.Own(result.Updates);
+        int count = updates.Count;
+        if (!HasWindowsUpdateAuthority(scope, session)) { return new(WindowsUpdateStatus.Unavailable, exact, null); }
+        // WUA may cease to expose an old revision. Its absence is never installation evidence.
+        if (count == 0) { return new(WindowsUpdateStatus.Succeeded, exact, null); }
+        if (count != 1) { return new(WindowsUpdateStatus.Partial, exact, null); }
+        dynamic update = scope.Own(updates[0]);
+        if (ReadIdentity(scope, update) != exact || !(bool)update.IsInstalled)
+        {
+            return new(WindowsUpdateStatus.Partial, exact, null);
+        }
+        return new(WindowsUpdateStatus.Succeeded, exact, true);
+    }
+
+    private static string IdentityCriteria(WindowsUpdateIdentity exact) =>
+        FormattableString.Invariant($"UpdateID='{exact.UpdateId:D}' and RevisionNumber={exact.Revision}");
 
     private static dynamic NewSession(ComScope scope)
     {
@@ -174,11 +198,16 @@ internal static class WuaSession
         if (count != 0) { throw new UpdateFailure(WindowsUpdateStatus.Partial); }
     }
 
-    internal static WindowsUpdateCandidate ReadCandidate(ComScope scope, dynamic update)
+    private static WindowsUpdateIdentity ReadIdentity(ComScope scope, dynamic update)
     {
         dynamic identity = scope.Own(update.Identity);
         if (!Guid.TryParseExact((string)identity.UpdateID, "D", out Guid id)) { throw new InvalidDataException(); }
-        var key = new WindowsUpdateIdentity(id, (int)identity.RevisionNumber);
+        return new WindowsUpdateIdentity(id, (int)identity.RevisionNumber);
+    }
+
+    internal static WindowsUpdateCandidate ReadCandidate(ComScope scope, dynamic update)
+    {
+        WindowsUpdateIdentity key = ReadIdentity(scope, update);
         decimal bytes = (decimal)update.MaxDownloadSize;
         long? maximum = bytes >= 0 && bytes <= long.MaxValue && bytes == decimal.Truncate(bytes) ? (long)bytes : null;
         int type = update.Type;

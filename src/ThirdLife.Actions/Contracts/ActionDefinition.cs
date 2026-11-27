@@ -35,6 +35,8 @@ public enum ActionVerification
     NoMachineChange = 1,
     ExactPackageIdentity,
     WindowsUpdateScan,
+    ExactDownloadedUpdateRevision,
+    ExactInstalledUpdateRevision,
 }
 
 public enum ActionRollback
