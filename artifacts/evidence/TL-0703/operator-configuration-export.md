@@ -39,3 +39,9 @@ was reused once. Targeted passed in 272.300 s on the active Windows 11 host.
 All 1,418 Quick .NET tests and 29 selected Reports and WPF tests passed with
 zero skips. The combined check includes configuration destination validation,
 Prepare preview/save and support export on the same application build.
+
+The integration candidate against reviewed main
+`2c8fadd3a6122f53768ef088f97b3681e485a9d2` passed Quick in 202.675 s.
+All 1,418 Quick .NET tests passed. The WPF assembly accounted for 118 s
+of the measured run. Source changes since the Targeted checkpoint were
+restricted to task and evidence metadata.

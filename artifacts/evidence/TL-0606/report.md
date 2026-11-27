@@ -57,3 +57,23 @@ passed. All 1,411 Quick .NET tests and 69 selected diagnostics, reports,
 persistence and WPF tests passed with zero skips. The selected WPF pass
 exercised support export, detector and recipient guide state on the same
 Handover stage. No live transfer or guest modification was performed.
+
+## Clean migration gate
+
+A detached clean checkout at `7af7721aba6135574486acc3286150309463ab66`
+passed `eng/verify.ps1 -Tier Full -Restore` in 620.459 s on the active
+Windows 11 host. All 310 governance tests passed in 410.145 s. All 2,625
+.NET tests across 13 projects passed with zero skips. Formatting, locked
+restore, Release build and both repository validators passed. The clean
+checkout retained a clean tracked state after verification. Full excludes
+separately invokable native and Extended scenarios.
+
+A reopened unconfirmed intent still requires exact archive verification
+before it can become a published receipt. It carries no personal destination
+path. The review continuations preserve the unconfirmed result. No archive
+was forwarded outside the local test folder.
+
+The metadata-only closure passed Quick on the active host in 211.571 s.
+All 1,411 Quick .NET tests passed. The measured WPF part took 130 s and
+accounted for the 120 s tier target overrun. The same subsystem had similar
+per-test assembly timings in Targeted and Full on this host.
