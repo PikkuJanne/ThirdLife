@@ -183,8 +183,11 @@ internal sealed partial class AuditWorkspace
             _updateHistory = await Task.Run(() => journal.LoadWindowsUpdatesAsync(jobId));
             var lastInventory = _updateHistory.LastOrDefault(entry => entry.Scan is { Status: WindowsUpdateStatus.Succeeded });
             if (lastInventory?.Scan is not { } scan) { return; }
-            var rows = scan.Updates.Select(DescribeUpdate);
-            WindowsUpdateInventory = $"Inventory saved at {lastInventory.OccurredAtUtc:u} with {scan.Updates.Count} applicable, nonhidden offers." +
+            var rows = scan.Updates.Select((update, index) => scan.EligibilityReasons is { } reasons && update.Classification == WindowsUpdateClass.Restricted
+                ? $"{DescribeUpdate(update)}. {DescribeEligibility(reasons[index])}" : DescribeUpdate(update));
+            var eligibility = scan.Updates.Count > 0 && !scan.Updates.Any(WindowsUpdatePolicy.IsSelectable)
+                ? " None met the servicing requirements in this scan." : string.Empty;
+            WindowsUpdateInventory = $"Inventory saved at {lastInventory.OccurredAtUtc:u} with {scan.Updates.Count} applicable, nonhidden offers.{eligibility}" +
                 (scan.Updates.Count == 0 ? string.Empty : Environment.NewLine + string.Join(Environment.NewLine, rows));
             if (lastInventory.Stage == WindowsUpdateStage.ScanCompleted && lastInventory.Id == _updateHistory[^1].Id)
             {

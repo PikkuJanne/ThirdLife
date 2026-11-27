@@ -76,7 +76,7 @@ The read-only lookup and prepared writer inspect the configured service registra
 
 ### Repeating the guest assessment
 
-From a clean committed checkout on the active machine, use the shared Hyper-V runner. Inspect returns the identity of the configured running Generation 2 guest. Prepare builds the Packages tests with the locked inputs and verifies the staged SDK. The assessment runs a single read-only test under the interactive limited token. Its local result records bounded offer counts, lookup status, eligibility reason, artifact digest, version and cleanup. It requires no broker provisioning or servicing consent.
+From a clean committed checkout on the active machine, use the shared Hyper-V runner on the existing ThirdLife-W11 guest. Inspect returns the identity of the running Generation 2 guest. Prepare builds the UI test payload with the locked inputs and verifies the staged SDK. The limited-token assessment reads the configured service once and checks at most one exact offer. It passes the captured inventory into Prepare for an isolated synthetic intake job, saves and reopens SQLite, checks the displayed inventory and confirms that the journal contains only the scan start and result. The receipt records bounded offer counts, lookup status, reason, reopening, approvals and dispatches, artifact digest, version and cleanup. The assessment has no servicing backend. Run it when the implementation or applicability evidence needs fresh qualification.
 
 ```powershell
 $guest = ./eng/run-thirdlife-hyperv.ps1 -Scenario Inspect

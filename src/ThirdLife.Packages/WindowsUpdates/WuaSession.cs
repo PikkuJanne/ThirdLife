@@ -26,16 +26,18 @@ internal static class WuaSession
         if (count is < 0 or > WindowsUpdatePolicy.MaximumUpdates) { throw new UpdateFailure(WindowsUpdateStatus.LimitExceeded); }
 
         var inventory = new List<WindowsUpdateCandidate>(count);
+        var reasons = new List<WindowsUpdateEligibilityReason>(count);
         for (var i = 0; i < count; i++)
         {
             token.ThrowIfCancellationRequested();
             using var itemScope = new ComScope();
             dynamic update = itemScope.Own(updates[i]);
-            inventory.Add(ReadCandidate(itemScope, update));
+            inventory.Add(ReadCandidate(itemScope, (object)update, out var reason));
+            reasons.Add(reason);
         }
 
         dynamic system = scope.Create(SystemInfoClass);
-        return new(WindowsUpdateStatus.Succeeded, inventory, (bool)system.RebootRequired);
+        return new(WindowsUpdateStatus.Succeeded, inventory, (bool)system.RebootRequired, reasons);
     }
 
     internal static WindowsUpdateOperation Apply(WindowsUpdateCandidate exact, bool install, CancellationToken token,

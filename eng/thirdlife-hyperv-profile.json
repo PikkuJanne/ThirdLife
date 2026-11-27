@@ -12,7 +12,7 @@
   "sdkSha512": "9b8b88590e4da131bfd0da7aa089d0fc04d5418d5f8607ec13d55dc5a17b4399afd54d496c12657fa05c6c6546dc5eab930f26ac6c50f2d3a7712c0fb378c366",
   "scenarios": {
     "WindowsUpdateBrokerRefusal": "ThirdLife.UI.Tests.ProtectedBrokerRehearsalTests.InstalledWindowsUpdateBrokerRefusesAnUnreviewedRequestBeforeNativeAdmission",
-    "WindowsUpdateAssessment": "ThirdLife.Packages.Tests.WindowsUpdateAgentTests.ActiveMachineAssessesOneExactOfferedRevisionWithoutMutation",
+    "WindowsUpdateAssessment": "ThirdLife.UI.Tests.WindowsUpdateInventoryTests.ActiveMachineReopensConfiguredUpdateInventoryWithoutServicing",
     "WindowsUpdateBrokerAssessment": "ThirdLife.Broker.Tests.NativeWindowsUpdateTests.NativeExactLookupRejectsMissingRevisionAndChecksARealRestrictedOfferWhenAvailable",
     "Verify": "ThirdLife.UI.Tests.ProtectedBrokerRehearsalTests.InstalledCandidateMatchesTheReviewedDigestAndRejectsDirectWriteAccess",
     "DistinctAccount": "ThirdLife.Broker.Tests.SandboxPipeAclTests.HyperVDistinctStandardAccountIsDeniedByProductionPipeAcl",
