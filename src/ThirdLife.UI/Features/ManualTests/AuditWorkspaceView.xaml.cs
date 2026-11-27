@@ -155,6 +155,13 @@ public partial class AuditWorkspaceView : UserControl
         await Workspace.ChangeJobArchiveAsync(job.Job.JobId, archive: !job.IsArchived);
     }
 
+    private async void ReviewArchivedOutputs(object sender, RoutedEventArgs e)
+    {
+        if (!Workspace.CanReviewArchivedOutputs) { return; }
+        FocusAndReveal(AuditStatus);
+        await Workspace.ReviewArchivedOutputsAsync();
+    }
+
     private void CloseJob(object sender, RoutedEventArgs e)
     {
         Workspace.CloseJob();
@@ -496,6 +503,7 @@ public partial class AuditWorkspaceView : UserControl
         RefreshBackupReadiness();
         JobHeader.Visibility = VisibleWhen(Workspace.Job is not null);
         JobArchiveRegion.Visibility = VisibleWhen(Workspace.ShowsJobArchive);
+        ReviewArchivedOutputsButton.Visibility = VisibleWhen(Workspace.ShowsArchivedOutputReview);
         OperationErrorRegion.Visibility = VisibleWhen(Workspace.OperationError.Length != 0);
         AuditStatus.Visibility = VisibleWhen(Workspace.OperationError.Length == 0);
         JobIdentity.Content = Workspace.Assessment?.Observations.FirstOrDefault(observation =>
