@@ -55,6 +55,7 @@ internal sealed partial class AuditWorkspace
             {
                 await Task.Run(() => save(store, expected, actor));
                 ClearReport();
+                ClearBackupReadiness();
                 _handoverModeFeedback = feedback;
             }
             catch (JobStoreConflictException)
@@ -84,6 +85,7 @@ internal sealed partial class AuditWorkspace
     private void ClearHandoverMode()
     {
         ClearRecipientGuide();
+        ClearBackupReadiness();
         RecipientHandover = null;
         _handoverModeFeedback = string.Empty;
     }

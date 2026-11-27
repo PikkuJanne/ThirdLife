@@ -322,6 +322,21 @@
             <TextBlock x:Name="RecipientChoicesSummary" Margin="0,8,0,0" TextWrapping="Wrap" />
           </StackPanel>
         </GroupBox>
+        <GroupBox x:Name="BackupReadinessRegion" Header="Backup readiness" AutomationProperties.Name="Backup readiness"
+                  Visibility="Collapsed" Margin="0,0,0,12">
+          <StackPanel>
+            <Label Target="{Binding ElementName=BackupScopeMebibytes}" Content="Estimated backup size in MiB" />
+            <TextBox x:Name="BackupScopeMebibytes" MaxLength="13" AutomationProperties.Name="Estimated backup size in MiB" />
+            <CheckBox x:Name="BackupRecoveryConfirmed" Content="The recipient is present and controls recovery"
+                      Margin="0,8,0,0" />
+            <Button x:Name="CheckBackupReadinessButton" Content="Choose a drive and check prerequisites" Click="CheckBackupReadiness" HorizontalAlignment="Left"
+                    IsEnabled="{Binding CanCheckBackupReadiness}" Margin="0,8,0,0" />
+            <TextBlock x:Name="BackupReadinessMessage" Text="{Binding BackupReadinessStatus}" Focusable="True"
+                       KeyboardNavigation.IsTabStop="False" AutomationProperties.Name="{Binding BackupReadinessStatus}"
+                       AutomationProperties.LiveSetting="Polite" Margin="0,8,0,0" />
+            <TextBlock x:Name="BackupReadinessError" Style="{DynamicResource Trace.ErrorText}" AutomationProperties.LiveSetting="Polite" />
+          </StackPanel>
+        </GroupBox>
         <GroupBox Header="Workshop finalization" AutomationProperties.Name="Workshop finalization checklist">
           <StackPanel>
             <TextBlock x:Name="FinalizationMessage" Text="{Binding FinalizationStatus}"
