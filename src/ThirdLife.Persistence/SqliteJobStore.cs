@@ -932,6 +932,13 @@ public sealed partial class SqliteJobStore : IJobStore
         {
             throw new JobStoreUnavailableException();
         }
+
+        // Retain the registered file identity and clear its previous pages after SQLite commits.
+        if (await ExecuteScalarAsync(connection, "PRAGMA journal_size_limit = 0;", cancellationToken).ConfigureAwait(false)
+            is not 0L)
+        {
+            throw new JobStoreUnavailableException();
+        }
     }
 
     private static async Task AssertDatabaseIdentityPreflightAsync(
