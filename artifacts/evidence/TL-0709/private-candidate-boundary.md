@@ -39,3 +39,11 @@ the archived job and refused altered bytes. It invoked no inventory
 provider. The 0.3.7 unpacked app opened normally on the active host.
 The 0.3.6 installed lifecycle keeps its separate artifact identity.
 [Archived report](../TL-0703/reopen-archived-report.md)
+
+Clean Quick verification at source 50beb56 passed 1,449 .NET tests
+and eight work-contract checks in 178.889 s. It exceeded the
+120-second target. The 229-case WPF group used 104 s and the cold
+Release build used 10.87 s. Earlier cold checkouts also exceeded
+the target. The separately observed exact desktop startup was
+1.404 s.
+[Earlier clean baseline](../TL-0601/report.md)
