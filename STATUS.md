@@ -35,8 +35,8 @@ M5 technical gate, TL-0511.
 [Preflight evidence](artifacts/evidence/TL-0503/report.md)
 
 TL-0504 adds Windows Update scans to Prepare and saved results to Verify.
-On the active host, WUA offered three drivers and one restricted software
-update. The controlled workflow exercises exact approval, installation,
+WUA offered three drivers and one restricted software update on the host,
+and one restricted software update in the guest. The controlled workflow exercises exact approval, installation,
 restart and independent revision verification. Native download and install
 remain open pending an update-specific broker, effective policy, eligible
 offer and exact approval. [Windows Update evidence](artifacts/evidence/TL-0504/report.md)

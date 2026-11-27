@@ -28,6 +28,36 @@ The SQLite integration cases use isolated job stores, an explicitly synthetic up
 
 The host's WUA API reported 8.0. Its agent product and wuapi.dll both reported version 1511.2611.5012.0. An unelevated online scan with the production adapter took 15.154 s. Windows reported three driver offers, one restricted software offer and no pending restart. None qualified for the prepared writer. A separate exact installed-state search confirmed a previously installed revision in 7.940 s. The host test selected its input from at most eight history entries and independently queried the actual installed state. ThirdLife did not install that update. The native cases can be run with `dotnet test tests/ThirdLife.Packages.Tests -c Release --no-build --no-restore --filter "FullyQualifiedName~WindowsUpdateAgentTests&Category=ActiveMachine" --logger "console;verbosity=detailed"`.
 
+The technical candidate was `ac3c96f1b89169ce8fffb0d4dfefde17b01ae369`. Targeted with `-TestProject` set to Packages and Persistence and `-Filter "FullyQualifiedName~WindowsUpdate&Category!=ActiveMachine"` passed all 1,298 cases in 132.687 s, including Quick, 25 adapter cases and 20 store/workflow cases. After the compiled action descriptions were tightened to name the exact downloaded or installed revision check, all 38 Actions registry cases passed. Repeating both host native cases found the same four offers, with the scan taking 6.047 s and the positive installed-only lookup taking 11.062 s. The test host reported 17.962 s.
+
+Candidate Quick passed 1,253 cases in 146.135 s while clean Full and guest qualification were running. WPF took 78 s compared with 61 s in the first Targeted run. The separate unelevated `eng/run-ui-smoke.ps1` reached Inspect using UI Automation and closed the application normally in 1.415 s. The Release apphost SHA-256 was `e7ef49604bc273d1078145dd39ce2fee649cfe8fe710d1293f09b38fcea26a05`. The WPF assembly SHA-256 was `51a99e46ebe87ce059068fff86417c0f4decce3828305856955d8b484909898a`. These checks cover technical accessibility and startup in the exercised paths.
+
+A clean detached checkout of `ac3c96f1b89169ce8fffb0d4dfefde17b01ae369` passed `eng/verify.ps1 -Tier Full -Restore` in 433.080 s. All 304 governance tests and 2,317 deterministic .NET tests passed, with zero skips. Its working tree stayed clean. The clean Release adapter had SHA-256 `acffff32a9bfe5b00843ee15b0d211361b6094e4fe1b6cb3bceb4817736856a5`. Running the two native cases with that artifact again confirmed the previously installed revision in 22.832 s and the same four nonhidden offers in 7.375 s. Interruption and restart coverage for ThirdLife-initiated update work used fixtures.
+
+### Same-machine guest
+
+The already running Generation 2 Windows 11 x64 guest on build 26300.9974 ran `ActiveMachineScansOnlyTheConfiguredWindowsUpdateService` under an interactive limited token. Its wuapi.dll reported version 1511.2611.5012.0. The candidate Release adapter and test assembly were staged with .NET SDK 10.0.400 under a single owned directory after validating the guest, checkpoint and payload hashes. The configured service offered one restricted software update, no eligible update and no pending restart. The online scan took 36.745 s. The test took 36.778 s and staging through cleanup took 167.327 s. The temporary task, staging and owned processes were confirmed absent. The guest stayed running throughout.
+
+The in-guest command below uses the staged SDK, test DLL and owned results directory. The harness required one passing named test in its TRX and removed that file along with the temporary guest and host staging. The observed guest platform facts cover client product type, native x64, OS build and WUA file version. Edition, display release and API major/minor were not collected in the guest.
+
+```powershell
+$case = 'ThirdLife.Packages.Tests.WindowsUpdateAgentTests.ActiveMachineScansOnlyTheConfiguredWindowsUpdateService'
+& $sdk vstest $test "/TestCaseFilter:FullyQualifiedName=$case" '/Logger:trx;LogFileName=scan.trx' "/ResultsDirectory:$results" -- RunConfiguration.TreatNoTestsAsError=true
+```
+
+| Guest workload | SHA-256 |
+| --- | --- |
+| ThirdLife.Packages.dll | `f8cb090083e4c37aea4d2df06b06b9ca298cfc5a4ca4918b68fdca1c14ec31c0` |
+| ThirdLife.Packages.Tests.dll | `7ac7daf8c43d4cb80f4a1a4a2fac63dfd0b077eb15fabbce01828415fbc869b0` |
+| Staged test payload | `40df4f41fa7c79e420a662e57c6a006801d2fd2586281aa3452c1a10ad076965` |
+| Limited-token test driver | `fa9e2f403de0ac7e6aa80c1fbd48f7457c4ed4b1aa4a88d9978203e899e2298d` |
+
+### Supplementary check
+
+The first completed hosted Quick run timed out in the existing inventory test `ObserveAsyncYieldsBeforeABlockingSourceCompletes` while waiting one second for a worker to start. The product provider and its collection deadline were unchanged. The test now allows ten seconds for worker scheduling, keeps its release gate closed until the assertion proves the caller has yielded, and bounds the fixture's own blocking wait. The 28 neighboring deterministic inventory provider cases passed in 3 s with `DOTNET_PROCESSOR_COUNT=2`. The command was `dotnet test tests/ThirdLife.Inventory.Tests -c Release --no-restore --filter "FullyQualifiedName~SystemInventoryProviderTests&Category!=ActiveMachine"`. [Initial hosted result](https://github.com/PikkuJanne/ThirdLife/actions/runs/45966672339)
+
+The evidence checkpoint passed `eng/verify.ps1 -Tier Targeted` with the Inventory project and the same provider filter in 118.260 s. All 1,281 cases passed, including the complete Quick selection and the 28 focused cases. This checkpoint changed the inventory test and evidence only. Its product source matches the clean Full candidate.
+
 ## Remaining native scope
 
 TL-0504 remains open for native download, installation, restart and rescan qualification. The current privilege boundary covers no-op broker actions and the reviewed package policy covers one MSI. Neither authorizes Windows servicing. Prepare the WUA-specific authenticated broker and effective policy for the intended Windows environment, including source, firmware exclusion, servicing eligibility, disk and rollback headroom, power, and independent verification. Qualify the composed route in the same-machine guest and obtain the applicable privilege decision before enabling ordinary dispatch. [Broker qualification](../TL-0317/report.md) · [Privilege and application gates](../../../TASKS.yaml)
