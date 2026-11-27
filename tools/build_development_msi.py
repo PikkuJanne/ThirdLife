@@ -23,8 +23,11 @@ PRODUCT_NAME = "ThirdLife Setup Core (Private Preview)"
 CABINET = "thirdlife.cab"
 INSTALL_DIR = "PrivateInstall"
 REGISTRY_KEY = r"Software\ThirdLife\PrivateInstaller"
-# This private candidate admits only the reviewed build on the current host and named guest.
-REQUIRED_PLATFORM = "VersionNT64 = 1000 AND Msix64 AND WindowsBuild = 26300 AND MsiNTProductType = 1"
+# Windows Installer can expose compatibility-version values for Windows 11.
+# Use the native machine registry build and the installer-owned client and x64 indicators.
+BUILD_PROPERTY = "TL_NATIVE_BUILD"
+BUILD_REGISTRY_KEY = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+REQUIRED_PLATFORM = f'VersionNT64 AND Msix64 AND MsiNTProductType = 1 AND {BUILD_PROPERTY} = "26300"'
 
 
 def checked(result: int, action: str) -> None:
@@ -84,6 +87,18 @@ def author_tables(path: Path, payload: dict[str, bytes], version: str) -> list[s
         table(path, "FeatureComponents", "Feature_\tComponent_", "s38\ts72", "Feature_\tComponent_", [
             ("Desktop", file_id) for file_id, _, _ in records
         ]),
+        table(path, "Signature", "Signature\tFileName\tMinVersion\tMaxVersion\tMinSize\tMaxSize\tMinDate\tMaxDate\tLanguages",
+              "s72\ts255\tS20\tS20\tI4\tI4\tI4\tI4\tS255", "Signature", []),
+        table(path, "AppSearch", "Property\tSignature_", "s72\ts72", "Property\tSignature_", [
+            (BUILD_PROPERTY, "NativeBuildFromRegistry"),
+        ]),
+        table(path, "RegLocator", "Signature_\tRoot\tKey\tName\tType", "s72\ti2\ts255\tS255\tI2", "Signature_", [
+            ("NativeBuildFromRegistry", 2, BUILD_REGISTRY_KEY, "CurrentBuildNumber", 18),
+        ]),
+        table(path, "CustomAction", "Action\tType\tSource\tTarget", "s72\ti2\tS72\tL255", "Action", [
+            # A fixed property assignment clears any externally supplied value before the registry read.
+            ("ResetNativeBuild", 51, BUILD_PROPERTY, "unavailable"),
+        ]),
         table(path, "LaunchCondition", "Condition\tDescription", "s255\tl255", "Condition", [
             (f"Installed OR ({REQUIRED_PLATFORM})", "This preview requires Windows 11 client build 26300 on native x64."),
             ("(NOT ALLUSERS) AND (NOT NEWERPREVIEW)", "This private preview installs for one user and requires a current version."),
@@ -95,7 +110,8 @@ def author_tables(path: Path, payload: dict[str, bytes], version: str) -> list[s
                   (upgrade_code, version, "", "", 2, "", "NEWERPREVIEW"),
               ]),
         table(path, "InstallExecuteSequence", "Action\tCondition\tSequence", "s72\tS255\ti2", "Action", [
-            ("FindRelatedProducts", "", 25), ("LaunchConditions", "", 100),
+            ("FindRelatedProducts", "", 25), ("ResetNativeBuild", "", 40),
+            ("AppSearch", "", 50), ("LaunchConditions", "", 100),
             ("CostInitialize", "", 800), ("FileCost", "", 900), ("CostFinalize", "", 1000),
             ("InstallValidate", "", 1400), ("InstallInitialize", "", 1500),
             ("RemoveExistingProducts", "", 1550), ("ProcessComponents", "", 1600),
