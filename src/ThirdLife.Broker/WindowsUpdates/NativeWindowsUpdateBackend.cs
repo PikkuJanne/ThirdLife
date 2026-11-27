@@ -59,16 +59,8 @@ internal sealed class NativeWindowsUpdateBackend : IWindowsUpdateBrokerBackend
                 return Apply(exact, action.Kind == ActionKind.InstallWindowsUpdate, Authorize, operationToken);
             }
             catch (OperationCanceledException) { return Interrupted(); }
-            catch (Exception ex) when (ex is ExternalException or IOException or UnauthorizedAccessException or
-                InvalidOperationException or ArgumentException or InvalidCastException or NotSupportedException or
-                NotImplementedException or OverflowException)
+            catch (Exception ex) when (Failure(ex, Volatile.Read(ref beginning) != 0) is { } outcome)
             {
-                var outcome = Volatile.Read(ref beginning) != 0 ? WindowsUpdateStatus.Partial : ex switch
-                {
-                    UnauthorizedAccessException => WindowsUpdateStatus.AccessDenied,
-                    COMException com => WuaFailure.FromHResult(com.HResult),
-                    _ => WindowsUpdateStatus.Unavailable,
-                };
                 return new(outcome, null);
             }
             finally { Volatile.Write(ref _active, 0); }
@@ -170,6 +162,19 @@ internal sealed class NativeWindowsUpdateBackend : IWindowsUpdateBrokerBackend
         catch (Exception error) when (error is COMException or InvalidCastException or InvalidDataException or
             UnauthorizedAccessException or NotSupportedException or NotImplementedException)
         { return null; }
+    }
+
+    internal static WindowsUpdateStatus? Failure(Exception error, bool beginning)
+    {
+        WindowsUpdateStatus? status = error switch
+        {
+            UnauthorizedAccessException => WindowsUpdateStatus.AccessDenied,
+            COMException com => WuaFailure.FromHResult(com.HResult),
+            InvalidDataException or ExternalException or IOException or InvalidOperationException or ArgumentException or
+                InvalidCastException or NotSupportedException or NotImplementedException or OverflowException => WindowsUpdateStatus.Unavailable,
+            _ => null,
+        };
+        return beginning && status.HasValue ? WindowsUpdateStatus.Partial : status;
     }
 
     private static WindowsUpdateOperation Unavailable() => new(WindowsUpdateStatus.Unavailable, null);

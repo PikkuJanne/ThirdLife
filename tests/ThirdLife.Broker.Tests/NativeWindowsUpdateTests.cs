@@ -28,6 +28,12 @@ public sealed class NativeWindowsUpdateTests(ITestOutputHelper output)
         Assert.Throws<OperationCanceledException>(() => NativeWindowsUpdateBackend.ReadOptional(() => throw new OperationCanceledException()));
     }
 
+    [Theory]
+    [InlineData(false, WindowsUpdateStatus.Unavailable)]
+    [InlineData(true, WindowsUpdateStatus.Partial)]
+    public void InvalidNativeResponseRetainsWhichSideOfBeginFailed(bool beginning, WindowsUpdateStatus expected) =>
+        Assert.Equal(expected, NativeWindowsUpdateBackend.Failure(new InvalidDataException(), beginning));
+
     [Fact]
     public async Task NativeWorkerRejectsScanAndCancelledRequestsBeforeAuthorization()
     {
