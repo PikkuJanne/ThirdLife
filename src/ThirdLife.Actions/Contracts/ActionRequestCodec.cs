@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using ThirdLife.Actions.Registry;
+using ThirdLife.Core.WindowsUpdates;
 
 namespace ThirdLife.Actions.Contracts;
 
@@ -11,6 +12,9 @@ public static class ActionRequestCodec
     private const string InvalidRequest = "Action request does not satisfy the ThirdLife action v1 contract.";
     private const string NoOpType = "no_op";
     private const string InstallPackageType = "install_package";
+    private const string UpdateScanType = "windows_update_scan";
+    private const string UpdateDownloadType = "windows_update_download";
+    private const string UpdateInstallType = "windows_update_install";
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     public static ActionRequest Parse(ReadOnlyMemory<byte> utf8Json)
@@ -44,6 +48,9 @@ public static class ActionRequestCodec
         {
             NoOpActionRequest => NoOpType,
             InstallPackageActionRequest => InstallPackageType,
+            WindowsUpdateActionRequest { Kind: ActionKind.ScanWindowsUpdate } => UpdateScanType,
+            WindowsUpdateActionRequest { Kind: ActionKind.DownloadWindowsUpdate } => UpdateDownloadType,
+            WindowsUpdateActionRequest { Kind: ActionKind.InstallWindowsUpdate } => UpdateInstallType,
             _ => throw new JsonException(InvalidRequest),
         };
 
@@ -58,6 +65,25 @@ public static class ActionRequestCodec
             if (request is InstallPackageActionRequest package)
             {
                 WriteInstallPackage(writer, package);
+            }
+            else if (request is WindowsUpdateActionRequest { Exact: { } exact })
+            {
+                writer.WriteString("update_id", exact.Identity.UpdateId);
+                writer.WriteNumber("revision", exact.Identity.Revision);
+                writer.WriteString("classification", exact.Classification switch
+                {
+                    WindowsUpdateClass.Security => "security",
+                    WindowsUpdateClass.Critical => "critical",
+                    _ => throw new JsonException(InvalidRequest),
+                });
+                if (exact.MaximumDownloadBytes is { } bytes)
+                {
+                    writer.WriteNumber("maximum_download_bytes", bytes);
+                }
+                else
+                {
+                    writer.WriteNull("maximum_download_bytes");
+                }
             }
 
             writer.WriteEndObject();
@@ -77,18 +103,15 @@ public static class ActionRequestCodec
             throw new JsonException();
         }
 
-        var id = ReadString(root, "action_id");
-        if (!Guid.TryParseExact(id, "D", out var actionId) || actionId == Guid.Empty ||
-            !string.Equals(id, actionId.ToString("D"), StringComparison.Ordinal))
-        {
-            throw new JsonException();
-        }
-
+        var actionId = ReadGuid(root, "action_id");
         var parameters = root.GetProperty("parameters");
         return ReadString(root, "type") switch
         {
             NoOpType => ReadNoOp(actionId, parameters),
             InstallPackageType => ReadInstallPackage(actionId, parameters),
+            UpdateScanType => ReadUpdateScan(actionId, parameters),
+            UpdateDownloadType => ActionRegistry.CreateDownloadWindowsUpdate(actionId, ReadUpdate(parameters)),
+            UpdateInstallType => ActionRegistry.CreateInstallWindowsUpdate(actionId, ReadUpdate(parameters)),
             _ => throw new JsonException(),
         };
     }
@@ -97,6 +120,37 @@ public static class ActionRequestCodec
     {
         RequireFields(parameters, []);
         return ActionRegistry.CreateNoOp(actionId);
+    }
+
+    private static WindowsUpdateActionRequest ReadUpdateScan(Guid actionId, JsonElement parameters)
+    {
+        RequireFields(parameters, []);
+        return ActionRegistry.CreateScanWindowsUpdate(actionId);
+    }
+
+    private static WindowsUpdateCandidate ReadUpdate(JsonElement parameters)
+    {
+        RequireFields(parameters, ["update_id", "revision", "classification", "maximum_download_bytes"]);
+        var updateId = ReadGuid(parameters, "update_id");
+        var classification = ReadString(parameters, "classification") switch
+        {
+            "security" => WindowsUpdateClass.Security,
+            "critical" => WindowsUpdateClass.Critical,
+            _ => throw new JsonException(),
+        };
+        if (!parameters.GetProperty("revision").TryGetInt32(out var revision))
+        {
+            throw new JsonException();
+        }
+
+        var size = parameters.GetProperty("maximum_download_bytes");
+        long? estimate = null;
+        if (size.ValueKind != JsonValueKind.Null)
+        {
+            estimate = size.TryGetInt64(out var bytes) ? bytes : throw new JsonException();
+        }
+
+        return new WindowsUpdateCandidate(new WindowsUpdateIdentity(updateId, revision), classification, estimate);
     }
 
     private static InstallPackageActionRequest ReadInstallPackage(Guid actionId, JsonElement parameters)
@@ -168,4 +222,12 @@ public static class ActionRequestCodec
 
     private static string ReadString(JsonElement value, string name) =>
         value.GetProperty(name).GetString() ?? throw new JsonException();
+
+    private static Guid ReadGuid(JsonElement value, string name)
+    {
+        var text = ReadString(value, name);
+        return Guid.TryParseExact(text, "D", out var id) && id != Guid.Empty &&
+            string.Equals(text, id.ToString("D"), StringComparison.Ordinal)
+            ? id : throw new JsonException();
+    }
 }

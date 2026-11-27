@@ -27,12 +27,14 @@ public enum ActionNetworkUse
 {
     None = 1,
     SoftwareDownload,
+    WindowsUpdate,
 }
 
 public enum ActionVerification
 {
     NoMachineChange = 1,
     ExactPackageIdentity,
+    WindowsUpdateScan,
 }
 
 public enum ActionRollback
@@ -51,4 +53,5 @@ public enum ActionAvailability
 {
     BrokerNoOp = 1,
     PackageBackendRequired,
+    WindowsUpdateAgentRequired,
 }
