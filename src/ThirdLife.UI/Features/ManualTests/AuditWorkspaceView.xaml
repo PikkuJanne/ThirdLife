@@ -45,6 +45,13 @@
             <Button x:Name="OpenJobButton" Content="Open job" Click="OpenJob" HorizontalAlignment="Left" />
           </StackPanel>
         </GroupBox>
+        <GroupBox x:Name="JobArchiveRegion" Header="Current job archive" Visibility="Collapsed" Margin="0,16,0,0">
+          <StackPanel>
+            <TextBlock Text="Archive keeps the current job's records available for review. Restore the job to resume work." />
+            <Button x:Name="JobArchiveButton" Content="{Binding JobArchiveAction}" Click="ChangeJobArchive"
+                    IsEnabled="{Binding CanChangeJobArchive}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+          </StackPanel>
+        </GroupBox>
         <TextBlock x:Name="AuditStatus" Text="{Binding JobEntryStatus}" Margin="0,12,0,0" Focusable="True"
                    AutomationProperties.Name="{Binding JobEntryStatus}" AutomationProperties.LiveSetting="Polite" />
       </StackPanel>
