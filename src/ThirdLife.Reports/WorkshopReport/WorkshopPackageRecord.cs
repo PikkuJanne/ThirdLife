@@ -70,6 +70,16 @@ public static partial class WorkshopReportRenderer
         StoredPolicyDecision? savedDecision,
         IReadOnlyList<WorkshopPackageRecord> packages,
         IReadOnlyList<WorkshopPreparationPlan>? preparation,
+        CancellationToken cancellationToken = default) =>
+        RenderWithPackageRecords(job, assessment, savedDecision, packages, preparation, null, cancellationToken);
+
+    public static string RenderWithPackageRecords(
+        StoredJob job,
+        WorkshopAssessmentSummary? assessment,
+        StoredPolicyDecision? savedDecision,
+        IReadOnlyList<WorkshopPackageRecord> packages,
+        IReadOnlyList<WorkshopPreparationPlan>? preparation,
+        WorkshopProfileVerification? profileVerification,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(packages);
@@ -79,7 +89,7 @@ public static partial class WorkshopReportRenderer
             throw new ArgumentException("The workshop report requires bounded package records and a matching assessment.");
         }
 
-        return RenderCore(job, assessment, savedDecision, packages, preparation, cancellationToken);
+        return RenderCore(job, assessment, savedDecision, packages, preparation, profileVerification, cancellationToken);
     }
 
     private static void WritePackageRecords(

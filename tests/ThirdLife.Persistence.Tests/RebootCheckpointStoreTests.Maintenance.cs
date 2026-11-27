@@ -6,6 +6,8 @@ using ThirdLife.Actions.Planning;
 using ThirdLife.Actions.WindowsUpdates;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.WindowsUpdates;
+using ThirdLife.Policy.Evaluation;
+using ThirdLife.Verification;
 
 namespace ThirdLife.Persistence.Tests;
 
@@ -26,6 +28,7 @@ public sealed partial class RebootCheckpointStoreTests
         uint? boot = 10;
         var fault = interruptedAfterCommit ? JobStoreFaultPoint.AfterWriteCommit : JobStoreFaultPoint.BeforeWriteCommit;
         var scanner = new WindowsUpdateWorkflowTests.FixtureAgent();
+        var schemaVersion = unexpectedShutdownAt == MaintenancePhase.FinalVerification ? 12 : SqliteJobStore.CurrentSchemaVersion;
         JournalPlanSnapshot plan;
         JournalApproval approval;
         await using (var prepare = await Open())
@@ -158,6 +161,7 @@ public sealed partial class RebootCheckpointStoreTests
         current = await AdvanceAcrossInterruption(current, MaintenancePhase.FinalVerification, observed);
         Assert.Null(current.LastCheckFailure);
         await InterruptAtSelectedBoundary(current);
+        schemaVersion = SqliteJobStore.CurrentSchemaVersion;
         await using var handoff = await Open();
         var saved = Assert.IsType<JournalHistory>(await handoff.LoadJournalAsync(plan.Key));
         Assert.Equal(verified, saved.Entries[^1]);
@@ -168,8 +172,39 @@ public sealed partial class RebootCheckpointStoreTests
         Assert.Empty(scanner.Prepared);
         Assert.Empty(scanner.Mutations);
 
+        var job = plan.Key.JobId;
+        Assert.Equal(current, await handoff.LoadMaintenanceAsync(job));
+        Assert.Null(await handoff.LoadProfileVerificationAsync(job));
+        var start = clock.GetUtcNow();
+        var finalScan = await Scan(handoff, false);
+        var verification = new ProfileVerificationResult(start, clock.GetUtcNow(), false, plan.ProfileSha256, new string('b', 64),
+            Enum.GetValues<ProfileCheckKind>().Select(kind => new ProfileVerificationCheck(kind, ProfileVerificationState.Unavailable,
+                kind is not (ProfileCheckKind.SystemVolumeCapacity or ProfileCheckKind.PhysicalStorageEvidence or ProfileCheckKind.AudioOutput or
+                    ProfileCheckKind.Camera or ProfileCheckKind.Microphone))).ToImmutableArray(),
+            [new(plan.Actions[0].CapabilityId, true, ProfileVerificationState.Failed, action.ExactVersion, "0.1.0", action.ActionId,
+                ProfilePackageStatus.Mismatch)],
+            [new(new("POL-OS-001"), PolicyRuleState.Unavailable, PolicyRuleReason.EvidenceMissing, true)],
+            null, null, null, 0, 0, WindowsUpdateDisposition.Current, false);
+        var result = new ProfileVerificationRecord(current, finalScan.Id, verified.EntryId, saved.Entries.Length, verification);
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => handoff.SaveProfileVerificationAsync(result with { ScanId = current.ScanId!.Value }));
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => handoff.SaveProfileVerificationAsync(result with { PackageJournalEntryId = applied.EntryId }));
+        await handoff.SaveProfileVerificationAsync(result);
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => handoff.SaveProfileVerificationAsync(result));
+
+        await using var profileReview = await Open();
+        var restored = Assert.IsType<SavedProfileVerification>(await profileReview.LoadProfileVerificationAsync(job));
+        Assert.True(restored.IsCurrent);
+        Assert.Equal(verification.Capabilities.AsEnumerable(), restored.Record.Result.Capabilities.AsEnumerable());
+        Assert.False(restored.Record.Result.ProfileChecksPassed);
+        Assert.Equal(current, await profileReview.LoadMaintenanceAsync(job));
+        Restart();
+        Assert.False((await profileReview.LoadProfileVerificationAsync(job))!.IsCurrent);
+        await Scan(profileReview, false);
+        Assert.False((await profileReview.LoadProfileVerificationAsync(job))!.IsCurrent);
+        Assert.Equal(approval, (await profileReview.LoadJournalAsync(plan.Key))!.ActiveApproval);
+
         Task<SqliteJobStore> Open(IJobStoreFaultInjector? writeFault = null) =>
-            SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot, SqliteJobStore.CurrentSchemaVersion, clock, writeFault,
+            SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot, schemaVersion, clock, writeFault,
                 () => uptime, readBootSession: () => boot);
 
         void Restart()

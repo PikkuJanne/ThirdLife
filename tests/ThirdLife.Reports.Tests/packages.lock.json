@@ -99,6 +99,9 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "thirdlife.catalog": {
+        "type": "Project"
+      },
       "thirdlife.core": {
         "type": "Project"
       },
@@ -116,6 +119,15 @@
         "dependencies": {
           "ThirdLife.Core": "[1.0.0, )",
           "ThirdLife.Diagnostics": "[1.0.0, )",
+          "ThirdLife.Policy": "[1.0.0, )",
+          "ThirdLife.Verification": "[1.0.0, )"
+        }
+      },
+      "thirdlife.verification": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Catalog": "[1.0.0, )",
+          "ThirdLife.Core": "[1.0.0, )",
           "ThirdLife.Policy": "[1.0.0, )"
         }
       }

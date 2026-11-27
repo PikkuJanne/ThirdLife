@@ -30,6 +30,12 @@ public sealed class PilotPackageService
 
     public PackageObservation Inspect() => runtime.Inspect();
 
+    public PackageObservation InspectApproved(InstallPackageActionRequest request, string approvedInstallerSha256)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return MatchesApproval(request, approvedInstallerSha256) ? Inspect() : new(PackageObservationStatus.Unavailable);
+    }
+
     public async Task<PackageVerificationStatus> VerifyInstalledAsync(InstallPackageActionRequest request,
         string approvedInstallerSha256, CancellationToken cancellationToken)
     {

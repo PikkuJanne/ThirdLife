@@ -44,6 +44,7 @@ internal sealed partial class AuditWorkspace
         if (IsSeparateEvidenceOrigin(job))
         {
             ClearPreparationDisposition();
+            ClearProfileVerification();
             return;
         }
 
@@ -51,8 +52,10 @@ internal sealed partial class AuditWorkspace
         {
             var histories = await ReadPreparationJournalsAsync(job.Job.JobId, CancellationToken.None);
             var checkpoint = await ReadMaintenanceForReportAsync(job.Job.JobId, CancellationToken.None);
+            await LoadProfileVerificationAsync(job.Job.JobId);
             var now = _timeProvider.GetUtcNow();
-            var preparation = await Task.Run(() => ProjectPreparationRecords(job, assessment, histories, checkpoint, now, CancellationToken.None));
+            var verification = _profileVerification;
+            var preparation = await Task.Run(() => ProjectPreparationRecords(job, assessment, histories, checkpoint, verification, now, CancellationToken.None));
             var current = preparation.SingleOrDefault(plan => plan.CurrentDisposition is not null);
             var status = preparation.Length == 0 ? string.Empty : WorkshopReportRenderer.DescribePreparationSummary(current);
             var outcomes = current is null ? string.Empty : string.Join(Environment.NewLine,
@@ -86,7 +89,8 @@ internal sealed partial class AuditWorkspace
             ? Task.Run(() => store.LoadMaintenanceAsync(jobId, token), token)
             : Task.FromResult<MaintenanceCheckpoint?>(null);
 
-    private static WorkshopMaintenanceCheckpoint? ProjectMaintenance(JournalHistory history, MaintenanceCheckpoint? saved)
+    private static WorkshopMaintenanceCheckpoint? ProjectMaintenance(JournalHistory history, MaintenanceCheckpoint? saved,
+        SavedProfileVerification? verification)
     {
         if (!history.Plan.FullMaintenance) { return null; }
         if (saved?.Plan != history.Plan.Key || saved.ApprovalId != history.ActiveApproval?.ApprovalId)
@@ -108,11 +112,12 @@ internal sealed partial class AuditWorkspace
             MaintenanceCheckIssue.PackageMismatch => WorkshopMaintenanceIssue.PackageMismatch,
             MaintenanceCheckIssue.PackageUnavailable => WorkshopMaintenanceIssue.PackageUnavailable,
             _ => null,
-        });
+        }, verification is { IsCurrent: true } && verification.Record.Checkpoint == saved);
     }
 
     private WorkshopPreparationPlan[] ProjectPreparationRecords(StoredJob job, AssessmentSnapshot? assessment,
-        ImmutableArray<JournalHistory> journals, MaintenanceCheckpoint? checkpoint, DateTimeOffset now, CancellationToken cancellationToken)
+        ImmutableArray<JournalHistory> journals, MaintenanceCheckpoint? checkpoint, SavedProfileVerification? verification,
+        DateTimeOffset now, CancellationToken cancellationToken)
     {
         var reviewed = journals.Where(history => !history.Entries.IsEmpty).ToArray();
         var latest = reviewed.OrderBy(LatestReviewTime).LastOrDefault();
@@ -128,7 +133,7 @@ internal sealed partial class AuditWorkspace
                     item.State is JournalState.Started or JournalState.Applied or JournalState.RequiresReview));
             var rows = outcomes.Select(ProjectPreparationAction).ToArray();
             result.Add(new WorkshopPreparationPlan(history.Plan.Key.JobId, history.Plan.Key.PlanSha256, history.Plan.SyntheticData,
-                isCurrent ? projection.Disposition : null, rows, ProjectMaintenance(history, checkpoint)));
+                isCurrent ? projection.Disposition : null, rows, ProjectMaintenance(history, checkpoint, verification)));
         }
 
         return result.ToArray();

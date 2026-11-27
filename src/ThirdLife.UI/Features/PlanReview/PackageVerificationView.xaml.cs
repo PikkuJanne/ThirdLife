@@ -74,6 +74,26 @@ public partial class PackageVerificationView : UserControl
         }
     }
 
+    private async void RunProfileVerification(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanRunProfileVerification)
+        {
+            var hadFocus = RunProfileVerificationButton.IsKeyboardFocused;
+            await workspace.RunProfileVerificationAsync();
+            RestoreFocus(ProfileVerificationMessage, hadFocus);
+        }
+    }
+
+    private void CancelProfileVerification(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanCancelProfileVerification)
+        {
+            var hadFocus = CancelProfileVerificationButton.IsKeyboardFocused;
+            workspace.CancelProfileVerification();
+            RestoreFocus(ProfileVerificationMessage, hadFocus);
+        }
+    }
+
     private void RestoreFocus(FrameworkElement preferred, bool hadFocus)
     {
         var focused = Keyboard.FocusedElement;

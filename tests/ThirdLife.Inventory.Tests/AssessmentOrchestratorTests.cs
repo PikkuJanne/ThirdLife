@@ -50,6 +50,62 @@ public sealed class AssessmentOrchestratorTests(ITestOutputHelper output)
         Assert.Equal(1, beta.InvocationCount);
     }
 
+    [Fact]
+    public async Task VerificationReadsChangedStateWithoutReplacingTheSavedAssessment()
+    {
+        await using var store = new AssessmentTestStore();
+        var key = new EvidenceKey("test.alpha.value");
+        var value = true;
+        var provider = new FakeInventoryProvider(Descriptor("alpha"), _ =>
+            ValueTask.FromResult(ProviderReadResult.Collected([NormalizedEvidence.Observed(key, EvidenceValue.FromBoolean(value))])));
+        var inspect = new AssessmentOrchestrator(store, [provider], new FixedTimeProvider(Now));
+        var saved = await inspect.AssessAsync(store.JobId);
+        var commits = store.Committed.Count;
+        value = false;
+
+        var verifier = new AssessmentOrchestrator(store, [provider], new FixedTimeProvider(Now.AddMinutes(1)));
+        var verification = await verifier.VerifyAsync(store.JobId, saved.GateDecisionId);
+
+        Assert.Equal(2, provider.InvocationCount);
+        Assert.Equal(AssessmentOutcome.Completed, verification.Outcome);
+        Assert.Equal(saved.GateDecisionId, verification.GateDecisionId);
+        Assert.NotEqual(saved.AssessmentId, verification.AssessmentId);
+        var fresh = Assert.Single(verification.Observations);
+        var original = Assert.Single(saved.Observations);
+        Assert.False(fresh.Value!.BooleanValue);
+        Assert.True(original.Value!.BooleanValue);
+        Assert.Equal(Now.AddMinutes(1), fresh.Metadata.CollectedAtUtc);
+        Assert.NotEqual(original.Metadata.EvidenceId, fresh.Metadata.EvidenceId);
+        Assert.Equal(commits, store.Committed.Count);
+        Assert.Null(await verifier.LoadAsync(store.JobId, verification.AssessmentId));
+        var job = Assert.IsType<StoredJob>(await store.LoadJobAsync(store.JobId));
+        Assert.Equal(saved.AssessmentId, AssessmentOrchestrator.ReadLatest(job)?.AssessmentId);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task VerificationRefusesAChangedGateBeforeExposingEvidence(bool changeDuringRead)
+    {
+        await using var store = new AssessmentTestStore();
+        var initial = Assert.IsType<StoredJob>(await store.LoadJobAsync(store.JobId));
+        var gate = Assert.Single(initial.SanitizationGateDecisions);
+        var key = new EvidenceKey("test.alpha.value");
+        var provider = new FakeInventoryProvider(Descriptor("alpha"), _ =>
+        {
+            store.ChangeSanitization(SanitizationState.Failed, recordDecision: true);
+            return ValueTask.FromResult(ProviderReadResult.Collected([NormalizedEvidence.Observed(key, EvidenceValue.FromBoolean(true))]));
+        });
+        if (!changeDuringRead) { store.ChangeSanitization(SanitizationState.Verified, recordDecision: true); }
+
+        var verifier = new AssessmentOrchestrator(store, [provider], new FixedTimeProvider(Now));
+        var error = await Assert.ThrowsAsync<AssessmentException>(() => verifier.VerifyAsync(store.JobId, gate.DecisionId));
+
+        Assert.Equal(changeDuringRead ? "assessment_gate_unverified" : "assessment_gate_blocked", error.ResultCode);
+        Assert.Equal(changeDuringRead ? 1 : 0, provider.InvocationCount);
+        Assert.Empty(store.Committed);
+    }
+
     [Theory]
     [InlineData(SanitizationState.Unknown)]
     [InlineData(SanitizationState.Failed)]

@@ -133,13 +133,22 @@
           "SQLitePCLRaw.bundle_winsqlite3": "[2.1.11, )",
           "ThirdLife.Actions": "[1.0.0, )",
           "ThirdLife.Core": "[1.0.0, )",
-          "ThirdLife.Policy": "[1.0.0, )"
+          "ThirdLife.Policy": "[1.0.0, )",
+          "ThirdLife.Verification": "[1.0.0, )"
         }
       },
       "thirdlife.policy": {
         "type": "Project",
         "dependencies": {
           "ThirdLife.Core": "[1.0.0, )"
+        }
+      },
+      "thirdlife.verification": {
+        "type": "Project",
+        "dependencies": {
+          "ThirdLife.Catalog": "[1.0.0, )",
+          "ThirdLife.Core": "[1.0.0, )",
+          "ThirdLife.Policy": "[1.0.0, )"
         }
       },
       "Microsoft.Data.Sqlite.Core": {

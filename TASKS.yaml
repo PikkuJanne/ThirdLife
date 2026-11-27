@@ -6487,7 +6487,7 @@ tasks:
   workstream: verification
   kind: code
   priority: P0
-  status: ready
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -6520,9 +6520,44 @@ tasks:
   verification:
   - Mutate system state between execution and final verification and confirm the change is detected.
   - Test missing capability, stale evidence, pending restart, package downgrade/removal, and low-space cases.
-  evidence: []
+  evidence:
+  - type: test
+    tier: targeted
+    date: '2026-11-27'
+    duration_seconds: 234.197
+    result: passed
+    environment: active Windows 11 Pro 26H2 native x64 host, build 26300.9974
+    reference: artifacts/evidence/TL-0507/report.md
+    summary: Passed the targeted runner with 1,871 deterministic .NET tests, including normal Verify, schema migration and reopened reports.
+    command: eng/verify.ps1 -Tier Targeted with Verification, Persistence, Reports, Packages and Policy test projects
+    limitation: The ordinary Verify workflow and reopened report used controlled providers. Native provider observations and live servicing qualification have separate scope.
+  - type: test
+    tier: targeted
+    date: '2026-11-27'
+    duration_seconds: 38.922
+    result: passed
+    environment: active Windows 11 Pro 26H2 native x64 host, build 26300.9974
+    reference: artifacts/evidence/TL-0507/report.md
+    summary: The production agent returned four applicable offers outside the servicing scope and no Windows Update restart flag.
+    command: dotnet test tests/ThirdLife.Packages.Tests -c Release --no-build --no-restore --filter FullyQualifiedName~ActiveMachineScansOnlyTheConfiguredWindowsUpdateService
+    limitation: The configured service offered one restricted revision and three drivers. The read-only scan provides no native installation or whole-device clearance evidence.
+  - type: test
+    tier: full
+    date: '2026-11-27'
+    duration_seconds: 427.138
+    result: passed
+    environment: clean detached checkout on active Windows 11 Pro 26H2 native x64 host, build 26300.9974
+    reference: artifacts/evidence/TL-0507/report.md, 8e91fc0162949291d01a6826d9ca41617013303e
+    summary: Passed all 310 governance regressions and 2,528 deterministic .NET cases across 13 assemblies with locked restore and zero build warnings.
+    command: eng/verify.ps1 -Tier Full -Restore
+    limitation: The default Full filter excludes native provider smoke and Extended scenarios. This is engineering evidence and leaves cold-boot and live servicing qualification open.
+  notes:
+  - The exact reviewed package profile and the separate laptop candidate baseline retain their own digests. Cold-boot re-verification and launch probes belong to TL-0509.
+  - The unresolved aggregate restart, system-disk attribution, ownership and guided-review requirements continue to hold readiness when their scoped evidence is missing.
+  - The existing guest and exact authorization gates for native servicing and pilot claims remain at TL-0511 and TL-0611.
   expected_test_tier: targeted
-  full_test_triggers: []
+  full_test_triggers:
+  - SQLite profile verification migration and locked project graph change.
   extended_test_triggers: []
 - id: TL-0508
   title: Finalize the pilot catalog, policy, and profiles
@@ -6594,7 +6629,7 @@ tasks:
   workstream: verification
   kind: code
   priority: P0
-  status: backlog
+  status: ready
   size: M
   executor: codex
   environment: windows

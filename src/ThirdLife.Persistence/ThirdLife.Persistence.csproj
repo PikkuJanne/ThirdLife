@@ -19,6 +19,7 @@
     <ProjectReference Include="..\ThirdLife.Actions\ThirdLife.Actions.csproj" />
     <ProjectReference Include="..\ThirdLife.Core\ThirdLife.Core.csproj" />
     <ProjectReference Include="..\ThirdLife.Policy\ThirdLife.Policy.csproj" />
+    <ProjectReference Include="..\ThirdLife.Verification\ThirdLife.Verification.csproj" />
   </ItemGroup>
 
 </Project>
