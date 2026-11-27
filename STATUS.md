@@ -124,8 +124,8 @@ awaits a desktop with its Windows first-use privacy choices resolved.
 
 The current Handover resumes the same protected harmless sample after
 a fresh recipient review and saves the current operator's copy result.
-The keyboard journey passed at 240 DPI. Native Windows restoration
-and the external wheel observation remain open.
+The external keyboard and fractional wheel journey passed at 240 DPI.
+Native Windows restoration and audible perception remain open.
 [Sample resume](artifacts/evidence/TL-0702/reopen-sample.md) · [Accessibility audit](artifacts/audits/v0.1-accessibility.md)
 
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B
