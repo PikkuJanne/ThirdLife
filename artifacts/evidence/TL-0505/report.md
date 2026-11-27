@@ -35,7 +35,7 @@ result and reconcile independently of the hold.
 | UI component filter `FullyQualifiedName~RestartPausesPackagePhase` | One WPF/SQLite case passed in 3 s. An explicit scan persisted the restart requirement. The reopened job showed the same keyboard-focusable, polite-live reason in Prepare and Verify. The provider received one scan in total. |
 | Targeted (includes Quick) | At `1c61d0466e7d2d711cd6575bf899511322691f6c`, `./eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj -Filter '(FullyQualifiedName~WindowsUpdateWorkflowTests\|FullyQualifiedName~RebootCheckpointStoreTests)&Category!=Extended&Category!=ActiveMachine'` passed in 241.401 s. Governance, formatting, the warnings-as-errors build, 141 Core, 956 Inventory, 183 UI and 55 Persistence cases passed. |
 | Contradictory inventory regression | On the final update-history change, all 40 cases of `dotnet test tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj -c Release --no-restore -p:TreatWarningsAsErrors=true --filter FullyQualifiedName~WindowsUpdateWorkflowTests` passed in 18 s test time. An installed revision reoffered by a later successful inventory held packages through interruption, reopen and a failed scan. The hold cleared when a newer successful inventory omitted it. |
-| Extended evidence reused | TL-0309 authenticated checkpoint fault/replay and TL-0408 package interruption and verification cover the unchanged action-specific recovery paths. [TL-0309](../TL-0309/report.md) Ãƒâ€šÃ‚Â· [TL-0408](../TL-0408/report.md) |
+| Extended evidence reused | TL-0309 authenticated checkpoint fault/replay and TL-0408 package interruption and verification cover the unchanged action-specific recovery paths. [TL-0309](../TL-0309/report.md) and [TL-0408](../TL-0408/report.md) |
 
 The initial Targeted attempts identified C# whitespace and a cancellation-token
 analyzer failure in the conflict reread. The reread now explicitly completes
@@ -53,3 +53,9 @@ checks, final restart checkpoint, and handoff to independent final verification.
 Exercise shutdown and resume at each of those additional boundaries. The native
 Windows Update receipts, installed-revision observation and applicable restart
 evidence retain their separate qualification requirements at TL-0511.
+
+The combined technical candidate `91c0153bd03228a45fd15f3e585a4eb27c01d72c`
+passed 59 Windows Update workflow, reboot store and interrupted journal migration
+cases in 28 s with the Release build. The `dotnet test` filter selected
+`WindowsUpdateWorkflowTests`, `RebootCheckpointStoreTests` and
+`InterruptedJournalMigrationRecoversAndPreservesExistingJob`.

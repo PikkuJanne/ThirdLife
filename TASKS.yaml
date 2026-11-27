@@ -6266,6 +6266,15 @@ tasks:
     duration: 560.757 s for 304 governance and 2423 deterministic tests, 152.849 s for 1414 final broker Targeted executions including Quick
     reference: artifacts/evidence/TL-0504/report.md, 80aad3735506c0b06fb3f140b6d002725a27f951
     limitation: Live servicing, restart and independent verification of a ThirdLife-installed revision require an eligible authorized guest transaction.
+  - summary: An actual guest scan retained the unsupported-handler finding in the same reopened job with zero approvals or dispatches.
+    command: eng/run-thirdlife-hyperv.ps1 -Prepare -WindowsUpdateAssessment and -Scenario WindowsUpdateAssessment bound to the inspected VMId and payload digest
+    tier: targeted
+    result: passed
+    environment: Limited-token ThirdLife-W11, Windows 11 x64 build 26300.9974, wuapi.dll 1511.2611.5012.0
+    date: '2026-11-27'
+    duration: 226.146 s including staging and verified cleanup
+    reference: artifacts/evidence/TL-0504/single-guest-inventory.md, 68537173b38d84b58eb8b2b7f2c59622432b341b
+    limitation: One real offer and zero selectable revisions. Native inventory was saved through an isolated synthetic intake. Positive servicing, restart and retry scenarios used controlled providers.
   execution_prerequisites:
   - kind: capability
     scope: Live servicing requires an exact eligible security or critical CBS revision offered to ThirdLife-W11, a reviewed protected v2 broker and an effective review binding the revision, organization policy, supported recovery and measured storage reserve.
@@ -6278,7 +6287,7 @@ tasks:
     scope: Durable operator approval for the exact update and impacts, an independent protected grant for each supervised phase and applicable Windows consent.
   notes:
   - PR 75 integrated the native writer, independent v2 broker authorization, policy and resource checks, WPF approval and schema 010 journal. The effective review catalog has no approved revision.
-  - ThirdLife-W11 offered one unsupported software revision and zero eligible offers. Its configured source and eligibility rules remain intact. Verify the saved exclusion reason through application reopening.
+  - ThirdLife-W11 offered one unsupported software revision and zero eligible offers. Its configured source and eligibility rules remain intact. The native assessment retained the saved exclusion reason through application reopening.
   - Reopen native servicing when a meaningful servicing change or qualification run yields an eligible revision on ThirdLife-W11. Bind its effective policy and recovery review, obtain exact action authorization, record both native receipts, restart if required, rescan and independently confirm installed identity and revision. TL-0511 requires that evidence separately.
   expected_test_tier: targeted
   full_test_triggers:
@@ -6291,7 +6300,7 @@ tasks:
   workstream: recovery
   kind: code
   priority: P0
-  status: backlog
+  status: in_progress
   size: L
   executor: codex
   environment: windows
@@ -6322,7 +6331,16 @@ tasks:
   - The operator can stop safely at a phase boundary without receiving a false ready result.
   verification:
   - Run zero-, one-, and multi-restart paths plus unexpected shutdown at each boundary.
-  evidence: []
+  evidence:
+  - summary: Package and Windows Update mutation paths now respect each other's durable same-job recovery state before dispatch.
+    command: Focused RebootCheckpointStoreTests, WindowsUpdateWorkflowTests and WindowsUpdateWorkspaceTests through SQLite and the WPF workspace
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 x64 host with isolated stores, controlled update offers, package outcomes and boot uptime
+    date: '2026-11-27'
+    duration: 241.401 s for 1335 Targeted cases including Quick, then 18 s for 40 Windows Update workflow cases on the final recovery change
+    reference: artifacts/evidence/TL-0505/report.md, 91c0153bd03228a45fd15f3e585a4eb27c01d72c
+    limitation: The passes model zero, one and two restarts. The full-profile schedule, post-package checks and final restart handoff remain in progress.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
@@ -6343,7 +6361,7 @@ tasks:
   workstream: security-baseline
   kind: code
   priority: P0
-  status: backlog
+  status: in_progress
   size: L
   executor: codex
   environment: windows
@@ -6385,7 +6403,16 @@ tasks:
     fixtures.
   - Run read-only provider smoke checks on the active machine. Compare provider, policy, UI and report wording and record
     blind spots while preserving security and ownership controls.
-  evidence: []
+  evidence:
+  - summary: Inspect collects bounded security and management findings. A positive management indicator drives the existing ownership blocker in the saved job and restricted report.
+    command: eng/verify.ps1 -Tier Targeted for Inventory, UI and Reports plus the read-only SecurityBaselineProviderTests host smoke
+    tier: targeted
+    result: passed
+    environment: Standard-user active Windows 11 x64 host, controlled native projections and isolated application jobs
+    date: '2026-11-27'
+    duration: 255.722 s for 1329 deterministic tests including Quick, plus focused native observation
+    reference: artifacts/evidence/TL-0506/report.md, 8291677a164f81783a1e22fd4f17c7c9d8cb844c
+    limitation: Nine of fourteen host fields had values. Missing observations cannot clear ownership. Remaining work includes explicit versioned security rules, recent time synchronization and attributable administrator and remote-access review.
   notes:
   - TL-0611 carries actual security-baseline acceptance for pilot scope. A documented blind spot cannot clear a required
     baseline rule.

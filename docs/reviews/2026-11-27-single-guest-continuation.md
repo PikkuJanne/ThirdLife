@@ -78,3 +78,19 @@ It performed no scan, checkpoint operation or servicing.
 Both historical Sandbox launchers now reject a run before staging. Their
 preflight and historical result-validation paths retain their existing semantics.
 The focused source check covers both launchers' guards and preflight returns.
+
+The publication candidate `f2b4bd82f39b3d10e9a32c99505c9c904a184697` passed
+all 310 Windows governance tests in 324.230 s using `python -m unittest discover
+-s tools/tests -p "test_*.py"`. The five requested tests passed again in 0.658 s.
+An earlier discovery run loaded the pre-edit manifest contract and failed one
+selection test. The finalized manifest and validator passed all 16 related tests.
+The first supplementary checkout found a stale digest for the final broker
+runbook edit. Regenerating the manifest satisfied the repository validator and
+the supplementary Windows check.
+
+The correction's active-host Quick tier passed 1,279 deterministic tests in
+278.869 s during the concurrent cold builds and governance checks. The WPF
+suite occupied 177 s of that run. The later combined candidate passed 1,308
+Quick tests in 167.885 s, including 84 s for WPF. Both exceeded the 120 s warm
+target. Remote main integrated the correction at `bacf1a7ef0f3ce55e88ffe5afb9082cc6ee59a82`.
+[Correction PR](https://github.com/PikkuJanne/ThirdLife/pull/76)
