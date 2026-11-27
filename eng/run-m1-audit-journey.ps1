@@ -167,7 +167,12 @@ function Assert-Announcement([string] $Id, [string] $Message) {
 }
 
 function Measure-FractionalWheel {
-    $viewport = Find-FixtureElement 'ShellScroll'
+    $viewport = Wait-For {
+        $candidate = Find-FixtureElement 'ShellScroll'
+        if ($candidate -and $candidate.GetCurrentPattern([Windows.Automation.ScrollPattern]::Pattern).Current.VerticallyScrollable) {
+            $candidate
+        }
+    } 'vertical overflow in the populated Intake fixture'
     $scroll = $viewport.GetCurrentPattern([Windows.Automation.ScrollPattern]::Pattern)
     $bounds = $viewport.Current.BoundingRectangle
     $cursor = [Windows.Forms.Cursor]::Position
@@ -229,7 +234,6 @@ try {
         $probe = [AuditAccessibilityProbe]::new($window)
         $result.live_region_events = @()
         $result.window_dpi = $probe.WindowDpi
-        Measure-FractionalWheel
     }
     Move-TabTo 'CreateJobButton'
     Send-At 'CreateJobButton' '{ENTER}'
@@ -240,6 +244,10 @@ try {
         throw 'The new job must still require explicit external confirmation.'
     }
     $result.steps += 'created_job_requires_explicit_confirmation'
+    if ($VerifyAccessibility) {
+        Measure-FractionalWheel
+        $result.steps += 'populated_intake_fractional_wheel'
+    }
 
     Move-TabTo 'ExternalRecordConfirmed'
     Send-At 'ExternalRecordConfirmed' '{ENTER}'
