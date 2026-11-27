@@ -123,6 +123,57 @@ public sealed class AuditReportTests
     }
 
     [Fact]
+    public async Task ReopenedArchivedJobOpensTheExactRecordedReportAndRejectsChangedBytes()
+    {
+        using var disk = new AuditTestStore();
+        using var output = new ReportTestDirectory();
+        var provider = AuditTestProvider.Available("saved-report-reopen", ProviderEvidenceOrigin.ActiveMachine);
+        JobId id;
+        WorkshopReportArtifact artifact;
+        await using (var first = OpenWorkspace(disk, output.Store(), [provider]))
+        {
+            await first.CreateJobAsync();
+            await first.RecordSanitizationAsync(VerifiedSample());
+            await first.GenerateReportAsync();
+            artifact = Assert.IsType<WorkshopReportArtifact>(first.ReportArtifact);
+            id = Assert.IsType<StoredJob>(first.Job).Job.JobId;
+            await first.ChangeJobArchiveAsync(id, archive: true);
+        }
+
+        var file = output.SingleReport();
+        var bytes = File.ReadAllBytes(file);
+        await using var reopened = OpenWorkspace(disk, output.Store(), [provider]);
+        await reopened.OpenJobAsync(id.Value);
+        Assert.True(Assert.IsType<StoredJob>(reopened.Job).IsArchived);
+        Assert.Null(reopened.ReportArtifact);
+        Assert.Equal(artifact.FileName, reopened.SavedReportFileName);
+        ShowAuditWindow(reopened, (window, view) =>
+        {
+            var open = Named<Button>(view, "OpenReportButton");
+            Assert.True(open.IsEnabled);
+            Invoke(window, open);
+            PumpUntil(window, () => !reopened.IsBusy && reopened.ReportPreview.Length > 0, () => reopened.ReportStatus);
+            Assert.Equal(File.ReadAllText(file), reopened.ReportPreview);
+            Assert.Contains("when it was generated", reopened.ReportStatus, StringComparison.Ordinal);
+            AssertReportAnnouncement(view, reopened);
+            Assert.Equal(bytes, File.ReadAllBytes(file));
+            Assert.Equal(file, output.SingleReport());
+
+            bytes[^1] ^= 1;
+            File.WriteAllBytes(file, bytes);
+            Invoke(window, open);
+            PumpUntil(window, () => !reopened.IsBusy && reopened.ReportPreview.Length == 0, () => reopened.ReportStatus);
+            Assert.Contains("saved report has changed", reopened.ReportStatus, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(bytes, File.ReadAllBytes(file));
+
+            reopened.CloseJob();
+            Assert.False(open.IsEnabled);
+            Assert.Null(reopened.SavedReportFileName);
+        });
+        Assert.Equal(0, provider.InvocationCount);
+    }
+
+    [Fact]
     public async Task ANameCollisionDoesNotReplaceThePublishedReportOrItsOpenCapability()
     {
         using var disk = new AuditTestStore();

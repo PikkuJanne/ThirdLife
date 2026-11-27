@@ -504,9 +504,9 @@ public partial class AuditWorkspaceView : UserControl
         JobState.Text = Workspace.Job?.IsArchived == true ? "Archived job · read-only"
             : Workspace.IsBusy ? "Job operation in progress" : "Job opened";
         BrokerExecutionPanel.Visibility = VisibleWhen(Workspace.IncludeBrokerQualification && Workspace.ShowsBrokerExecution);
-        ReportArtifactDetails.Text = Workspace.ReportArtifact is { } artifact
-            ? $"Saved workshop artifact: {artifact.FileName}"
-            : "No workshop report is available for preview in this session.";
+        ReportArtifactDetails.Text = Workspace.SavedReportFileName is { } fileName
+            ? $"Saved workshop artifact: {fileName}"
+            : "No saved workshop report is available for this job.";
         var snapshot = Workspace.Assessment;
         FindingsSummary.Text = snapshot is null
             ? ""
@@ -638,8 +638,8 @@ public partial class AuditWorkspaceView : UserControl
         ReviewDispositionButton.Visibility = VisibleWhen(hasAssessment);
         SetPrimaryAction(StartAssessmentButton, !hasAssessment);
         SetPrimaryAction(ReviewDispositionButton, hasAssessment);
-        SetPrimaryAction(GenerateReportButton, Workspace.ReportArtifact is null);
-        SetPrimaryAction(OpenReportButton, Workspace.ReportArtifact is not null);
+        SetPrimaryAction(GenerateReportButton, Workspace.SavedReportFileName is null);
+        SetPrimaryAction(OpenReportButton, Workspace.SavedReportFileName is not null);
         ShowEvidenceButton.IsEnabled = AssessmentObservations.SelectedItem is not null;
         SanitizationFields.Visibility = VisibleWhen(Workspace.Job?.IsArchived != true &&
             !Workspace.CanCompleteSavedSanitization);
