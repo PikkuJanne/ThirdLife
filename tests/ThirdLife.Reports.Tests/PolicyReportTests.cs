@@ -64,6 +64,28 @@ public sealed class PolicyReportTests
         Assert.DoesNotContain('\r', report);
     }
 
+    [Theory]
+    [InlineData(Disposition.ReadyToPrepare)]
+    [InlineData(Disposition.RepairAndRetest)]
+    [InlineData(Disposition.HumanReviewRequired)]
+    [InlineData(Disposition.AlternativeOperatingSystemCandidate)]
+    [InlineData(Disposition.DoNotDeploy)]
+    public void TechnicalRecordRetainsTheExactCapturedDispositionAndShowsUnverifiedHandover(Disposition expected)
+    {
+        var (job, assessment, saved) = Fixture(expected);
+        var details = new WorkshopRecordDetails([]);
+        var report = WorkshopReportRenderer.RenderTechnicalRecord(job, assessment, saved, [], null, null, details);
+
+        Assert.Equal(report, WorkshopReportRenderer.RenderTechnicalRecord(job, assessment, saved, [], null, null, details));
+        Assert.Contains("\nSchema: workshop-technical-v3\n", report, StringComparison.Ordinal);
+        Assert.Contains("\nHandover eligibility and sign-off require a separate review of current evidence.\n", report, StringComparison.Ordinal);
+        Assert.Contains("\nCaptured disposition\n" + ExpectedDisposition(expected).ReplaceLineEndings("\n") + "\n\n", report,
+            StringComparison.Ordinal);
+        Assert.Contains("\nIndependent profile verification\nNo profile verification result is saved for this job.\n",
+            report, StringComparison.Ordinal);
+        Assert.Contains("\nNo plan is saved for this job.\n", report, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void RuleExceptionsAndPendingConfirmationRemainDistinctAndSecretsStayWithheld()
     {
