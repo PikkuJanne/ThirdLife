@@ -7818,7 +7818,17 @@ tasks:
     successful-restore, and sealed-handover tests.
   - Execute and verify supported backup and harmless restore on an approved isolated destination or disposable virtual
     disk on the active machine. Verify credential isolation, cleanup, and truthful unsupported or deferred outcomes.
-  evidence: []
+  evidence:
+  - summary: Assisted File History readiness, exact capacity and recovery checks, and distinct pending and restore-proof states.
+    task: TL-0702
+    command: eng/verify.ps1 -Tier Targeted -Restore with File History, recipient settings and handover completion filters
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 218.210 s, 1446 Quick and 9 selected .NET tests
+    environment: Active Windows 11 native x64 host, unelevated WPF and controlled domain fixtures
+    reference: artifacts/evidence/TL-0702/readiness.md, c9446391db4d742e9aa464c901c755cd40f51569
+    limitation: Read-only native interface prerequisites and system-volume rejection were observed. Launcher, protected restore probe and live backup and restore remain pending.
   notes:
   - The actual recipient controls destination, credentials and recovery material. TL-0710 carries the final security/privacy
     disposition.
@@ -7882,6 +7892,16 @@ tasks:
     environment: Active Windows 11 Pro 26H2 native x64 host, isolated WPF and protected output folders
     reference: artifacts/evidence/TL-0703/operator-configuration-export.md, f8c5c5a3e03393b2043aefe1fe3b891cc755a215
     limitation: The verified local archive does not adopt imported inputs. Exact release-package ownership and uninstall/data-preservation verification remain pending under the lifecycle work.
+  - summary: Integrated source data-map review and guarded persistence, report, guide, configuration, and support archive checks.
+    task: TL-0703
+    command: Selected dotnet test runs for guarded Persistence and Reports cases, plus bundle and repository validation
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 68 Persistence tests in 12 s and 26 Reports tests in 803 ms
+    environment: Active Windows 11 native x64 host, clean source build and isolated fixture stores
+    reference: artifacts/evidence/TL-0703/current-data-map.md, dd69090554665a87c7e145b81a3bcf5710e4382a
+    limitation: Current runtime paths and preservation contract reviewed. Exact installer inventory and application and job-data removal behavior still require lifecycle verification.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
