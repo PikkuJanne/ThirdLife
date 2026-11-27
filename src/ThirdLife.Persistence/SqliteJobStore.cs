@@ -39,6 +39,7 @@ public sealed partial class SqliteJobStore : IJobStore
     private readonly bool _supportsMaintenance;
     private readonly bool _supportsProfileVerification;
     private readonly bool _supportsColdBoot;
+    private readonly bool _supportsFinalization;
     private bool _disposed;
 
     private SqliteJobStore(
@@ -67,6 +68,7 @@ public sealed partial class SqliteJobStore : IJobStore
         _supportsMaintenance = schemaVersion >= 12;
         _supportsProfileVerification = schemaVersion >= 13;
         _supportsColdBoot = schemaVersion >= 14;
+        _supportsFinalization = schemaVersion >= 15;
         _jsonOptions = DomainJson.CreateStrictOptions();
     }
 

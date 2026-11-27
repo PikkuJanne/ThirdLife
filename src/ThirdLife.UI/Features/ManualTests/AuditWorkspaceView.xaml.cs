@@ -23,6 +23,7 @@ public partial class AuditWorkspaceView : UserControl
     private string? _lastOperationError;
     private string? _lastAssessmentStatus;
     private string? _lastReportStatus;
+    private string? _lastFinalizationStatus;
     private bool _sanitizationDateInvalid;
     private ManualTestProgressItem? _displayedManualItem;
     private readonly ManualCheckOption[] _manualOptions;
@@ -51,6 +52,7 @@ public partial class AuditWorkspaceView : UserControl
         _lastOperationError = workspace.OperationError;
         _lastAssessmentStatus = workspace.AssessmentStatus;
         _lastReportStatus = workspace.ReportStatus;
+        _lastFinalizationStatus = workspace.FinalizationStatus;
         FixtureNotice.Visibility = VisibleWhen(workspace.IsFixtureScenario);
         FixtureManualNotice.Visibility = FixtureNotice.Visibility;
         ManualPassOption.IsEnabled = !workspace.IsFixtureScenario;
@@ -81,6 +83,7 @@ public partial class AuditWorkspaceView : UserControl
 
     internal void ShowStage(ShellStage? stage)
     {
+        var enteringHandover = _shownStage != ShellStage.Handover && stage == ShellStage.Handover;
         _shownStage = stage;
         JobRegion.Visibility = VisibleWhen(stage is null);
         IntakeSurface.Visibility = VisibleWhen(stage == ShellStage.Intake);
@@ -89,6 +92,17 @@ public partial class AuditWorkspaceView : UserControl
         PrepareSurface.Visibility = VisibleWhen(stage == ShellStage.Prepare);
         VerifySurface.Visibility = VisibleWhen(stage == ShellStage.Verify);
         HandoverSurface.Visibility = VisibleWhen(stage == ShellStage.Handover);
+        _workspace?.ShowFinalization(stage == ShellStage.Handover);
+        if (enteringHandover)
+        {
+            _ = Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            {
+                if (_shownStage == ShellStage.Handover && _workspace is { } workspace)
+                {
+                    _ = workspace.RefreshFinalizationAsync();
+                }
+            }));
+        }
     }
 
     internal void FocusJobs() => FocusAndReveal(CreateJobButton.IsEnabled ? CreateJobButton : JobRegion);
@@ -447,14 +461,17 @@ public partial class AuditWorkspaceView : UserControl
         var statusChanged = _lastStatus != Workspace.JobEntryStatus;
         var errorChanged = _lastOperationError != Workspace.OperationError;
         var reportChanged = _lastReportStatus != Workspace.ReportStatus;
+        var finalizationChanged = _lastFinalizationStatus != Workspace.FinalizationStatus;
         _lastAssessmentStatus = Workspace.AssessmentStatus;
         _lastStatus = Workspace.JobEntryStatus;
         _lastOperationError = Workspace.OperationError;
         _lastReportStatus = Workspace.ReportStatus;
+        _lastFinalizationStatus = Workspace.FinalizationStatus;
         if (assessmentChanged) { Announce(AssessmentMessage); }
         if (statusChanged && Workspace.OperationError.Length == 0) { Announce(AuditStatus); }
         if (errorChanged) { Announce(OperationErrorMessage); }
         if (reportChanged) { Announce(ReportMessage); }
+        if (finalizationChanged) { Announce(FinalizationMessage); }
     }
 
     private void RefreshWorkspace()
@@ -462,6 +479,7 @@ public partial class AuditWorkspaceView : UserControl
         RefreshJob();
         RefreshActionAvailability();
         RefreshManualProgress();
+        RefreshFinalizationChecklist();
         JobHeader.Visibility = VisibleWhen(Workspace.Job is not null);
         OperationErrorRegion.Visibility = VisibleWhen(Workspace.OperationError.Length != 0);
         AuditStatus.Visibility = VisibleWhen(Workspace.OperationError.Length == 0);

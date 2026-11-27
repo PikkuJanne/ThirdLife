@@ -133,6 +133,24 @@ checks and finalization are still required for handover.
 
 [Windows shutdown command](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/shutdown)
 
+## Workshop finalization
+
+In **Handover**, choose a workshop check and follow its guidance. Save the
+result with your local workshop operator code. When a check permits **Not
+applicable**, choose the reason that fits what you confirmed. Use **Could not
+confirm** when the evidence is insufficient or when an earlier result no
+longer holds. Never enter account names, network names, passwords, recovery
+material or other secret values as an operator code.
+
+The checklist distinguishes saved operator confirmations from the independent
+pending-restart check. A missing or failed required result holds handover.
+Open **Saved confirmations for this check** to review earlier outcomes. A new
+boot or a relevant change to the durable job makes earlier confirmations
+historical and requires another check. Use **Refresh checklist** after
+reopening or reviewing a change. The checklist records outcomes and leaves
+workshop cleanup to the operator. Whole-device verification and the overall
+handover decision remain separate.
+
 ## Workshop report
 
 Open **Handover** for the current job, then choose **Generate workshop report**.

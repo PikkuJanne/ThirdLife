@@ -6926,7 +6926,7 @@ tasks:
   workstream: finalization
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: any
@@ -6953,9 +6953,32 @@ tasks:
   - Finalization history remains auditable and is not silently overwritten.
   verification:
   - Test passed, failed, unknown, human-confirmed, not-applicable, reopened-job, and changed-system-state cases.
-  evidence: []
+  evidence:
+  - summary: TRACE Handover saved an attributable confirmation, reopened it under the same job, and held the earlier result after a modeled boot change.
+    task: TL-0601
+    command: eng/verify.ps1 -Tier Targeted with Persistence and Verification projects, plus the focused Handover journey
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 310.976 s for Targeted, 1594 deterministic .NET tests and eight work-selection regressions
+    environment: Active Windows 11 Pro 26H2 native x64 host, build 26300.9974, .NET SDK 10.0.400 and Python 3.14.7
+    reference: artifacts/evidence/TL-0601/report.md, be6069969f66b0971fd30454cef74cc9199e912a
+    limitation: Isolated SQLite and WPF application controls with a modeled boot. Live cleanup and recipient handover remain separate.
+  - summary: The clean migration gate passed the complete governed validator suite and deterministic solution tests.
+    task: TL-0601
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 700.420 s, 310 governance regressions and 2558 deterministic .NET tests
+    environment: Clean detached worktree on the active Windows 11 Pro 26H2 native x64 host
+    reference: artifacts/evidence/TL-0601/report.md, be6069969f66b0971fd30454cef74cc9199e912a
+    limitation: The default Full filter excludes native and Extended cases. An added ActiveMachine Intake focus assertion reproduced on the unchanged baseline.
+  notes:
+  - Completion covers checklist rules, operator confirmation, history and recheck behavior. TL-0602 owns bounded artifact detection, TL-0604 owns the technical record and TL-0607 owns the handover gate.
   expected_test_tier: targeted
-  full_test_triggers: []
+  full_test_triggers:
+  - Run Full from a clean checkout for the finalization confirmation migration.
   extended_test_triggers: []
   release_prerequisites:
   - kind: task
