@@ -52,6 +52,8 @@ public sealed class InventoryReadOnlyBoundaryTests
             (typeof(WindowsSecurityBaselineSource), "netapi32.dll", "NetFreeAadJoinInformation"),
             (typeof(WindowsSecurityBaselineSource), "MDMRegistration.dll", "IsDeviceRegisteredWithManagement"),
             (typeof(WindowsSecurityBaselineSource), "advapi32.dll", "RegGetValueW"),
+            (typeof(WindowsWorkshopArtifactSource), "netapi32.dll", "NetUserGetInfo"),
+            (typeof(WindowsWorkshopArtifactSource), "netapi32.dll", "NetShareGetInfo"),
             (typeof(WindowsEventLogNative), "wevtapi.dll", "EvtQuery"),
             (typeof(WindowsEventLogNative), "wevtapi.dll", "EvtNext"),
             (typeof(WindowsEventLogNative), "wevtapi.dll", "EvtCreateRenderContext"),

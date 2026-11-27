@@ -1,0 +1,14 @@
+# TL-0602 workshop artifact detection
+
+## Detector checkpoint
+
+The Windows detector reads fixed metadata for temporary battery-report files, protected workshop report copies and ThirdLife installer staging directories. It checks only exact local account and SMB-share names supplied for one scan. A fixed set of Windows settings covers the local Remote Desktop setting and the two Remote Assistance policies. The result contains only an enumerated source and state. A scoped absence leaves the wider workshop check open. [Local account lookup](https://learn.microsoft.com/en-us/windows/win32/api/lmaccess/nf-lmaccess-netusergetinfo) [Local share lookup](https://learn.microsoft.com/en-us/windows/win32/api/lmshare/nf-lmshare-netsharegetinfo) [Remote Assistance policy](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-remoteassistance)
+
+Directory inspection stays on a fixed local volume, pins at most 32 path components, checks up to 512 direct entries per source, and uses a five-second scan budget. It verifies matched entry type and path without reading file contents. The named target limits are 16 distinct accounts and 16 distinct shares. An unconfigured scope, access denial, unsafe entry, timeout, or exhausted budget remains explicit. Tests preserve seeded decoys and application artifacts.
+
+| Check | Result |
+|---|---|
+| `dotnet test tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj --configuration Release --no-restore --filter '(FullyQualifiedName~WorkshopArtifactDetectorTests\|FullyQualifiedName~InventoryReadOnlyBoundaryTests\|FullyQualifiedName~BatteryReportWorkspaceTests\|FullyQualifiedName~SecurityBaselineProviderTests)&Category!=ActiveMachine'` | 88 passed in 0.703 s. Native file metadata ran against disposable local fixture directories. Account/share and unavailable source states were controlled. |
+| `eng/verify.ps1 -Tier Targeted -TestProject tests/ThirdLife.Inventory.Tests/ThirdLife.Inventory.Tests.csproj` with the same explicit filter | Passed in 198.966 s on 2026-11-27 using Windows 11 Pro x64 build 26300, .NET 10.0.400 and pinned Python. Quick ran 1,368 tests. The 88 selected Inventory tests passed again in 0.617 s. The WPF selection occupied 117 s within this run. |
+
+The detector verification used base `7615a339a873613e87827c0530d2448b039f4ce6` with source tree `9fea40cdabd65565d8043a496233b3ab4041c978`. The first governed run caught two new read-only native lookups and a duplicate buffer release missing from the exact import inventory. The second run passed after registering the lookups and reusing the existing buffer release. The isolated detector checkpoint covers fixture behavior and guarded Windows file metadata. Handover wiring, persistence, and native account/share observation require their own evidence.
