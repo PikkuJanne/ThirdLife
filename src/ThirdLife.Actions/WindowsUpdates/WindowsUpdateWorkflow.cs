@@ -12,6 +12,8 @@ public sealed class WindowsUpdateWorkflow
     private readonly IWindowsUpdateAgent _agent;
     private readonly TimeProvider _clock;
     private readonly Func<WindowsUpdateCandidate, CancellationToken, Task<bool>>? _recheckResources;
+    private readonly IWindowsUpdateDispatchBackend? _backend;
+    private static readonly TimeSpan DispatchWindow = TimeSpan.FromMinutes(2);
 
     public WindowsUpdateWorkflow(IWindowsUpdateJournal journal, IWindowsUpdateAgent agent, TimeProvider? clock = null)
     {
@@ -22,9 +24,12 @@ public sealed class WindowsUpdateWorkflow
 
     // Only the controlled fixture can supply this capability. Ordinary composition exposes scan and review.
     internal WindowsUpdateWorkflow(IWindowsUpdateJournal journal, IWindowsUpdateAgent agent,
-        Func<WindowsUpdateCandidate, CancellationToken, Task<bool>> recheckQualifiedResources, TimeProvider clock)
-        : this(journal, agent, clock) =>
+        IWindowsUpdateDispatchBackend backend, Func<WindowsUpdateCandidate, CancellationToken, Task<bool>> recheckQualifiedResources,
+        TimeProvider clock) : this(journal, agent, clock)
+    {
+        _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         _recheckResources = recheckQualifiedResources ?? throw new ArgumentNullException(nameof(recheckQualifiedResources));
+    }
 
     public async Task<WindowsUpdateEntry> ScanAsync(JobId jobId, SanitizationGateDecisionId gateId, CancellationToken token = default)
     {
@@ -74,8 +79,10 @@ public sealed class WindowsUpdateWorkflow
         WindowsUpdateCandidate exact, OperatorId operatorId, string policyDecisionId, CancellationToken token = default)
     {
         RequireQualifiedRoute();
-        var scope = new WindowsUpdateApproval(displayedScanId, exact, operatorId, policyDecisionId);
-        return await _journal.AppendWindowsUpdateAsync(new WindowsUpdateEntry(Guid.NewGuid(), displayedScanId, jobId, gateId,
+        var approvalId = Guid.NewGuid();
+        var actions = WindowsUpdatePolicy.IsSelectable(exact) ? WindowsUpdateApprovedActions.Create(approvalId, exact) : null;
+        var scope = new WindowsUpdateApproval(displayedScanId, exact, operatorId, policyDecisionId, actions);
+        return await _journal.AppendWindowsUpdateAsync(new WindowsUpdateEntry(approvalId, displayedScanId, jobId, gateId,
             _clock.GetUtcNow(), WindowsUpdateStage.Approved, null, scope, null), token).ConfigureAwait(false);
     }
 
@@ -84,7 +91,8 @@ public sealed class WindowsUpdateWorkflow
         RequireQualifiedRoute();
         var history = await _journal.LoadWindowsUpdatesAsync(jobId, token).ConfigureAwait(false);
         if (history.LastOrDefault() is not { Stage: WindowsUpdateStage.Approved, Approval: not null } approval ||
-            approval.Id != approvalId)
+            approval.Id != approvalId || approval.Approval.Actions is not { } actions ||
+            actions.ApprovalId != approvalId || !actions.MatchesCurrentActions(approval.Approval.Exact))
         {
             throw new InvalidOperationException("A fresh, exact Windows Update approval is required.");
         }
@@ -124,25 +132,54 @@ public sealed class WindowsUpdateWorkflow
             return await AppendAsync(check, WindowsUpdateStage.ResourcesDeferred, token: CancellationToken.None).ConfigureAwait(false);
         }
 
-        var request = download ? ActionRegistry.CreateDownloadWindowsUpdate(Guid.NewGuid(), exact)
-            : ActionRegistry.CreateInstallWindowsUpdate(Guid.NewGuid(), exact);
+        var actions = prior.Approval.Actions!;
+        var phase = download ? actions.Download : actions.Install;
         var intent = await AppendAsync(check, download ? WindowsUpdateStage.DownloadStarted : WindowsUpdateStage.InstallStarted,
-            id: request.ActionId, token: token).ConfigureAwait(false);
-        WindowsUpdateOperation outcome;
+            id: phase.ActionId, token: token).ConfigureAwait(false);
+        var dispatch = new WindowsUpdateDispatch(intent.JobId, intent.GateId, prior.Approval.ScanId, prior.Approval.PolicyDecisionId,
+            actions.ApprovalId, exact, phase, intent.OccurredAtUtc + DispatchWindow);
+        var outcome = await DispatchAsync(intent, dispatch, token).ConfigureAwait(false);
+        return await AppendAsync(intent, download ? WindowsUpdateStage.DownloadCompleted : WindowsUpdateStage.InstallCompleted,
+            operation: outcome, token: CancellationToken.None).ConfigureAwait(false);
+    }
+
+    private async Task<WindowsUpdateOperation> DispatchAsync(WindowsUpdateEntry intent, WindowsUpdateDispatch dispatch, CancellationToken token)
+    {
+        // The store already granted the sole start for this phase. No API resumes a started intent or sends a prepared
+        // channel twice. Check the durable scope again at the handoff after any channel setup or consent wait.
+        using var deadline = new CancellationTokenSource(DispatchWindow, _clock);
+        using var waiting = CancellationTokenSource.CreateLinkedTokenSource(token, deadline.Token);
+        var sent = false;
         try
         {
-            token.ThrowIfCancellationRequested();
-            outcome = download
-                ? await _agent.DownloadAsync(exact, token).ConfigureAwait(false)
-                : await _agent.InstallAsync(exact, token).ConfigureAwait(false);
+            waiting.Token.ThrowIfCancellationRequested();
+            await using var channel = await _backend!.PrepareAsync(dispatch, waiting.Token).ConfigureAwait(false);
+            waiting.Token.ThrowIfCancellationRequested();
+            if (channel is null) { return new(WindowsUpdateStatus.Unavailable, null); }
+            if (channel.Dispatch != dispatch) { return new(WindowsUpdateStatus.ApprovalChanged, null); }
+
+            var offered = await ObserveAsync(waiting.Token).ConfigureAwait(false);
+            if (offered.Status != WindowsUpdateStatus.Succeeded) { return new(offered.Status, offered.RebootRequired); }
+            if (!WindowsUpdatePolicy.Matches(dispatch.Exact, offered)) { return new(WindowsUpdateStatus.ApprovalChanged, offered.RebootRequired); }
+            if (!await _recheckResources!(dispatch.Exact, waiting.Token).ConfigureAwait(false)) { return new(WindowsUpdateStatus.Unavailable, null); }
+            if (!await _journal.IsWindowsUpdateDispatchCurrentAsync(intent, waiting.Token).ConfigureAwait(false))
+            {
+                return new(WindowsUpdateStatus.ApprovalChanged, null);
+            }
+
+            waiting.Token.ThrowIfCancellationRequested();
+            var now = _clock.GetUtcNow();
+            if (now < intent.OccurredAtUtc || now >= dispatch.ExpiresAtUtc) { return new(WindowsUpdateStatus.TimedOut, null); }
+            sent = true;
+            var receipt = await channel.SendAsync(token).ConfigureAwait(false);
+            return receipt?.Dispatch == dispatch && receipt.Outcome is not null ? receipt.Outcome : new(WindowsUpdateStatus.Partial, null);
         }
         catch (OperationCanceledException)
         {
-            outcome = new WindowsUpdateOperation(WindowsUpdateStatus.Cancelled, null);
+            // Losing a call after handoff cannot establish that Windows cancelled the action.
+            return new(sent ? WindowsUpdateStatus.Partial : token.IsCancellationRequested
+                ? WindowsUpdateStatus.Cancelled : WindowsUpdateStatus.TimedOut, null);
         }
-
-        return await AppendAsync(intent, download ? WindowsUpdateStage.DownloadCompleted : WindowsUpdateStage.InstallCompleted,
-            operation: outcome, token: CancellationToken.None).ConfigureAwait(false);
     }
 
     private async Task<WindowsUpdateScan> ObserveAsync(CancellationToken token)

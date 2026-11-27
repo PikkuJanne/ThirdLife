@@ -449,7 +449,7 @@ internal static class SqliteTestControl
         Assert.Equal(0, process.ExitCode);
     }
 
-    private static async Task<SqliteConnection> OpenAsync(string databasePath)
+    internal static async Task<SqliteConnection> OpenAsync(string databasePath)
     {
         var connection = new SqliteConnection(new SqliteConnectionStringBuilder
         {

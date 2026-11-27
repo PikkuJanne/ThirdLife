@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Sanitization;
@@ -20,7 +21,8 @@ public enum WindowsUpdateStage
     ResourcesDeferred,
 }
 
-public sealed record WindowsUpdateApproval(Guid ScanId, WindowsUpdateCandidate Exact, OperatorId OperatorId, string PolicyDecisionId);
+public sealed record WindowsUpdateApproval(Guid ScanId, WindowsUpdateCandidate Exact, OperatorId OperatorId, string PolicyDecisionId,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] WindowsUpdateApprovedActions? Actions = null);
 
 public sealed record WindowsUpdateVerification(Guid InstallReceiptId, WindowsUpdateInstalledObservation Observation);
 
@@ -35,6 +37,10 @@ public interface IWindowsUpdateJournal
     // The store checks the predecessor, state transition, current job gate and any required
     // policy in one transaction. It stamps its own boot observation on scans and restart results.
     Task<WindowsUpdateEntry> AppendWindowsUpdateAsync(WindowsUpdateEntry entry, CancellationToken token = default);
+
+    // Reopen the saved phase, original approval and current policy/intake in one local read transaction.
+    Task<bool> IsWindowsUpdateDispatchCurrentAsync(WindowsUpdateEntry intent, CancellationToken token = default) =>
+        Task.FromResult(false);
 }
 
 public static class WindowsUpdateHistory
@@ -186,7 +192,8 @@ public static class WindowsUpdateHistory
         if (entry.Stage == WindowsUpdateStage.Approved)
         {
             // Reserve enough room for both mutation phases and the independent final scan.
-            return history.Length <= MaximumEntries - 10 && prior?.Id == scope.ScanId &&
+            return (scope.Actions is null || (scope.Actions.HasDistinctIds() && scope.Actions.ApprovalId == entry.Id)) &&
+                history.Length <= MaximumEntries - 10 && prior?.Id == scope.ScanId &&
                 prior is { Stage: WindowsUpdateStage.ScanCompleted, Scan: { } scanned } &&
                 Disposition(history) == WindowsUpdateDisposition.ApprovalRequired &&
                 WindowsUpdatePolicy.Matches(scope.Exact, scanned) && entry.Scan is null && entry.Operation is null;
@@ -223,5 +230,7 @@ public static class WindowsUpdateHistory
 
     private static bool CanStart(WindowsUpdateEntry previous, WindowsUpdateStage requiredStage, WindowsUpdateEntry entry) =>
         previous.Stage == requiredStage && previous.Scan is { } scan && WindowsUpdatePolicy.Matches(entry.Approval!.Exact, scan) &&
+        (entry.Approval.Actions is not { } actions ||
+            entry.Id == (requiredStage == WindowsUpdateStage.DownloadChecked ? actions.Download.ActionId : actions.Install.ActionId)) &&
         entry.Operation is null && entry.Scan is null;
 }
