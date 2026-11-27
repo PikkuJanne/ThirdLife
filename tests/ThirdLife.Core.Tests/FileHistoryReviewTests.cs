@@ -50,21 +50,23 @@ public sealed class FileHistoryReviewTests
     [Fact]
     public void AVerifiedHarmlessRestoreRequiresTheExactSampleScopeAndBytes()
     {
-        var review = Assert.IsType<FileHistoryReview>(FileHistoryReview.Inspect(Handover(HandoverMode.Assisted), true,
-            Destination, 1_000, true).Review);
+        var handover = Handover(HandoverMode.Assisted);
+        var review = Assert.IsType<FileHistoryReview>(FileHistoryReview.Inspect(handover, true, Destination, 1_000, true).Review);
         var approval = review.Approve(review.ReviewId, true);
-        var id = Guid.NewGuid();
-        var digest = new string('a', 64);
-        var sample = new FileHistoryRestoredSample(review.ReviewId, id, Destination.VolumeBinding, true, 22, digest);
-        Assert.Equal(FileHistoryRestoreOutcome.Pending, approval.EvaluateRestore(Handover(HandoverMode.Assisted), true, Destination, id, digest, 22, null));
-        Assert.Equal(FileHistoryRestoreOutcome.UnboundObservation, approval.EvaluateRestore(Handover(HandoverMode.Assisted), true, Destination, id, digest, 22, sample with
-        {
-            ObservedFromSeparateRestore = false,
-        }));
-        Assert.Equal(FileHistoryRestoreOutcome.Mismatch, approval.EvaluateRestore(Handover(HandoverMode.Assisted), true, Destination, id, digest, 22, sample with { ByteLength = 21 }));
+        Assert.Throws<InvalidOperationException>(() => approval.CreateRestoreSample(Handover(HandoverMode.Sealed), true, Destination));
+        var sample = approval.CreateRestoreSample(handover, true, Destination);
+        var digest = new FileHistorySampleDigest(sample.ByteLength, sample.Sha256);
+        var observed = new FileHistorySampleObservation(sample.SampleId, digest, digest);
+
+        Assert.Equal(FileHistoryRestoreOutcome.Pending, approval.EvaluateRestore(handover, true, Destination, sample, null, true));
+        Assert.Equal(FileHistoryRestoreOutcome.Pending, approval.EvaluateRestore(handover, true, Destination, sample, observed, false));
         Assert.Equal(FileHistoryRestoreOutcome.UnboundObservation,
-            approval.EvaluateRestore(Handover(HandoverMode.Sealed), true, Destination, id, digest, 22, sample));
-        Assert.Equal(FileHistoryRestoreOutcome.Verified, approval.EvaluateRestore(Handover(HandoverMode.Assisted), true, Destination, id, digest, 22, sample));
+            approval.EvaluateRestore(handover, true, Destination, sample, observed with { SampleId = Guid.NewGuid() }, true));
+        Assert.Equal(FileHistoryRestoreOutcome.Mismatch,
+            approval.EvaluateRestore(handover, true, Destination, sample, observed with { Recovered = digest with { ByteLength = 1 } }, true));
+        Assert.Equal(FileHistoryRestoreOutcome.UnboundObservation,
+            approval.EvaluateRestore(Handover(HandoverMode.Sealed), true, Destination, sample, observed, true));
+        Assert.Equal(FileHistoryRestoreOutcome.Verified, approval.EvaluateRestore(handover, true, Destination, sample, observed, true));
     }
 
     private static SavedRecipientHandover Handover(HandoverMode mode) => SavedRecipientHandover.Evaluate(new JobId("job-file-history"),

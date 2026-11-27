@@ -159,7 +159,14 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
         }
     }
 
-    public FileStream OpenValidatedRecord(string path, FileShare share, bool createRootIfMissing = true)
+    public FileStream OpenValidatedRecord(string path, FileShare share, bool createRootIfMissing = true) =>
+        OpenValidatedRecord(path, share, createRootIfMissing, allowInheritedFileRules: false);
+
+    // Windows may restore a file with the already protected destination's inherited rules.
+    public FileStream OpenValidatedRestoredSample(string path) =>
+        OpenValidatedRecord(path, FileShare.Read, createRootIfMissing: false, allowInheritedFileRules: true);
+
+    private FileStream OpenValidatedRecord(string path, FileShare share, bool createRootIfMissing, bool allowInheritedFileRules)
     {
         EnsureSafeRoot(createRootIfMissing);
         EnsureContained(path);
@@ -174,7 +181,7 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
         {
             if (OperatingSystem.IsWindows())
             {
-                ValidateWindowsFile(path, stream);
+                ValidateWindowsFile(path, stream, allowInheritedFileRules);
             }
             else
             {
@@ -370,7 +377,7 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
     }
 
     [SupportedOSPlatform("windows")]
-    private void ValidateWindowsFile(string expectedPath, FileStream stream)
+    private void ValidateWindowsFile(string expectedPath, FileStream stream, bool allowInheritedFileRules = false)
     {
         var canonical = Path.TrimEndingDirectorySeparator(Path.GetFullPath(expectedPath));
         var attributes = WindowsDiagnosticFileIdentity.GetAttributes(stream.SafeFileHandle);
@@ -384,7 +391,7 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
             throw UnsafeStore();
         }
 
-        ValidateSecurityDescriptor(stream.GetAccessControl());
+        ValidateSecurityDescriptor(stream.GetAccessControl(), allowInheritedFileRules);
     }
 
     [UnsupportedOSPlatform("windows")]
@@ -402,9 +409,9 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
     }
 
     [SupportedOSPlatform("windows")]
-    private void ValidateSecurityDescriptor(FileSystemSecurity security)
+    private void ValidateSecurityDescriptor(FileSystemSecurity security, bool allowInheritedFileRules = false)
     {
-        if (!security.AreAccessRulesProtected ||
+        if ((!allowInheritedFileRules && !security.AreAccessRulesProtected) ||
             security.GetOwner(typeof(SecurityIdentifier)) is not SecurityIdentifier owner ||
             !_allowedIdentities.Contains(owner))
         {
@@ -418,7 +425,7 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
                      typeof(SecurityIdentifier)))
         {
             if (rule.IdentityReference is not SecurityIdentifier identity ||
-                rule.IsInherited ||
+                (!allowInheritedFileRules && rule.IsInherited) ||
                 rule.AccessControlType != AccessControlType.Allow ||
                 !_allowedIdentities.Contains(identity))
             {
