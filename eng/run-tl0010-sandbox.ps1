@@ -11,6 +11,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# Retain validation of the historical M0 evidence under D-076.
+if ($PSCmdlet.ParameterSetName -eq "Run" -and -not $PreflightOnly) {
+    throw "Windows Sandbox execution is retired. Use the existing ThirdLife-W11 guest for guest scenarios."
+}
+
 $TaskId = "TL-0010"
 $CandidateCommit = "17975419badd4154b82895d9d92a4a904790c7c0"
 $GateRecordSha256 = "b4dfbc2fd66bd869ee10a4332ab8089c9f5c3586b378d3a99a095763e18df153"

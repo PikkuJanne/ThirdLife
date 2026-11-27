@@ -39,7 +39,8 @@ The project follows the portfolio v2.1 universal operating rule:
 
 - GitHub is the canonical continuity record. Integrate verified checkpoints under the current development workflow and record the continuation in STATUS.md. Gate evidence uses a clean clone or worktree on the active Codex machine as applicable.
 - The active Codex machine is the only physical machine used for implementation, tests, benchmarks, clean environments, manual walkthroughs, cold-boot evidence, and release evidence.
-- VMs, Windows Sandbox, containers, virtual disks, separate worktrees, process constraints, and deterministic fixtures are allowed only when hosted on that same physical machine.
+- The sole Windows guest is the existing `ThirdLife-W11` VM on that machine. This is a permanent constraint through M0–M7, release, maintenance and future tasks. Do not create or request another VM, guest clone, Windows Sandbox instance or associated licence. Do not reinstall Windows or invent another baseline merely to manufacture a test target. Ordinary servicing, repair and authorized checkpoint refresh within this guest remain engineering work. Existing historical environment evidence keeps its original provenance.
+- Run clean-install, upgrade, restart, recovery and resource scenarios sequentially in that guest using retained authorized states. Separate source worktrees, safe process constraints, deterministic fixtures and test data remain available without creating another Windows instance.
 - No lab, second PC, lower-performance test device, volunteer hardware pool, cloud runner matrix, or missing equipment class is a project dependency or blocker.
 - Modest-hardware readiness is engineered through streaming/chunking, conservative configurable concurrency, CPU fallback, bounded cache/temp/database growth, preflighted disk space, cancellation/checkpointing, and measured same-machine constraints.
 - Quick and targeted checks drive iteration. Full and extended runs occur only at named gates or when a task’s risk trigger requires them.
@@ -207,6 +208,21 @@ execution unavailable. Codex owns engineering verification and prepares
 candidates for genuine decisions. Technical completion creates zero routine
 owner QA or sign-off.
 
+A missing test condition, including an eligible Windows Update offer, is a scoped
+evidence limitation. Codex completes available code, deterministic cases and native
+observations, records the exact reopening condition, and continues other engineering.
+An unsupported offered update is not evidence of no available updates or a fully
+patched system. Never turn a fixture pass into a native servicing claim.
+
+The M5 graph uses already integrated update contracts for `TL-0505` maintenance
+coordination and lets `TL-0506` security providers proceed independently.
+`TL-0510` matrix and `TL-0605` guide engineering may use identifiable candidate
+inputs; `TL-0508` adoption remains a prerequisite for the affected exposure.
+`TL-0504` has an integrated protected servicing path. Native transaction qualification
+requires an eligible offer in `ThirdLife-W11`, actual phase authorization and a verified postcondition.
+`TL-0511`, `TL-0611` and `TL-0710` retain their actual capability and exposure
+requirements without becoming barriers to unrelated candidate work.
+
 ## 10. Delivery milestones
 
 ### M0 — Foundation and product contract
@@ -287,14 +303,14 @@ TL-0401 records the backend route and its evidence in ADR 0009. The installer, s
 
 **Exit criteria:**
 
-- The job-seeker machine profile converges on supported clean Windows 11 client/native-x64 environments hosted on the active Codex machine.
+- The job-seeker machine profile converges in the verified Windows 11 client/native-x64 state of the existing `ThirdLife-W11` guest. Clean and upgraded application states are exercised sequentially in that guest.
 - Essential failures and resource or ownership blockers prevent ready status.
 - Same-machine offline, low-space, no-GPU, reduced-concurrency, interruption, and failure scenarios preserve state and recovery.
 - Checkpoint and approved VM cold-start verification record exact versions and environment. State any unverified physical power cycle explicitly and retain genuinely required physical product/release conditions.
 - New or materially changed catalogue content retains applicable policy, application-selection, licensing and privacy decisions. Security baseline and pilot-scope dispositions belong to TL-0611.
 - Evidence describes the reference machine and constraints and does not imply cross-hardware certification.
 
-**Gate:** `TL-0511` — Validate the M5 full-machine-profile gate. Codex owns integration, fault and resource evidence and records blockers and coverage limits.
+**Gate:** `TL-0511` — Validate the M5 full-machine-profile gate. Codex owns integration, fault and resource evidence and records blockers and coverage limits. A missing eligible update defers only the corresponding native servicing observation and claim; prepare this gate and continue M6/M7 engineering. Do not mark unfinished servicing implementation or unobserved installation complete.
 
 ### M6 — Handover and controlled pilot
 
@@ -304,7 +320,7 @@ TL-0401 records the backend route and its evidence in ADR 0009. The installer, s
 
 - Workshop, recipient, and diagnostic outputs respect their distinct data boundaries.
 - Finalization and sign-off cannot be bypassed while blockers remain.
-- Codex completes recipient-guide checks, technical audits and the exact Windows 11 client/native-x64 pilot package lifecycle, rollback and runbook before seeking consent for exposure.
+- Codex completes recipient-guide checks, technical audits and the exact Windows 11 client/native-x64 pilot package lifecycle, rollback and runbook in sequential states of the sole existing guest before seeking consent for exposure.
 - The prepared evidence and required pilot records support one coordinated go/no-go packet at TL-0611, with actual security, privacy, accessibility, licensing, release and partner decisions attributed by scope.
 - The gate record states that Core 1.0 completion and portfolio handoff remain in M7.
 
@@ -318,7 +334,7 @@ TL-0401 records the backend route and its evidence in ADR 0009. The installer, s
 
 - ThirdLife Setup Core is useful, installable, updateable, repairable, removable, and recoverable without sibling applications, a ThirdLife account, or a permanent privileged service.
 - Recipient accessibility and basic operating-system backup choices remain recipient-controlled, reversible where applicable, and do not leak recovery material.
-- Offline core behavior, same-machine modest-hardware evidence, security/privacy, accessibility, update, repair, uninstall, migration, and data-preservation evidence pass the Windows 11 client/native-x64 stable-release matrix.
+- Offline core behavior, same-machine modest-hardware evidence, security/privacy, accessibility, update, repair, uninstall, migration, and data-preservation evidence pass the Windows 11 client/native-x64 stable-release matrix. Clean-install and upgraded application states run sequentially in `ThirdLife-W11`; the matrix cannot introduce a second guest or another Windows baseline.
 - Exact artifacts, hashes, source revision, SBOM, licence evidence, known limitations, sanitized samples, and RELEASE_INTERFACE.md are frozen.
 - Codex verifies the frozen standalone candidate before exposure. TL-0710 records actual stable-release and security/privacy/accessibility/licensing/support/portfolio decisions on the candidate and required pilot evidence.
 - Team B/B1 is complete and the next project is Scam Explainer; no B4 sibling adapter work is authorized by this gate.

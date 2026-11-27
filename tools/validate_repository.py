@@ -103,7 +103,7 @@ EXPECTED_TEST_MANIFEST = {
         },
         "full": {
             "filter": DETERMINISTIC_TEST_FILTER,
-            "separate_checks": "Active-machine observation and named Extended/SandboxOnly scenarios require explicit project/filter selection in their approved environment.",
+            "separate_checks": "Run active-machine observations and named Extended scenarios explicitly. Use ThirdLife-W11 for guest work. SandboxOnly profiles retain historical selections and require porting before new guest runs.",
             "trigger": [
                 "milestone, preview, pilot, or stable gate",
                 "protected or cumulative default-branch integration",

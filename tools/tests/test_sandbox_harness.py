@@ -16,6 +16,7 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 HOST_HARNESS = REPOSITORY_ROOT / "eng" / "run-tl0102-sandbox.ps1"
 GUEST_HARNESS = REPOSITORY_ROOT / "eng" / "run-tl0102-sandbox-guest.ps1"
+HYPERV_HARNESS = REPOSITORY_ROOT / "eng" / "run-thirdlife-hyperv.ps1"
 POWERSHELL = shutil.which("pwsh") or shutil.which("powershell.exe")
 STABILIZATION_OWNER = "AMD-2026-09-12-REPOSITORY-STABILIZATION"
 TL0109_NATIVE_METHODS = (
@@ -34,11 +35,93 @@ TL0109_NATIVE_STEP = {
 }
 
 
+class HyperVCheckpointSelectionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.host = HYPERV_HARNESS.read_text(encoding="utf-8")
+        guard = re.search(r"(?ms)^if \(\$Scenario -notin .*?^\}", cls.host)
+        if guard is None:
+            raise AssertionError("Scenario-scoped checkpoint guard is missing")
+        cls.guard = guard.group(0)
+
+    def test_only_inspection_and_read_only_assessment_bypass_the_checkpoint_lookup(self):
+        excluded = re.search(r"\$Scenario -notin @\((.*?)\) -and", self.guard)
+        self.assertIsNotNone(excluded)
+        self.assertEqual(re.findall(r"'([^']+)'", excluded.group(1)),
+                         ["Inspect", "WindowsUpdateAssessment"])
+        self.assertEqual(self.host.count("Get-VMSnapshot"), 1)
+        self.assertIn("@(Get-VMSnapshot -VM $vm -Name $profile.baseline).Count -ne 1", self.guard)
+        self.assertIn("throw 'The configured clean Hyper-V checkpoint could not be verified.'", self.guard)
+        self.assertLess(self.host.index("$vm.Id -ne $ExpectedVMId"), self.host.index(self.guard))
+        self.assertLess(self.host.index(self.guard), self.host.index("$session = Connect-Guest"))
+        self.assertIn("if (-not $ownsLease) { throw", self.host)
+        self.assertIn("Invoke-Guest Cleanup 45", self.host)
+
+    @unittest.skipUnless(POWERSHELL, "PowerShell is required for mocked guard execution")
+    def test_checkpoint_absence_ambiguity_and_lookup_failure_affect_only_dependent_scenarios(self):
+        # Execute only the production guard with a mocked lookup: no Hyper-V or guest activity.
+        profile = json.loads((REPOSITORY_ROOT / "eng/thirdlife-hyperv-profile.json").read_text(encoding="utf-8"))
+        scenarios = ["Inspect", *profile["scenarios"], "inspect", "windowsupdateassessment", "FutureMutation"]
+        scenarios_literal = ", ".join("'" + value.replace("'", "''") + "'" for value in scenarios)
+        script = (
+            "Set-StrictMode -Version Latest\n$ErrorActionPreference = 'Stop'\n"
+            "$vm = [pscustomobject]@{ Id = 'existing-guest' }\n"
+            "$profile = [pscustomobject]@{ baseline = 'existing-baseline' }\n"
+            "$guard = [scriptblock]::Create(@'\n" + self.guard + "\n'@)\n"
+            "function Get-VMSnapshot { param($VM, $Name)\n"
+            " $script:queries++\n"
+            " if ($VM.Id -cne 'existing-guest' -or $Name -cne 'existing-baseline') { throw 'Wrong lookup target' }\n"
+            " if ($script:lookup -eq 'failure') { throw 'Snapshot lookup failed' }\n"
+            " $count = switch ($script:lookup) { absent { 0 }; one { 1 }; ambiguous { 2 } }\n"
+            " for ($i = 0; $i -lt $count; $i++) { [pscustomobject]@{ Id = $i } }\n}\n"
+            f"$results = @(foreach ($Scenario in @({scenarios_literal})) {{\n"
+            " foreach ($script:lookup in @('absent', 'one', 'ambiguous', 'failure')) {\n"
+            "  $script:queries = 0; $failure = $null\n"
+            "  try { & $guard } catch { $failure = $_.Exception.Message }\n"
+            "  [pscustomobject]@{ scenario = $Scenario; lookup = $script:lookup; queries = $script:queries; failure = $failure }\n"
+            " }\n})\nConvertTo-Json -InputObject $results -Compress\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "checkpoint-guard.ps1"
+            path.write_text(script, encoding="utf-8")
+            result = subprocess.run(
+                [POWERSHELL, "-NoProfile", "-NonInteractive", "-File", str(path)],
+                capture_output=True, text=True, timeout=30, check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        results = json.loads(result.stdout)
+        self.assertEqual(len(results), len(scenarios) * 4)
+        for outcome in results:
+            with self.subTest(scenario=outcome["scenario"], lookup=outcome["lookup"]):
+                independent = outcome["scenario"].lower() in {"inspect", "windowsupdateassessment"}
+                self.assertEqual(outcome["queries"], 0 if independent else 1)
+                expected_failure = None
+                if not independent and outcome["lookup"] != "one":
+                    expected_failure = ("Snapshot lookup failed" if outcome["lookup"] == "failure" else
+                                        "The configured clean Hyper-V checkpoint could not be verified.")
+                self.assertEqual(outcome["failure"], expected_failure)
+
+
 class SandboxHarnessContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.host = HOST_HARNESS.read_text(encoding="utf-8")
         cls.guest = GUEST_HARNESS.read_text(encoding="utf-8")
+
+
+    def test_retired_sandbox_launchers_stop_before_staging(self):
+        guards = {
+            "run-tl0010-sandbox.ps1": '$PSCmdlet.ParameterSetName -eq "Run" -and -not $PreflightOnly',
+            "run-tl0102-sandbox.ps1": "-not $PreflightOnly",
+        }
+        for name, condition in guards.items():
+            with self.subTest(name=name):
+                source = (REPOSITORY_ROOT / "eng" / name).read_text(encoding="utf-8")
+                guard = f'if ({condition}) {{\n    throw "Windows Sandbox execution is retired.'
+                self.assertLess(source.index(guard), source.index("$TaskId ="))
+                preflight = source.index("if ($PreflightOnly)")
+                launch = source.index("Start-Process -FilePath $sandboxExecutable", preflight)
+                self.assertIn("return", source[preflight:launch])
 
     def test_tl0104_stages_only_its_diagnostics_working_inputs(self):
         self.assertIn(

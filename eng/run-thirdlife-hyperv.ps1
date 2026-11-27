@@ -158,7 +158,10 @@ if ($vm.State -ne 'Running' -or $vm.Generation -ne 2 -or $vm.Id -eq [guid]::Empt
     ($ExpectedVMId -ne [guid]::Empty -and $vm.Id -ne $ExpectedVMId)) {
     throw 'The configured running Generation 2 VM could not be bound to its expected identity.'
 }
-if (@(Get-VMSnapshot -VM $vm -Name $profile.baseline).Count -ne 1) {
+# Admission and read-only offer assessment do not require a rollback baseline.
+# Keep the existing recovery prerequisite for every other qualification scenario.
+if ($Scenario -notin @('Inspect', 'WindowsUpdateAssessment') -and
+    @(Get-VMSnapshot -VM $vm -Name $profile.baseline).Count -ne 1) {
     throw 'The configured clean Hyper-V checkpoint could not be verified.'
 }
 if ($Credential -and $PromptForCredential) { throw 'Choose the supplied credential or one attended local prompt.' }

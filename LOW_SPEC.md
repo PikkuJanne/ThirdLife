@@ -41,7 +41,7 @@ Record only:
 - storage technology/class, free-space class, and volume used for tests;
 - GPU presence and whether tests used acceleration or the CPU path;
 - .NET SDK/runtime, PowerShell, package tooling, database tooling, and relevant test-tool versions;
-- whether clean environments use a VM, Windows Sandbox, container, separate worktree, or clean clone on the same machine; and
+- whether checks use the existing `ThirdLife-W11` guest, an isolated workspace, a separate worktree, or a clean source clone on the same machine; and
 - known machine limitations that affect evidence interpretation.
 
 Do not record serial numbers, donor or corporate asset tags, usernames, email addresses, device names, SSIDs, IP addresses, credentials, recovery keys, personal paths, screenshots, photos, audio, video, or raw logs.
@@ -51,6 +51,8 @@ The canonical repository record belongs at `docs/testing/reference-machine-profi
 ## 4. Same-machine constraint profiles
 
 Constraints are selected only to answer a concrete risk. Each scenario must be safe, reversible, independently invokable, and clearly labelled as simulation or constrained execution.
+
+Use only the one existing Windows guest throughout development, release and maintenance. Apply constrained settings sequentially and preserve the required evidence before authorized restoration. Missing hardware or a live test condition cannot require another guest, a new Windows Sandbox instance or an alternate Windows baseline; continue deterministic and independent engineering with the exact evidence limit recorded.
 
 | Constraint profile | Risk answered | Acceptable methods on the active machine | Required evidence |
 |---|---|---|---|

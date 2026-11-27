@@ -18,6 +18,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# D-076 retains this launcher and its profiles for historical evidence.
+if (-not $PreflightOnly) {
+    throw "Windows Sandbox execution is retired. Use the existing ThirdLife-W11 guest for guest scenarios."
+}
+
 $TaskId = $EvidenceTaskId
 $RepositoryStabilizationTaskId = "AMD-2026-09-12-REPOSITORY-STABILIZATION"
 $ResultSchemaVersion = 2

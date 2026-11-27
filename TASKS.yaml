@@ -1,6 +1,6 @@
 schema_version: 2
 bundle_version: 0.8.0
-generated_on: '2026-11-25'
+generated_on: '2026-11-27'
 project:
   name: ThirdLife
   component: ThirdLife Setup Core
@@ -52,11 +52,14 @@ workflow:
   selection_rule: Select implementation-ready work within the assigned outcome. Prefer ready work and use priority and ID
     as tie-breakers.
   prerequisite_rule: Check capability evidence and action authorization before the scoped execution or release. Candidate
-    engineering may proceed independently.
+    engineering may proceed independently. Across M0-M7, release maintenance and future tasks, use only the active Codex
+    machine and its one existing ThirdLife-W11 Windows 11 guest. An unavailable test condition affects only its scenario
+    and associated claim; it cannot create a second-guest, alternative-baseline or licensing prerequisite for development.
 definition_of_ready:
 - Every actual implementation dependency is done.
 - The next engineering step is verifiable on the active machine or with appropriate deterministic fixtures.
-- The task records what requires execution qualification or exposure authorization.
+- The task records what requires execution qualification or exposure authorization. An unavailable external condition
+  is not an implementation dependency; finish the available engineering and continue other implementation-ready work.
 definition_of_done:
 - Evidence meets the task's defined outcome, verification tier, criteria and scoped prerequisites.
 - Record blocked or unavailable capability without claiming unobserved success.
@@ -128,7 +131,8 @@ milestones:
     and constrained scenarios hosted on the active Codex machine.
   gate_task: TL-0511
   exit_criteria:
-  - The job-seeker machine profile converges on supported clean Windows 11 client/native-x64 environments hosted on the active Codex machine.
+  - The job-seeker machine profile converges in the verified Windows 11 client/native-x64 state of the one existing
+    ThirdLife-W11 guest. Clean and upgraded test states run sequentially in that guest; no extra Windows instance is required.
   - Essential failures and resource or ownership blockers prevent ready status.
   - Same-machine offline, low-space, no-GPU, reduced-concurrency, interruption, and failure scenarios preserve state and
     recovery.
@@ -1485,7 +1489,6 @@ tasks:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
-  blocked_reason: null
 - id: TL-0101
   title: Implement core job and evidence domain models
   milestone: M1
@@ -6108,7 +6111,7 @@ tasks:
   workstream: windows-update
   kind: code
   priority: P0
-  status: blocked
+  status: in_progress
   size: XL
   executor: codex
   environment: windows
@@ -6120,8 +6123,9 @@ tasks:
   - D-032
   - D-034
   - D-074
-  objective: Implement and verify structured Windows Update scan, download, install, journal, and rescan behavior in supported
-    same-machine Windows environments.
+  objective: Implement and verify structured Windows Update scan, download, install, journal, and rescan behavior
+    using deterministic contracts, the active Windows host for appropriate read-only observations, and the one existing
+    ThirdLife-W11 guest. Keep native servicing qualification distinct from implementation completion.
   deliverables:
   - Windows Update adapter
   - update scan/download/install compiled actions
@@ -6138,9 +6142,12 @@ tasks:
   - Update identifiers and diagnostics are bounded and meet privacy rules. Integration records identify tested Windows/API
     versions and coverage gaps.
   verification:
-  - Exercise no-updates, updates-available, download/install failure, service unavailable, reboot-required, and multi-pass
-    cases in approved supported Windows environments hosted on the active machine. Distinguish provider behavior from
-    fixtures and record exact versions.
+  - Exercise empty scan, offered-but-ineligible, eligible offer, download/install failure, service unavailable, reboot-required,
+    and multi-pass cases through deterministic adapters and the actual plan, approval, journal and recovery seams.
+    Run native observations in the existing environment when their conditions exist; identify fixtures and exact versions
+    separately.
+  - A native no-eligible-offer result records the actual offered items and rejection reasons. It establishes neither
+    a successful installation nor a fully patched machine. Preserve the unavailable live scenario and continue implementation.
   evidence:
   - summary: Saved and reopened read-only scans and exact controlled actions through the new Windows Update journal.
     command: eng/verify.ps1 -Tier Targeted with Actions, Broker, Broker.SecurityTests, Packages and Persistence
@@ -6259,20 +6266,20 @@ tasks:
     duration: 560.757 s for 304 governance and 2423 deterministic tests, 152.849 s for 1414 final broker Targeted executions including Quick
     reference: artifacts/evidence/TL-0504/report.md, 80aad3735506c0b06fb3f140b6d002725a27f951
     limitation: Live servicing, restart and independent verification of a ThirdLife-installed revision require an eligible authorized guest transaction.
-  blocked_reason: The authorized Windows 11 guest currently offers no eligible revision. No exact update can yet be reviewed, approved, downloaded, installed or independently confirmed by this workflow.
   execution_prerequisites:
   - kind: capability
-    scope: Same-machine Windows 11 guest with an applicable security or critical CBS revision, a reviewed v2 broker image and an effective compiled review for that exact revision, organization policy, recovery procedure and resource bounds.
+    scope: Live servicing requires an exact eligible security or critical CBS revision offered to ThirdLife-W11, a reviewed protected v2 broker and an effective review binding the revision, organization policy, supported recovery and measured storage reserve.
   - kind: task
     task: TL-0314
-    scope: Privilege-boundary decision for ordinary broker-dependent dispatch covering the WUA-specific action and its evidence.
+    scope: Privilege-boundary decision for ordinary broker-dependent dispatch covering the WUA-specific action and
+      its evidence.
   - kind: authorization
     authority: operator
-    scope: Durable approval for the exact update and its impacts, separate protected phase grants from the supervised qualification authority and the applicable actual Windows consent.
+    scope: Durable operator approval for the exact update and impacts, an independent protected grant for each supervised phase and applicable Windows consent.
   notes:
-  - The native writer, v2 protocol, WPF operator workflow and schema 010 journal are implemented. The compiled servicing catalog contains no effective review.
-  - The available guest and its local installation media are both Windows 11 build 26300.9974. The guest offered one unsupported software revision. Host and guest provider checks were read-only. An alternative baseline requires a licensed, authorized same-machine environment.
-  - Reopen with an eligible revision, bind its policy and recovery evidence, obtain exact approval and run the protected phases. Record the native receipts, any required restart, rescan and independently confirmed installed revision. Fixture results cannot close this qualification.
+  - PR 75 integrated the native writer, independent v2 broker authorization, policy and resource checks, WPF approval and schema 010 journal. The effective review catalog has no approved revision.
+  - ThirdLife-W11 offered one unsupported software revision and zero eligible offers. Its configured source and eligibility rules remain intact. Verify the saved exclusion reason through application reopening.
+  - Reopen native servicing when a meaningful servicing change or qualification run yields an eligible revision on ThirdLife-W11. Bind its effective policy and recovery review, obtain exact action authorization, record both native receipts, restart if required, rescan and independently confirm installed identity and revision. TL-0511 requires that evidence separately.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
@@ -6290,7 +6297,7 @@ tasks:
   environment: windows
   depends_on:
   - TL-0502
-  - TL-0504
+  - TL-0503
   - TL-0309
   decision_refs:
   - D-032
@@ -6319,6 +6326,17 @@ tasks:
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
+  notes:
+  - Use the integrated Windows Update contracts and journal from b893288340fd274e827a86ce3fe8f20cf498393f with controlled
+    adapters to implement maintenance phases. TL-0504 native servicing qualification is not a whole-task implementation
+    dependency.
+  - Test ordinary restarts sequentially in ThirdLife-W11. Preserve native servicing-related restart evidence separately.
+  execution_prerequisites:
+  - kind: capability
+    scope: For live update dispatch only, revalidate the TL-0504 qualified protected route, exact eligible revision, effective policy, supported recovery and measured reserve in ThirdLife-W11.
+  - kind: authorization
+    authority: operator
+    scope: For the actual update phase, require the saved exact scope approval, independently authorized protected phase grant, applicable Windows consent and the privilege decision for ordinary dispatch.
 - id: TL-0506
   title: Implement the v0.1 security baseline providers
   milestone: M5
@@ -6330,7 +6348,6 @@ tasks:
   executor: codex
   environment: windows
   depends_on:
-  - TL-0505
   - TL-0112
   - TL-0004
   decision_refs:
@@ -6372,6 +6389,8 @@ tasks:
   notes:
   - TL-0611 carries actual security-baseline acceptance for pilot scope. A documented blind spot cannot clear a required
     baseline rule.
+  - Read-only security providers use the existing evidence/policy contracts and do not depend on maintenance completion,
+    an eligible Windows update, or a new environment. TL-0507 composes their fresh post-maintenance verification later.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
@@ -6505,7 +6524,7 @@ tasks:
   - D-066
   - D-074
   objective: Require a cold-boot checkpoint and fresh verification for final acceptance, and verify checkpoint behavior
-    using approved same-machine VM cold starts.
+    using orderly shutdown and power-on of the existing ThirdLife-W11 guest.
   deliverables:
   - cold-boot checkpoint
   - post-boot verification trigger
@@ -6521,8 +6540,9 @@ tasks:
   - The technical record distinguishes VM cold start from a physical host power cycle and identifies any outstanding required
     physical product or release condition.
   verification:
-  - Run the checkpoint and fresh verification after an approved clean VM cold start on the active machine. Record a physical
-    host power cycle only if actually observed under the applicable explicit trigger.
+  - Run the checkpoint and fresh verification after orderly shutdown and power-on of the existing ThirdLife-W11 guest.
+    Reuse its verified state; do not require another guest or Windows baseline. Record a physical host power cycle
+    only if actually observed under the applicable explicit trigger.
   - Test stale checkpoint, copied resume token, changed device/job, ambiguous shutdown, and post-boot failure.
   evidence: []
   notes:
@@ -6547,7 +6567,6 @@ tasks:
   - TL-0503
   - TL-0505
   - TL-0507
-  - TL-0508
   - TL-0509
   decision_refs:
   - D-006
@@ -6577,7 +6596,8 @@ tasks:
   - artifacts/e2e/M5-full-profile.md
   - Test scope, residual defects, and physical/perceptual validation limits
   acceptance_criteria:
-  - The reference profile completes on supported clean Windows 11 environments hosted on the active Codex machine.
+  - The reference profile completes in the verified state of the existing ThirdLife-W11 guest. Test alternate controlled
+    states sequentially in that guest and identify deterministic substitutions and unavailable native conditions explicitly.
   - Optional failures do not corrupt essential work; essential failures block ready status.
   - Low space is detected before installation and multi-restart update paths recover.
   - Network interruption, UI kill, broker kill, constrained disk, changed metadata, wrong clock, broken source, success-without-install,
@@ -6598,12 +6618,21 @@ tasks:
   evidence: []
   notes:
   - Known required-flow defects block the affected outcome. TL-0611 carries actual pilot-scope decisions.
+  - Use versioned candidate catalog/policy/profile data for technical scenarios while TL-0508 adoption is pending.
+  - Complete every available scenario and record any unavailable native update offer as a scoped evidence limitation
+    with a reopening condition. Deterministic results do not claim live installation; TL-0511 retains native capability
+    qualification.
   expected_test_tier: extended
   full_test_triggers: []
   extended_test_triggers:
   - Run only the independently invokable scenarios whose named risk is changed or whose gate explicitly requires them.
   - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
     risk affected by the task.
+  release_prerequisites:
+  - kind: task
+    task: TL-0508
+    scope: Adoption of the exact catalog, policy and profiles used for pilot exposure and claims; candidate matrix
+      engineering may use versioned candidate inputs without claiming adoption.
 - id: TL-0511
   title: Validate the M5 full-machine-profile gate
   milestone: M5
@@ -6655,8 +6684,11 @@ tasks:
     Carry forward valid unchanged results.
   evidence: []
   notes:
-  - TL-0611 decides actual pilot scope. The technical gate documents physical/perceptual limits and any remaining release
-    condition.
+  - TL-0611 decides actual pilot scope. The technical gate documents physical/perceptual limits and any remaining
+    release condition.
+  - Prepare the complete gate evidence and continue M6/M7 engineering using the sole existing ThirdLife-W11 guest
+    while a specific native condition is unavailable. A no-eligible-offer observation cannot substitute for live installation
+    evidence.
   expected_test_tier: full
   full_test_triggers:
   - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
@@ -6666,11 +6698,19 @@ tasks:
   completion_phase: execution
   execution_prerequisites:
   - kind: capability
-    scope: A live sequence of at least two distinct actions with qualified supported backends and per-action independent verification,
-      restart and reconciliation under the exact approved schedule.
+    scope: A live sequence of at least two distinct actions with qualified supported backends and per-action independent
+      verification, restart and reconciliation under the exact approved schedule.
   - kind: authorization
     scope: Attributable approval for the exact live schedule and target, with applicable Windows consent at each dispatch.
     authority: operator
+  - kind: task
+    task: TL-0504
+    scope: Completed protected Windows Update servicing implementation, including typed native handler, independent
+      authorization, effective policy and recovery/resource checks.
+  - kind: capability
+    scope: For the claimed native Windows Update capability, actual eligible-offer download and installation in ThirdLife-W11,
+      followed by an independent installed-identity/revision observation and rescan, plus a servicing-related restart
+      when required. Controlled fixtures cannot satisfy this native evidence.
 - id: TL-0601
   title: Implement finalization rules and checklist state
   milestone: M6
@@ -6841,7 +6881,7 @@ tasks:
   environment: any
   depends_on:
   - TL-0603
-  - TL-0508
+  - TL-0301
   decision_refs:
   - D-014
   - D-021
@@ -6877,9 +6917,17 @@ tasks:
   notes:
   - Representative comprehension remains unobserved unless supported by actual evidence. Resolve a consequential ambiguity
     through the D-074 exception only when its conditions apply.
+  - Build and verify rendering with versioned candidate profiles and synthetic installed-state facts using the existing
+    profile contract. Candidate content must remain identifiable until TL-0508 adoption; rendering does not wait for
+    that decision.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
+  release_prerequisites:
+  - kind: task
+    task: TL-0508
+    scope: Exact adopted catalog, policy and profile content before a recipient guide represents an exposed pilot
+      configuration.
 - id: TL-0606
   title: Build a previewable sanitized diagnostic bundle
   milestone: M6
@@ -7147,9 +7195,11 @@ tasks:
     freeze remain in M7.
   verification:
   - Reproduce the pilot package from a clean checkout.
-  - Drive the real packaged install, upgrade, repair, rollback, uninstall, and runbook route in approved same-machine
-    Windows 11 client/native-x64 environments. Record exact edition, release, build, architecture, artifact, outcomes and cleanup.
-  - Black-box review the pilot draft interface sheet against the packaged build and mark unknown/stable-only fields explicitly.
+  - Drive the real packaged install, upgrade, repair, rollback, uninstall, and runbook route sequentially in the existing
+    ThirdLife-W11 Windows 11 client/native-x64 guest. Use retained authorized test states and record exact edition,
+    release, build, architecture, artifact, outcomes and cleanup. No additional Windows environment is a prerequisite.
+  - Black-box review the pilot draft interface sheet against the packaged build and mark unknown/stable-only fields
+    explicitly.
   evidence: []
   notes:
   - The completed technical candidate is the input for TL-0611. Core 1.0 onboarding uses the actual plan, journal and handover components.
@@ -7234,14 +7284,18 @@ tasks:
   completion_phase: release
   release_prerequisites:
   - kind: task
+    task: TL-0508
+    scope: Attributable adoption of the exact catalog, policy and profiles included in the controlled pilot; candidate
+      engineering and packaging remain independent of this exposure prerequisite.
+  - kind: task
     task: TL-0511
     scope: Profile qualification for the exact controlled pilot scope
   - kind: task
     task: TL-0411
     scope: Qualification of the package-installation and recovery route exposed to pilot operators
   - kind: authorization
-    scope: Accountable project/product and release decision-makers record the controlled-pilot go/no-go for the exact candidate
-      and exposure scope.
+    scope: Accountable project/product and release decision-makers record the controlled-pilot go/no-go for the exact
+      candidate and exposure scope.
     authority: release-owners
   - kind: authorization
     scope: Accountable security, privacy, accessibility, and licensing decision-makers record actual pilot-scope dispositions,
@@ -7444,8 +7498,8 @@ tasks:
   - D-061
   - D-063
   - D-074
-  objective: Verify the standalone application lifecycle and data preservation across approved clean and upgraded same-machine
-    Windows 11 client/native-x64 environments.
+  objective: Verify the standalone application lifecycle and data preservation across clean and upgraded ThirdLife
+    application states run sequentially in the existing ThirdLife-W11 Windows 11 client/native-x64 guest.
   deliverables:
   - Windows 11 native-x64 production installer/package definition
   - update and repair procedure
@@ -7454,8 +7508,8 @@ tasks:
   - clean-install and upgrade fixtures/tests
   - Versioned packaged lifecycle evidence, recovery and preservation outcomes, and release decision inputs
   acceptance_criteria:
-  - Tested clean and upgraded same-machine Windows 11 client/native-x64 environments install, launch, update/repair, and uninstall ThirdLife
-    Setup Core using documented privileges and restart behavior.
+  - Clean-install and upgraded application states in the same existing Windows 11 client/native-x64 guest install,
+    launch, update/repair, and uninstall ThirdLife Setup Core using documented privileges and restart behavior.
   - The main UI remains unelevated and no permanent privileged service is left installed.
   - Jobs and user-selected reports are preserved or removed only through explicit documented choices.
   - Interrupted install/update/repair/uninstall produces a recoverable or truthfully blocked state.
@@ -7635,18 +7689,20 @@ tasks:
   acceptance_criteria:
   - The full primary workflow works without a sibling application, account, ThirdLife server, or permanent privileged
     service.
-  - Inventory, policy, manual-test workflow, evidence review, and reports work offline; network-dependent actions fail
-    recoverably and visibly.
-  - Same-machine low-resource scenarios show bounded peak memory, temporary/cache growth, correct output, and safe cancellation/recovery.
+  - Inventory, policy, manual-test workflow, evidence review, and reports work offline; network-dependent actions
+    fail recoverably and visibly.
+  - Same-machine low-resource scenarios show bounded peak memory, temporary/cache growth, correct output, and safe
+    cancellation/recovery.
   - Recipient accessibility and supported backup/restore or explicit pending/unsupported paths pass their matrices.
-  - Install, upgrade/repair, migration, rollback/non-rollback, uninstall, and data preservation pass in clean and upgraded
-    Windows 11 client/native-x64 environments hosted on the active Codex machine. Record exact editions, releases, builds and artifacts.
-  - All critical/high defects are fixed and their smallest deterministic cases plus related targeted sets rerun, or they
-    block release.
-  - No test uses a sibling development build, private interface, external hardware matrix, or authoritative remote runtime
-    runner.
-  - Release evidence states the exact candidate, reference-machine profile, constraint methods, skipped scenarios, reuse
-    provenance, and hardware and perception limits.
+  - Install, upgrade/repair, migration, rollback/non-rollback, uninstall, and data preservation pass across sequential
+    clean-install and upgraded application states in the existing ThirdLife-W11 Windows 11 client/native-x64 guest.
+    Record its exact edition, release, build and artifacts; no second guest or fresh Windows licence is required.
+  - All critical/high defects are fixed and their smallest deterministic cases plus related targeted sets rerun, or
+    they block release.
+  - No test uses a sibling development build, private interface, external hardware matrix, or authoritative remote
+    runtime runner.
+  - Release evidence states the exact candidate, reference-machine profile, constraint methods, skipped scenarios,
+    reuse provenance, and hardware and perception limits.
   verification:
   - Run clean-clone verification, Full and risk-triggered extended scenarios on the active machine. Reuse unchanged valid
     evidence and rerun changed-risk checks.
@@ -7656,6 +7712,9 @@ tasks:
   evidence: []
   notes:
   - TL-0710 considers the evidence and actual release scope.
+  - Single-guest execution continues through stable release, maintenance and future regression work. Reuse relevant
+    valid evidence and safe retained states; an unavailable native condition limits only its associated result and
+    claim.
   expected_test_tier: extended
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

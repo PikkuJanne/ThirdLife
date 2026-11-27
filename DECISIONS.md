@@ -1,7 +1,7 @@
 # ThirdLife Setup Core — Decision Register
 
 **Bundle version:** 0.8.0  
-**Generated:** 2026-11-25  
+**Generated:** 2026-11-27  
 **Status:** Rationale and decision history for Team B/B1
 
 ## Purpose and status
@@ -16,6 +16,8 @@ do not impose sequencing or independent approval requirements.
 D-075 records the current development model and identifies the implementation
 constraints that have been superseded. [Change control](docs/change-control.md)
 covers recording a material product, trust, licensing or exposure decision.
+D-076 fixes guest capacity for the complete lifecycle and applies that model to
+unavailable live test conditions without changing product safeguards.
 
 ## Index
 
@@ -96,6 +98,7 @@ covers recording a material product, trust, licensing or exposure decision.
 | [D-073](#d-073) | Focused human testing and bounded continuation |
 | [D-074](#d-074) | Codex owns technical verification and accountable decisions remain explicit |
 | [D-075](#d-075) | Current product contract and capability-specific engineering |
+| [D-076](#d-076) | One existing guest and continued engineering across the complete timeline |
 
 ## Decisions
 
@@ -1087,3 +1090,15 @@ The previous assignment ended with the integrated M1 technical gate. TL-0611 rem
 **Rationale.** Separating engineering, runtime capability and release authority keeps the product moving when one route needs qualification and prevents a merged checkpoint from enabling unqualified execution.
 
 **Approved amendment.** Project owner Janne Vuorela approved the [development contract reset](docs/amendments/2026-11-25-development-contract-reset.md) on 25 November 2026. It supersedes D-045 and D-067 prospectively, narrows D-029 and replaces the historical D-074 assignment endpoint. The current product contract identifies when a material change still requires a decision.
+
+<a id="d-076"></a>
+
+### D-076 — One existing guest and continued engineering across the complete timeline
+
+**Owner direction.** On 27 November 2026, Janne Vuorela directed that only one guest will ever be made available and that unavailable technical test conditions must not halt development project-wide or across the complete timeline. This settles guest capacity; no further guest-count, alternate-baseline or second-Windows-licence question is required.
+
+**Decision.** Use the existing `ThirdLife-W11` for every guest scenario throughout development, pilot, release and maintenance. Run scenarios sequentially. Reuse existing scoped authority for guest operations, preserve evidence before restoration, and verify the same guest identity and state. Ordinary supported servicing, repair and authorized checkpoint refresh remain engineering work on that guest. Do not create another Windows instance, clone or Windows Sandbox session, or reinstall/downgrade merely to manufacture a live test target.
+
+**Continuation.** A missing eligible Windows Update offer limits the corresponding native download/install observation. Complete the protected handler, authorization, policy, resources, journal and recovery implementation with focused controlled cases, retain the native evidence gap, and continue independent tasks. Separate implementation dependencies from action qualification and release exposure using existing task fields. Correct a false dependency immediately; do not create a new approval stage, polling loop or owner QA assignment. Never report unavailable evidence as passed or mark unimplemented behavior complete.
+
+**Scope and history.** This narrows earlier D-059/D-070 and historical Sandbox procedures prospectively. Completed observations retain their original source and environment; their former commands do not authorize new guests. Runtime consent, exact trust/action binding, independent verification, recovery, recipient choices and the actual TL-0611/TL-0710 exposure decisions remain scoped to the operations and claims they protect. Missing evidence does not silently remove promised product functionality.

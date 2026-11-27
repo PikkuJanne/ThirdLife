@@ -4,6 +4,8 @@
 **Project:** Team B / B1  
 **Physical validation scope:** active Codex machine only
 
+**Permanent guest limit:** the existing `ThirdLife-W11` is the only Windows guest for the complete project lifecycle, including pilot, release and maintenance. Do not request or create another Windows instance, a VM clone or a new Windows Sandbox instance, or change/reinstall Windows solely to manufacture a test condition. Do not reopen second-guest or additional-Windows-licensing questions. Ordinary supported servicing, repair and authorized checkpoint refresh of this same guest remain Codex-owned. Reuse its authorized checkpoint when restoration is needed, preserving evidence first; destructive resets require only the authority applicable to that operation. Earlier broader VM/Sandbox instructions are historical, not prospective authorization.
+
 ## Start and continue
 
 1. Read [DEVELOPMENT_WORKFLOW.md](DEVELOPMENT_WORKFLOW.md). Verify remote, branch, worktree, HEAD, upstream and divergence, fetch from the intended repository, and compare with `main`. Preserve unexplained work and use an isolated branch/worktree when needed.
@@ -11,6 +13,7 @@
 3. Read [TASKS.yaml](TASKS.yaml), dependencies, execution and release prerequisites, implementation, tests and evidence for the outcome. Run the narrowest relevant baseline and record pre-existing failures.
 4. For assigned work, select the directly enabling components. Otherwise use implementation-ready tasks, prefer `ready` to `backlog`, and consider impact, priority and the current continuation. Use milestone order as a planning signal. Validate the actual implementation dependencies and keep the scope coherent.
 5. Continue safe work across tasks toward the assigned outcome. If a capability is blocked, identify the affected action and exact missing prerequisite. After two materially identical attempts without new information, change method or park that component and continue independent work. Record the changed input or hypothesis for a repeat.
+6. A missing live test condition limits only its observation and dependent action. Complete implementation, deterministic checks and independent tasks. Repair whole-task dependencies that incorrectly propagate that limit. A successful scan with no eligible Windows Update offer does not prove that no updates exist, that Windows is fully patched, or that installation succeeded; record the scan and exact remaining qualification separately.
 
 ## Preserve scope and safeguards
 
