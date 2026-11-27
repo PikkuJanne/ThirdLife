@@ -276,8 +276,10 @@ public sealed class AuditAccessibilityTests
         ShellTestHost.Drain(window);
     }
 
-    internal static void PumpUntil(Window window, Func<bool> condition, Func<string>? detail = null)
+    internal static void PumpUntil(Window window, Func<bool> condition, Func<string>? detail = null,
+        TimeSpan? timeout = null)
     {
+        var limit = timeout ?? TimeSpan.FromSeconds(5);
         if (!condition())
         {
             var frame = new DispatcherFrame();
@@ -286,7 +288,7 @@ public sealed class AuditAccessibilityTests
             { Interval = TimeSpan.FromMilliseconds(10) };
             timer.Tick += (_, _) =>
             {
-                if (condition() || deadline.Elapsed > TimeSpan.FromSeconds(5)) { frame.Continue = false; }
+                if (condition() || deadline.Elapsed > limit) { frame.Continue = false; }
             };
             try
             {
