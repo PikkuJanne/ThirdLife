@@ -48,3 +48,9 @@ The selections used isolated jobs and typed fixture inputs. The modeled boot
 change did not restart Windows. Test coverage includes the text preview and
 stored bytes. Sending a report to an external recipient, physical printing and
 perceptual assistive-technology coverage were outside the observed scope.
+
+Integration used TL-0601 main `1fff72535d508102cfa6f47eca54df7cccf30402`.
+Production and test sources match the Targeted checkpoint. The combined
+continuity Quick passed in 364.706 s with 1,368 .NET cases and eight
+work-selection regressions. The desktop suite took 262 s while other suites
+ran on the same host. [Integration PR](https://github.com/PikkuJanne/ThirdLife/pull/84)
