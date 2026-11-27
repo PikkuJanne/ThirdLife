@@ -7596,7 +7596,17 @@ tasks:
     release, build, architecture, artifact, outcomes and cleanup. No additional Windows environment is a prerequisite.
   - Black-box review the pilot draft interface sheet against the packaged build and mark unknown/stable-only fields
     explicitly.
-  evidence: []
+  evidence:
+  - summary: Private package verifier and controlled pilot draft runbooks for deployment, operation, support and evidence.
+    task: TL-0610
+    command: python -m unittest tools.tests.test_verify_development_package and read-only verifier on two private packages
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 6 Python tests in 285 ms, 19 entries checked per package
+    environment: Active Windows 11 native x64 host, pinned Python 3.14.7 and ignored local development package outputs
+    reference: artifacts/evidence/TL-0610/development-integrity.md, c212728172dab2ac6810839f22268382ba6bc047
+    limitation: Private archive preflight and draft operating guidance. Installer lifecycle, release rights, signing and pilot exposure remain separate.
   notes:
   - The completed technical candidate is the input for TL-0611. Core 1.0 onboarding uses the actual plan, journal and handover components.
   expected_test_tier: full

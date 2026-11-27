@@ -1,6 +1,6 @@
 # ThirdLife Setup Core — Minimal Release Interface Sheet
 
-**Status:** Draft placeholder; not a published compatibility contract  
+**Status:** Draft placeholder for release freeze with incomplete engineering preview  
 **Bundle version:** 0.8.0  
 **Pilot draft task:** `TL-0610`  
 **Stable completion task:** `TL-0706`  
@@ -9,6 +9,20 @@
 This sheet is completed for a frozen preview or stable release. It documents ordinary standalone behavior for later black-box deployment. It is **not a shared application API**, plugin contract, or permission to build a sibling adapter before B4.
 
 At `TL-0610`, verified pilot behavior is populated and the sheet remains clearly marked preview/incomplete. At `TL-0706`, it is completed for the frozen Core 1.0 candidate. Fields that remain unknown during implementation stay **TBD**. Unsupported behavior is recorded as **Not supported** with a reason; it is not invented to make future integration appear easier.
+
+## Observed private preview
+
+The engineering preview is a framework-dependent Windows 11 AMD64 ZIP.
+Its unpacked desktop application was observed to open Inspect under an
+unelevated workshop token and exit normally. The source revision, archive
+and SBOM digests are recorded with the artifact. The standalone installer,
+lifecycle checks, partner exposure and stable freeze remain open.
+[Package evidence](artifacts/evidence/TL-0610/development-payload.md)
+
+[Deployment](docs/pilot/deployment-rollback.md) ·
+[Operator runbook](docs/pilot/operator-runbook.md) ·
+[Support and incidents](docs/pilot/support-and-incident.md) ·
+[Metrics and evidence](docs/pilot/metrics-export.md)
 
 ## 1. Product identity
 
