@@ -276,6 +276,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ClearRepairs();
         ClearPolicyView();
         ClearReport();
+        ClearFinalization();
         Status = "Job closed. Reopen it by its workshop job ID.";
         Publish();
     }
@@ -394,7 +395,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         CancelBrokerExecution();
         try
         {
-            await _active;
+            await Task.WhenAll(_active, _finalizationRead);
         }
         finally
         {
@@ -499,20 +500,25 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             {
                 ReportStatus = "The workshop report could not be generated from this job. Reopen the job and review its saved records.";
             }
-        });
+        }, refreshFinalization: false);
     }
 
-    private Task RunAsync(Func<Task> command)
+    private Task RunAsync(Func<Task> command, bool refreshFinalization = true)
     {
         if (IsBusy || _closing) { return Task.CompletedTask; }
+        if (refreshFinalization)
+        {
+            _finalizationReadVersion++;
+        }
+
         IsBusy = true;
         OperationError = string.Empty;
         Publish();
-        _active = ExecuteAsync(command);
+        _active = ExecuteAsync(command, refreshFinalization);
         return _active;
     }
 
-    private async Task ExecuteAsync(Func<Task> command)
+    private async Task ExecuteAsync(Func<Task> command, bool refreshFinalization)
     {
         try
         {
@@ -559,8 +565,18 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             _packageActivity = null;
             _brokerCancellation?.Dispose();
             _brokerCancellation = null;
-            IsBusy = false;
-            Publish();
+            try
+            {
+                if (_showFinalization && (refreshFinalization || Finalization is null))
+                {
+                    await LoadFinalizationAsync();
+                }
+            }
+            finally
+            {
+                IsBusy = false;
+                Publish();
+            }
         }
     }
 
@@ -665,6 +681,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         Job = job;
         if (jobChanged)
         {
+            ClearFinalization();
             ClearBrokerHistory();
             ClearPackageHistory();
             ClearWindowsUpdateHistory();

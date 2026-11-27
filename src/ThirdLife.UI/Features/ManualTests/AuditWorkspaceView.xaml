@@ -5,6 +5,7 @@
              xmlns:plan="clr-namespace:ThirdLife.UI.Features.PlanReview"
              xmlns:execution="clr-namespace:ThirdLife.UI.Features.Execution"
              xmlns:evidence="clr-namespace:ThirdLife.Core.Evidence;assembly=ThirdLife.Core"
+             xmlns:finalization="clr-namespace:ThirdLife.Core.Finalization;assembly=ThirdLife.Core"
              xmlns:manual="clr-namespace:ThirdLife.Core.ManualTests;assembly=ThirdLife.Core"
              xmlns:sanitization="clr-namespace:ThirdLife.Core.Sanitization;assembly=ThirdLife.Core">  <StackPanel>
     <Border x:Name="JobHeader" Visibility="Collapsed" Padding="24,12"
@@ -278,9 +279,53 @@
         <Border Style="{DynamicResource Trace.ActionArea}" Margin="0,12,0,12">
           <StackPanel>
             <TextBlock x:Name="HandoverStatus" Text="Device handover is still open" Style="{DynamicResource Trace.AttentionText}" FontWeight="SemiBold" />
-            <TextBlock Text="Finalization and whole-device cold-boot verification are required. Recipient-guide generation is unavailable in this build." Margin="0,4,0,0" />
+            <TextBlock Text="Complete the required workshop checks and review whole-device cold-boot verification before handover. Recipient-guide generation is pending." Margin="0,4,0,0" />
           </StackPanel>
         </Border>
+        <GroupBox Header="Workshop finalization" AutomationProperties.Name="Workshop finalization checklist">
+          <StackPanel>
+            <TextBlock x:Name="FinalizationMessage" Text="{Binding FinalizationStatus}"
+                       AutomationProperties.Name="{Binding FinalizationStatus}" AutomationProperties.LiveSetting="Polite"
+                       Focusable="True" KeyboardNavigation.IsTabStop="False" />
+            <Button x:Name="RefreshFinalizationButton" Content="Refresh checklist" Click="RefreshFinalization"
+                    IsEnabled="{Binding CanRefreshFinalization}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+            <StackPanel x:Name="FinalizationChecklistFields" Visibility="Collapsed">
+              <Label Target="{Binding ElementName=FinalizationCheck}" Content="Workshop check" />
+              <ComboBox x:Name="FinalizationCheck" DisplayMemberPath="Caption" SelectedValuePath="Id"
+                        SelectionChanged="FinalizationCheckChanged" AutomationProperties.Name="Workshop check" />
+              <TextBlock x:Name="FinalizationGuidance" Margin="0,8,0,0" />
+              <TextBlock x:Name="FinalizationFinding" FontWeight="SemiBold" Margin="0,4,0,8"
+                         AutomationProperties.LiveSetting="Polite" />
+              <StackPanel x:Name="FinalizationRecordFields">
+                <Label Target="{Binding ElementName=FinalizationOutcomeInput}" Content="Result of your check" />
+                <ComboBox x:Name="FinalizationOutcomeInput" SelectedValuePath="Tag" SelectionChanged="FinalizationOutcomeChanged"
+                          AutomationProperties.Name="Result of your check">
+                  <ComboBoxItem Content="Checked and clear" Tag="{x:Static finalization:FinalizationOutcome.Passed}" />
+                  <ComboBoxItem Content="Problem found" Tag="{x:Static finalization:FinalizationOutcome.Failed}" />
+                  <ComboBoxItem Content="Could not confirm" Tag="{x:Static finalization:FinalizationOutcome.Unknown}" />
+                  <ComboBoxItem x:Name="FinalizationNotApplicable" Content="Not applicable" Tag="{x:Static finalization:FinalizationOutcome.NotApplicable}" />
+                </ComboBox>
+                <StackPanel x:Name="FinalizationReasonFields" Visibility="Collapsed">
+                  <Label Target="{Binding ElementName=FinalizationReasonInput}" Content="Reason the check does not apply" />
+                  <ComboBox x:Name="FinalizationReasonInput" DisplayMemberPath="Label" SelectedValuePath="Reason"
+                            AutomationProperties.Name="Reason the check does not apply" />
+                </StackPanel>
+                <Label Target="{Binding ElementName=FinalizationOperatorCode}" Content="Workshop operator code" />
+                <TextBlock Text="Use your local workshop code. Leave out names, account details, and secrets." />
+                <TextBox x:Name="FinalizationOperatorCode" MaxLength="64" AutomationProperties.Name="Workshop operator code" />
+                <TextBlock x:Name="FinalizationInputError" Style="{DynamicResource Trace.ErrorText}"
+                           AutomationProperties.LiveSetting="Polite" />
+                <Button x:Name="SaveFinalizationButton" Content="Save check result" Click="SaveFinalization"
+                        HorizontalAlignment="Left" Margin="0,8,0,0" />
+              </StackPanel>
+              <Expander x:Name="FinalizationHistoryRegion" Header="Saved confirmations for this check" Margin="0,12,0,0">
+                <TextBox x:Name="FinalizationHistory" IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                         MinHeight="42" MaxHeight="180" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                         AutomationProperties.Name="Saved confirmations for this check" />
+              </Expander>
+            </StackPanel>
+          </StackPanel>
+        </GroupBox>
     <GroupBox x:Name="WorkshopReportRegion" Header="Workshop report" AutomationProperties.Name="Workshop report">
       <StackPanel>
         <TextBlock Text="Generate a restricted report from this saved job. Keep it with workshop records." />
