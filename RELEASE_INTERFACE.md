@@ -18,6 +18,12 @@ unelevated workshop token and exit normally. The source revision, archive
 and SBOM digests are recorded with the artifact. The standalone installer,
 lifecycle checks, partner exposure and stable freeze remain open.
 [Package evidence](artifacts/evidence/TL-0610/development-payload.md)
+The newer unpacked engineering candidate also opened Prepare and
+displayed the exact Basic and Job Seeker configuration previews.
+Both previews listed the profile, catalogue and policy files. Saving
+Job Seeker through the native folder picker produced the exact ZIP
+shown in its preview.
+[Unpacked candidate checks](artifacts/evidence/TL-0706/private-interface.md)
 
 [Deployment](docs/pilot/deployment-rollback.md) ·
 [Operator runbook](docs/pilot/operator-runbook.md) ·
@@ -75,8 +81,8 @@ No permanent privileged service is expected for Core 1.0.
 
 | Field | Value |
 |---|---|
-| Executable/launch path | TBD |
-| Normal interactive launch | Required |
+| Executable/launch path | Open `ThirdLife.UI.exe` from the verified private ZIP with the other archive files and pinned .NET Windows Desktop runtime. The installed shortcut and stable installation paths remain open. |
+| Normal interactive launch | Observed under the active Windows 11 x64 host's unelevated token. [Unpacked candidate evidence](artifacts/evidence/TL-0706/private-interface.md) |
 | File associations | None promised during B1 unless independently useful to Core |
 | Command-line options | None promised; document only options useful to Core users, testing, automation, or support |
 | Custom URI/plugin API | Not supported in B1 |
@@ -180,6 +186,12 @@ Document:
 It excludes user documents, recordings, message bodies, browser history, credentials, keys, sibling-app content, and full identifying fields by default.
 
 ## 12. Sample artifacts
+
+The private engineering sample manifest records exact hashes, byte counts
+and expected outcomes for synthetic intake, the historical workshop
+report, both recipient guide variants and the sanitized support ZIP.
+The job files are engineering fixtures for comparing expected states.
+[Synthetic sample manifest](artifacts/evidence/TL-0706/sample-manifest.json)
 
 At freeze, provide non-sensitive samples and hashes for:
 
