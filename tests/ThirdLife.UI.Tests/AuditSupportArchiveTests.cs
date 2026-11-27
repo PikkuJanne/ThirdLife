@@ -13,6 +13,7 @@ using ThirdLife.Inventory;
 using ThirdLife.Inventory.Normalization;
 using ThirdLife.Inventory.Providers;
 using ThirdLife.Persistence;
+using ThirdLife.Reports.Support;
 using ThirdLife.UI.Features.ManualTests;
 using ThirdLife.UI.Shell;
 using static ThirdLife.UI.Tests.AuditAccessibilityTests;
@@ -132,6 +133,60 @@ public sealed class AuditSupportArchiveTests
         Assert.Equal(expected.InternalSupportId, receipt.InternalSupportId);
         Assert.Equal(expected.ArchiveSha256, receipt.ContentSha256);
         Assert.Equal(actorCode, receipt.OperatorId.Value);
+    }
+
+    [Fact]
+    public async Task ReopenedJobReconcilesOnlyTheExactArchiveWithoutPublishingAgain()
+    {
+        using var disk = new AuditTestStore();
+        var chosen = Path.Combine(disk.Root, "recovery-choice");
+        Directory.CreateDirectory(chosen);
+        var protectedFolder = Path.Combine(chosen, "ThirdLifeSupport");
+        var preview = SupportArchivePreview.Create([], DateTimeOffset.UtcNow);
+        var actor = new OperatorId("operator-original-export");
+        var intent = new SupportExportAudit(preview.InternalSupportId, SupportArchivePreview.SchemaVersion,
+            SupportArchivePreview.ManifestVersion, preview.ArchiveSha256, DateTimeOffset.UtcNow, actor, SupportExportState.Pending);
+        string jobId;
+        await using (var original = await CreateWorkspaceAsync(disk))
+        {
+            jobId = original.JobId;
+            await using var store = await OpenStoreAsync(disk);
+            await store.StageSupportExportAsync(new(jobId), intent);
+        }
+        var added = new SupportArchiveStore(protectedFolder).Export(preview, preview.ArchiveSha256);
+        var before = File.GetLastWriteTimeUtc(Path.Combine(protectedFolder, added.FileName));
+
+        await using var reopened = new AuditWorkspace(async token => await OpenStoreAsync(disk, token).ConfigureAwait(false),
+            [new SupportFixtureProvider()], TimeProvider.System);
+        await reopened.OpenJobAsync(jobId);
+        InHandover(reopened, (window, view) =>
+        {
+            Assert.True(reopened.CanRecoverSupportExport);
+            Named<ComboBox>(view, "PendingSupportExport").SelectedItem = Assert.Single(reopened.PendingSupportExports);
+            Named<TextBox>(view, "SupportRecoveryOperator").Text = "operator-observed-recovery";
+            view.SelectSupportFolderForTesting = () => Path.Combine(disk.Root, "nonexistent-choice");
+            var button = Named<Button>(view, "RecoverSupportExportButton");
+            Invoke(window, button);
+            PumpUntil(window, () => !reopened.IsBusy && reopened.SupportExportStatus.Contains("remains unconfirmed", StringComparison.Ordinal),
+                () => reopened.SupportExportStatus);
+            Assert.False(Directory.Exists(Path.Combine(disk.Root, "nonexistent-choice")));
+            Assert.Single(reopened.PendingSupportExports);
+
+            view.SelectSupportFolderForTesting = () => chosen;
+            Invoke(window, button);
+            PumpUntil(window, () => !reopened.IsBusy && reopened.PendingSupportExports.Count == 0,
+                () => reopened.SupportExportStatus);
+            Assert.Contains("recorded recovery", reopened.SupportExportStatus, StringComparison.Ordinal);
+        });
+
+        await using var inspected = await OpenStoreAsync(disk);
+        var saved = Assert.Single(await inspected.LoadSupportExportsAsync(new(jobId)));
+        Assert.Equal(SupportExportState.Published, saved.State);
+        Assert.Equal(actor, saved.OperatorId);
+        Assert.Equal("operator-observed-recovery", saved.RecoveryOperatorId?.Value);
+        Assert.Equal(preview.ArchiveSha256, saved.ContentSha256);
+        Assert.Equal(before, File.GetLastWriteTimeUtc(Path.Combine(protectedFolder, added.FileName)));
+        Assert.Single(Directory.EnumerateFiles(protectedFolder));
     }
 
     private static async Task<AuditWorkspace> CreateWorkspaceAsync(AuditTestStore disk)
