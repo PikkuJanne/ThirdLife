@@ -50,7 +50,9 @@ public sealed partial class PackageSetupTests
 
         await using var reopened = Open();
         await reopened.OpenJobAsync(jobId);
-        Assert.Contains("network connection", reopened.MaintenancePhaseStatus);
+        Assert.Contains("Windows Update phase", reopened.MaintenancePhaseStatus);
+        Assert.True(reopened.HasWindowsUpdateHistory);
+        Assert.Contains("network connection", reopened.WindowsUpdateStatusText);
         Assert.False(reopened.CanInstallPackage);
         var deferred = await ReadCheckpointAsync(jobId);
         Assert.Equal(approved.Plan, deferred.Plan);
