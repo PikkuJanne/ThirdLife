@@ -6,9 +6,11 @@ import argparse
 from contextlib import contextmanager
 import ctypes
 from ctypes import wintypes
+from datetime import datetime
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -21,6 +23,9 @@ from tools.verify_development_package import ARCHIVE, MAX_ARCHIVE, read_bounded,
 UPGRADE_NAMESPACE = uuid.UUID("f9d1d0d5-3c36-471f-9b78-89951d6a9aef")
 PRODUCT_NAME = "ThirdLife Setup Core (Private Preview)"
 CABINET = "thirdlife.cab"
+CABINET_MEMBER_DATE = datetime(2000, 1, 1)
+PACKAGE_CODE_PROPERTY = 9
+UNASSIGNED_PACKAGE_CODE = "{00000000-0000-0000-0000-000000000000}"
 INSTALL_DIR = "PrivateInstall"
 REGISTRY_KEY = r"Software\ThirdLife\PrivateInstaller"
 # Windows Installer can expose compatibility-version values for Windows 11.
@@ -123,6 +128,33 @@ def author_tables(path: Path, payload: dict[str, bytes], version: str) -> list[s
     ]
 
 
+def clear_storage_timestamp(path: Path) -> None:
+    """Clear the generated compound file's embedded root modification time."""
+    ole = ctypes.WinDLL("ole32", winmode=0x800)
+    ole.StgOpenStorage.argtypes = [
+        wintypes.LPCWSTR, ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p,
+        wintypes.DWORD, ctypes.POINTER(ctypes.c_void_p),
+    ]
+    ole.StgOpenStorage.restype = wintypes.LONG
+    storage = ctypes.c_void_p()
+    # STGM_DIRECT | STGM_READWRITE | STGM_SHARE_EXCLUSIVE opens our generated file.
+    checked(ole.StgOpenStorage(str(path), None, 0x12, None, 0, ctypes.byref(storage)), "open MSI storage")
+    vtable = ctypes.cast(ctypes.cast(storage, ctypes.POINTER(ctypes.c_void_p))[0],
+                         ctypes.POINTER(ctypes.c_void_p))
+    # IUnknown::Release and IStorage::Commit / SetElementTimes in interface order.
+    release = ctypes.WINFUNCTYPE(wintypes.ULONG, ctypes.c_void_p)(vtable[2])
+    commit = ctypes.WINFUNCTYPE(wintypes.LONG, ctypes.c_void_p, wintypes.DWORD)(vtable[9])
+    filetime_pointer = ctypes.POINTER(wintypes.FILETIME)
+    set_times = ctypes.WINFUNCTYPE(wintypes.LONG, ctypes.c_void_p, wintypes.LPCWSTR,
+                                  filetime_pointer, filetime_pointer, filetime_pointer)(vtable[14])
+    try:
+        empty = wintypes.FILETIME()
+        checked(set_times(storage, None, None, None, ctypes.byref(empty)), "clear MSI storage timestamp")
+        checked(commit(storage, 0), "commit MSI storage")
+    finally:
+        release(storage)
+
+
 class WindowsInstaller:
     def __init__(self):
         msi = ctypes.WinDLL("msi", winmode=0x800)
@@ -177,7 +209,7 @@ class WindowsInstaller:
             with self.open_handle(self.api.MsiGetSummaryInformationW, database, None, 12) as summary:
                 for property_id, value in {
                     2: "Installation Database", 3: PRODUCT_NAME, 4: "ThirdLife",
-                    7: "x64;1033", 9: identifier(uuid.uuid4()),
+                    7: "x64;1033", PACKAGE_CODE_PROPERTY: UNASSIGNED_PACKAGE_CODE,
                 }.items():
                     checked(self.api.MsiSummaryInfoSetPropertyW(summary, property_id, 30, 0, None, value),
                             "set MSI text metadata")
@@ -187,6 +219,19 @@ class WindowsInstaller:
                             "set MSI numeric metadata")
                 checked(self.api.MsiSummaryInfoPersist(summary), "write MSI metadata")
             checked(self.api.MsiDatabaseCommit(database), "commit MSI")
+        # Hash the complete rendered database and cabinet with the package code blanked.
+        # A changed payload or installer table then receives a distinct package code.
+        clear_storage_timestamp(destination)
+        with destination.open("rb") as handle:
+            digest = hashlib.file_digest(handle, "sha256").hexdigest()
+        package_code = identifier(uuid.uuid5(UPGRADE_NAMESPACE, "package:" + digest))
+        with self.open_handle(self.api.MsiOpenDatabaseW, str(destination), 2) as database:
+            with self.open_handle(self.api.MsiGetSummaryInformationW, database, None, 1) as summary:
+                checked(self.api.MsiSummaryInfoSetPropertyW(
+                    summary, PACKAGE_CODE_PROPERTY, 30, 0, None, package_code), "set MSI package code")
+                checked(self.api.MsiSummaryInfoPersist(summary), "persist MSI package code")
+            checked(self.api.MsiDatabaseCommit(database), "commit MSI package code")
+        clear_storage_timestamp(destination)
         checked(self.api.MsiVerifyPackageW(str(destination)), "verify the assembled MSI")
 
 
@@ -197,8 +242,11 @@ def make_cabinet(staging: Path, payload: dict[str, bytes]) -> None:
         ".OPTION EXPLICIT", f".Set CabinetNameTemplate={CABINET}", ".Set DiskDirectoryTemplate=.",
         ".Set MaxDiskSize=0", ".Set Cabinet=ON", ".Set Compress=ON", ".Set CompressionType=MSZIP",
     ]
+    member_timestamp = CABINET_MEMBER_DATE.timestamp()
     for index, (name, content) in enumerate(payload.items(), 1):
-        (members / name).write_bytes(content)
+        member = members / name
+        member.write_bytes(content)
+        os.utime(member, (member_timestamp, member_timestamp))
         spec.append(f'"payload\\{name}" F{index:03}')
     (staging / "payload.ddf").write_bytes(("\r\n".join(spec) + "\r\n").encode("ascii"))
 
@@ -234,7 +282,9 @@ def build(package: Path, output: Path, source: str, archive_sha256: str, sbom_sh
     tables = author_tables(staging, payload, version)
     make_cabinet(staging, payload)
     destination = output / "ThirdLife-SetupCore-Private-x64.msi"
-    WindowsInstaller().assemble(destination, staging, tables)
+    staged_msi = staging / destination.name
+    WindowsInstaller().assemble(staged_msi, staging, tables)
+    staged_msi.replace(destination)
     receipt = {
         "classification": "private_unsigned_development_installer",
         "source": source, "app_archive_sha256": archive_sha256, "sbom_sha256": sbom_sha256,

@@ -8406,7 +8406,27 @@ tasks:
   - Reproduce and hash the release from a clean checkout.
   - Run the final install, launch, workflow, and uninstall checks using only exact frozen candidate artifacts and release
     documentation.
-  evidence: []
+  evidence:
+  - summary: Two clean checkouts independently produced byte-identical private ZIP, SBOM, MSI and receipts.
+    task: TL-0708
+    command: eng/package-development-preview.ps1, tools.verify_development_package and tools.build_development_msi
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 29.656 s and 29.040 s, 10 focused native authoring and package verifier tests in 0.782 s
+    environment: Active Windows 11 Pro 26H2 native x64 host, distinct clean detached checkouts, locked restore
+    reference: artifacts/evidence/TL-0708/private-reproducibility.md, 71ec3b3bda6229d62b38263cb8422606d954e975
+    limitation: Same-machine unsigned private 0.3.4 scope. Native lifecycle, controlled pilot and release authorization remain separate.
+  - summary: Clean Full verification of the deterministic private packaging change and existing application.
+    task: TL-0708
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 529.343 s, 320 repository checks and 2688 .NET tests
+    environment: Active Windows 11 Pro 26H2 native x64 host, clean detached checkout
+    reference: artifacts/evidence/TL-0708/private-reproducibility.md, 71ec3b3bda6229d62b38263cb8422606d954e975
+    limitation: Exact same-machine private artifact verification. Installed lifecycle used separately identified packages.
   notes:
   - TL-0710 governs actual distribution and portfolio-transition consent.
   expected_test_tier: full
