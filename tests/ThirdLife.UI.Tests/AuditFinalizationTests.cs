@@ -90,7 +90,7 @@ public sealed class AuditFinalizationTests
             [AuditTestProvider.Available("finalization-ui")], clock);
     }
 
-    private static void InHandover(AuditWorkspace workspace, Action<Window, FrameworkElement> check)
+    internal static void InHandover(AuditWorkspace workspace, Action<Window, FrameworkElement> check)
     {
         ShellTestHost.Run(() =>
         {

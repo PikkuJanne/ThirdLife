@@ -9,6 +9,7 @@ internal sealed partial class AuditWorkspace
     private const string SavedFinalizationMessage = "Checklist result saved.";
     private Task _finalizationRead = Task.CompletedTask;
     private int _finalizationReadVersion;
+    private int _completedFinalizationReadVersion = -1;
     private bool _showFinalization;
     private bool _readingFinalization;
     private string _finalizationFeedback = string.Empty;
@@ -40,7 +41,13 @@ internal sealed partial class AuditWorkspace
         }
     }
 
-    public void ShowFinalization(bool show) => _showFinalization = show;
+    public void ShowFinalization(bool show)
+    {
+        if (_showFinalization == show) { return; }
+        _showFinalization = show;
+        _completedFinalizationReadVersion = -1;
+        Publish();
+    }
 
     public Task RefreshFinalizationAsync()
     {
@@ -50,6 +57,7 @@ internal sealed partial class AuditWorkspace
         }
 
         _finalizationFeedback = string.Empty;
+        _handoverModeFeedback = string.Empty;
         return _finalizationRead = ReviewFinalizationAsync();
     }
 
@@ -106,6 +114,7 @@ internal sealed partial class AuditWorkspace
             readFailed = true;
         }
 
+        var handover = await ReadRecipientHandoverAsync(job);
         if (ReferenceEquals(Job, job) && version == _finalizationReadVersion)
         {
             if (readFailed || job.IsArchived || checklist?.EvidenceVersion != Finalization?.EvidenceVersion &&
@@ -114,7 +123,9 @@ internal sealed partial class AuditWorkspace
                 _finalizationFeedback = string.Empty;
             }
 
+            RecipientHandover = handover;
             Finalization = checklist;
+            _completedFinalizationReadVersion = version;
             _finalizationReadFailed = readFailed;
         }
     }
@@ -136,7 +147,9 @@ internal sealed partial class AuditWorkspace
 
     private void ClearFinalization()
     {
+        ClearHandoverMode();
         Finalization = null;
+        _completedFinalizationReadVersion = -1;
         _finalizationFeedback = string.Empty;
         _artifactScanFeedback = string.Empty;
         _finalizationReadFailed = false;

@@ -41,6 +41,7 @@ public sealed class AuditArtifactScanTests
                 shares.Text = share;
                 var scan = Named<Button>(view, "ScanWorkshopArtifactsButton");
                 Assert.Equal("Scan workshop artifacts", ShellTestHost.ButtonPeer(scan).GetName());
+                PumpUntil(window, () => scan.IsEnabled, () => workspace.ArtifactScanStatus);
                 Invoke(window, scan);
                 PumpUntil(window, () => workspace.Finalization?.ArtifactScans.Count == 1 && !workspace.IsBusy,
                     () => workspace.ArtifactScanStatus);

@@ -103,28 +103,40 @@ public sealed partial class SqliteJobStore : IFinalizationStore
             FROM jobs WHERE job_id = $job;
             """;
         command.Parameters.AddWithValue("$job", jobId.Value);
-        await using var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
-        if (!await reader.ReadAsync(token).ConfigureAwait(false))
+        uint bootSession;
+        long[] revisions;
+        await using (var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false))
         {
-            return null;
+            if (!await reader.ReadAsync(token).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            _layout.ValidateJobDirectory(jobId);
+            var archiveState = reader.GetInt64(0);
+            if (archiveState is not 0 and not 1)
+            {
+                throw new JobStoreCorruptionException("store_payload_mismatch");
+            }
+
+            if (archiveState == 1 || _readBootSession() is not { } currentBoot)
+            {
+                return new(EvidenceVersion: null);
+            }
+
+            bootSession = currentBoot;
+            revisions = new long[reader.FieldCount - 1];
+            for (var index = 0; index < revisions.Length; index++)
+            {
+                revisions[index] = reader.IsDBNull(index + 1) ? 0 : reader.GetInt64(index + 1);
+            }
         }
 
-        _layout.ValidateJobDirectory(jobId);
-        var archiveState = reader.GetInt64(0);
-        if (archiveState is not 0 and not 1)
+        var modeSequence = await ReadRecipientHandoverModeSequenceAsync(transaction, jobId, token).ConfigureAwait(false);
+        if (modeSequence > 0)
         {
-            throw new JobStoreCorruptionException("store_payload_mismatch");
-        }
-
-        if (archiveState == 1 || _readBootSession() is not { } bootSession)
-        {
-            return new(EvidenceVersion: null);
-        }
-
-        var revisions = new long[reader.FieldCount - 1];
-        for (var index = 0; index < revisions.Length; index++)
-        {
-            revisions[index] = reader.IsDBNull(index + 1) ? 0 : reader.GetInt64(index + 1);
+            // Keep existing confirmations current across the schema upgrade until a mode is selected.
+            revisions = [.. revisions, modeSequence];
         }
 
         return new(SerializePayload(new

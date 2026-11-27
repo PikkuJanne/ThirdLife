@@ -15,7 +15,8 @@ internal sealed partial class AuditWorkspace
 
     internal Func<string[], string[], CancellationToken, Task<IReadOnlyList<WorkshopArtifactFinding>>>? FixtureArtifactScan { get; init; }
 
-    public bool CanScanArtifacts => CanAssess && !_readingFinalization && Finalization is { CanScanArtifacts: true } &&
+    public bool CanScanArtifacts => CanAssess && _showFinalization && !_readingFinalization &&
+        _completedFinalizationReadVersion == _finalizationReadVersion && Finalization is { CanScanArtifacts: true } &&
         (!IsFixtureScenario || FixtureArtifactScan is not null && Job is { SanitizationEvidence.Count: > 0 });
 
     public bool CanCancelArtifactScan => _artifactScanCancellation is { IsCancellationRequested: false };
