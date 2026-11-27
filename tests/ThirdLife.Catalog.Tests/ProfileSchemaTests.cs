@@ -59,6 +59,22 @@ public sealed class ProfileSchemaTests
     }
 
     [Fact]
+    public void CatalogueAndProfileKeepTheExactValidatedBytesAfterCallerMutation()
+    {
+        var catalogueInput = ReadFixture("catalog");
+        var profileInput = ReadFixture("basic");
+        var catalogue = CatalogSchema.Parse(catalogueInput, AsOfUtc);
+        var profile = ProfileSchema.Parse(profileInput, catalogue);
+        Array.Clear(catalogueInput);
+        Array.Clear(profileInput);
+
+        Assert.Equal(ReadFixture("catalog"), catalogue.Utf8Json.AsEnumerable());
+        Assert.Equal(ReadFixture("basic"), profile.Utf8Json.AsEnumerable());
+        Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(catalogue.Utf8Json.AsSpan())), profile.CatalogContentSha256);
+        Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(profile.Utf8Json.AsSpan())), profile.ContentSha256);
+    }
+
+    [Fact]
     public void AllowsAWorkshopProfileWithNoRecipientChoices()
     {
         var basic = Basic();

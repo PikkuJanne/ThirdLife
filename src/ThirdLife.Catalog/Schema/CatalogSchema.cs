@@ -22,8 +22,8 @@ public static partial class CatalogSchema
     {
         try
         {
-            using var document = Open(utf8Json, MaximumDocumentBytes, out var contentSha256);
-            var catalog = ReadCatalog(document.RootElement, asOfUtc, contentSha256);
+            using var document = Open(utf8Json, MaximumDocumentBytes, out var contentSha256, out var bytes);
+            var catalog = ReadCatalog(document.RootElement, asOfUtc, contentSha256, bytes);
             if (current is not null)
             {
                 RequireCurrentVersion(catalog, current);
@@ -37,7 +37,8 @@ public static partial class CatalogSchema
         }
     }
 
-    private static CatalogDocument ReadCatalog(JsonElement root, DateTimeOffset asOfUtc, string digest)
+    private static CatalogDocument ReadCatalog(JsonElement root, DateTimeOffset asOfUtc, string digest,
+        ImmutableArray<byte> utf8Json)
     {
         RequireFields(root, ["schema_version", "catalog_id", "version", "status", "synthetic_data", "classification", "applications"]);
         var synthetic = root.GetProperty("synthetic_data").GetBoolean();
@@ -48,6 +49,7 @@ public static partial class CatalogSchema
             ReadToken(root, "catalog_id", LowerKebabPattern(), 64),
             ReadToken(root, "version", SemanticVersionPattern(), 64),
             digest,
+            utf8Json,
             synthetic,
             ReadApplications(root.GetProperty("applications"), synthetic, asOfUtc));
     }

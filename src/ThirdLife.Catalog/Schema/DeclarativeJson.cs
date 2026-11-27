@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -9,7 +10,8 @@ internal static partial class DeclarativeJson
 {
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
-    public static JsonDocument Open(ReadOnlyMemory<byte> utf8Json, int maximumBytes, out string contentSha256)
+    public static JsonDocument Open(ReadOnlyMemory<byte> utf8Json, int maximumBytes, out string contentSha256,
+        out ImmutableArray<byte> bytes)
     {
         if (utf8Json.IsEmpty || utf8Json.Length > maximumBytes)
         {
@@ -17,10 +19,10 @@ internal static partial class DeclarativeJson
         }
 
         // Validate and hash the same bounded byte snapshot.
-        var bytes = utf8Json.ToArray();
-        _ = StrictUtf8.GetCharCount(bytes);
-        contentSha256 = Convert.ToHexStringLower(SHA256.HashData(bytes));
-        return JsonDocument.Parse(bytes, new JsonDocumentOptions
+        bytes = ImmutableArray.Create(utf8Json.Span);
+        _ = StrictUtf8.GetCharCount(bytes.AsSpan());
+        contentSha256 = Convert.ToHexStringLower(SHA256.HashData(bytes.AsSpan()));
+        return JsonDocument.Parse(bytes.AsMemory(), new JsonDocumentOptions
         {
             AllowDuplicateProperties = false,
             MaxDepth = 8,
