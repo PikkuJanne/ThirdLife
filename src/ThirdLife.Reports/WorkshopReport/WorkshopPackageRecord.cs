@@ -43,6 +43,7 @@ public enum WorkshopPackageOutcome
     BackendUnavailableBeforeDispatch,
     ExistingTargetVerified,
     Skipped,
+    ResourcePreflightDeferred,
 }
 
 public sealed record WorkshopPackageRecord(
@@ -122,6 +123,7 @@ public static partial class WorkshopReportRenderer
         WorkshopPackageOutcome.BackendUnavailableBeforeDispatch => "The package backend was unavailable before Windows Installer started.",
         WorkshopPackageOutcome.TrustChanged => "The installer failed its package trust check. Stop and review the approved source and package identity.",
         WorkshopPackageOutcome.PreconditionChanged => "The approval, plan or installed state changed before dispatch. Review the job and build a new plan.",
+        WorkshopPackageOutcome.ResourcePreflightDeferred => "Resource requirements changed before dispatch. Windows Installer did not start. Check preparation requirements before retrying.",
         WorkshopPackageOutcome.VerificationUnconfirmed => "Independent verification could not confirm the requested version and machine-wide scope.",
         WorkshopPackageOutcome.ProbeUnavailable => "The application could not be started for verification. Review the installation.",
         WorkshopPackageOutcome.ProbeExitedEarly => "The application closed before the launch check completed. Review the installation.",

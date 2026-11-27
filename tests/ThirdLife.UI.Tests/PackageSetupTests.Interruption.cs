@@ -380,7 +380,8 @@ public sealed partial class PackageSetupTests
         var time = new FixedClock();
         return new(async token => await SqliteJobStore.OpenForTestingAsync(Path.Combine(root, "store"),
                 SqliteJobStore.CurrentSchemaVersion, time, faultInjector: null, token).ConfigureAwait(false),
-            [OsSample(), SystemSample()], time, packageService: new PilotPackageService(runtime));
+            [OsSample(), SystemSample()], time, packageService: new PilotPackageService(runtime),
+            observePreparationResources: ReadyPreparationResources);
     }
 
     private static async Task<JournalHistory> LoadPackageInterruptionJournalAsync(string root, JobId job)

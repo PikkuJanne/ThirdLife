@@ -26,6 +26,7 @@ public sealed class InventoryReadOnlyBoundaryTests
             (typeof(WindowsActivationNativeApi), "kernel32.dll", "LocalFree"),
             (typeof(WindowsStorageVolumeSource), "kernel32.dll", "GetSystemWindowsDirectoryW"),
             (typeof(WindowsStorageVolumeSource), "kernel32.dll", "GetVolumePathNameW"),
+            (typeof(WindowsStorageVolumeSource), "kernel32.dll", "GetVolumeNameForVolumeMountPointW"),
             (typeof(WindowsStorageVolumeSource), "kernel32.dll", "GetDriveTypeW"),
             (typeof(WindowsStorageVolumeSource), "kernel32.dll", "GetDiskFreeSpaceExW"),
             (typeof(StorageWmiNativeMethods), "ole32.dll", "CoInitializeEx"),
@@ -49,7 +50,7 @@ public sealed class InventoryReadOnlyBoundaryTests
             (typeof(WindowsFirmwarePlatformNativeApi), "advapi32.dll", "RegOpenKeyExW"),
             (typeof(WindowsFirmwarePlatformNativeApi), "advapi32.dll", "RegQueryValueExW"),
             (typeof(WindowsTpmSource), "tbs.dll", "Tbsi_GetDeviceInfo"),
-            (typeof(WindowsBatteryReportEnvironment), "kernel32.dll", "GetSystemPowerStatus"),
+            (typeof(WindowsSystemPowerSource), "kernel32.dll", "GetSystemPowerStatus"),
             (typeof(BatteryReportProcess), "kernel32.dll", "GetSystemDirectoryW"),
             (typeof(BatteryReportProcess), "kernel32.dll", "CreateJobObjectW"),
             (typeof(BatteryReportProcess), "kernel32.dll", "SetInformationJobObject"),
@@ -189,6 +190,7 @@ public sealed class InventoryReadOnlyBoundaryTests
         [
             typeof(IBatteryReportSource), typeof(IBatteryReportEnvironment), typeof(IBatteryReportWorkspace),
             typeof(IBatteryReportProcess), typeof(WindowsBatteryReportSource), typeof(WindowsBatteryReportEnvironment),
+            typeof(WindowsSystemPowerSource),
             typeof(BatteryReportWorkspace), typeof(BatteryReportFiles), typeof(BatteryReportProcess),
             typeof(BatteryReportParser), typeof(BatteryReportSourceSnapshot), typeof(BatteryReportFileIdentity),
         ];

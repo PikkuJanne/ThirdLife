@@ -97,6 +97,7 @@ public enum JournalResult
     PackageProbeExecutableUntrusted,
     PackageProbeLaunchFailed,
     PackageDispatchAuthorizationChanged,
+    PackageResourcePreflightDeferred,
 }
 
 public enum JournalCheckpoint

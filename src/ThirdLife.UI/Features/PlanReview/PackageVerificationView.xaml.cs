@@ -19,7 +19,8 @@ public partial class PackageVerificationView : UserControl
         {
             var hadFocus = RetryPackageButton.IsKeyboardFocused;
             await workspace.RetryPackageAsync();
-            RestoreFocus(RetryPlanStatus.IsVisible ? RetryPlanStatus : PackageRetryMessage, hadFocus);
+            RestoreFocus(workspace.HasPackagePreflightBlocker ? RetryPreflightMessage :
+                RetryPlanStatus.IsVisible ? RetryPlanStatus : PackageRetryMessage, hadFocus);
         }
     }
 
@@ -67,9 +68,13 @@ public partial class PackageVerificationView : UserControl
         target.BringIntoView();
     }
 
-    private void AnnounceStatus(object sender, DataTransferEventArgs args)
+    private void AnnounceStatus(object sender, DataTransferEventArgs args) => AnnounceMessage(args.TargetObject);
+
+    private void AnnouncePreflightVisibility(object sender, DependencyPropertyChangedEventArgs args) => AnnounceMessage(sender);
+
+    private void AnnounceMessage(object target)
     {
-        if (args.TargetObject is not TextBlock { IsLoaded: true, IsVisible: true, Text.Length: > 0 } message ||
+        if (target is not TextBlock { IsLoaded: true, IsVisible: true, Text.Length: > 0 } message ||
             _announcedMessages.TryGetValue(message, out var last) && string.Equals(last, message.Text, StringComparison.Ordinal))
         {
             return;

@@ -102,7 +102,7 @@ internal sealed partial class AuditWorkspace
                     (previous != expected || expected.Result == JournalResult.PackageDispatchAuthorizationChanged)))
             {
                 ClearPlanReview();
-                await CheckPackageAsync();
+                await CheckPackageAsync(displayed);
                 await LoadDisplayedActionDecisionAsync(displayed);
                 PresentPlan(displayed);
                 if (PlanReviewDecision is not { Outcome: PlanReviewOutcome.Declined })
@@ -114,7 +114,6 @@ internal sealed partial class AuditWorkspace
                 return;
             }
 
-            _packageApproval = null;
             _packageCancellation = new CancellationTokenSource();
             try
             {

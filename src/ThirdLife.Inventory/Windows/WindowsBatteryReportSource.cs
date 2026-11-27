@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-
 namespace ThirdLife.Inventory.Windows;
 
 internal sealed class WindowsBatteryReportSource : IBatteryReportSource
@@ -196,8 +194,8 @@ internal sealed class BatteryReportExecutionGate
 
 internal sealed class WindowsBatteryReportEnvironment : IBatteryReportEnvironment
 {
-    public bool HasNoSystemBattery() => OperatingSystem.IsWindows() &&
-        NativeMethods.GetSystemPowerStatus(out var status) && IsExplicitNoBattery(status.BatteryFlag);
+    public bool HasNoSystemBattery() =>
+        WindowsSystemPowerSource.Read() is { BatteryFlag: var batteryFlag } && IsExplicitNoBattery(batteryFlag);
 
     internal static bool IsExplicitNoBattery(byte batteryFlag) => batteryFlag == 128;
 
@@ -205,23 +203,4 @@ internal sealed class WindowsBatteryReportEnvironment : IBatteryReportEnvironmen
 
     public IBatteryReportProcess StartProcess(IBatteryReportWorkspace workspace) =>
         BatteryReportProcess.LaunchFixedReport(workspace.DirectoryPath, workspace.ReportFileName);
-
-    private static class NativeMethods
-    {
-        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-        [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetSystemPowerStatus(out SystemPowerStatus status);
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct SystemPowerStatus
-    {
-        public byte AcLineStatus;
-        public byte BatteryFlag;
-        public byte BatteryLifePercent;
-        public byte SystemStatusFlag;
-        public uint BatteryLifeTime;
-        public uint BatteryFullLifeTime;
-    }
 }
