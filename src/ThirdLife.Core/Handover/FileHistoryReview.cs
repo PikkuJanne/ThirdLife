@@ -97,24 +97,34 @@ public sealed class FileHistoryApproval
             destination.AvailableBytes >= Review.RequiredBytes;
     }
 
-    public FileHistoryRestoreOutcome EvaluateRestore(SavedRecipientHandover handover, bool routeAvailable,
-        FileHistoryDestinationObservation? destination, Guid sampleId, string expectedSha256, int expectedLength,
-        FileHistoryRestoredSample? restored)
+    public FileHistoryRestoreSample CreateRestoreSample(SavedRecipientHandover handover, bool routeAvailable,
+        FileHistoryDestinationObservation? destination)
     {
-        if (sampleId == Guid.Empty || expectedSha256 is not { Length: 64 } ||
-            expectedSha256.Any(character => character is not (>= '0' and <= '9' or >= 'a' and <= 'f')) ||
-            expectedLength is < 1 or > 4096)
+        if (!IsCurrent(handover, routeAvailable, destination))
         {
-            throw new ArgumentException("A bounded harmless sample with exact identity is required.");
+            throw new InvalidOperationException("Review the current handover and destination before preparing a restore sample.");
         }
-        if (restored is null) { return FileHistoryRestoreOutcome.Pending; }
-        if (!IsCurrent(handover, routeAvailable, destination) || restored.ReviewId != Review.ReviewId || restored.SampleId != sampleId || restored.VolumeBinding != Review.VolumeBinding ||
-            !restored.ObservedFromSeparateRestore)
+
+        return new FileHistoryRestoreSample(Review.ReviewId);
+    }
+
+    public FileHistoryRestoreOutcome EvaluateRestore(SavedRecipientHandover handover, bool routeAvailable,
+        FileHistoryDestinationObservation? destination, FileHistoryRestoreSample sample,
+        FileHistorySampleObservation? observation, bool windowsRestoreAttributed)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+        if (observation is null) { return FileHistoryRestoreOutcome.Pending; }
+        if (!IsCurrent(handover, routeAvailable, destination) || sample.ReviewId != Review.ReviewId ||
+            observation.SampleId != sample.SampleId)
         {
             return FileHistoryRestoreOutcome.UnboundObservation;
         }
-        return restored.ByteLength == expectedLength && restored.Sha256 == expectedSha256
-            ? FileHistoryRestoreOutcome.Verified : FileHistoryRestoreOutcome.Mismatch;
+        if (!sample.Matches(observation.Original) || !sample.Matches(observation.Recovered))
+        {
+            return FileHistoryRestoreOutcome.Mismatch;
+        }
+
+        return windowsRestoreAttributed ? FileHistoryRestoreOutcome.Verified : FileHistoryRestoreOutcome.Pending;
     }
 }
 
@@ -125,6 +135,3 @@ public enum FileHistoryRestoreOutcome
     Mismatch,
     Verified,
 }
-
-public sealed record FileHistoryRestoredSample(Guid ReviewId, Guid SampleId, Guid VolumeBinding,
-    bool ObservedFromSeparateRestore, int ByteLength, string Sha256);

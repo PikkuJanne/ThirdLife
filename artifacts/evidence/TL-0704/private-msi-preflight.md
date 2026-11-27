@@ -65,3 +65,18 @@ guest session. The final installed-file inventory and separate
 authorized job-data removal are still open. The contents in the
 private host and guest staging directories remain out of deliverables.
 [Windows Installer standard actions](https://learn.microsoft.com/en-us/windows/win32/msi/using-standard-actions) · [MSI cabinet](https://learn.microsoft.com/en-us/windows/win32/msi/including-a-cabinet-file-in-an-installation)
+
+## Guest process diagnosis
+
+A first native Secondary Logon attempt rejected the command parameters.
+The corrected fixed-path runner kept the command below the documented
+1,024-character limit and created the disposable user's process. The
+process exited with `0xC0000142` before the fixture script wrote its
+receipt or invoked Windows Installer. The exact fixture account was
+removed. Its unloaded profile and the protected staging directory
+`C:\ProgramData\ThirdLife-PrivateLifecycle-2b7d05c5a07040ca83942f9f46dad2bd`
+were retained. There was no install log or owned application directory.
+After the fixture profile unloaded, Secondary Logon was verified stopped
+with its original manual start type. The currently available
+noninteractive route therefore leaves actual lifecycle execution pending.
+[Native logon constraints](https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-createprocesswithlogonw)
