@@ -7560,6 +7560,16 @@ tasks:
     environment: Active Windows 11 Pro 26H2 native x64 host with the locked SDK and isolated fixtures
     reference: artifacts/audits/v0.1-security-privacy.md, 7590368dbd293ff017069be9cca4d5148b9bae1b
     limitation: Scoped technical checkpoint. Exact frozen package, signing, licence/distribution and remaining named native observations retain their own gates.
+  - summary: Reviewed current Handover data flows, protected sample and report privacy, and the private MSI and ZIP boundaries.
+    task: TL-0609
+    command: Selected Release persistence and Reports tests, package-authoring and verifier tests, and exact-source review
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 8 Persistence, 22 Reports and 9 Python cases
+    environment: Active Windows 11 native x64 host with isolated store and archive fixtures
+    reference: artifacts/audits/v0.1-security-privacy.md, e94f10343f1f703612c2ac0310d2c8570c10c776
+    limitation: Current protected data and package preflight only. Actual recipient Windows operations, guest lifecycle and accountable release scope stay open.
   notes:
   - Codex technical inspection cannot establish independent security or privacy review. Accountable acceptance of pilot
     scope occurs at TL-0611.
