@@ -215,5 +215,48 @@
         </StackPanel>
       </StackPanel>
     </GroupBox>
+    <GroupBox Header="Configuration export" AutomationProperties.Name="Configuration export" Margin="0,16,0,0"
+              Visibility="{Binding HasConfigurationExportOptions, Converter={StaticResource PlanReviewVisibility}}">
+      <StackPanel>
+        <Label Content="Configuration to export" Target="{Binding ElementName=ConfigurationExportSelector}" />
+        <ComboBox x:Name="ConfigurationExportSelector" ItemsSource="{Binding PlanProfiles}"
+                  DisplayMemberPath="ConfigurationExportLabel" SelectedItem="{Binding ConfigurationExportOption, Mode=TwoWay}"
+                  IsEnabled="{Binding CanChooseConfigurationExport}" AutomationProperties.Name="Configuration to export" />
+        <Button x:Name="PreviewConfigurationExportButton" Content="Preview configuration ZIP"
+                Click="PreviewConfigurationExport" IsEnabled="{Binding CanPreviewConfigurationExport}"
+                HorizontalAlignment="Left" Margin="0,8,0,0" />
+        <TextBlock x:Name="ConfigurationExportMessage" Text="{Binding ConfigurationExportStatus, NotifyOnTargetUpdated=True}"
+                   Visibility="{Binding HasConfigurationExportStatus, Converter={StaticResource PlanReviewVisibility}}"
+                   AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" Focusable="True"
+                   KeyboardNavigation.IsTabStop="True" TextWrapping="Wrap" Margin="0,8,0,0" />
+        <StackPanel x:Name="ConfigurationPreviewRegion" Margin="0,8,0,0"
+                    Visibility="{Binding HasConfigurationPreview, Converter={StaticResource PlanReviewVisibility}}">
+          <TextBlock x:Name="ConfigurationPreviewTitle" Text="{Binding ConfigurationPreview.FileName}"
+                     AutomationProperties.HeadingLevel="Level2" FontWeight="SemiBold" TextWrapping="Wrap"
+                     Focusable="True" KeyboardNavigation.IsTabStop="True" />
+          <TextBlock Text="{Binding ConfigurationPreview.ProfileVersion, StringFormat={}Profile version {0}}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding ConfigurationPreview.ArchiveSha256, StringFormat={}ZIP SHA-256 {0}}"
+                     Style="{DynamicResource Trace.MetaText}" TextWrapping="Wrap" />
+          <ItemsControl x:Name="ConfigurationPreviewFiles" ItemsSource="{Binding ConfigurationPreview.Files}"
+                        AutomationProperties.Name="Files in the configuration ZIP">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Margin="0,6,0,0">
+                  <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding ByteCount, StringFormat={}{0} bytes}" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding ContentSha256, StringFormat={}SHA-256 {0}}" TextWrapping="Wrap"
+                             Style="{DynamicResource Trace.MetaText}" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="The ZIP goes in a protected ThirdLifeConfiguration subfolder of the location you choose."
+                     TextWrapping="Wrap" Margin="0,8,0,0" />
+          <Button x:Name="SaveConfigurationExportButton" Content="Choose folder and save ZIP"
+                  Click="SaveConfigurationExport" IsEnabled="{Binding CanSaveConfigurationExport}"
+                  HorizontalAlignment="Left" Margin="0,8,0,0" />
+        </StackPanel>
+      </StackPanel>
+    </GroupBox>
   </StackPanel>
 </UserControl>

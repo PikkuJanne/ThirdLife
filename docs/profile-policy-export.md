@@ -1,9 +1,15 @@
 # Profile and policy export
 
-The current model returns the exact validated UTF-8 JSON bytes for an embedded
-workshop profile and its related catalogue and policy. It supplies fixed file
-names and the SHA-256 of each payload. The file selection and destination writer
-remain pending. [Configuration export model](../src/ThirdLife.UI/Features/PlanReview/WorkshopConfigurationExport.cs)
+Open **Prepare**, select a configuration in **Configuration export** and choose
+**Preview configuration ZIP**. The preview shows the profile version, file list,
+byte counts and SHA-256 digests. A synthetic candidate is identified in the
+selector. Changing the selection clears its preview.
+
+Choose **Choose folder and save ZIP** to select an existing local Windows folder.
+ThirdLife saves the exact reviewed ZIP to a protected `ThirdLifeConfiguration`
+subfolder. Publication uses a restricted temporary file and an atomic rename.
+An occupied archive name preserves the existing file. A cancelled picker
+preserves the preview for another attempt. [Archive store](../src/ThirdLife.Reports/Configuration/ConfigurationArchiveStore.cs)
 
 | File | Validated schema | Validation binding |
 | --- | --- | --- |
@@ -12,14 +18,16 @@ remain pending. [Configuration export model](../src/ThirdLife.UI/Features/PlanRe
 | `policy.json` | `thirdlife.policy.v2` | Exact validated policy bytes for the profile's policy ID and version. The compiled candidate or reviewed package policy must agree with the profile's synthetic status. |
 
 Catalogue and profile schemas hash and validate one owned byte snapshot and
-retain that snapshot. Export preserves whitespace, byte order, version and
-synthetic markings. The current model covers the bundled Basic and Job Seeker
-candidates and the scoped reviewed plain-text editor profile. The payloads
-contain only the reviewed configuration metadata. [Catalogue schema](../src/ThirdLife.Catalog/Schema/CatalogSchema.cs) [Profile schema](../src/ThirdLife.Catalog/Profiles/ProfileSchema.cs) [Policy snapshot](../src/ThirdLife.Policy/Versioning/PolicySnapshot.cs)
+retain that snapshot. Each ZIP member preserves the original bytes, including
+whitespace, version and synthetic markings. The current model covers the
+bundled Basic and Job Seeker candidates and the scoped reviewed plain-text
+editor profile. The payloads contain only the reviewed configuration metadata.
+[Archive preview](../src/ThirdLife.Reports/Configuration/ConfigurationArchivePreview.cs)
+[Catalogue schema](../src/ThirdLife.Catalog/Schema/CatalogSchema.cs)
+[Profile schema](../src/ThirdLife.Catalog/Profiles/ProfileSchema.cs)
+[Policy snapshot](../src/ThirdLife.Policy/Versioning/PolicySnapshot.cs)
 
 An exported configuration preserves the original review scope. A matching digest
 checks byte identity. Adoption, effective policy, package authority and permission
-to dispatch are established by their existing distinct controls. A later writer
-must preserve the validated payloads, confirm the chosen destination and file set,
-handle collision and interruption, and avoid importing or adopting any output.
-That writer and its file-lifecycle verification remain open for TL-0703.
+to dispatch retain their existing controls. The export is a copy of the bundled
+configuration and leaves the preparation plan and saved job history intact.

@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Microsoft.Win32;
+using ThirdLife.Reports.Configuration;
 using ThirdLife.UI.Shell;
 
 namespace ThirdLife.UI.Features.PlanReview;
@@ -13,11 +15,58 @@ public partial class PlanReviewView : UserControl
     private IInputElement? _detailsHeaderFocus;
     private PlanReviewSnapshot? _detailsPlan;
     private readonly Dictionary<TextBlock, string> _announcedMessages = [];
+    internal Func<string?>? SelectConfigurationFolderForTesting { get; set; }
 
     public PlanReviewView() => InitializeComponent();
 
     private void ResizeMaterialImpact(object sender, SizeChangedEventArgs args) =>
         MaterialImpactItems.Tag = args.NewSize.Width >= 560 ? 2 : 1;
+
+    private void PreviewConfigurationExport(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanPreviewConfigurationExport)
+        {
+            var hadFocus = PreviewConfigurationExportButton.IsKeyboardFocused;
+            workspace.PreviewConfigurationExport();
+            RestoreFocus(workspace.HasConfigurationPreview ? ConfigurationPreviewTitle : ConfigurationExportMessage, hadFocus);
+        }
+    }
+
+    private async void SaveConfigurationExport(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is not AuditWorkspace { CanSaveConfigurationExport: true, ConfigurationPreview: { } preview } workspace)
+        {
+            return;
+        }
+
+        var hadFocus = SaveConfigurationExportButton.IsKeyboardFocused;
+        var selected = ChooseConfigurationFolder();
+        if (selected is null)
+        {
+            return;
+        }
+
+        if (ConfigurationArchiveDestination.FromSelectedFolder(selected) is not { } destination)
+        {
+            workspace.ShowInvalidConfigurationDestination();
+        }
+        else
+        {
+            await workspace.SaveConfigurationExportAsync(preview, destination);
+        }
+        RestoreFocus(ConfigurationExportMessage, hadFocus);
+    }
+
+    private string? ChooseConfigurationFolder()
+    {
+        if (SelectConfigurationFolderForTesting is { } select)
+        {
+            return select();
+        }
+
+        var dialog = new OpenFolderDialog { Title = "Choose a local folder for configuration export" };
+        return dialog.ShowDialog(Window.GetWindow(this)) == true ? dialog.FolderName : null;
+    }
 
     private async void BuildPlanReview(object sender, RoutedEventArgs args)
     {
