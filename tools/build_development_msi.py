@@ -12,12 +12,13 @@ import io
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import uuid
 import zipfile
 
-from tools.verify_development_package import ARCHIVE, MAX_ARCHIVE, read_bounded, verify
+from tools.verify_development_package import (
+    ARCHIVE, INSTALLER, INSTALLER_RECEIPT, MAX_ARCHIVE, read_bounded, require_installer_version, verify,
+)
 
 
 UPGRADE_NAMESPACE = uuid.UUID("f9d1d0d5-3c36-471f-9b78-89951d6a9aef")
@@ -273,10 +274,7 @@ def make_cabinet(staging: Path, payload: dict[str, bytes]) -> None:
 
 def build(package: Path, output: Path, source: str, archive_sha256: str, sbom_sha256: str,
           version: str) -> Path:
-    match = re.fullmatch(r"([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,5})", version)
-    if not match or any(str(int(value)) != value or int(value) > limit
-                        for value, limit in zip(match.groups(), (255, 255, 65535), strict=True)):
-        raise ValueError("Supply a three-part Windows Installer product version.")
+    require_installer_version(version)
     verify(package, source, archive_sha256, sbom_sha256)
     snapshot = read_bounded(package / ARCHIVE, MAX_ARCHIVE)
     if hashlib.sha256(snapshot).hexdigest() != archive_sha256:
@@ -289,7 +287,7 @@ def build(package: Path, output: Path, source: str, archive_sha256: str, sbom_sh
     staging.mkdir()
     tables = author_tables(staging, payload, version)
     make_cabinet(staging, payload)
-    destination = output / "ThirdLife-SetupCore-Private-x64.msi"
+    destination = output / INSTALLER
     staged_msi = staging / destination.name
     WindowsInstaller().assemble(staged_msi, staging, tables)
     staged_msi.replace(destination)
@@ -298,7 +296,7 @@ def build(package: Path, output: Path, source: str, archive_sha256: str, sbom_sh
         "source": source, "app_archive_sha256": archive_sha256, "sbom_sha256": sbom_sha256,
         "version": version, "msi_sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
     }
-    (output / "installer-receipt.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+    (output / INSTALLER_RECEIPT).write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     return destination
 
 
