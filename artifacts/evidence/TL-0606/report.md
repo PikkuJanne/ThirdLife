@@ -38,3 +38,13 @@ build 26300.9974, with .NET SDK 10.0.400 on 27 November 2026.
 The UI checks used isolated fixtures and a synthetic private-looking value.
 The ZIP sample uses invented machine inputs and a modeled package result.
 No external transfer or physical assistive-technology observation was made.
+
+## Composition with recipient guide and restart recovery
+
+The candidate incorporating reviewed main `c06e9e145669a36651550e3ab5bd734ee94f7284`
+passed `eng/verify.ps1 -Tier Targeted` in 228.464 s on the active Windows 11
+host. The Release build and repository validators passed. All 1,411 Quick
+.NET tests and 15 selected diagnostics, reports and persistence tests
+passed with zero skips. Refresh now updates recipient guide and support
+export state whenever the workspace changes. Clean Full remains the
+migration gate for the latest combined source.

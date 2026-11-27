@@ -21,6 +21,7 @@ using ThirdLife.Packages.WindowsUpdates;
 using ThirdLife.Persistence;
 using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
+using ThirdLife.Reports.RecipientGuide;
 using ThirdLife.Reports.WorkshopReport;
 using ThirdLife.UI.BrokerClient;
 using ThirdLife.UI.Features.PlanReview;
@@ -74,7 +75,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         Func<IBrokerExecutionJournal, ExecutionCoordinator>? fixtureBrokerCoordinator = null,
         Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null,
         Func<DateTimeOffset, PreparationResourceSnapshot>? observePreparationResources = null,
-        IWindowsUpdateAgent? fixtureWindowsUpdates = null)
+        IWindowsUpdateAgent? fixtureWindowsUpdates = null,
+        RecipientGuideStore? recipientGuideStore = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -88,6 +90,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         _providers = providers.ToArray();
         _timeProvider = timeProvider;
         _reportStore = reportStore;
+        _recipientGuideStore = recipientGuideStore;
         IsFixtureScenario = _providers.All(static provider =>
             provider.Descriptor.EvidenceOrigin == ProviderEvidenceOrigin.SyntheticFixture);
         if (!IsFixtureScenario && _providers.Any(static provider =>
@@ -198,12 +201,14 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             new PendingRebootProvider(),
             new SecurityBaselineProvider(),
             new StorageProvider(),
+            new SystemDiskHealthProvider(),
             new SystemInventoryProvider(),
         ],
         TimeProvider.System,
         RegisteredReportStore(),
         packageService: new PilotPackageService(),
-        appendPackageDiagnostic: AppendLocalPackageDiagnosticAsync)
+        appendPackageDiagnostic: AppendLocalPackageDiagnosticAsync,
+        recipientGuideStore: RegisteredRecipientGuideStore())
     {
         UpdateAgent = new WindowsUpdateAgent(),
         UpdateBackend = new ProtectedWindowsUpdateBackend(),
@@ -417,6 +422,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         var jobId = Job!.Job.JobId;
         return RunReportAsync("Generating the workshop report from saved evidence.", async cancellationToken =>
         {
+            var finalization = await ReadFinalizationForReportAsync(jobId, cancellationToken);
             var stored = await LoadJobAsync(jobId, cancellationToken);
             if (IsSeparateEvidenceOrigin(stored))
             {
@@ -430,13 +436,16 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             var checkpoint = await ReadMaintenanceForReportAsync(jobId, cancellationToken);
             var verification = await ReadProfileVerificationForReportAsync(jobId, cancellationToken);
             var coldBoot = await ReadColdBootVerificationAsync(jobId, cancellationToken);
+            await ConfirmReportEvidenceAsync(jobId, finalization, cancellationToken);
             var now = _timeProvider.GetUtcNow();
             var artifact = await Task.Run(() =>
             {
                 var packages = ReadPackageRecords(journals, includeEarlierAttempts: true);
                 var preparation = ProjectPreparationRecords(stored, assessment, journals, checkpoint, verification, now, cancellationToken);
-                var content = WorkshopReportRenderer.RenderWithPackageRecords(stored, summary, policy, packages,
-                    preparation, ProjectProfileVerification(verification, coldBoot), cancellationToken);
+                var content = WorkshopReportRenderer.RenderTechnicalRecord(stored, summary, policy, packages,
+                    preparation, ProjectProfileVerification(verification, coldBoot),
+                    ProjectWorkshopRecordDetails(jobId, journals, finalization),
+                    cancellationToken);
                 return _reportStore!.Write(jobId, content, cancellationToken);
             }, cancellationToken);
             ReportArtifact = artifact;
@@ -497,7 +506,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
                     _ => "The workshop report could not be saved. Previously saved reports were preserved.",
                 };
             }
-            catch (Exception exception) when (exception is AssessmentException or JobStoreException
+            catch (Exception exception) when (exception is AssessmentException or JobStoreException or JobLifecycleException
                 or ArgumentException or InvalidOperationException)
             {
                 ReportStatus = "The workshop report could not be generated from this job. Reopen the job and review its saved records.";

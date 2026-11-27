@@ -6819,10 +6819,30 @@ tasks:
     environment: Existing ThirdLife-W11, Windows 11 Pro 26H2 native x64 build 26300.9974, pinned private SDK 10.0.400 and controlled adapters
     reference: artifacts/evidence/TL-0510/guest.json, 84e47d5fe6b697e14cb9f1463f61ed8b30fce2be
     limitation: Candidate actions are synthetic. The guest settings and checkpoint were untouched. Whole-device reference verification is held.
-  blocked_reason: Whole-device reference verification is held. The live route lacks trusted system-volume-to-disk health
-    evidence and positive aggregate restart clearance. The Job Seeker profile is synthetic and the live workshop route
-    supports one reviewed package. Reopen the native reference case with those evidence sources and a qualified exact
-    reference profile on ThirdLife-W11. TL-0511 retains actual update and live multi-action qualification.
+  - summary: The normal inventory roster and final verification accept bounded health from the exact Windows boot-volume disk. The active host reported inferred healthy.
+    task: TL-0510
+    command: eng/verify.ps1 -Tier Targeted with the named Inventory, UI, Reports and Verification selections, and SystemDiskHealthProviderTests ActiveMachine
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: Targeted 285.301 s, active-host production provider smoke 3.535 s
+    environment: Active Windows 11 Pro 26H2 native x64 host, standard-user token and local Windows Storage WMI
+    reference: artifacts/evidence/TL-0510/system-disk-health.md, 3b5dd745e94435650635e9495184348bcf4e5cd6
+    limitation: The provider qualified on the host only. The existing guest and exact live-profile case still require their own evidence and aggregate restart clearance.
+  - summary: An earlier unresolved servicing recovery holds the restart check through Verify and Finalization, including a still-saved historical pass.
+    task: TL-0510
+    command: eng/verify.ps1 -Tier Targeted with ProfileVerificationTests and FullMaintenanceReopensAtEveryBoundaryAndRequiresFreshStateAfterFinalRestart
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 295.294 s with 1382 Quick and 13 selected deterministic .NET cases
+    environment: Active Windows 11 Pro 26H2 native x64 host with controlled update and maintenance evidence
+    reference: artifacts/evidence/TL-0510/restart-recovery.md, 4f9aabb
+    limitation: The production guard preserves historical results and gates unresolved recovery. Native clearance still requires its own positive proof.
+  blocked_reason: Whole-device reference verification is held. The OS-disk health provider has active-host evidence.
+    Reopen the native reference case with guest disk health, aggregate restart clearance and a qualified exact
+    reference profile on ThirdLife-W11. Job Seeker is synthetic and the current live route supports one reviewed
+    package. TL-0511 retains actual update and live multi-action qualification.
   notes:
   - Known required-flow defects block the affected outcome. TL-0611 carries actual pilot-scope decisions.
   - Use versioned candidate catalog/policy/profile data for technical scenarios while TL-0508 adoption is pending.
@@ -6830,7 +6850,7 @@ tasks:
     with a reopening condition. Deterministic results do not claim live installation; TL-0511 retains native capability
     qualification.
   - The candidate and fault matrix can run apart from the held reference case. Record scoped observations and continue
-    independent work such as TL-0601 while the native verification inputs are qualified.
+    independent handover work while the native verification inputs are qualified.
   expected_test_tier: extended
   full_test_triggers: []
   extended_test_triggers:
@@ -6926,7 +6946,7 @@ tasks:
   workstream: finalization
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: L
   executor: codex
   environment: any
@@ -6953,7 +6973,29 @@ tasks:
   - Finalization history remains auditable and is not silently overwritten.
   verification:
   - Test passed, failed, unknown, human-confirmed, not-applicable, reopened-job, and changed-system-state cases.
-  evidence: []
+  evidence:
+  - summary: TRACE Handover saved an attributable confirmation, reopened it under the same job, and held the earlier result after a modeled boot change.
+    task: TL-0601
+    command: eng/verify.ps1 -Tier Targeted with Persistence and Verification projects, plus the focused Handover journey
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 310.976 s for Targeted, 1594 deterministic .NET tests and eight work-selection regressions
+    environment: Active Windows 11 Pro 26H2 native x64 host, build 26300.9974, .NET SDK 10.0.400 and Python 3.14.7
+    reference: artifacts/evidence/TL-0601/report.md, be6069969f66b0971fd30454cef74cc9199e912a
+    limitation: Isolated SQLite and WPF application controls with a modeled boot. Live cleanup and recipient handover remain separate.
+  - summary: The clean migration gate passed the complete governed validator suite and deterministic solution tests.
+    task: TL-0601
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 700.420 s, 310 governance regressions and 2558 deterministic .NET tests
+    environment: Clean detached worktree on the active Windows 11 Pro 26H2 native x64 host
+    reference: artifacts/evidence/TL-0601/report.md, be6069969f66b0971fd30454cef74cc9199e912a
+    limitation: The default Full filter excludes native and Extended cases. An added ActiveMachine Intake focus assertion reproduced on the unchanged baseline.
+  notes:
+  - Completion covers checklist rules, operator confirmation, history and recheck behavior. TL-0602 owns bounded artifact detection, TL-0604 owns the technical record and TL-0607 owns the handover gate.
   expected_test_tier: targeted
   full_test_triggers:
   - Run Full from a clean checkout for the finalization confirmation migration.
@@ -7007,7 +7049,7 @@ tasks:
   workstream: handover
   kind: code
   priority: P0
-  status: in_progress
+  status: done
   size: M
   executor: codex
   environment: any
@@ -7035,7 +7077,27 @@ tasks:
   verification:
   - Run both handover modes and inspect records for recipient-secret leakage.
   - Test switching modes after partial completion.
-  evidence: []
+  evidence:
+  - summary: TRACE Handover saved the assisted guidance choice only after recipient presence was confirmed and reopened sealed mode with every choice deferred.
+    task: TL-0603
+    command: eng/verify.ps1 -Tier Targeted with Persistence and the focused Handover WPF and workshop report tests
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: Targeted 409.475 s, focused combined WPF three tests in 7 s
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated SQLite and WPF
+    reference: artifacts/evidence/TL-0603/report.md, f39667f1a94bdeb6871fa758476e368fe7d47ca3
+    limitation: Modeled recipient presence and exact local save/reopen. Recipient decisions and setup remain external to feature verification.
+  - summary: Clean migration gate passed the complete governance and deterministic solution suites.
+    task: TL-0603
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 887.559 s with 310 governance regressions and 2571 deterministic .NET tests
+    environment: Clean detached worktree on the active Windows 11 Pro 26H2 native x64 host
+    reference: artifacts/evidence/TL-0603/report.md, f39667f1a94bdeb6871fa758476e368fe7d47ca3
+    limitation: Clean Full covers the exact mode code and migration. Focused combined WPF separately covers the subsequent workshop report integration.
   expected_test_tier: targeted
   full_test_triggers:
   - Run Full from a clean checkout for the handover mode history migration.
@@ -7046,7 +7108,7 @@ tasks:
   workstream: reports
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: any
@@ -7076,7 +7138,17 @@ tasks:
   verification:
   - Compare golden reports for representative ready, repair, review, alternative-OS, and do-not-deploy jobs.
   - Run HTML/markup injection and long-text tests.
-  evidence: []
+  evidence:
+  - summary: The normal Handover report retained exact plan provenance, approval and repair history, independent verification, and current and earlier finalization.
+    task: TL-0604
+    command: eng/verify.ps1 -Tier Targeted -Restore with the Reports and UI selections in the evidence record
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 267.992 s, 1407 deterministic .NET executions and eight work-selection regressions
+    environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64, .NET SDK 10.0.400, Python 3.14.7, isolated SQLite and WPF
+    reference: artifacts/evidence/TL-0604/report.md, b7fefee6c9b596dda8ea348908982a2a184694cf
+    limitation: Controlled inputs and modeled boot change. Physical printing and perceptual assistive-technology use were unobserved. An existing ActiveMachine focus assertion reproduced on the unchanged baseline.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
@@ -7086,7 +7158,7 @@ tasks:
   workstream: reports
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: any
@@ -7124,7 +7196,27 @@ tasks:
   - Inspect both rendered guides for reading order, headings, responsiveness, and accessible output at 200% zoom. Check
     wording against the product states.
   - Run prohibited-field and hostile-text tests.
-  evidence: []
+  evidence:
+  - summary: TRACE generated and saved the exact recipient guide for both assisted and sealed handover. The preview rejected changed saved facts.
+    task: TL-0605
+    command: eng/verify.ps1 -Tier Targeted -Restore with the Reports and UI selections in the guide evidence
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 269.973 s, 1394 deterministic .NET executions and eight work-selection regressions
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated SQLite and WPF, local printable HTML
+    reference: artifacts/evidence/TL-0605/report.md, 73a64d94bbd1b9c2b38bdcda19bc897b0402dca1
+    limitation: The guide used controlled job facts and modeled recipient choices. Actual transfer and kit adoption retain separate authority.
+  - summary: Both synthetic variants preserved ten headings and reading order with no horizontal overflow or external requests at the tested scale.
+    task: TL-0605
+    command: Isolated Edge reading-order and 200 percent equivalent pixel-scale probe recorded with both rendered variants
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 2.531 s
+    environment: Edge 158.0.4370.45 on the active host, 320 CSS pixel viewport at device pixel ratio 2
+    reference: artifacts/evidence/TL-0605/layout-receipt.json
+    limitation: Physical printing, audible assistive use, recipient comprehension and actual recipient transfer remain unobserved.
   notes:
   - Representative comprehension remains unobserved unless supported by actual evidence. Resolve a consequential ambiguity
     through the D-074 exception only when its conditions apply.
@@ -7268,7 +7360,17 @@ tasks:
     automation, and announcement signals against ACCESSIBILITY.md.
   - Attach issue and test evidence for findings and fixes, and record unavailable physical or perceptual observations
     as specific validation limits.
-  evidence: []
+  evidence:
+  - summary: The two baseline desktop focus failures passed unchanged after programmatic stage transitions laid out the newly shown controls.
+    task: TL-0608
+    command: eng/verify.ps1 -Tier Targeted with the M1AuditJourneyTests and supported PolicyWorkflowTests active-host journeys
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 377.974 s, 1367 deterministic .NET cases plus two active-host journey cases
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated jobs and standard-user WPF
+    reference: artifacts/evidence/TL-0608/stage-focus.md, 522d90f3f2e585b8ce3b8735582096196836c55d
+    limitation: Verified stage-transition repair. The full M6 technical accessibility audit and perceptual scope remain open.
   notes:
   - Engineering audit scope cannot establish full perceptual accessibility. TL-0611 carries the accountable pilot accessibility
     disposition.

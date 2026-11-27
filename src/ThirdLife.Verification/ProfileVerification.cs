@@ -328,7 +328,7 @@ public static class ProfileVerification
             return ProfileVerificationState.Stale;
         }
 
-        return update.RebootRequired == false && restart.Value?.StringValue == "clear"
+        return !update.RecoveryPending && update.RebootRequired == false && restart.Value?.StringValue == "clear"
             ? ProfileVerificationState.Passed : ProfileVerificationState.Unavailable;
     }
 

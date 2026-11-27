@@ -79,6 +79,7 @@ internal sealed partial class AuditWorkspace
             {
                 await Task.Run(() => store.SaveFinalizationConfirmationAsync(job.Job.JobId, expected, rule, outcome,
                     reason, actor));
+                ClearReport();
                 _finalizationFeedback = SavedFinalizationMessage;
             }
             catch (JobStoreConflictException)
@@ -121,6 +122,11 @@ internal sealed partial class AuditWorkspace
                 _finalizationFeedback == SavedFinalizationMessage)
             {
                 _finalizationFeedback = string.Empty;
+            }
+
+            if (_recipientGuide is { } preview && preview.HandoverSequence != handover?.Sequence)
+            {
+                ClearRecipientGuide("The saved handover changed. Preview the guide again.");
             }
 
             RecipientHandover = handover;

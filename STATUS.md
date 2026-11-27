@@ -70,10 +70,31 @@ in the workshop report. Physical host power-cycle evidence remains unobserved.
 
 TL-0510 passed 40 host matrix cases and three controlled candidate cases on
 `ThirdLife-W11`. The guest reopened the exact job, approval and report. Live
-reference verification is held pending trusted system-disk health and
-aggregate restart clearance plus a qualified exact live profile. TL-0511
-retains live update and multi-action qualification. TL-0601 can proceed independently.
-[M5 matrix](artifacts/e2e/M5-full-profile.md)
+reference verification is held pending guest disk health, aggregate restart
+clearance and a qualified exact live profile. The read-only provider tied the
+Windows volume to its disk and observed healthy on the active host. TL-0511
+retains live update and multi-action qualification.
+[M5 matrix](artifacts/e2e/M5-full-profile.md) · [System-disk evidence](artifacts/evidence/TL-0510/system-disk-health.md)
+
+TL-0601 adds the workshop checklist to TRACE Handover. It saves attributable
+confirmations, retains earlier results, and requires a recheck after a relevant
+job or boot change. TL-0602 adds the bounded artifact detector.
+[Finalization evidence](artifacts/evidence/TL-0601/report.md)
+
+TL-0604 generates the restricted technical workshop record from saved
+provenance, repairs, approval, preparation, verification and current or
+earlier finalization. The record keeps whole-device handover open.
+[Workshop record evidence](artifacts/evidence/TL-0604/report.md)
+
+TL-0603 saves assisted or sealed mode in the same job. A mode change requires
+a fresh checklist and preserves earlier confirmations. Sealed mode leaves
+personal choices pending. TL-0605 consumes the saved choices for the guide.
+[Handover mode evidence](artifacts/evidence/TL-0603/report.md)
+
+TL-0605 generates an assisted or sealed recipient guide from saved choices
+and verified facts. The operator previews and saves the exact printable
+copy. Each variant preserved reading order at the tested 200% equivalent
+scale. [Recipient guide evidence](artifacts/evidence/TL-0605/report.md)
 
 Pilot adoption and exposure remain at TL-0611. Standalone release and Team B
 exit remain at TL-0710. [Decision and graph review](docs/reviews/2026-11-27-single-guest-continuation.md)

@@ -1,0 +1,130 @@
+{
+  "browser": "Edg/158.0.4370.45",
+  "mode": "headless",
+  "variants": [
+    {
+      "variant": "assisted",
+      "width": 305,
+      "scrollWidth": 305,
+      "height": 2187,
+      "scale": 2,
+      "networkEntries": 0,
+      "headings": [
+        [
+          "H1",
+          "Your Windows 11 setup guide"
+        ],
+        [
+          "H2",
+          "Getting started"
+        ],
+        [
+          "H2",
+          "Programs checked by the workshop"
+        ],
+        [
+          "H2",
+          "Windows and app updates"
+        ],
+        [
+          "H2",
+          "Where to find your files"
+        ],
+        [
+          "H2",
+          "Back up and restore your files"
+        ],
+        [
+          "H2",
+          "Accessibility settings"
+        ],
+        [
+          "H2",
+          "Your setup choices"
+        ],
+        [
+          "H2",
+          "Help and support"
+        ],
+        [
+          "H2",
+          "What this guide covers"
+        ]
+      ],
+      "accessibleHeadings": [
+        "Your Windows 11 setup guide",
+        "Getting started",
+        "Programs checked by the workshop",
+        "Windows and app updates",
+        "Where to find your files",
+        "Back up and restore your files",
+        "Accessibility settings",
+        "Your setup choices",
+        "Help and support",
+        "What this guide covers"
+      ]
+    },
+    {
+      "variant": "sealed",
+      "width": 305,
+      "scrollWidth": 305,
+      "height": 2139,
+      "scale": 2,
+      "networkEntries": 0,
+      "headings": [
+        [
+          "H1",
+          "Your Windows 11 setup guide"
+        ],
+        [
+          "H2",
+          "Getting started"
+        ],
+        [
+          "H2",
+          "Programs checked by the workshop"
+        ],
+        [
+          "H2",
+          "Windows and app updates"
+        ],
+        [
+          "H2",
+          "Where to find your files"
+        ],
+        [
+          "H2",
+          "Back up and restore your files"
+        ],
+        [
+          "H2",
+          "Accessibility settings"
+        ],
+        [
+          "H2",
+          "Your setup choices"
+        ],
+        [
+          "H2",
+          "Help and support"
+        ],
+        [
+          "H2",
+          "What this guide covers"
+        ]
+      ],
+      "accessibleHeadings": [
+        "Your Windows 11 setup guide",
+        "Getting started",
+        "Programs checked by the workshop",
+        "Windows and app updates",
+        "Where to find your files",
+        "Back up and restore your files",
+        "Accessibility settings",
+        "Your setup choices",
+        "Help and support",
+        "What this guide covers"
+      ]
+    }
+  ]
+}

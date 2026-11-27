@@ -64,10 +64,10 @@ public sealed class WorkshopReportStore
     private const int ReservedFreeBytes = 4 * 1024 * 1024;
     private const int TransferBytes = 16 * 1024;
     private const string LockFileName = ".workshop-write.lock";
-    private const string ReportPrefix = "workshop-";
-    private const string ReportSuffix = ".txt";
     private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private readonly string _rootDirectory;
+    private readonly string _filePrefix;
+    private readonly string _fileSuffix;
     private readonly Func<Guid> _nextReportToken;
     private readonly object _issuer = new();
 
@@ -76,6 +76,11 @@ public sealed class WorkshopReportStore
     }
 
     internal WorkshopReportStore(string rootDirectory, Func<Guid> nextReportToken)
+        : this(rootDirectory, nextReportToken, printableRecipientGuide: false)
+    {
+    }
+
+    internal WorkshopReportStore(string rootDirectory, Func<Guid> nextReportToken, bool printableRecipientGuide)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
         ArgumentNullException.ThrowIfNull(nextReportToken);
@@ -86,6 +91,8 @@ public sealed class WorkshopReportStore
 
         _rootDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootDirectory));
         _nextReportToken = nextReportToken;
+        _filePrefix = printableRecipientGuide ? "recipient-guide-" : "workshop-";
+        _fileSuffix = printableRecipientGuide ? ".html" : ".txt";
     }
 
     public WorkshopReportArtifact Write(
@@ -117,7 +124,7 @@ public sealed class WorkshopReportStore
             throw new WorkshopReportStoreException(WorkshopReportFailure.WriteFailed);
         }
 
-        var fileName = $"{ReportPrefix}{_nextReportToken():N}{ReportSuffix}";
+        var fileName = $"{_filePrefix}{_nextReportToken():N}{_fileSuffix}";
         var destination = Path.Combine(_rootDirectory, fileName);
         using var security = OpenRoot(create: true);
         try
@@ -131,7 +138,7 @@ public sealed class WorkshopReportStore
 
             EnsureCapacity(bytes.Length, cancellationToken);
             var digest = SHA256.HashData(bytes);
-            var temporary = Path.Combine(_rootDirectory, $".workshop-{Guid.NewGuid():N}.tmp");
+            var temporary = Path.Combine(_rootDirectory, $".{_filePrefix}{Guid.NewGuid():N}.tmp");
             cancellationToken.ThrowIfCancellationRequested();
             var committed = ProtectedArtifactPublication.Publish(security, bytes, temporary, destination, cancellationToken);
             if (!committed)

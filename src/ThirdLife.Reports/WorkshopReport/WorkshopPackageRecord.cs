@@ -82,14 +82,19 @@ public static partial class WorkshopReportRenderer
         WorkshopProfileVerification? profileVerification,
         CancellationToken cancellationToken = default)
     {
+        ValidatePackageRecords(packages, savedDecision, assessment);
+        return RenderCore(job, assessment, savedDecision, packages, preparation, profileVerification, cancellationToken: cancellationToken);
+    }
+
+    private static void ValidatePackageRecords(IReadOnlyList<WorkshopPackageRecord> packages,
+        StoredPolicyDecision? savedDecision, WorkshopAssessmentSummary? assessment)
+    {
         ArgumentNullException.ThrowIfNull(packages);
         // Each projected attempt or unused approval represents one bounded journal entry.
         if (packages.Count > 1_024 || (savedDecision is not null && assessment is null))
         {
             throw new ArgumentException("The workshop report requires bounded package records and a matching assessment.");
         }
-
-        return RenderCore(job, assessment, savedDecision, packages, preparation, profileVerification, cancellationToken);
     }
 
     private static void WritePackageRecords(
