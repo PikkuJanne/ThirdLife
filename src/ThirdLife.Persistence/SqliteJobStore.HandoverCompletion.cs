@@ -12,6 +12,19 @@ public sealed partial class SqliteJobStore
     private const int PublicationPayloadLimit = 2048;
     private const int SignOffPayloadLimit = 16384;
 
+    public Task<HandoverFileReceipt?> ReadLatestWorkshopReportReceiptAsync(JobId jobId, CancellationToken token = default)
+    {
+        ArgumentNullException.ThrowIfNull(jobId);
+        return ReadJournalTransactionAsync<HandoverFileReceipt?>(async (transaction, ct) =>
+        {
+            if (!_supportsHandoverCompletion) { return null; }
+            var history = await ReadPublicationsAsync(transaction, jobId, ct).ConfigureAwait(false);
+            var latest = history.LastOrDefault(item => item.File?.Output.Kind == HandoverOutputKind.WorkshopRecord)?.File;
+            if (latest is not null) { _layout.ValidateJobDirectory(jobId); }
+            return latest;
+        }, token);
+    }
+
     public Task SaveHandoverFileAsync(HandoverFileReceipt receipt, IHandoverFileVerifier verifier, CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(receipt);

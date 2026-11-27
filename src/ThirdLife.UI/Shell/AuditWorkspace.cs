@@ -165,12 +165,15 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     public string JobArchiveAction => Job?.IsArchived == true ? "Restore archived job" : "Archive job";
     public bool IsFixtureScenario { get; }
     public bool IncludeBrokerQualification => _fixtureBrokerCoordinator is not null;
+    private HandoverFileReceipt? _recordedWorkshopReport;
     public WorkshopReportArtifact? ReportArtifact { get; private set; }
+    public string? SavedReportFileName => ReportArtifact?.FileName ?? _recordedWorkshopReport?.FileName;
     public string ReportPreview { get; private set; } = string.Empty;
     public string ReportStatus { get; private set; } =
         "Open a job to generate its restricted workshop report.";
     public bool CanGenerateReport => CanCloseJob && _reportStore is not null && !_hasSeparateEvidenceOrigin;
-    public bool CanOpenReport => CanGenerateReport && ReportArtifact?.JobId == Job?.Job.JobId;
+    public bool CanOpenReport => CanGenerateReport && Job is { } job &&
+        (ReportArtifact?.JobId == job.Job.JobId || _recordedWorkshopReport?.Output.Scope.JobId == job.Job.JobId);
     public bool CanCancelReport => _reportCancellation is { IsCancellationRequested: false };
 
     private SanitizationGateStatus? Gate => Job is null ? null : SanitizationGate.Inspect(Job);
@@ -272,6 +275,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
 
         await ReconcileSavedPackageAsync(id);
         await RefreshPreparationDispositionAsync(id, invalidateReport: false);
+        await LoadRecordedWorkshopReportAsync(id);
         Status = "Job opened. The committed records are shown below.";
     });
 
@@ -291,6 +295,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             ClearSupportExport();
             ClearReport();
             await ApplyJobAsync(stored);
+            await LoadRecordedWorkshopReportAsync(jobId);
             Status = stored.IsArchived
                 ? "The job is archived and its saved records remain available to review."
                 : "The archived job was restored. You can resume work from its saved records.";
@@ -498,13 +503,42 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     public Task OpenReportAsync()
     {
         if (!CanOpenReport) { return Task.CompletedTask; }
-        var artifact = ReportArtifact!;
+        var jobId = Job!.Job.JobId;
+        var artifact = ReportArtifact?.JobId == jobId ? ReportArtifact : null;
+        var saved = _recordedWorkshopReport;
         ReportPreview = string.Empty;
         return RunReportAsync("Opening the saved workshop report.", async cancellationToken =>
         {
-            ReportPreview = await Task.Run(() => _reportStore!.Read(artifact, cancellationToken), cancellationToken);
-            ReportStatus = "Restricted workshop report opened. Review the saved findings and limits.";
+            ReportPreview = await Task.Run(() => artifact is null
+                ? _reportStore!.ReadSavedReport(jobId, saved!, cancellationToken)
+                : _reportStore!.Read(artifact, cancellationToken), cancellationToken);
+            ReportStatus = artifact is null
+                ? "Saved workshop report opened. This copy reflects the evidence recorded when it was generated."
+                : "Restricted workshop report opened. Review the saved findings and limits.";
         });
+    }
+
+    private async Task LoadRecordedWorkshopReportAsync(JobId jobId)
+    {
+        if (IsFixtureScenario || _hasSeparateEvidenceOrigin || _reportStore is null ||
+            ReportArtifact is not null || _store is not IHandoverCompletionStore store)
+        {
+            return;
+        }
+
+        _recordedWorkshopReport = null;
+        ReportPreview = string.Empty;
+        try
+        {
+            _recordedWorkshopReport = await Task.Run(() => store.ReadLatestWorkshopReportReceiptAsync(jobId));
+            ReportStatus = _recordedWorkshopReport is null
+                ? "Generate a restricted workshop report from the saved job."
+                : "A saved workshop report is available for this job.";
+        }
+        catch (JobStoreException)
+        {
+            ReportStatus = "The saved report receipt could not be read. Generate a current report to continue.";
+        }
     }
 
     public void CancelReport()
@@ -786,6 +820,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
 
     private void ClearReport()
     {
+        _recordedWorkshopReport = null;
         ReportArtifact = null;
         ReportPreview = string.Empty;
         ReportStatus = _reportStore is null

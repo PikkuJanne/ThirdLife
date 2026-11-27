@@ -43,6 +43,7 @@ public interface IHandoverCompletionStore
 {
     Task<HandoverEligibility?> LoadHandoverReviewAsync(JobId jobId, CancellationToken token = default);
     Task<HandoverEligibility?> LoadHandoverReviewAsync(JobId jobId, IHandoverFileVerifier verifier, CancellationToken token = default);
+    Task<HandoverFileReceipt?> ReadLatestWorkshopReportReceiptAsync(JobId jobId, CancellationToken token = default);
     Task SaveHandoverFileAsync(HandoverFileReceipt receipt, IHandoverFileVerifier verifier, CancellationToken token = default);
     Task SaveHandoverSupportOmissionAsync(HandoverReviewScope expected, OperatorId actor, SupportBundleOmissionReason reason,
         CancellationToken token = default);
