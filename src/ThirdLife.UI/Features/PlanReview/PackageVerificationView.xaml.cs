@@ -94,6 +94,36 @@ public partial class PackageVerificationView : UserControl
         }
     }
 
+    private async void RecordColdBootCheckpoint(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanRecordColdBootCheckpoint)
+        {
+            var hadFocus = RecordColdBootCheckpointButton.IsKeyboardFocused;
+            await workspace.RecordColdBootCheckpointAsync();
+            RestoreFocus(ColdBootVerificationMessage, hadFocus);
+        }
+    }
+
+    private async void RunPostBootVerification(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanRunPostBootVerification)
+        {
+            var hadFocus = RunPostBootVerificationButton.IsKeyboardFocused;
+            await workspace.RunPostBootVerificationAsync();
+            RestoreFocus(ColdBootVerificationMessage, hadFocus);
+        }
+    }
+
+    private void CancelPostBootVerification(object sender, RoutedEventArgs args)
+    {
+        if (DataContext is AuditWorkspace workspace && workspace.CanCancelProfileVerification)
+        {
+            var hadFocus = CancelPostBootVerificationButton.IsKeyboardFocused;
+            workspace.CancelProfileVerification();
+            RestoreFocus(ColdBootVerificationMessage, hadFocus);
+        }
+    }
+
     private void RestoreFocus(FrameworkElement preferred, bool hadFocus)
     {
         var focused = Keyboard.FocusedElement;

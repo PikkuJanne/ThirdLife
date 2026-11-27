@@ -35,8 +35,10 @@ public sealed partial class SqliteJobStore : IJobStore
     private readonly IJobStoreFaultInjector? _faultInjector;
     private readonly Func<ulong?> _readBootUptime;
     private readonly Func<uint?> _readBootSession;
+    private readonly Func<uint, DateTimeOffset, ColdBootObservation?>? _readColdBoot;
     private readonly bool _supportsMaintenance;
     private readonly bool _supportsProfileVerification;
+    private readonly bool _supportsColdBoot;
     private bool _disposed;
 
     private SqliteJobStore(
@@ -49,6 +51,7 @@ public sealed partial class SqliteJobStore : IJobStore
         IJobStoreFaultInjector? faultInjector,
         Func<ulong?> readBootUptime,
         Func<uint?> readBootSession,
+        Func<uint, DateTimeOffset, ColdBootObservation?>? readColdBoot,
         int schemaVersion)
     {
         _layout = layout;
@@ -60,8 +63,10 @@ public sealed partial class SqliteJobStore : IJobStore
         _faultInjector = faultInjector;
         _readBootUptime = readBootUptime;
         _readBootSession = readBootSession;
+        _readColdBoot = readColdBoot;
         _supportsMaintenance = schemaVersion >= 12;
         _supportsProfileVerification = schemaVersion >= 13;
+        _supportsColdBoot = schemaVersion >= 14;
         _jsonOptions = DomainJson.CreateStrictOptions();
     }
 
@@ -78,6 +83,11 @@ public sealed partial class SqliteJobStore : IJobStore
             readBootUptime: null,
             readBootSession: null,
             cancellationToken);
+
+    internal static Task<SqliteJobStore> OpenWithColdBootAsync(
+        Func<uint, DateTimeOffset, ColdBootObservation?> readColdBoot, CancellationToken cancellationToken) =>
+        OpenInternalAsync(ResolveRegisteredRoot(), SqliteMigrationCatalog.CurrentVersion, TimeProvider.System,
+            null, null, null, cancellationToken, readColdBoot);
 
     internal static Task<SqliteJobStore> OpenAsync(
         string rootPath,
@@ -505,6 +515,18 @@ public sealed partial class SqliteJobStore : IJobStore
         CancellationToken cancellationToken = default) =>
         OpenInternalAsync(rootPath, maximumMigrationVersion, timeProvider, faultInjector, readBootUptime, readBootSession, cancellationToken);
 
+    internal static Task<SqliteJobStore> OpenForTestingAsync(
+        string rootPath,
+        int maximumMigrationVersion,
+        TimeProvider timeProvider,
+        IJobStoreFaultInjector? faultInjector,
+        Func<ulong?> readBootUptime,
+        Func<uint?> readBootSession,
+        Func<uint, DateTimeOffset, ColdBootObservation?> readColdBoot,
+        CancellationToken cancellationToken = default) =>
+        OpenInternalAsync(rootPath, maximumMigrationVersion, timeProvider, faultInjector, readBootUptime, readBootSession,
+            cancellationToken, readColdBoot);
+
     private static async Task<SqliteJobStore> OpenInternalAsync(
         string rootPath,
         int maximumMigrationVersion,
@@ -512,7 +534,8 @@ public sealed partial class SqliteJobStore : IJobStore
         IJobStoreFaultInjector? faultInjector,
         Func<ulong?>? readBootUptime,
         Func<uint?>? readBootSession,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<uint, DateTimeOffset, ColdBootObservation?>? readColdBoot = null)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
         if (!OperatingSystem.IsWindows())
@@ -602,6 +625,7 @@ public sealed partial class SqliteJobStore : IJobStore
                 faultInjector,
                 readBootUptime ?? WindowsBootUptime.Read,
                 readBootSession ?? WindowsBootUptime.ReadBootSession,
+                readColdBoot,
                 maximumMigrationVersion);
             databaseGuard = null;
             journalGuard = null;

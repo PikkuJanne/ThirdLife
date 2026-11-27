@@ -46,7 +46,8 @@ public sealed record ProfileVerificationCheck(ProfileCheckKind Kind, ProfileVeri
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record ProfileCapabilityResult(string CapabilityId, bool Essential, ProfileVerificationState State,
-    string? ExpectedVersion, string? ObservedVersion, Guid? ActionId, ProfilePackageStatus? PackageStatus = null);
+    string? ExpectedVersion, string? ObservedVersion, Guid? ActionId, ProfilePackageStatus? PackageStatus = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProfileVerificationState? LaunchProbe = null);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record ProfilePolicyFinding(RequirementId RuleId, PolicyRuleState State, PolicyRuleReason Reason, bool Blocking);
@@ -147,7 +148,8 @@ public sealed partial class ProfileVerificationResult
     [JsonIgnore]
     public bool ProfileChecksPassed => !SyntheticData &&
         Checks.All(check => !check.Blocking || check.State == ProfileVerificationState.Passed) &&
-        Capabilities.All(capability => !capability.Essential || capability.State == ProfileVerificationState.Passed) &&
+        Capabilities.All(capability => !capability.Essential || capability.State == ProfileVerificationState.Passed &&
+            capability.LaunchProbe is null or ProfileVerificationState.Passed) &&
         PolicyFindings.All(finding => !finding.Blocking || finding.State is PolicyRuleState.Met or PolicyRuleState.Inactive);
 
     internal static bool IsKnownCapability(string? value) =>
@@ -161,6 +163,14 @@ public sealed partial class ProfileVerificationResult
         Enum.IsDefined(capability.State) && capability.ActionId != Guid.Empty &&
         (capability.ExpectedVersion is null || IsPackageVersion(capability.ExpectedVersion)) &&
         (capability.ObservedVersion is null || IsPackageVersion(capability.ObservedVersion)) &&
+        (capability.LaunchProbe switch
+        {
+            null => true,
+            ProfileVerificationState.Passed or ProfileVerificationState.Failed =>
+                capability is { ActionId: not null, State: ProfileVerificationState.Passed },
+            ProfileVerificationState.Unavailable => capability.ActionId.HasValue,
+            _ => false,
+        }) &&
         (capability.State switch
         {
             ProfileVerificationState.Passed => capability.PackageStatus == ProfilePackageStatus.ExactVersion &&

@@ -188,7 +188,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
 
     internal static AuditWorkspace CreateLive(Func<CancellationToken, Task<IJobStore>>? openStore = null) => new(
         openStore ?? (async cancellationToken =>
-            await SqliteJobStore.OpenAsync(cancellationToken).ConfigureAwait(false)),
+            await SqliteJobStore.OpenWithColdBootAsync(WindowsColdBootEvidence.Read, cancellationToken).ConfigureAwait(false)),
         [
             new ActivationProvider(),
             new BatteryReportProvider(),
@@ -425,13 +425,14 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             var journals = await ReadPreparationJournalsAsync(jobId, cancellationToken);
             var checkpoint = await ReadMaintenanceForReportAsync(jobId, cancellationToken);
             var verification = await ReadProfileVerificationForReportAsync(jobId, cancellationToken);
+            var coldBoot = await ReadColdBootVerificationAsync(jobId, cancellationToken);
             var now = _timeProvider.GetUtcNow();
             var artifact = await Task.Run(() =>
             {
                 var packages = ReadPackageRecords(journals, includeEarlierAttempts: true);
                 var preparation = ProjectPreparationRecords(stored, assessment, journals, checkpoint, verification, now, cancellationToken);
                 var content = WorkshopReportRenderer.RenderWithPackageRecords(stored, summary, policy, packages,
-                    preparation, ProjectProfileVerification(verification), cancellationToken);
+                    preparation, ProjectProfileVerification(verification, coldBoot), cancellationToken);
                 return _reportStore!.Write(jobId, content, cancellationToken);
             }, cancellationToken);
             ReportArtifact = artifact;
@@ -547,6 +548,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             _updateCancellation = null;
             _profileVerificationCancellation?.Dispose();
             _profileVerificationCancellation = null;
+            _postBootVerificationRunning = false;
             _reportCancellation?.Dispose();
             _reportCancellation = null;
             _packageCancellation?.Dispose();

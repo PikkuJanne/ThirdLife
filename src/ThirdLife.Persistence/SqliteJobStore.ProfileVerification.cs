@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 using ThirdLife.Actions.Contracts;
 using ThirdLife.Actions.Journal;
@@ -14,12 +15,20 @@ public interface IProfileVerificationStore
 {
     Task SaveProfileVerificationAsync(ProfileVerificationRecord record, CancellationToken token = default);
     Task<SavedProfileVerification?> LoadProfileVerificationAsync(JobId jobId, CancellationToken token = default);
+    Task<ColdBootCheckpoint> RecordColdBootCheckpointAsync(MaintenanceCheckpoint expected, CancellationToken token = default);
+    Task<SavedColdBootVerification?> LoadColdBootVerificationAsync(JobId jobId, CancellationToken token = default);
 }
 
 public sealed record ProfileVerificationRecord(MaintenanceCheckpoint Checkpoint, Guid ScanId,
-    Guid PackageJournalEntryId, int JournalEntryCount, ProfileVerificationResult Result);
+    Guid PackageJournalEntryId, int JournalEntryCount, ProfileVerificationResult Result,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? ColdBootCheckpointId = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ColdBootObservation? ColdBootObservation = null);
 
-public sealed record SavedProfileVerification(ProfileVerificationRecord Record, bool IsCurrent);
+public sealed record SavedProfileVerification(ProfileVerificationRecord Record, bool IsCurrent)
+{
+    public bool HasPassedPostBootVerification => IsCurrent && Record.ColdBootObservation is not null &&
+        Record.Result.ProfileChecksPassed;
+}
 
 public sealed partial class SqliteJobStore : IProfileVerificationStore
 {
@@ -30,6 +39,22 @@ public sealed partial class SqliteJobStore : IProfileVerificationStore
         ArgumentNullException.ThrowIfNull(record);
         return ExecuteWriteAsync(async (connection, transaction, ct) =>
         {
+            if (record.ColdBootObservation is not null) { throw new JobStoreConflictException(); }
+            if (record.ColdBootCheckpointId is { } id)
+            {
+                if (!_supportsColdBoot || _readBootSession() is not { } boot ||
+                    await ReadColdBootRequestAsync(transaction, record.Checkpoint.Plan.JobId, ct).ConfigureAwait(false) is not
+                    { Authenticated: true } row || row.Request.Checkpoint.Id != id)
+                {
+                    throw new JobStoreConflictException();
+                }
+
+                var now = _timeProvider.GetUtcNow();
+                var checkpoint = row.Request.Checkpoint;
+                var observation = checkpoint.CanObserve(boot, now) ? ReadColdBootObservation(checkpoint, boot, now) : null;
+                if (!checkpoint.Matches(observation, boot, now)) { throw new JobStoreConflictException(); }
+                record = record with { ColdBootObservation = observation };
+            }
             if (!_supportsProfileVerification ||
                 !await IsCurrentProfileVerificationAsync(transaction, record, ct).ConfigureAwait(false))
             {
@@ -92,7 +117,10 @@ public sealed partial class SqliteJobStore : IProfileVerificationStore
         if (record.Checkpoint?.Plan?.JobId != jobId || record.Checkpoint.Phase != MaintenancePhase.FinalVerification ||
             record.Checkpoint.Revision != reader.GetInt64(1) || record.ScanId.ToString("D") != reader.GetString(2) ||
             record.ScanId == record.Checkpoint.ScanId || record.PackageJournalEntryId == Guid.Empty ||
-            record.JournalEntryCount is < 1 or > JournalHistory.MaximumEntriesPerJob || record.Result is null)
+            record.JournalEntryCount is < 1 or > JournalHistory.MaximumEntriesPerJob || record.Result is null ||
+            record.ColdBootCheckpointId == Guid.Empty ||
+            record.ColdBootCheckpointId.HasValue != (record.ColdBootObservation is not null) ||
+            record.ColdBootObservation is { Kind: not ColdBootKind.OrderlyPowerOff })
         {
             throw new JobStoreCorruptionException("store_payload_mismatch");
         }
@@ -134,7 +162,29 @@ public sealed partial class SqliteJobStore : IProfileVerificationStore
             started.BootSession == boot && completed.BootSession == boot && completed.GateId == plan.GateDecisionId &&
             completed.Id == record.ScanId && boundary?.OccurredAtUtc <= record.Result.StartedAtUtc &&
             started.OccurredAtUtc >= record.Result.StartedAtUtc && completed.OccurredAtUtc <= record.Result.FinishedAtUtc &&
-            (!record.Result.ProfileChecksPassed || WindowsUpdateHistory.Disposition(updates) == WindowsUpdateDisposition.Current);
+            (!record.Result.ProfileChecksPassed || WindowsUpdateHistory.Disposition(updates) == WindowsUpdateDisposition.Current) &&
+            await MatchesSavedColdBootAsync(transaction, record, boot, token).ConfigureAwait(false);
+    }
+
+    private async Task<bool> MatchesSavedColdBootAsync(SqliteTransaction transaction, ProfileVerificationRecord record,
+        uint boot, CancellationToken token)
+    {
+        if (record.ColdBootCheckpointId is not { } id)
+        {
+            return record.ColdBootObservation is null && record.Result.Capabilities.All(capability => capability.LaunchProbe is null);
+        }
+
+        if (!_supportsColdBoot ||
+            await ReadColdBootRequestAsync(transaction, record.Checkpoint.Plan.JobId, token).ConfigureAwait(false) is not
+            { Authenticated: true } row || row.Request.Checkpoint.Id != id ||
+            row.Request.Binding != await ReadColdBootBindingAsync(transaction, record.Checkpoint, token).ConfigureAwait(false))
+        {
+            return false;
+        }
+
+        return row.Request.Checkpoint.Matches(record.ColdBootObservation, boot, record.Result.StartedAtUtc) &&
+            row.Request.Checkpoint.CanObserve(boot, record.Result.FinishedAtUtc) &&
+            record.Result.Capabilities.All(capability => capability.ActionId.HasValue == capability.LaunchProbe.HasValue);
     }
 
     private static bool MatchesPackageVerification(ProfileVerificationRecord record, JournalHistory history)
