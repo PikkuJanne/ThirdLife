@@ -6178,6 +6178,60 @@ tasks:
     duration: 433.080 s, 304 governance tests and 2317 .NET tests, zero skips
     reference: artifacts/evidence/TL-0504/report.md, ac3c96f1b89169ce8fffb0d4dfefde17b01ae369
     limitation: Native WUA observations and the guest run were collected separately. Production update execution remains unqualified.
+  - summary: Prepare checks an exact saved offer and its servicing resources. A changed job, intake, scan or revision invalidates the preview.
+    command: eng/verify.ps1 -Tier Targeted with Packages and Persistence and the deterministic WindowsUpdate filter, plus eng/run-ui-smoke.ps1
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 x64 build 26300.9974, .NET SDK 10.0.400
+    date: '2026-11-27'
+    duration: 138.756 s for 1308 tests including Quick, 1.355 s for the unelevated shell smoke
+    reference: artifacts/evidence/TL-0504/report.md, 0bbbe8a6ade0f7c8c8fd3c2a005c859b65bab87a
+    limitation: WPF and SQLite used isolated jobs and controlled providers. The online host and guest checks used the native adapter separately.
+  - summary: Exact native lookup identified an unsupported handler on the host and guest. Neither service offered an eligible revision.
+    command: Packages WindowsUpdateAgentTests ActiveMachine cases on host, eng/run-thirdlife-hyperv.ps1 -Scenario WindowsUpdateAssessment in limited-token guest
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 x64 host and same-machine Generation 2 guest, build 26300.9974, wuapi.dll 1511.2611.5012.0
+    date: '2026-11-27'
+    duration: 1.7728 min for three host cases and 104.127 s for one guest case including staging and cleanup
+    reference: artifacts/evidence/TL-0504/report.md, 0bbbe8a6ade0f7c8c8fd3c2a005c859b65bab87a
+    limitation: The host WUA supplied no installation-space recommendation. Native servicing, rollback and a servicing-related restart remain unobserved.
+  - summary: Phase-bound approvals survive reopening. Known pre-send stops allow fresh review, while uncertain handoffs stay in workshop review.
+    command: eng/verify.ps1 -Tier Targeted with Actions, Packages and Persistence, filtered to WindowsUpdate, ActionRegistryTests and MigrationAndCorruptionTests
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 x64 build 26300.9974 with SQLite migrations 008 and 009
+    date: '2026-11-27'
+    duration: 142.383 s, 1406 deterministic cases including Quick
+    reference: artifacts/evidence/TL-0504/report.md, 710e5a867d15905c471bd8658539be94f6950f8a
+    limitation: Actual store transitions and WPF presentation used controlled channels and offers. The production broker still admits no update actions.
+  - summary: Verified application interruption and reopening on the upgraded job schema for both existing no-op scheduling modes.
+    command: dotnet test tests/ThirdLife.UI.Tests -c Release --no-build --no-restore --filter FullyQualifiedName~KilledNoOpApplicationReopensTheSameJobAndReconcilesWithoutDispatch
+    tier: extended
+    result: passed
+    environment: Unelevated active Windows 11 Pro 26H2 x64 host with owned WPF test processes
+    date: '2026-11-27'
+    duration: 11.601 s, two cases
+    reference: artifacts/evidence/TL-0504/report.md, 710e5a867d15905c471bd8658539be94f6950f8a
+    limitation: The killed-process test exercised the existing no-op backend. WUA-specific interruption used controlled channel and journal cases.
+  - summary: Rechecked the exact restricted software offer and WUA uninstall support on both machines using the integrated adapter.
+    command: Packages WindowsUpdateAgentTests ActiveMachine host selection, limited-token Hyper-V WindowsUpdateAssessment scenario
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 x64 host and same-machine Generation 2 guest, build 26300.9974, wuapi.dll 1511.2611.5012.0
+    date: '2026-11-27'
+    duration: 1.2603 min for three host cases, 169.075 s for one guest case including staging and verified cleanup
+    reference: artifacts/evidence/TL-0504/report.md, 710e5a867d15905c471bd8658539be94f6950f8a
+    limitation: Both reported unsupported handler, uninstall unavailable and zero eligible revisions. Native installation, rollback and a servicing-related restart remain open.
+  - summary: Clean checkout passed locked restore, formatting, Release build, complete governance regression and deterministic solution tests on schema 009.
+    command: eng/verify.ps1 -Tier Full -Restore, then Packages ActiveMachineAssessesOneExactOfferedRevisionWithoutMutation against the clean Release artifact
+    tier: full
+    result: passed
+    environment: Clean detached worktree on active Windows 11 Pro 26H2 native x64 build 26300.9974, .NET SDK 10.0.400
+    date: '2026-11-27'
+    duration: 411.907 s, 304 governance and 2348 deterministic tests, plus 25.022 s for the native offer check
+    reference: artifacts/evidence/TL-0504/report.md, 710e5a867d15905c471bd8658539be94f6950f8a
+    limitation: The read-only native test again found no eligible revision. Broker-side Windows servicing and independent verification of a ThirdLife-installed update remain unqualified.
   execution_prerequisites:
   - kind: capability
     scope: A WUA-specific authenticated ephemeral broker and effective update policy qualified for the exact action, source, servicing, power, storage and rollback requirements.

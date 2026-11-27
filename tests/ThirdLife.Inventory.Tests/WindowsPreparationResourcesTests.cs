@@ -34,6 +34,23 @@ public sealed class WindowsPreparationResourcesTests(ITestOutputHelper output)
         Assert.Equal(expected, WindowsPreparationResources.ClassifyPower(externalPower, batteryFlag, percent));
 
     [Fact]
+    public void WindowsUpdateRequiresCurrentServicingForTheObservedClientEditionBuildAndArchitecture()
+    {
+        var today = WindowsLifecycleData.AsOf;
+        var client = new OperatingSystemSnapshot(
+            SystemInventorySourceValue<OperatingSystemVersion>.Available(new(10, 0, 26300)),
+            SystemInventorySourceValue<uint>.Available(0x30), SystemInventorySourceValue<ushort>.Available(9),
+            SystemInventorySourceValue<WindowsProductType>.Available(WindowsProductType.Workstation));
+        Assert.True(WindowsPreparationResources.EvaluateServicing(client, today));
+        Assert.Null(WindowsPreparationResources.EvaluateServicing(client, today.AddDays(31)));
+        Assert.Null(WindowsPreparationResources.EvaluateServicing(client, today.AddDays(-1)));
+        Assert.Null(WindowsPreparationResources.EvaluateServicing(client with { Edition = SystemInventorySourceValue<uint>.Unavailable() }, today));
+        Assert.Null(WindowsPreparationResources.EvaluateServicing(client with { ProductType = SystemInventorySourceValue<WindowsProductType>.Unavailable() }, today));
+        Assert.False(WindowsPreparationResources.EvaluateServicing(client with { Version = SystemInventorySourceValue<OperatingSystemVersion>.Available(new(10, 0, 22621)) }, today));
+        Assert.False(WindowsPreparationResources.EvaluateServicing(client with { Architecture = SystemInventorySourceValue<ushort>.Available(12) }, today));
+    }
+
+    [Fact]
     public void InstallCapacityRequiresBothRoleReadsOnTheSameKnownVolume()
     {
         Assert.Equal(100UL, WindowsPreparationResources.GetSystemInstallCapacity(200, 100, true));

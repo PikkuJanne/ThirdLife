@@ -75,7 +75,14 @@ if ($Mode -eq 'Inspect') {
 }
 
 if ($RunId -cnotmatch '\A[0-9a-f]{32}\z') { throw 'Invalid run identifier.' }
-if ($Mode -in @('Start','Status','RunTest') -and
+$updateScenario = $Scenario -ceq 'WindowsUpdateAssessment'
+if ($updateScenario) {
+    if ($Mode -in @('Start','Status','RunTest') -and
+        $TestName -cne 'ThirdLife.Packages.Tests.WindowsUpdateAgentTests.ActiveMachineAssessesOneExactOfferedRevisionWithoutMutation') {
+        throw 'The Windows Update case requires the exact read-only assessment test.'
+    }
+}
+elseif ($Mode -in @('Start','Status','RunTest') -and
     ($Scenario -cnotin @('Verify','DistinctAccount','Accept','Decline','Interrupt','Timeout','Disconnect','RetainObservation',
         'ApplicationPreview','ApplicationAccept','ApplicationDecline','ApplicationCancel') -or
         $TestName -cnotmatch '\AThirdLife\.(?:Broker|UI)\.Tests\.[A-Za-z][A-Za-z0-9.]+\z')) {
@@ -92,7 +99,7 @@ if ($applicationScenario -and $Mode -in @('Start','Status','RunTest') -and
     $TestName -cne ('ThirdLife.UI.Tests.PlanReviewTests.' + $applicationTests[$Scenario])) {
     throw 'The test selection does not match the application case.'
 }
-$evidenceTask = if ($applicationScenario) { 'TL-0313' } else { 'TL-0317' }
+$evidenceTask = if ($updateScenario) { 'TL-0504' } elseif ($applicationScenario) { 'TL-0313' } else { 'TL-0317' }
 $programFiles = [Environment]::GetFolderPath('ProgramFiles')
 $programFilesItem = Get-Item -LiteralPath $programFiles -Force
 if (-not $programFilesItem.PSIsContainer -or ($programFilesItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
@@ -265,19 +272,21 @@ switch ($Mode) {
         if ([IO.File]::ReadAllText((Join-Path $stage 'payload\source.txt')).Trim() -cne $TestSource) {
             throw 'The staged test archive is bound to a different source commit.'
         }
-        $provisioner = Read-VerifiedScript (Join-Path $stage 'payload\install-thirdlife-broker.ps1') $ProvisionerHash
-        $candidate = Join-Path $stage 'payload\ThirdLife.Broker.exe'
-        if ((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash -ine $BrokerHash) {
-            throw 'The guest candidate differs from the reviewed Native AOT digest.'
-        }
-        Push-Location -LiteralPath ([Environment]::SystemDirectory)
-        try {
-            if (-not $applicationScenario) {
-                & $provisioner -BrokerArtifact $candidate -ExpectedSha256 $BrokerHash | Out-Null
+        if (-not $updateScenario) {
+            $provisioner = Read-VerifiedScript (Join-Path $stage 'payload\install-thirdlife-broker.ps1') $ProvisionerHash
+            $candidate = Join-Path $stage 'payload\ThirdLife.Broker.exe'
+            if ((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash -ine $BrokerHash) {
+                throw 'The guest candidate differs from the reviewed Native AOT digest.'
             }
-            & $provisioner -VerifyOnly -ExpectedSha256 $BrokerHash | Out-Null
+            Push-Location -LiteralPath ([Environment]::SystemDirectory)
+            try {
+                if (-not $applicationScenario) {
+                    & $provisioner -BrokerArtifact $candidate -ExpectedSha256 $BrokerHash | Out-Null
+                }
+                & $provisioner -VerifyOnly -ExpectedSha256 $BrokerHash | Out-Null
+            }
+            finally { Pop-Location }
         }
-        finally { Pop-Location }
         Initialize-PrivateDotNet $stage
         $installedSdks = @(& $sdk --list-sdks)
         if ($LASTEXITCODE -ne 0 -or $installedSdks.Count -ne 1 -or $installedSdks[0] -notmatch '^10\.0\.400 \[') {
@@ -288,7 +297,15 @@ switch ($Mode) {
             -not ($runtimes -match '^Microsoft\.WindowsDesktop\.App 10\.0\.[0-9]+ \[')) {
             throw 'The pinned guest SDK does not contain the required .NET and Windows Desktop 10.0 runtimes.'
         }
-        [pscustomobject]@{ ProtectedBrokerVerified = $true; PrivateSdkVerified = $true }
+        $verification = [ordered]@{ ProtectedBrokerVerified = -not $updateScenario; PrivateSdkVerified = $true }
+        if ($updateScenario) {
+            $adapter = Join-Path $stage 'payload\ThirdLife.Packages.Tests\ThirdLife.Packages.dll'
+            $wuapi = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path ([Environment]::SystemDirectory) 'wuapi.dll'))
+            $verification.adapterSha256 = (Get-FileHash -LiteralPath $adapter -Algorithm SHA256).Hash.ToLowerInvariant()
+            $verification.wuapiVersion = "$($wuapi.FileMajorPart).$($wuapi.FileMinorPart).$($wuapi.FileBuildPart).$($wuapi.FilePrivatePart)"
+            $verification.windowsBuild = "$([int]$os.CurrentBuildNumber).$([int]$os.UBR)"
+        }
+        [pscustomobject]$verification
     }
     'Start' {
         if (Get-Process -Name 'ThirdLife.Broker' -ErrorAction SilentlyContinue) {
@@ -324,7 +341,7 @@ exit `$LASTEXITCODE
         $action = New-ScheduledTaskAction -Execute $powershell -Argument "-NoProfile -NonInteractive -EncodedCommand $encoded" -WorkingDirectory $stage
         $level = if ($Scenario -eq 'DistinctAccount') { 'Highest' } else { 'Limited' }
         $principal = New-ScheduledTaskPrincipal -UserId "$Computer\$Account" -LogonType Interactive -RunLevel $level
-        $taskMinutes = if ($applicationScenario -and $Scenario -cne 'ApplicationPreview') { 6 } else { 3 }
+        $taskMinutes = if ($updateScenario -or ($applicationScenario -and $Scenario -cne 'ApplicationPreview')) { 6 } else { 3 }
         $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::FromMinutes($taskMinutes)) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
         Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Settings $settings | Out-Null
         Start-ScheduledTask -TaskName $taskName
@@ -336,12 +353,14 @@ exit `$LASTEXITCODE
             throw 'The scheduled test did not receive its required token and basic-console session.'
         }
         Initialize-PrivateDotNet $results
-        $env:THIRDLIFE_TL0311_REVIEWED_BROKER_SHA256 = $BrokerHash
-        $env:THIRDLIFE_TL0311_CONSENT_REHEARSAL = $Scenario.ToLowerInvariant()
-        $env:THIRDLIFE_TL0317_TRACE_PATH = $tracePath
+        if (-not $updateScenario) {
+            $env:THIRDLIFE_TL0311_REVIEWED_BROKER_SHA256 = $BrokerHash
+            $env:THIRDLIFE_TL0311_CONSENT_REHEARSAL = $Scenario.ToLowerInvariant()
+            $env:THIRDLIFE_TL0317_TRACE_PATH = $tracePath
+        }
         if ($Scenario -eq 'DistinctAccount') { $env:THIRDLIFE_HYPERV_BROKER_ACL_RUN_ID = $RunId }
         if ($applicationScenario) { $env:THIRDLIFE_TL0313_HYPERV_RUN_ID = $RunId }
-        $assembly = if ($Scenario -eq 'DistinctAccount') { 'ThirdLife.Broker.Tests' } else { 'ThirdLife.UI.Tests' }
+        $assembly = if ($updateScenario) { 'ThirdLife.Packages.Tests' } elseif ($Scenario -eq 'DistinctAccount') { 'ThirdLife.Broker.Tests' } else { 'ThirdLife.UI.Tests' }
         $test = Join-Path $stage "payload\$assembly\$assembly.dll"
         & $sdk vstest $test "/TestCaseFilter:FullyQualifiedName=$TestName" `
             '/Logger:trx;LogFileName=result.trx' "/ResultsDirectory:$results" -- RunConfiguration.TreatNoTestsAsError=true
@@ -351,7 +370,7 @@ exit `$LASTEXITCODE
         $state = (Get-ScheduledTask -TaskName $taskName).State
         $trace = Get-ResultFile 'trace.jsonl'
         $lines = @()
-        if ($trace) {
+        if ($trace -and -not $updateScenario) {
             $stream = [IO.File]::Open($trace, 'Open', 'Read', 'ReadWrite')
             try {
                 if ($stream.Length -gt 128KB) { throw 'The observation trace exceeded its size limit.' }
@@ -433,6 +452,7 @@ exit `$LASTEXITCODE
             $taskLastResult = [uint32](Get-ScheduledTaskInfo -TaskName $taskName).LastTaskResult
         }
         $passed = $false
+        $updateAssessment = $null
         $testFailure = $null
         $testNativeErrorCode = $null
         $classifyFailure = $applicationScenario -or $Scenario -cin @('DistinctAccount', 'RetainObservation')
@@ -448,6 +468,35 @@ exit `$LASTEXITCODE
                 $case = $document.SelectNodes("//*[local-name()='UnitTestResult']")
                 if ($case.Count -eq 1 -and $case[0].GetAttribute('testName') -ceq $TestName) {
                     $passed = $testExit -eq 0 -and $case[0].GetAttribute('outcome') -ceq 'Passed'
+                    if ($passed -and $updateScenario) {
+                        # Export only bounded counts, fixed status tokens and the optional removal fact.
+                        $stdout = $case[0].SelectSingleNode(".//*[local-name()='StdOut']")
+                        if ($stdout -and $stdout.InnerText -cmatch 'Offered (\d{1,2}) revisions, selectable (\d{1,2})\.') {
+                            $offered = [int]$Matches[1]
+                            $selectable = [int]$Matches[2]
+                            if ($offered -le 64 -and $selectable -le $offered) {
+                                $updateAssessment = [ordered]@{ offered = $offered; selectable = $selectable }
+                            }
+                        }
+                        if (-not $updateAssessment) { $passed = $false; $testFailure = 'OfferCountsUnavailable' }
+                        elseif ($offered -gt 0) {
+                            $states = 'Succeeded|ApprovalChanged|Unavailable|Offline|AccessDenied|ServiceUnavailable|TimedOut|Partial'
+                            $reasons = 'Eligible|Driver|UnsupportedUpdateType|UnknownDownloadSize|UnsupportedHandler|Beta|SourceMedia|LicenceAcceptance|BrowseOnly|Mandatory|Inapplicable|Bundle|UnknownInstallationBehavior|Interactive|AmbiguousClassification|OutsideApprovedClasses'
+                            if ($stdout.InnerText -cmatch "lookup status=($states), reason=($reasons)?,") {
+                                $updateAssessment.status = $Matches[1]
+                                $updateAssessment.reason = $Matches[2]
+                                if ($stdout.InnerText -cmatch 'removalSupported=(True|False|Unknown),') {
+                                    $updateAssessment.removalSupported = switch ($Matches[1]) {
+                                        'True' { $true }
+                                        'False' { $false }
+                                        default { $null }
+                                    }
+                                }
+                                else { $passed = $false; $testFailure = 'RemovalObservationMissing' }
+                            }
+                            else { $passed = $false; $testFailure = 'ExactAssessmentUnavailable' }
+                        }
+                    }
                     if (-not $passed -and $classifyFailure) {
                         # Only fixed classification tokens leave the guest. TRX can contain local paths and identities.
                         $messageNode = $case[0].SelectSingleNode(".//*[local-name()='ErrorInfo']/*[local-name()='Message']")
@@ -556,6 +605,7 @@ exit `$LASTEXITCODE
             BrokerRemaining = [bool](Get-Process -Name 'ThirdLife.Broker' -ErrorAction SilentlyContinue)
             ConsentProcess = [bool](Get-Process -Name 'consent' -ErrorAction SilentlyContinue | Where-Object SessionId -eq $ConsoleSession)
             ApplicationPlan = $applicationPlan
+            UpdateAssessment = $updateAssessment
             Observations = @($observations)
         }
     }
@@ -576,6 +626,22 @@ exit `$LASTEXITCODE
                 if ($scheduled.State -eq 'Running') { throw 'The owned scenario task did not stop.' }
             }
             Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
+        }
+        if ($updateScenario) {
+            $testhost = Join-Path $stage 'payload\ThirdLife.Packages.Tests\testhost.exe'
+            foreach ($worker in @(Get-Process -Name dotnet,testhost -ErrorAction SilentlyContinue)) {
+                try {
+                    if ($worker.Path -in @($sdk, $testhost) -and -not $worker.HasExited) {
+                        try { $worker.Kill() }
+                        catch [InvalidOperationException] { if (-not $worker.HasExited) { throw } }
+                        if (-not $worker.WaitForExit(5000)) { throw 'The staged assessment worker did not exit.' }
+                    }
+                }
+                finally { $worker.Dispose() }
+            }
+            if (Get-Process -Name dotnet,testhost -ErrorAction SilentlyContinue | Where-Object Path -in @($sdk, $testhost)) {
+                throw 'A staged assessment process remains.'
+            }
         }
         if ($Scenario -eq 'DistinctAccount') {
             $name = 'TLBroker' + $RunId.Substring(0, 12)

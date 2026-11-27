@@ -40,9 +40,11 @@ public sealed record WindowsUpdateIdentity
 
 public sealed record WindowsUpdateCandidate
 {
+    public const long DownloadSizeLimit = 9_007_199_254_740_991;
+
     public WindowsUpdateCandidate(WindowsUpdateIdentity identity, WindowsUpdateClass classification, long? maximumDownloadBytes = null)
     {
-        if (maximumDownloadBytes is < 0 or > 9_007_199_254_740_991)
+        if (maximumDownloadBytes is < 0 or > DownloadSizeLimit)
         {
             throw new ArgumentOutOfRangeException(nameof(maximumDownloadBytes));
         }
@@ -127,6 +129,9 @@ public sealed record WindowsUpdateInstalledObservation
 public interface IWindowsUpdateAgent
 {
     Task<WindowsUpdateScan> ScanAsync(CancellationToken cancellationToken);
+    Task<WindowsUpdatePreparation> AssessPreparationAsync(WindowsUpdateCandidate exact, CancellationToken cancellationToken) =>
+        Task.FromResult(new WindowsUpdatePreparation(exact,
+            cancellationToken.IsCancellationRequested ? WindowsUpdateStatus.Cancelled : WindowsUpdateStatus.Unavailable, DateTimeOffset.UtcNow));
     Task<WindowsUpdateOperation> DownloadAsync(WindowsUpdateCandidate exact, CancellationToken cancellationToken);
     Task<WindowsUpdateOperation> InstallAsync(WindowsUpdateCandidate exact, CancellationToken cancellationToken);
     Task<WindowsUpdateInstalledObservation> ObserveInstalledAsync(WindowsUpdateIdentity exact, CancellationToken cancellationToken) =>

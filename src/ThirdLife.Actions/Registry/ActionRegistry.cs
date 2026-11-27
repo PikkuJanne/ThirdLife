@@ -42,6 +42,7 @@ public static partial class ActionRegistry
     private static readonly ActionDefinition UpdateDownload = UpdateScan with
     {
         Kind = ActionKind.DownloadWindowsUpdate,
+        Availability = ActionAvailability.WindowsUpdateServicingBrokerRequired,
         Privilege = ActionPrivilege.Elevated,
         Verification = ActionVerification.ExactDownloadedUpdateRevision,
         Rollback = ActionRollback.ManualReview,
@@ -103,15 +104,25 @@ public static partial class ActionRegistry
     public static WindowsUpdateActionRequest CreateInstallWindowsUpdate(Guid actionId, WindowsUpdateCandidate exact) =>
         CreateUpdateAction(actionId, ActionKind.InstallWindowsUpdate, exact);
 
+    public static (ActionDefinition Download, ActionDefinition Install) DescribeWindowsUpdateServicing(WindowsUpdateCandidate exact)
+    {
+        RequireSelectableUpdate(exact);
+        return (UpdateDownload, UpdateInstall);
+    }
+
     private static WindowsUpdateActionRequest CreateUpdateAction(Guid actionId, ActionKind kind, WindowsUpdateCandidate exact)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(actionId, Guid.Empty);
+        RequireSelectableUpdate(exact);
+        return new WindowsUpdateActionRequest(actionId, kind, exact);
+    }
+
+    private static void RequireSelectableUpdate(WindowsUpdateCandidate exact)
+    {
         if (!WindowsUpdatePolicy.IsSelectable(exact))
         {
             throw new ArgumentException("The update is outside the permitted software classifications.", nameof(exact));
         }
-
-        return new WindowsUpdateActionRequest(actionId, kind, exact);
     }
 
     public static ActionDefinition Describe(ActionRequest request) => request switch

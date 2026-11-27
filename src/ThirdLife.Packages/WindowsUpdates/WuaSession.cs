@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Microsoft.CSharp.RuntimeBinder;
 using ThirdLife.Core.WindowsUpdates;
 
 namespace ThirdLife.Packages.WindowsUpdates;
@@ -10,7 +11,6 @@ internal static class WuaSession
     private static readonly Guid SessionClass = new("4cb43d7f-7eee-4906-8698-60da1c38f2fe");
     private static readonly Guid SystemInfoClass = new("c01b9ba0-bea7-41ba-b604-d0a36f469133");
     private static readonly Guid CollectionClass = new("13639463-00db-4646-803d-528026140d88");
-    private static readonly Guid WindowsUpdateService = new("9482f4b4-e343-43b6-b170-9a65bc822c77");
     internal const string CbsHandler = "http://schemas.microsoft.com/msus/2002/12/UpdateHandlers/Cbs";
     internal const string Applicable = "IsInstalled=0 and IsHidden=0 and DeploymentAction='Installation'";
     private const int MaxCategories = 32;
@@ -96,6 +96,43 @@ internal static class WuaSession
         finally { job.CleanUp(); }
     }
 
+    internal static WindowsUpdatePreparation AssessOffer(WindowsUpdateCandidate exact, CancellationToken token,
+        Func<Guid, object>? activate = null)
+    {
+        WindowsUpdatePreparation Failure(WindowsUpdateStatus status) => new(exact, status, DateTimeOffset.UtcNow);
+        using var scope = new ComScope(activate);
+        dynamic session = NewSession(scope);
+        if (!HasWindowsUpdateAuthority(scope, session)) { return Failure(WindowsUpdateStatus.Unavailable); }
+        dynamic result = Search(scope, session, $"{Applicable} and {IdentityCriteria(exact.Identity)}", token);
+        CheckSearch(scope, result);
+        dynamic updates = scope.Own(result.Updates);
+        if ((int)updates.Count != 1) { return Failure(WindowsUpdateStatus.ApprovalChanged); }
+        dynamic update = scope.Own(updates[0]);
+        WindowsUpdateCandidate current = ReadCandidate(scope, (object)update, out WindowsUpdateEligibilityReason reason);
+        if (current != exact) { return Failure(WindowsUpdateStatus.ApprovalChanged); }
+
+        // IUpdate reports zero when it has no pre-install disk space recommendation.
+        var recommendedMb = ReadOptionalValue<int>(() => update.RecommendedHardDiskSpace);
+        long? recommended = recommendedMb is > 0 ? recommendedMb.Value * 1_048_576L : null;
+        var removalSupported = ReadOptionalValue<bool>(() => update.IsUninstallable);
+        dynamic system = scope.Create(SystemInfoClass);
+        bool reboot = system.RebootRequired;
+        if (!HasWindowsUpdateAuthority(scope, session)) { return Failure(WindowsUpdateStatus.Unavailable); }
+        return new(exact, WindowsUpdateStatus.Succeeded, DateTimeOffset.UtcNow, reboot,
+            RecommendedInstallationBytes: recommended, EligibilityReason: reason, RemovalSupported: removalSupported);
+    }
+
+    private static T? ReadOptionalValue<T>(Func<object?> read) where T : struct
+    {
+        // An unavailable optional automation property leaves the other exact-offer facts usable.
+        try { return read() as T?; }
+        catch (Exception error) when (error is COMException or UnauthorizedAccessException or RuntimeBinderException or
+            MissingMemberException or NotSupportedException or NotImplementedException)
+        {
+            return null;
+        }
+    }
+
     internal static WindowsUpdateInstalledObservation ObserveInstalled(WindowsUpdateIdentity exact, CancellationToken token,
         Func<Guid, object>? activate = null)
     {
@@ -131,28 +168,18 @@ internal static class WuaSession
     // The WUA default may resolve to WSUS or a different service, including mixed
     // per-category routing. Reject managed services and ambiguous AU registrations.
     // Never set ServerSelection/ServiceID to bypass the machine's configured policy.
-    private static bool HasWindowsUpdateAuthority(ComScope scope, dynamic session)
+    private static bool HasWindowsUpdateAuthority(ComScope scope, object session)
     {
-        dynamic manager = scope.Own(session.CreateUpdateServiceManager());
-        dynamic services = scope.Own(manager.Services);
-        int count = services.Count;
-        if (count is < 1 or > 16) { return false; }
-        var found = false;
-        for (var i = 0; i < count; i++)
+        if (scope.HasInjectedActivation)
         {
-            dynamic service = scope.Own(services[i]);
-            if ((bool)service.IsManaged) { return false; }
-            bool isDefault = service.IsDefaultAUService;
-            bool registered = service.IsRegisteredWithAU;
-            if (!isDefault && !registered) { continue; }
-            if (found || !isDefault || !registered || (bool)service.IsScanPackageService ||
-                !Guid.TryParseExact((string)service.ServiceID, "D", out Guid id) || id != WindowsUpdateService)
-            {
-                return false;
-            }
-            found = true;
+            return session is IWuaRegistrationSource source &&
+                WuaServiceAuthority.IsBuiltIn(source.Count, source.ReadRegistration);
         }
-        return found;
+
+        if (!Marshal.IsComObject(session)) { return false; }
+        nint unknown = Marshal.GetIUnknownForObject(session);
+        try { return WuaServiceAuthority.IsBuiltInForSession(unknown); }
+        finally { _ = Marshal.Release(unknown); }
     }
 
     private static dynamic Search(ComScope scope, dynamic session, string criteria, CancellationToken token)
@@ -205,51 +232,74 @@ internal static class WuaSession
         return new WindowsUpdateIdentity(id, (int)identity.RevisionNumber);
     }
 
-    internal static WindowsUpdateCandidate ReadCandidate(ComScope scope, dynamic update)
+    internal static WindowsUpdateCandidate ReadCandidate(ComScope scope, dynamic update) =>
+        ReadCandidate(scope, (object)update, out _);
+
+    internal static WindowsUpdateCandidate ReadCandidate(ComScope scope, object offer, out WindowsUpdateEligibilityReason reason)
     {
+        dynamic update = offer;
         WindowsUpdateIdentity key = ReadIdentity(scope, update);
         decimal bytes = (decimal)update.MaxDownloadSize;
-        long? maximum = bytes >= 0 && bytes <= long.MaxValue && bytes == decimal.Truncate(bytes) ? (long)bytes : null;
+        long? maximum = bytes >= 0 && bytes <= WindowsUpdateCandidate.DownloadSizeLimit && bytes == decimal.Truncate(bytes)
+            ? (long)bytes : null;
+        reason = ClassifyOffer(scope, offer, maximum, out var classification);
+        return new(key, classification, maximum);
+    }
+
+    private static WindowsUpdateEligibilityReason ClassifyOffer(ComScope scope, object offer, long? maximum, out WindowsUpdateClass classification)
+    {
+        dynamic update = offer;
+        classification = WindowsUpdateClass.Restricted;
         int type = update.Type;
-        if (type == 2) { return new(key, WindowsUpdateClass.Driver, maximum); }
-        if (type != 1 || maximum is null || (string?)update.HandlerID != CbsHandler ||
-            (bool)update.IsBeta || (bool)update.CanRequireSource ||
-            !(bool)update.EulaAccepted || (bool)update.BrowseOnly || (bool)update.IsMandatory ||
-            (bool)update.IsInstalled || (bool)update.IsHidden || (int)update.DeploymentAction != 1)
+        if (type == 2)
         {
-            return new(key, WindowsUpdateClass.Restricted, maximum);
+            classification = WindowsUpdateClass.Driver;
+            return WindowsUpdateEligibilityReason.Driver;
+        }
+        if (type != 1) { return WindowsUpdateEligibilityReason.UnsupportedUpdateType; }
+        if (maximum is null) { return WindowsUpdateEligibilityReason.UnknownDownloadSize; }
+        if ((string?)update.HandlerID != CbsHandler) { return WindowsUpdateEligibilityReason.UnsupportedHandler; }
+        if ((bool)update.IsBeta) { return WindowsUpdateEligibilityReason.Beta; }
+        if ((bool)update.CanRequireSource) { return WindowsUpdateEligibilityReason.SourceMedia; }
+        if (!(bool)update.EulaAccepted) { return WindowsUpdateEligibilityReason.LicenceAcceptance; }
+        if ((bool)update.BrowseOnly) { return WindowsUpdateEligibilityReason.BrowseOnly; }
+        if ((bool)update.IsMandatory) { return WindowsUpdateEligibilityReason.Mandatory; }
+        if ((bool)update.IsInstalled || (bool)update.IsHidden || (int)update.DeploymentAction != 1)
+        {
+            return WindowsUpdateEligibilityReason.Inapplicable;
         }
 
         dynamic? bundle = scope.OwnOptional(update.BundledUpdates);
+        if (bundle is not null && (int)bundle.Count != 0) { return WindowsUpdateEligibilityReason.Bundle; }
         dynamic? behavior = scope.OwnOptional(update.InstallationBehavior);
-        if (bundle is not null && (int)bundle.Count != 0 || behavior is null || (bool)behavior.CanRequestUserInput)
-        {
-            return new(key, WindowsUpdateClass.Restricted, maximum);
-        }
+        if (behavior is null) { return WindowsUpdateEligibilityReason.UnknownInstallationBehavior; }
+        if ((bool)behavior.CanRequestUserInput) { return WindowsUpdateEligibilityReason.Interactive; }
 
         dynamic categories = scope.Own(update.Categories);
         int count = categories.Count;
-        if (count is < 0 or > MaxCategories) { return new(key, WindowsUpdateClass.Restricted, maximum); }
-        var classification = WindowsUpdateClass.Other;
+        if (count is < 0 or > MaxCategories) { return WindowsUpdateEligibilityReason.AmbiguousClassification; }
+        var offeredClass = WindowsUpdateClass.Other;
         var found = false;
         for (var i = 0; i < count; i++)
         {
             dynamic category = scope.Own(categories[i]);
             if ((string)category.Type != "UpdateClassification") { continue; }
-            if (found) { return new(key, WindowsUpdateClass.Restricted, maximum); }
+            if (found) { return WindowsUpdateEligibilityReason.AmbiguousClassification; }
             found = true;
             if (!Guid.TryParseExact((string)category.CategoryID, "D", out Guid guid))
             {
-                return new(key, WindowsUpdateClass.Restricted, maximum);
+                return WindowsUpdateEligibilityReason.AmbiguousClassification;
             }
-            classification = guid.ToString("D") switch
+            offeredClass = guid.ToString("D") switch
             {
                 "0fa1201d-4330-4fa8-8ae9-b877473b6441" => WindowsUpdateClass.Security,
                 "e6cf1350-c01b-414d-a61f-263d14d133b4" => WindowsUpdateClass.Critical,
                 _ => WindowsUpdateClass.Other,
             };
         }
-        return new(key, classification, maximum);
+        classification = offeredClass;
+        return offeredClass is WindowsUpdateClass.Security or WindowsUpdateClass.Critical
+            ? WindowsUpdateEligibilityReason.Eligible : WindowsUpdateEligibilityReason.OutsideApprovedClasses;
     }
 
     internal static WindowsUpdateStatus OperationStatus(int overall, int overallHResult, int item, int itemHResult)
@@ -293,9 +343,16 @@ internal static class WuaSession
     }
 }
 
+internal interface IWuaRegistrationSource
+{
+    int Count { get; }
+    WuaServiceRegistration ReadRegistration(int index);
+}
+
 internal sealed class ComScope(Func<Guid, object>? activate = null) : IDisposable
 {
     private readonly List<object> owned = [];
+    internal bool HasInjectedActivation => activate is not null;
 
     public dynamic Create(Guid classId) => Own(activate is null ?
         Activator.CreateInstance(Type.GetTypeFromCLSID(classId, throwOnError: true)!)! : activate(classId));

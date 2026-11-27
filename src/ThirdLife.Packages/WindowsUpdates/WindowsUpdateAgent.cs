@@ -13,6 +13,30 @@ public sealed class WindowsUpdateAgent : IWindowsUpdateAgent
     public Task<WindowsUpdateScan> ScanAsync(CancellationToken cancellationToken) =>
         RunAsync(WuaSession.Scan, status => new WindowsUpdateScan(status, [], null), ScanTimeout, cancellationToken);
 
+    public Task<WindowsUpdatePreparation> AssessPreparationAsync(WindowsUpdateCandidate exact, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(exact);
+        return RunAsync(token =>
+        {
+            var offer = WuaSession.AssessOffer(exact, token);
+            if (offer.Status != WindowsUpdateStatus.Succeeded) { return offer; }
+            var resources = WindowsPreparationResources.ReadForWindowsUpdate(offer.ObservedAtUtc, token);
+            return offer with
+            {
+                ServicingSupported = resources.ServicingSupported,
+                PowerReady = resources.Power switch
+                {
+                    WindowsPreparationPower.ExternalPower or WindowsPreparationPower.NoBattery => true,
+                    WindowsPreparationPower.OnBattery or WindowsPreparationPower.CriticallyLowBattery => false,
+                    _ => null,
+                },
+                SystemAvailableBytes = resources.SystemAvailableBytes,
+                CacheAvailableBytes = resources.CacheAvailableBytes,
+                CacheSharesSystemVolume = resources.CacheSharesSystemVolume,
+            };
+        }, status => new WindowsUpdatePreparation(exact, status, DateTimeOffset.UtcNow), ScanTimeout, cancellationToken);
+    }
+
     public Task<WindowsUpdateInstalledObservation> ObserveInstalledAsync(WindowsUpdateIdentity exact, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(exact);

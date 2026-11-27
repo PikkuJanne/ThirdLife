@@ -28,7 +28,17 @@ public sealed class WindowsPreparationResourceSnapshot
     public bool? SharedVolume { get; }
 }
 
-/// <summary>Reads current platform, power, and caller-available storage at the package route's fixed locations.</summary>
+public sealed class WindowsServicingResources(bool? servicingSupported, WindowsPreparationPower power,
+    ulong? systemAvailableBytes, ulong? cacheAvailableBytes, bool? cacheSharesSystemVolume)
+{
+    public bool? ServicingSupported { get; } = servicingSupported;
+    public WindowsPreparationPower Power { get; } = power;
+    public ulong? SystemAvailableBytes { get; } = systemAvailableBytes;
+    public ulong? CacheAvailableBytes { get; } = cacheAvailableBytes;
+    public bool? CacheSharesSystemVolume { get; } = cacheSharesSystemVolume;
+}
+
+/// <summary>Reads platform, power and caller-available storage at each preparation route's fixed locations.</summary>
 public static class WindowsPreparationResources
 {
     private const byte MinimumPortableBatteryPercent = 10;
@@ -49,14 +59,59 @@ public static class WindowsPreparationResources
         var systemInstallCapacity = GetSystemInstallCapacity(systemAvailable, installAvailable,
             WindowsStorageVolumeSource.ShareVolume(systemMount, installMount));
         var sharedVolume = WindowsStorageVolumeSource.ShareVolume(systemMount, stagingMount);
-        var power = WindowsSystemPowerSource.Read() is { } status
-            ? ClassifyPower(status.AcLineStatus, status.BatteryFlag, status.BatteryLifePercent)
-            : WindowsPreparationPower.Unknown;
-        return new(platform, power, systemInstallCapacity, stagingAvailable, sharedVolume);
+        return new(platform, ReadPower(), systemInstallCapacity, stagingAvailable, sharedVolume);
     }
 
-    // The reviewed x64 package places its payload in the native Program Files tree.
-    // This route's single system budget covers both Windows Installer and that payload.
+    /// <summary>Reads the Windows servicing store and update download cache without following redirects.</summary>
+    public static WindowsServicingResources ReadForWindowsUpdate(DateTimeOffset now, CancellationToken token)
+    {
+        var os = new WindowsOperatingSystemSource().Read(token);
+        var servicing = EvaluateServicing(os, DateOnly.FromDateTime(now.UtcDateTime));
+        if (WindowsPlatform.Evaluate(os).Eligibility != WindowsPlatformEligibility.Supported)
+        {
+            return new(servicing, WindowsPreparationPower.Unknown, null, null, null);
+        }
+
+        var system = Environment.SystemDirectory;
+        var windows = Path.GetDirectoryName(system);
+        if (windows is null || !WindowsStorageVolumeSource.IsLocalAbsolutePath(windows))
+        {
+            return new(servicing, ReadPower(), null, null, null);
+        }
+
+        var (systemFree, systemMount) = WindowsStorageVolumeSource.ReadPreparationVolume(system);
+        var (storeFree, storeMount) = WindowsStorageVolumeSource.ReadPreparationVolume(Path.Combine(windows, "WinSxS"));
+        token.ThrowIfCancellationRequested();
+        var (cacheFree, cacheMount) = WindowsStorageVolumeSource.ReadPreparationVolume(
+            Path.Combine(windows, "SoftwareDistribution", "Download"));
+        var servicingFree = GetSystemInstallCapacity(systemFree, storeFree, WindowsStorageVolumeSource.ShareVolume(systemMount, storeMount));
+        return new(servicing, ReadPower(), servicingFree, cacheFree, WindowsStorageVolumeSource.ShareVolume(systemMount, cacheMount));
+    }
+
+    internal static bool? EvaluateServicing(OperatingSystemSnapshot os, DateOnly today)
+    {
+        var platform = WindowsPlatform.Evaluate(os).Eligibility;
+        if (platform != WindowsPlatformEligibility.Supported)
+        {
+            return platform == WindowsPlatformEligibility.UnverifiedIdentity ? null : false;
+        }
+
+        if (os.Edition.Status != SystemInventorySourceStatus.Available) { return null; }
+        var lifecycle = WindowsLifecycleCatalog.Current.Evaluate((uint)os.Version.GetRequiredValue().Build,
+            os.Edition.GetRequiredValue(), WindowsPlatform.GetArchitecture(os.Architecture), today);
+        return lifecycle.Status switch
+        {
+            WindowsLifecycleStatus.Supported => true,
+            WindowsLifecycleStatus.Unsupported => false,
+            _ => null,
+        };
+    }
+
+    private static WindowsPreparationPower ReadPower() => WindowsSystemPowerSource.Read() is { } status
+        ? ClassifyPower(status.AcLineStatus, status.BatteryFlag, status.BatteryLifePercent)
+        : WindowsPreparationPower.Unknown;
+
+    // The system budget covers both Windows and the route's installation directory.
     internal static ulong? GetSystemInstallCapacity(ulong? systemAvailable, ulong? installAvailable, bool? installSharesSystem) =>
         installSharesSystem is true && systemAvailable is { } system && installAvailable is { } install
             ? Math.Min(system, install) : null;

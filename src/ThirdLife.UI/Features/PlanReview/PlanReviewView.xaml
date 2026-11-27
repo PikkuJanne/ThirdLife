@@ -148,14 +148,14 @@
     <GroupBox Header="Windows Update" AutomationProperties.Name="Windows Update" Margin="0,16,0,0"
               Visibility="{Binding ShowsWindowsUpdates, Converter={StaticResource PlanReviewVisibility}}">
       <StackPanel>
-        <TextBlock Text="Scan the configured Windows Update service using the network. This build supports inventory only. Update downloads and installation are unavailable."
+        <TextBlock Text="Scan the configured Windows Update service and check individual offers online. Update downloads and installation are unavailable."
                    TextWrapping="Wrap" />
         <WrapPanel Margin="0,8,0,4">
           <Button x:Name="ScanWindowsUpdatesButton" Content="Scan for Windows updates" Click="ScanWindowsUpdates"
                   IsEnabled="{Binding CanScanWindowsUpdates}" Margin="0,0,8,4" />
-          <Button x:Name="CancelWindowsUpdateScanButton" Content="Cancel update scan" Click="CancelWindowsUpdateScan"
-                  IsEnabled="{Binding CanCancelWindowsUpdateScan}" Margin="0,0,0,4"
-                  Visibility="{Binding IsWindowsUpdateScanning, Converter={StaticResource PlanReviewVisibility}}" />
+          <Button x:Name="CancelWindowsUpdateButton" Content="{Binding WindowsUpdateCancelLabel}" Click="CancelWindowsUpdate"
+                  IsEnabled="{Binding CanCancelWindowsUpdate}" Margin="0,0,0,4"
+                  Visibility="{Binding IsWindowsUpdateRunning, Converter={StaticResource PlanReviewVisibility}}" />
         </WrapPanel>
         <TextBlock x:Name="WindowsUpdateMessage" Text="{Binding WindowsUpdateStatusText, NotifyOnTargetUpdated=True}"
                    TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
@@ -164,6 +164,18 @@
                  Visibility="{Binding HasWindowsUpdateInventory, Converter={StaticResource PlanReviewVisibility}}"
                  IsReadOnly="True" IsReadOnlyCaretVisible="True" TextWrapping="Wrap" AcceptsReturn="True"
                  MaxHeight="200" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,8,0,0" />
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding HasWindowsUpdateOffers, Converter={StaticResource PlanReviewVisibility}}">
+          <Label Target="{Binding ElementName=UpdateOfferPicker}" Content="Update to check" Padding="0,0,0,4" />
+          <ComboBox x:Name="UpdateOfferPicker" ItemsSource="{Binding WindowsUpdateOffers}"
+                    SelectedItem="{Binding SelectedUpdateOffer, Mode=TwoWay}" DisplayMemberPath="Label"
+                    AutomationProperties.Name="Update to check" IsEnabled="{Binding CanEditJob}" />
+          <Button x:Name="CheckUpdateOfferButton" Content="Check selected offer online" Click="CheckUpdateOffer"
+                  IsEnabled="{Binding CanCheckUpdateOffer}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+        </StackPanel>
+        <TextBlock x:Name="UpdateOfferPreview" Text="{Binding WindowsUpdatePreview, NotifyOnTargetUpdated=True}"
+                   Visibility="{Binding HasWindowsUpdatePreview, Converter={StaticResource PlanReviewVisibility}}"
+                   TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True" Margin="0,8,0,0"
+                   AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
       </StackPanel>
     </GroupBox>
   </StackPanel>

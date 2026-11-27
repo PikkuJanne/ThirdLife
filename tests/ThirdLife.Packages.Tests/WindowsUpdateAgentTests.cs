@@ -28,6 +28,42 @@ public sealed class WindowsUpdateAgentTests(ITestOutputHelper output)
 
     [Fact]
     [Trait("Category", "ActiveMachine")]
+    public async Task ActiveMachineAssessesOneExactOfferedRevisionWithoutMutation()
+    {
+        var agent = new WindowsUpdateAgent();
+        var scan = await agent.ScanAsync(CancellationToken.None);
+        Assert.Equal(WindowsUpdateStatus.Succeeded, scan.Status);
+        output.WriteLine($"Offered {scan.Updates.Count} revisions, selectable {scan.Updates.Count(WindowsUpdatePolicy.IsSelectable)}.");
+        var exact = scan.Updates.FirstOrDefault(WindowsUpdatePolicy.IsSelectable)
+            ?? scan.Updates.FirstOrDefault(update => update.Classification != WindowsUpdateClass.Driver)
+            ?? (scan.Updates.Count > 0 ? scan.Updates[0] : null);
+        if (exact is null) { output.WriteLine("The configured service offered no revision to assess."); return; }
+
+        var timer = Stopwatch.StartNew();
+        var observation = await agent.AssessPreparationAsync(exact, CancellationToken.None);
+        Assert.Equal(exact, observation.Exact);
+        output.WriteLine($"Exact {exact.Classification} lookup status={observation.Status}, reason={observation.EligibilityReason}, " +
+            $"servicingSupported={observation.ServicingSupported}, powerReady={observation.PowerReady}, restart={observation.RebootRequired}, " +
+            $"systemObserved={observation.SystemAvailableBytes.HasValue}, cacheObserved={observation.CacheAvailableBytes.HasValue}, " +
+            $"sharedVolume={observation.CacheSharesSystemVolume}, recommendedBytes={observation.RecommendedInstallationBytes}, " +
+            $"recommendedSpaceMet={observation.HasRecommendedSpace}, removalSupported={observation.RemovalSupported?.ToString() ?? "Unknown"}, elapsed={timer.Elapsed}.");
+        Assert.Contains(observation.Status, new[] { WindowsUpdateStatus.Succeeded, WindowsUpdateStatus.ApprovalChanged,
+            WindowsUpdateStatus.Unavailable, WindowsUpdateStatus.Offline, WindowsUpdateStatus.AccessDenied,
+            WindowsUpdateStatus.ServiceUnavailable, WindowsUpdateStatus.TimedOut, WindowsUpdateStatus.Partial });
+        if (observation.Status == WindowsUpdateStatus.Succeeded)
+        {
+            Assert.NotNull(observation.EligibilityReason);
+            Assert.NotNull(observation.RebootRequired);
+        }
+        else
+        {
+            Assert.Null(observation.HasRecommendedSpace);
+            Assert.Null(observation.RemovalSupported);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "ActiveMachine")]
     public async Task ActiveMachineObservesExactInstalledRevisionThroughIndependentSearch()
     {
         var exact = ReadHistoricalCandidate();
@@ -79,6 +115,7 @@ public sealed class WindowsUpdateAgentTests(ITestOutputHelper output)
         Assert.Equal(WindowsUpdateStatus.Unavailable, (await adapter.DownloadAsync(exact, CancellationToken.None)).Status);
         Assert.Equal(WindowsUpdateStatus.Unavailable, (await adapter.InstallAsync(exact, CancellationToken.None)).Status);
         Assert.Equal(WindowsUpdateStatus.Cancelled, (await adapter.ScanAsync(new CancellationToken(true))).Status);
+        Assert.Equal(WindowsUpdateStatus.Cancelled, (await adapter.AssessPreparationAsync(exact, new CancellationToken(true))).Status);
     }
 
     [Theory]
@@ -90,8 +127,14 @@ public sealed class WindowsUpdateAgentTests(ITestOutputHelper output)
     {
         using var scope = new ComScope();
         var update = new Update { Categories = [new Category { CategoryID = category }] };
-        var candidate = WuaSession.ReadCandidate(scope, update);
+        var candidate = WuaSession.ReadCandidate(scope, update, out var reason);
         Assert.Equal(expected, candidate.Classification);
+        Assert.Equal(expected switch
+        {
+            WindowsUpdateClass.Restricted => WindowsUpdateEligibilityReason.AmbiguousClassification,
+            WindowsUpdateClass.Other => WindowsUpdateEligibilityReason.OutsideApprovedClasses,
+            _ => WindowsUpdateEligibilityReason.Eligible,
+        }, reason);
         Assert.Equal(500L, candidate.MaximumDownloadBytes);
         Assert.Equal(2, candidate.Identity.Revision);
     }
@@ -103,20 +146,27 @@ public sealed class WindowsUpdateAgentTests(ITestOutputHelper output)
         using var scope = new ComScope();
         var restricted = new[]
         {
-            software with { BundledUpdates = new List<int> { 1 } },
-            software with { EulaAccepted = false },
-            software with { HandlerID = "http://schemas.microsoft.com/msus/2002/12/UpdateHandlers/InfBasedInstallation" },
-            software with { HandlerID = "http://schemas.microsoft.com/msus/2002/12/UpdateHandlers/CommandLineInstallation" },
-            software with { BrowseOnly = true },
-            software with { InstallationBehavior = new Behavior { CanRequestUserInput = true } },
-            software with { InstallationBehavior = null },
-            software with { Categories = [new Category(), new Category()] },
-            software with { Categories = Enumerable.Repeat(new Category(), 33).ToList() },
-            software with { MaxDownloadSize = -1 },
+            (software with { BundledUpdates = new List<int> { 1 } }, WindowsUpdateEligibilityReason.Bundle),
+            (software with { EulaAccepted = false }, WindowsUpdateEligibilityReason.LicenceAcceptance),
+            (software with { HandlerID = "http://schemas.microsoft.com/msus/2002/12/UpdateHandlers/InfBasedInstallation" }, WindowsUpdateEligibilityReason.UnsupportedHandler),
+            (software with { HandlerID = "http://schemas.microsoft.com/msus/2002/12/UpdateHandlers/CommandLineInstallation" }, WindowsUpdateEligibilityReason.UnsupportedHandler),
+            (software with { BrowseOnly = true }, WindowsUpdateEligibilityReason.BrowseOnly),
+            (software with { IsBeta = true }, WindowsUpdateEligibilityReason.Beta),
+            (software with { CanRequireSource = true }, WindowsUpdateEligibilityReason.SourceMedia),
+            (software with { IsMandatory = true }, WindowsUpdateEligibilityReason.Mandatory),
+            (software with { IsInstalled = true }, WindowsUpdateEligibilityReason.Inapplicable),
+            (software with { Type = 17 }, WindowsUpdateEligibilityReason.UnsupportedUpdateType),
+            (software with { InstallationBehavior = new Behavior { CanRequestUserInput = true } }, WindowsUpdateEligibilityReason.Interactive),
+            (software with { InstallationBehavior = null }, WindowsUpdateEligibilityReason.UnknownInstallationBehavior),
+            (software with { Categories = [new Category(), new Category()] }, WindowsUpdateEligibilityReason.AmbiguousClassification),
+            (software with { Categories = Enumerable.Repeat(new Category(), 33).ToList() }, WindowsUpdateEligibilityReason.AmbiguousClassification),
+            (software with { MaxDownloadSize = -1 }, WindowsUpdateEligibilityReason.UnknownDownloadSize),
+            (software with { MaxDownloadSize = WindowsUpdateCandidate.DownloadSizeLimit + 1 }, WindowsUpdateEligibilityReason.UnknownDownloadSize),
         };
-        foreach (var item in restricted)
+        foreach (var (item, expected) in restricted)
         {
-            Assert.Equal(WindowsUpdateClass.Restricted, WuaSession.ReadCandidate(scope, item).Classification);
+            Assert.Equal(WindowsUpdateClass.Restricted, WuaSession.ReadCandidate(scope, item, out var reason).Classification);
+            Assert.Equal(expected, reason);
         }
 
         Assert.Equal(WindowsUpdateClass.Driver, WuaSession.ReadCandidate(scope, software with { Type = 2 }).Classification);
@@ -152,6 +202,10 @@ public sealed class WindowsUpdateAgentTests(ITestOutputHelper output)
         public string HandlerID { get; init; } = WuaSession.CbsHandler;
         public bool IsDownloaded { get; init; } = true;
         public decimal MaxDownloadSize { get; init; } = 500;
+        public Func<object?> ReadDiskRecommendation { get; init; } = () => 0;
+        public object? RecommendedHardDiskSpace => ReadDiskRecommendation();
+        public Func<object?> ReadRemovalSupport { get; init; } = () => null;
+        public object? IsUninstallable => ReadRemovalSupport();
         public bool IsBeta { get; init; }
         public bool IsInstalled { get; init; }
         public bool IsMandatory { get; init; }

@@ -63,3 +63,73 @@ The evidence checkpoint passed `eng/verify.ps1 -Tier Targeted` with the Inventor
 TL-0504 remains open for native download, installation, restart and rescan qualification. The current privilege boundary covers no-op broker actions and the reviewed package policy covers one MSI. Neither authorizes Windows servicing. Prepare the WUA-specific authenticated broker and effective policy for the intended Windows environment, including source, firmware exclusion, servicing eligibility, disk and rollback headroom, power, and independent verification. Qualify the composed route in the same-machine guest and obtain the applicable privilege decision before enabling ordinary dispatch. [Broker qualification](../TL-0317/report.md) · [Privilege and application gates](../../../TASKS.yaml)
 
 For a live qualification run, use a suitable offered security or critical CBS update, save the exact action approval and use the applicable Windows consent prompt. Record native download, per-update installation status, any actual restart and the fresh scan under the same job. Previous package or no-op approvals do not extend to Windows Update. No host update installation or restart was requested during this checkpoint.
+
+## Exact offer review in Prepare
+
+After a successful scan, select an update in Prepare and choose **Check selected offer online**. The application reopens the current intake and saved scan before and after asking the configured service for that exact revision. A changed offer, later scan, intake change or cancellation invalidates the result. Reopening the job restores the saved inventory and leaves a fresh network check to the operator. The transient check creates no new approval or journal entry.
+
+The review reports the first eligibility condition observed, pending restart, current servicing support, power and caller-available space at the Windows component store and download cache. A selectable offer also shows what the compiled download and installation would change and how the installed revision would be verified. The check accounts for the transfer and installation recommendation together when both locations share a volume. An absent recommendation is shown as unknown. A rollback reserve still needs its own basis. [WUA installation-space recommendation](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdate-get_recommendedharddiskspace)
+
+Prepare also shows whether WUA reports that this exact revision supports uninstall. Windows can omit either that property or its disk recommendation. The other observations remain visible when either is unavailable. Establishing a recovery procedure and measuring its required headroom remain separate qualification steps. [WUA uninstall support](https://learn.microsoft.com/en-us/windows/win32/api/wuapi/nf-wuapi-iupdate-get_isuninstallable)
+
+The read-only lookup and prepared writer inspect the configured service registration through the same WUA session used for the lookup. The fixed Windows interfaces can also run under Native AOT. The protected broker continues to implement its previously qualified no-op protocol. An authenticated servicing request, independent approval and intent validation, update-specific effective policy and qualified rollback reserve remain engineering prerequisites for a live transaction.
+
+### Repeating the guest assessment
+
+From a clean committed checkout on the active machine, use the shared Hyper-V runner. Inspect returns the identity of the configured running Generation 2 guest. Prepare builds the Packages tests with the locked inputs and verifies the staged SDK. The assessment runs a single read-only test under the interactive limited token. Its local result records bounded offer counts, lookup status, eligibility reason, artifact digest, version and cleanup. It requires no broker provisioning or servicing consent.
+
+```powershell
+$guest = ./eng/run-thirdlife-hyperv.ps1 -Scenario Inspect
+$candidate = ./eng/run-thirdlife-hyperv.ps1 -Prepare -WindowsUpdateAssessment | Select-Object -Last 1
+./eng/run-thirdlife-hyperv.ps1 -Scenario WindowsUpdateAssessment -ExpectedVMId $guest.VMId -PayloadSha256 $candidate.PayloadSha256
+```
+
+### Observations on 2026-11-27
+
+The offer-review checkpoint was `0bbbe8a6ade0f7c8c8fd3c2a005c859b65bab87a`, based on merged PR 73 at `52a12906c1b07ddc1587bd07598f4dfecd8d0e5a`. The initial locked baseline passed 25 WUA adapter cases. The initial Targeted checks found incorrect line endings in new C# files and a public init setter on the inventory resource result. The result now exposes get-only observations, and the existing read-only provider contract regression passed. Targeted with Packages and Persistence and filter `FullyQualifiedName~WindowsUpdate&Category!=ActiveMachine` then passed 1,308 tests in 138.756 s, including Quick. The six focused WPF/SQLite cases covered keyboard operation, cancellation, invalidation and reopening using isolated synthetic jobs. The unelevated shell reached Inspect through UI Automation and exited normally in 1.355 s. These WPF cases and the native service observations used separate entry points.
+
+| Native environment | Exact offer check |
+| --- | --- |
+| Host, Windows 11 Pro 26H2 x64 build 26300.9974 | Four offers, comprising three drivers and one restricted software update. The exact software revision used an unsupported handler. Servicing and power checks passed. Windows reported no pending restart. Both fixed locations had observable space and shared a volume. WUA supplied no installation-space recommendation. The exact lookup took 7.997 s. |
+| Same-machine Generation 2 guest, Windows 11 x64 build 26300.9974 | One offer, zero selectable. The fresh limited-token assessment confirmed an unsupported handler. The source-bound run took 104.127 s including staging and verified cleanup. The collected guest result contains the selection counts and eligibility reason. |
+
+Both machines reported wuapi.dll `1511.2611.5012.0`. On the host, the three `WindowsUpdateAgentTests` in the `ActiveMachine` category passed in 1.7728 minutes, including an independent positive query for a previously installed revision. The guest payload SHA-256 was `063668e23dc124c63dcc5eee1e787c48c8b266c9c7fcfcb10a570968c9858c07`, with adapter SHA-256 `77d387dfff35820f36184698203869bf4f6241c088a8e741d42eebc96d2c383b`. Neither environment presented an eligible servicing transaction.
+
+A temporary unelevated Windows x64 Native AOT probe compiled the fixed service-registration reader with the broker's 10.0.14 AOT toolchain on SDK 10.0.400. It activated an in-process WUA session, checked that same session four times and released the acquired interfaces. Four reads identified the built-in authority in 0.132 s. Independent WUA Automation enumeration agreed. The probe image SHA-256 was `dcf14c5c454b7dcd80870fde9a7c97e2f1b5d519173c162dcdc070cb7d1dc0b7`. This exercised service identification. It used no privileged broker session and performed no update operation.
+
+## Approval and phase handoff
+
+Under the controlled policy, an approval now records two distinct action IDs, one for download and one for installation. It binds those IDs and their compiled impacts to the originating approval, job, intake, scan, policy decision and exact revision. Prepare uses the same compiled impact descriptions. Scanning requires the standard WUA agent. The download and installation descriptors each require a qualified servicing broker.
+
+SQLite migrations 008 and 009 version the stored approvals and phase outcomes. Existing payloads and hashes remain intact. Earlier approvals remain readable. Execution requires fresh review for an approval that predates phase binding. A reader that supports only an earlier schema refuses to open the upgraded store.
+
+The controlled channel can wait for consent during setup. Before handoff, the coordinator checks the exact fresh offer, resources, current intake and policy, phase identity, deadline and journal state. A receipt must match the dispatched phase to be attributable. The production WUA mutation methods remain unavailable. No controlled result establishes native installation or independent broker authorization.
+
+Channel setup can end before an action is sent. The store records that outcome against its own preparing entry. A fresh scan can also settle an interrupted setup atomically, allowing a new review. A committed send intent with a missing or mismatching receipt still requires workshop review after reopening. A backwards wall-clock adjustment preserves the actual observed time of a correlated receipt. Journal sequence records its order.
+
+On 2026-11-27 the intent-binding baseline on the active machine passed 20 SQLite workflow cases in 7 s. At `ce85b22063b48aae9e557dc4dd27efaefc481623`, the same filtered test project passed 30 cases in 10 s. Quick with locked restore passed 1,253 tests in 129.420 s. Review identified that a refused pre-send installation could prevent a fresh approval, and that a deadline or clock change during setup could misstate the result. At `ffee8c6ff03e1d836c7c15c35196d408786b4c86`, the filtered suite passed 36 cases in 13 s. The cases used real SQLite, controlled channels, clocks and update offers. They exercised concurrent decisions, interrupted setup and handoff, migration, replay refusal, receipt mismatch and reopening. After correcting a formatting failure, Quick with locked restore passed 1,253 tests in 122.948 s. The warm Quick target is 120 s.
+
+### Integrated verification on 2026-11-27
+
+The integrated technical source is `710e5a867d15905c471bd8658539be94f6950f8a`. On the active Windows 11 Pro x64 host, the nine focused WPF cases passed in 4.790 s. The integrated Targeted run passed 1,406 cases in 142.383 s with zero skips. It included Quick, 38 action registry cases, 31 WUA adapter cases and 75 persistence cases.
+
+```powershell
+$projects = 'tests/ThirdLife.Actions.Tests/ThirdLife.Actions.Tests.csproj',
+    'tests/ThirdLife.Packages.Tests/ThirdLife.Packages.Tests.csproj',
+    'tests/ThirdLife.Persistence.Tests/ThirdLife.Persistence.Tests.csproj'
+./eng/verify.ps1 -Tier Targeted -TestProject $projects -Filter '(FullyQualifiedName~WindowsUpdate|FullyQualifiedName~ActionRegistryTests|FullyQualifiedName~MigrationAndCorruptionTests)&Category!=ActiveMachine&Category!=Extended&Category!=SandboxOnly'
+```
+
+The separate Extended check terminated owned WPF instances after dispatch intent and reopened the same jobs on schema 009. Both existing `KilledNoOpApplicationReopensTheSameJobAndReconcilesWithoutDispatch` cases passed in 11.601 s. They cover the neighbouring no-op recovery workflow using its controlled backend. WUA-specific interruption and late-result checks used controlled channels and real SQLite. The unelevated `eng/run-ui-smoke.ps1` reached Inspect through UI Automation and exited normally in 1.461 s. Its Release apphost SHA-256 was `f0edbd0344ebf5ec4bc981caac8359d9deb10fde174639dc1b9d6422e4c89868`.
+
+The integrated host run passed all three native WUA cases in 1.2603 minutes. The exact restricted offer recheck took 8.734 s. Windows reported an unsupported installer, uninstall unavailable, no disk recommendation and no pending restart. The separate lookup confirmed a previously installed revision in 7.531 s. The host adapter SHA-256 was `e921dd96ec143c890a6d4b49b2b5036274c3d8c2158bf24976376abf72546bfd`.
+
+The limited-token guest repeated the assessment from the integrated commit. Its single offer still had an unsupported handler, and WUA reported that the revision did not support uninstall. The run took 169.075 s including staging and verified cleanup. Its payload SHA-256 was `f2586854d68549d6d345a154d82f66dbaa49be1a7c122971ff342e48760e3e6d` and adapter SHA-256 was `3683523d1d83ba9f994695344f587dda7c51c6333e540baf5f04ecfcceae8b3d`. Both native environments still reported Windows build 26300.9974 and wuapi.dll 1511.2611.5012.0.
+
+In a clean detached checkout of `710e5a867d15905c471bd8658539be94f6950f8a`, `eng/verify.ps1 -Tier Full -Restore` passed in 411.907 s. All 304 governance tests and 2,348 deterministic .NET tests passed, with zero skips. Locked restore, formatting and the warnings-as-errors Release build passed. The clean Release adapter had SHA-256 `78496902687eafaa96387a7e615d15718af64bd54143095383742cd4f12c9b70`. Its separate native exact-offer test passed in 25.022 s, again finding four offers, zero selectable revisions and an unsupported handler with uninstall unavailable. The worktree remained clean.
+
+The final evidence checkpoint passed `eng/verify.ps1 -Tier Quick` with 1,262 .NET cases in 124.506 s, 4.506 s above the warm target. The Release build took 7.80 s. WPF took 65 s, compared with 61 s on the isolated phase-binding checkpoint and 62 s in integrated Targeted. The technical source and tests match the clean Full candidate. [Integration PR 74](https://github.com/PikkuJanne/ThirdLife/pull/74)
+
+### Remaining work
+
+Implement the protected Windows Update request and native handler for the approved phase and qualify their independent authorization checks. Bind the effective servicing policy to a supported recovery procedure and its disk requirements. Reopen native transaction qualification when the guest offers an eligible security or critical CBS revision. Obtain approval for that exact planned action and applicable Windows consent, record the per-update download and installation receipts, then rescan and independently verify the installed revision after any required restart. TL-0314 governs ordinary privileged dispatch. The offer checks and technical tests confer no servicing authority.

@@ -56,4 +56,5 @@ public enum ActionAvailability
     BrokerNoOp = 1,
     PackageBackendRequired,
     WindowsUpdateAgentRequired,
+    WindowsUpdateServicingBrokerRequired,
 }
