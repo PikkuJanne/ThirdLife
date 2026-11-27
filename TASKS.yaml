@@ -7949,6 +7949,16 @@ tasks:
     environment: Clean active Windows 11 native x64 checkout and explicitly selected local drive
     reference: artifacts/evidence/TL-0702/reopen-sample.md, c3284b46dfc94c2b30b2f129a08476b5d7e1d0b0
     limitation: Reviewed resume and matching separate fixture copy only. Native setup, backup and attributable Windows restoration remain pending.
+  - summary: Inspected File History restore-related provider metadata for a usable native attribution source.
+    task: TL-0702
+    command: Unelevated Get-WinEvent provider manifest review and read-only BackupLog channel lookup
+    tier: targeted
+    result: unavailable
+    date: '2026-11-27'
+    duration: Two restore-related manifest descriptions examined
+    environment: Active Windows 11 native x64 host with standard-user token
+    reference: artifacts/evidence/TL-0702/restore-attribution-review.md
+    limitation: Both observed events concern failures and carry unstructured messages. The named log was access denied. No successful native restore or attribution was observed.
   notes:
   - The actual recipient controls destination, credentials and recovery material. TL-0710 carries the final security/privacy
     disposition.
@@ -8315,7 +8325,17 @@ tasks:
   - Inspect generated reports, databases, logs, uninstall remnants, support bundles, benchmark records, and test manifest.
   - Confirm each slow scenario is independently invokable and that failures were rerun at scenario/targeted scope before
     any broad rerun.
-  evidence: []
+  evidence:
+  - summary: Prepared the stable matrix with exact reusable source, private installed lifecycle and restricted scope.
+    task: TL-0707
+    command: Source and local evidence reference review across stable matrix operations
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: Eight scoped operations indexed with their retained proof and missing exact conditions
+    environment: Active Windows 11 native x64 host and evidence from the existing ThirdLife-W11 guest
+    reference: artifacts/matrices/core-1.0-stable.md, 4331fbedfb49c64af090ba01b1929eaa38e1b22f
+    limitation: Matrix preparation only. Exact frozen candidate, current installed app window, interruption recovery, release rights and exposure remain pending.
   notes:
   - TL-0710 considers the evidence and actual release scope.
   - Single-guest execution continues through stable release, maintenance and future regression work. Reuse relevant
