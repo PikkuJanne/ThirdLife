@@ -263,16 +263,18 @@ In assisted Handover, enter the estimated backup size and confirm the
 recipient is present and controls recovery. Choose a ready local drive
 root separate from the Windows system volume. TRACE reports whether
 Windows File History prerequisites and the declared capacity are present.
-Backup remains pending until a separately restored harmless sample
-is verified. Sealed handover leaves this choice with the recipient.
+A protected copy check compares the generated sample bytes.
+Backup remains pending until native Windows restoration is attributable.
+Sealed handover leaves backup setup with the recipient.
 
 After the drive and estimate are shown, confirm the scope with the
 recipient, enter the workshop operator code, and choose **Prepare harmless
-restore sample**. TRACE shows
-the generated file and the separate local recovery folder. Any Windows
-File History operation requires the recipient to review the actual
-included libraries and exact destination in Windows. Use its restore-to
-choice to avoid replacing the original.
+restore sample**. TRACE shows the generated file and the separate local
+recovery folder. If the recipient chooses to include the sample, use
+their chosen Windows backup account and add only the displayed original
+sample folder to a File History library. Check the included libraries
+and destination with the recipient before running a backup. Use
+**Restore to** in Previous Versions to keep the original.
 
 **Check separate recovered copy** compares the protected original
 and recovered files. The current check reports unavailable, mismatched
@@ -281,3 +283,11 @@ Windows restore can be recorded. The job reopens with the attributed
 sample evidence and any unconfirmed preparation. New sample checks
 require the current handover's reviewed destination.
 [Private sample locations](../data-locations.md) · [Windows File History](https://support.microsoft.com/en-us/windows/experience/backup-recovery/backup-and-restore-with-file-history)
+
+After reopening a job, review the current backup drive and scope,
+confirm the review with the recipient and enter the current workshop
+operator code. Choose **Use saved harmless sample** to verify and
+reopen the exact earlier original. TRACE checks the protected digest,
+keeps earlier results and writes no new sample. A subsequent copy result
+is attributed to the current operator. The action is available only
+for a prepared sample in the current assisted handover.
