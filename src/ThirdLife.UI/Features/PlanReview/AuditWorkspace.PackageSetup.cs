@@ -337,7 +337,7 @@ internal sealed partial class AuditWorkspace
         {
             await LoadPackageHistoryAsync(approval.Plan.JobId);
             await LoadWindowsUpdateHistoryAsync(approval.Plan.JobId);
-            var saved = await journal.LoadJournalAsync(approval.Plan);
+            var saved = await journal.LoadJournalAsync(approval.Plan, CancellationToken.None);
             if (HoldsPackageDispatch && saved?.ActiveApproval == approval && IsFreshPackageApproval(approval) &&
                 saved.Entries.LastOrDefault(entry => entry.ActionId == request.ActionId) == previous)
             {
