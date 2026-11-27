@@ -100,12 +100,12 @@ internal sealed partial class AuditWorkspace
                 return;
             }
 
+            var current = PlanReviewPresentation.Describe(plan);
             if (!plan.SyntheticData)
             {
-                await CheckPackageAsync();
+                await CheckPackageAsync(current);
             }
 
-            var current = PlanReviewPresentation.Describe(plan);
             await LoadDisplayedActionDecisionAsync(current);
             if (active is not null)
             {
@@ -322,6 +322,7 @@ internal sealed partial class AuditWorkspace
         _displayedActionDecisionHistory = null;
         _packageApproval = null;
         _packageResolution = null;
+        _packagePreflight = null;
         _packageDiagnosticUnavailable = false;
         ClearBrokerPlan(clearSelection);
         _planReviewChanges = null;

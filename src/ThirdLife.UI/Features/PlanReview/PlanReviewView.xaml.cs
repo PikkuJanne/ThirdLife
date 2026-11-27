@@ -12,8 +12,7 @@ public partial class PlanReviewView : UserControl
 {
     private IInputElement? _detailsHeaderFocus;
     private PlanReviewSnapshot? _detailsPlan;
-    private string? _announcedStatus;
-    private string? _announcedPackageStatus;
+    private readonly Dictionary<TextBlock, string> _announcedMessages = [];
 
     public PlanReviewView() => InitializeComponent();
 
@@ -26,7 +25,8 @@ public partial class PlanReviewView : UserControl
         {
             var hadFocus = BuildPlanReviewButton.IsKeyboardFocused;
             await workspace.BuildPlanReviewAsync();
-            RestoreFocus(workspace.HasPlanReview ? PlanResultTitle : PlanStatusMessage, hadFocus);
+            RestoreFocus(workspace.HasPackagePreflightBlocker ? PackagePreflightMessage :
+                workspace.HasPlanReview ? PlanResultTitle : PlanStatusMessage, hadFocus);
         }
     }
 
@@ -67,7 +67,7 @@ public partial class PlanReviewView : UserControl
         {
             var hadFocus = InstallPackageButton.IsKeyboardFocused;
             await workspace.InstallPackageAsync();
-            RestoreFocus(PlanStatusMessage, hadFocus);
+            RestoreFocus(workspace.HasPackagePreflightBlocker ? PackagePreflightMessage : PlanStatusMessage, hadFocus);
         }
     }
 
@@ -143,20 +143,19 @@ public partial class PlanReviewView : UserControl
         }
     }
 
-    private void AnnounceStatus(object sender, DataTransferEventArgs args)
+    private void AnnounceStatus(object sender, DataTransferEventArgs args) => AnnounceMessage(args.TargetObject);
+
+    private void AnnouncePreflightVisibility(object sender, DependencyPropertyChangedEventArgs args) => AnnounceMessage(sender);
+
+    private void AnnounceMessage(object target)
     {
-        if (args.TargetObject is not TextBlock { IsLoaded: true, IsVisible: true, Text.Length: > 0 } message)
+        if (target is not TextBlock { IsLoaded: true, IsVisible: true, Text.Length: > 0 } message ||
+            _announcedMessages.TryGetValue(message, out var last) && string.Equals(last, message.Text, StringComparison.Ordinal))
         {
             return;
         }
 
-        ref var announced = ref (ReferenceEquals(message, PackageSourceMessage) ? ref _announcedPackageStatus : ref _announcedStatus);
-        if (string.Equals(announced, message.Text, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        announced = message.Text;
+        _announcedMessages[message] = message.Text;
         var peer = UIElementAutomationPeer.FromElement(message) ?? UIElementAutomationPeer.CreatePeerForElement(message);
         peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }

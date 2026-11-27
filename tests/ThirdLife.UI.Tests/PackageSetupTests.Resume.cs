@@ -262,7 +262,7 @@ public sealed partial class PackageSetupTests
 
         AuditWorkspace OpenRestartWorkspace(IPilotPackageRuntime runtime) =>
             new(async token => await OpenStore(token), [OsSample(), SystemSample()], clock, reports,
-                packageService: new PilotPackageService(runtime));
+                packageService: new PilotPackageService(runtime), observePreparationResources: ReadyPreparationResources);
     }
 
     private static async Task<(JobId JobId, JournalHistory History)> SaveRecoveryBoundaryAsync(

@@ -60,6 +60,11 @@
                    Visibility="{Binding ShowsPackageVerificationPlanStatus, Converter={StaticResource VerifyVisibility}}"
                    TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
                    AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
+        <TextBlock x:Name="RetryPreflightMessage" Text="{Binding PackagePreflightStatus, NotifyOnTargetUpdated=True}"
+                   Visibility="{Binding HasPackagePreflightStatus, Converter={StaticResource VerifyVisibility}}"
+                   TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                   AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus"
+                   IsVisibleChanged="AnnouncePreflightVisibility" />
         <TextBlock x:Name="PackageRetryMessage" Text="{Binding PackageRetryStatusText, NotifyOnTargetUpdated=True}"
                    Visibility="{Binding HasPackageRetryStatus, Converter={StaticResource VerifyVisibility}}"
                    TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"

@@ -6020,7 +6020,7 @@ tasks:
   workstream: planning
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: M
   executor: codex
   environment: windows
@@ -6050,10 +6050,58 @@ tasks:
   - Unknown estimates are shown as uncertainty rather than zero.
   verification:
   - Test boundary values, changing free space, low battery/no AC, incompatible architecture, and unknown estimates.
-  evidence: []
+  - Exercise Prepare, approved cancellation, late deferral, reopen, and retry through WPF, SQLite, and controlled package execution.
+  evidence:
+  - summary: Resource boundaries, normal Prepare and Verify behavior, and journal continuity.
+    command: eng/verify.ps1 -Tier Targeted with Actions, Persistence, Reports, and Packages
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64
+    date: '2026-11-27'
+    duration: 172.340 s
+    reference: artifacts/evidence/TL-0503/report.md, candidate execution source f37d6cf67f4570a29cc751011e2c8d02425d2fed
+    limitation: 1,720 deterministic tests passed. The last live-region visibility wiring was checked by the candidate Quick run.
+  - summary: Final candidate build, format, deterministic Quick and accessible status wiring.
+    command: eng/verify.ps1 -Tier Quick
+    tier: quick
+    result: passed
+    environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64
+    date: '2026-11-27'
+    duration: 113.248 s
+    reference: artifacts/evidence/TL-0503/report.md, f37d6cf67f4570a29cc751011e2c8d02425d2fed
+    limitation: 1,242 tests passed. The command excludes active-machine and Extended cases.
+  - summary: Application and backend interruption preserved correlated attempts and recovery behavior.
+    command: Release UI interruption filters for application loss and owned package backend termination
+    tier: extended
+    result: passed
+    environment: Active unelevated Windows 11 Pro 26H2 build 26300.9974 native x64
+    date: '2026-11-27'
+    duration: 12.106 s
+    reference: artifacts/evidence/TL-0503/report.md, f37d6cf67f4570a29cc751011e2c8d02425d2fed
+    limitation: Three cases used owned processes and controlled package backends.
+  - summary: Read-only Windows resource observation and unelevated shell startup.
+    command: Release Inventory native preflight filter and eng/run-ui-smoke.ps1
+    tier: targeted
+    result: passed
+    environment: Active unelevated Windows 11 Pro 26H2 build 26300.9974 native x64
+    date: '2026-11-27'
+    duration: 0.978 s native test host, 1.290 s shell smoke
+    reference: artifacts/evidence/TL-0503/report.md, f37d6cf67f4570a29cc751011e2c8d02425d2fed
+    limitation: The native probe observed external power and shared storage. Low-charge and storage refusal used fixtures.
+  - summary: Clean checkout and locked build passed governance and complete deterministic regression.
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    environment: Clean detached worktree on active Windows 11 Pro 26H2 build 26300.9974 native x64
+    date: '2026-11-27'
+    duration: 400.827 s
+    reference: artifacts/evidence/TL-0503/report.md, f37d6cf67f4570a29cc751011e2c8d02425d2fed
+    limitation: All 304 governance and 2,258 deterministic cases passed. Native and Extended selections were run separately.
   expected_test_tier: targeted
-  full_test_triggers: []
-  extended_test_triggers: []
+  full_test_triggers:
+  - A new persisted outcome extends the shared package journal and restricted report contract.
+  extended_test_triggers:
+  - Recheck owned application and backend interruption after adding the final pre-dispatch resource read.
 - id: TL-0504
   title: Implement a structured Windows Update workflow
   milestone: M5

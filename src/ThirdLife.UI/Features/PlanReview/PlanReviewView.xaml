@@ -39,6 +39,11 @@
                TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True" Margin="0,0,0,8"
                AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />
     <StackPanel Visibility="{Binding ShowsPackageOperationStatus, Converter={StaticResource PlanReviewVisibility}}">
+      <TextBlock x:Name="PackagePreflightMessage" Text="{Binding PackagePreflightStatus, NotifyOnTargetUpdated=True}"
+                 Visibility="{Binding HasPackagePreflightStatus, Converter={StaticResource PlanReviewVisibility}}"
+                 Margin="0,0,0,8" TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
+                 AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus"
+                 IsVisibleChanged="AnnouncePreflightVisibility" />
       <TextBlock x:Name="PackageSourceMessage" Text="{Binding PackageSourceStatus, NotifyOnTargetUpdated=True}"
                  TextWrapping="Wrap" Focusable="True" KeyboardNavigation.IsTabStop="True"
                  AutomationProperties.LiveSetting="Polite" TargetUpdated="AnnounceStatus" />

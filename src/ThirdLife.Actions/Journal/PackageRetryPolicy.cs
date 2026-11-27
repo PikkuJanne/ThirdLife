@@ -40,7 +40,7 @@ public static class PackageRetryPolicy
         Actor: JournalActor.PackageBackend,
         Checkpoint: JournalCheckpoint.PackagePreDispatchFailure,
         Result: JournalResult.NetworkUnavailable or JournalResult.Cancelled or JournalResult.BackendUnavailable or
-            JournalResult.PackageDispatchAuthorizationChanged,
+            JournalResult.PackageDispatchAuthorizationChanged or JournalResult.PackageResourcePreflightDeferred,
     };
 
     public static PackageRetryEligibility Evaluate(IReadOnlyList<JournalHistory> histories,

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using ThirdLife.Actions.Execution;
 using ThirdLife.Actions.Journal;
+using ThirdLife.Actions.Planning;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
@@ -67,7 +68,8 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         Func<PolicyDeviceClass, PolicySnapshot?>? fixturePlanPolicy = null,
         PilotPackageService? packageService = null,
         Func<IBrokerExecutionJournal, ExecutionCoordinator>? fixtureBrokerCoordinator = null,
-        Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null)
+        Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null,
+        Func<DateTimeOffset, PreparationResourceSnapshot>? observePreparationResources = null)
     {
         ArgumentNullException.ThrowIfNull(openStore);
         ArgumentNullException.ThrowIfNull(providers);
@@ -107,6 +109,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         }
 
         _packageService = packageService;
+        _observePreparationResources = observePreparationResources ?? ObserveWindowsPreparationResources;
         _appendPackageDiagnostic = appendPackageDiagnostic;
         PlanProfiles = packageService is not null && WorkshopPackageProfile.Load(timeProvider.GetUtcNow()) is { } package
             ? [.. WorkshopPlanCandidate.Options, package]

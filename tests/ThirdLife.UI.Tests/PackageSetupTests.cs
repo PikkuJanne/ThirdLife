@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using ThirdLife.Actions.Journal;
+using ThirdLife.Actions.Planning;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Sanitization;
 using ThirdLife.Diagnostics.Logging;
@@ -282,12 +283,14 @@ public sealed partial class PackageSetupTests
 
     private static AuditWorkspace OpenWorkspace(
         AuditTestStore disk, WorkshopReportStore reports, PilotPackageService service, TimeProvider? clock = null,
-        Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null)
+        Func<StructuredDiagnosticEvent, CancellationToken, Task>? appendPackageDiagnostic = null,
+        Func<DateTimeOffset, PreparationResourceSnapshot>? observePreparationResources = null)
     {
         var time = clock ?? new FixedClock();
         return new(async token => await OpenPackageStoreAsync(disk, time, token),
             [OsSample(), SystemSample()], time, reports,
-            packageService: service, appendPackageDiagnostic: appendPackageDiagnostic);
+            packageService: service, appendPackageDiagnostic: appendPackageDiagnostic,
+            observePreparationResources: observePreparationResources ?? ReadyPreparationResources);
     }
 
     private static Task<SqliteJobStore> OpenPackageStoreAsync(
@@ -335,6 +338,7 @@ public sealed partial class PackageSetupTests
     private sealed class FixtureInstaller(PackageInstallStatus result, bool register) : IPilotPackageRuntime
     {
         private bool _registered;
+        public int AcquireCalls { get; private set; }
         public int InstallCalls { get; private set; }
         public int ProbeCalls { get; private set; }
         public Action? Acquiring { get; set; }
@@ -349,6 +353,7 @@ public sealed partial class PackageSetupTests
 
         public Task<IPackageArtifact> AcquireAsync(CancellationToken cancellationToken)
         {
+            AcquireCalls++;
             Acquiring?.Invoke();
             return Task.FromResult<IPackageArtifact>(new FixtureArtifact());
         }

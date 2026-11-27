@@ -96,11 +96,11 @@ The quick tier validates these definitions and safe wording only. Revised `TL-00
 - **Purpose:** Prove capacity preflight, rollback headroom, atomicity, safe refusal, and cleanup.
 - **Prerequisites:** Injected capacity provider or disposable bounded virtual disk/workspace; known fixture sizes; failure threshold; recovery image/snapshot when needed.
 - **Safe setup:** Prefer injected values. If integration behavior requires a volume, create a disposable virtual disk or bounded workspace with explicit maximum size away from the host system volume.
-- **Invocation state:** Not implemented at TL-0008; the named owning task must supply isolated capacity setup and one-scenario command before invocation.
+- **Invocation:** The TL-0503 package case uses an injected capacity observation and a disposable SQLite job. Run `dotnet test tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName~PackagePreflight"` from a restored checkout.
 - **Expected invariant:** Insufficient capacity blocks before unsafe mutation; mid-write exhaustion never produces false complete/verified state; partial output is bounded and removed or explicitly recoverable.
 - **Abort:** Target resolves to system/personal/donor storage, free-space headroom is uncertain, bounds fail, or unrelated data could be changed.
 - **Cleanup/restoration:** Confirm exact disposable target, detach/delete it through the reviewed task procedure, verify source job and host storage remain intact.
-- **Claim limitation/status:** Does not test every full/slow physical disk; thresholds/command/result not implemented at TL-0008; the named owning task must supply the item before invocation; `Not run`.
+- **Claim limit:** The package fixture verifies refusal before download, recheck before applying the package, and continuity after reopening. The fixture writes no package to host storage. Mid-write exhaustion is a separate scenario for the owning task.
 
 ## 9. `SMC-OFFLINE`
 
