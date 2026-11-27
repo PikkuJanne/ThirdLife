@@ -218,7 +218,7 @@ internal static class WuaSession
         for (var i = 0; i < count; i++)
         {
             dynamic warning = scope.Own(warnings[i]);
-            var reason = HResultStatus((int)warning.HResult);
+            var reason = WuaFailure.FromHResult((int)warning.HResult);
             if (reason != WindowsUpdateStatus.Failed) { throw new UpdateFailure(reason); }
         }
         if (status != WindowsUpdateStatus.Succeeded) { throw new UpdateFailure(status); }
@@ -304,8 +304,8 @@ internal static class WuaSession
 
     internal static WindowsUpdateStatus OperationStatus(int overall, int overallHResult, int item, int itemHResult)
     {
-        if (itemHResult < 0) { return HResultStatus(itemHResult); }
-        if (overallHResult < 0) { return HResultStatus(overallHResult); }
+        if (itemHResult < 0) { return WuaFailure.FromHResult(itemHResult); }
+        if (overallHResult < 0) { return WuaFailure.FromHResult(overallHResult); }
         if (overallHResult > 0 || itemHResult > 0) { return WindowsUpdateStatus.Partial; }
         var status = ResultCode(overall);
         return status == WindowsUpdateStatus.Succeeded ? ResultCode(item) : status;
@@ -323,17 +323,7 @@ internal static class WuaSession
     {
         UpdateFailure failure => failure.Status,
         UnauthorizedAccessException => WindowsUpdateStatus.AccessDenied,
-        COMException com => HResultStatus(com.HResult),
-        _ => WindowsUpdateStatus.Failed,
-    };
-
-    private static WindowsUpdateStatus HResultStatus(int code) => unchecked((uint)code) switch
-    {
-        0x80070005 or 0x80240044 => WindowsUpdateStatus.AccessDenied,
-        0x80070422 or 0x8024001e or 0x8024002e or 0x8024a000 => WindowsUpdateStatus.ServiceUnavailable,
-        0x80072ee7 or 0x80072efd or 0x8024001f or 0x8024402c => WindowsUpdateStatus.Offline,
-        0x80072ee2 => WindowsUpdateStatus.TimedOut,
-        0x800704c7 or 0x8024000b => WindowsUpdateStatus.Cancelled,
+        COMException com => WuaFailure.FromHResult(com.HResult),
         _ => WindowsUpdateStatus.Failed,
     };
 

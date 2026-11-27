@@ -75,11 +75,23 @@ if ($Mode -eq 'Inspect') {
 }
 
 if ($RunId -cnotmatch '\A[0-9a-f]{32}\z') { throw 'Invalid run identifier.' }
-$updateScenario = $Scenario -ceq 'WindowsUpdateAssessment'
+$nativeAssessment = $Scenario -ceq 'WindowsUpdateBrokerAssessment'
+$updateRefusal = $Scenario -ceq 'WindowsUpdateBrokerRefusal'
+$updateScenario = $Scenario -ceq 'WindowsUpdateAssessment' -or $nativeAssessment
+$updateAssembly = if ($nativeAssessment) { 'ThirdLife.Broker.Tests' } else { 'ThirdLife.Packages.Tests' }
 if ($updateScenario) {
-    if ($Mode -in @('Start','Status','RunTest') -and
-        $TestName -cne 'ThirdLife.Packages.Tests.WindowsUpdateAgentTests.ActiveMachineAssessesOneExactOfferedRevisionWithoutMutation') {
+    $expectedUpdateTest = if ($nativeAssessment) {
+        'ThirdLife.Broker.Tests.NativeWindowsUpdateTests.NativeExactLookupRejectsMissingRevisionAndChecksARealRestrictedOfferWhenAvailable'
+    }
+    else { 'ThirdLife.Packages.Tests.WindowsUpdateAgentTests.ActiveMachineAssessesOneExactOfferedRevisionWithoutMutation' }
+    if ($Mode -in @('Start','Status','RunTest') -and $TestName -cne $expectedUpdateTest) {
         throw 'The Windows Update case requires the exact read-only assessment test.'
+    }
+}
+elseif ($updateRefusal) {
+    if ($Mode -in @('Start','Status','RunTest') -and
+        $TestName -cne 'ThirdLife.UI.Tests.ProtectedBrokerRehearsalTests.InstalledWindowsUpdateBrokerRefusesAnUnreviewedRequestBeforeNativeAdmission') {
+        throw 'The protected v2 refusal case requires the exact unreviewed-request test.'
     }
 }
 elseif ($Mode -in @('Start','Status','RunTest') -and
@@ -99,7 +111,7 @@ if ($applicationScenario -and $Mode -in @('Start','Status','RunTest') -and
     $TestName -cne ('ThirdLife.UI.Tests.PlanReviewTests.' + $applicationTests[$Scenario])) {
     throw 'The test selection does not match the application case.'
 }
-$evidenceTask = if ($updateScenario) { 'TL-0504' } elseif ($applicationScenario) { 'TL-0313' } else { 'TL-0317' }
+$evidenceTask = if ($updateScenario -or $updateRefusal) { 'TL-0504' } elseif ($applicationScenario) { 'TL-0313' } else { 'TL-0317' }
 $programFiles = [Environment]::GetFolderPath('ProgramFiles')
 $programFilesItem = Get-Item -LiteralPath $programFiles -Force
 if (-not $programFilesItem.PSIsContainer -or ($programFilesItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
@@ -275,12 +287,15 @@ switch ($Mode) {
         if (-not $updateScenario) {
             $provisioner = Read-VerifiedScript (Join-Path $stage 'payload\install-thirdlife-broker.ps1') $ProvisionerHash
             $candidate = Join-Path $stage 'payload\ThirdLife.Broker.exe'
-            if ((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash -ine $BrokerHash) {
+            if ($updateRefusal -and (Test-Path -LiteralPath $candidate)) {
+                throw 'The verify-only v2 refusal payload must omit the privileged broker executable.'
+            }
+            if (-not $updateRefusal -and (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash -ine $BrokerHash) {
                 throw 'The guest candidate differs from the reviewed Native AOT digest.'
             }
             Push-Location -LiteralPath ([Environment]::SystemDirectory)
             try {
-                if (-not $applicationScenario) {
+                if (-not $applicationScenario -and -not $updateRefusal) {
                     & $provisioner -BrokerArtifact $candidate -ExpectedSha256 $BrokerHash | Out-Null
                 }
                 & $provisioner -VerifyOnly -ExpectedSha256 $BrokerHash | Out-Null
@@ -299,7 +314,8 @@ switch ($Mode) {
         }
         $verification = [ordered]@{ ProtectedBrokerVerified = -not $updateScenario; PrivateSdkVerified = $true }
         if ($updateScenario) {
-            $adapter = Join-Path $stage 'payload\ThirdLife.Packages.Tests\ThirdLife.Packages.dll'
+            $adapter = if ($nativeAssessment) { Join-Path $stage 'payload\ThirdLife.Broker.Tests\ThirdLife.Broker.dll' }
+                else { Join-Path $stage 'payload\ThirdLife.Packages.Tests\ThirdLife.Packages.dll' }
             $wuapi = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path ([Environment]::SystemDirectory) 'wuapi.dll'))
             $verification.adapterSha256 = (Get-FileHash -LiteralPath $adapter -Algorithm SHA256).Hash.ToLowerInvariant()
             $verification.wuapiVersion = "$($wuapi.FileMajorPart).$($wuapi.FileMinorPart).$($wuapi.FileBuildPart).$($wuapi.FilePrivatePart)"
@@ -360,7 +376,7 @@ exit `$LASTEXITCODE
         }
         if ($Scenario -eq 'DistinctAccount') { $env:THIRDLIFE_HYPERV_BROKER_ACL_RUN_ID = $RunId }
         if ($applicationScenario) { $env:THIRDLIFE_TL0313_HYPERV_RUN_ID = $RunId }
-        $assembly = if ($updateScenario) { 'ThirdLife.Packages.Tests' } elseif ($Scenario -eq 'DistinctAccount') { 'ThirdLife.Broker.Tests' } else { 'ThirdLife.UI.Tests' }
+        $assembly = if ($updateScenario) { $updateAssembly } elseif ($Scenario -eq 'DistinctAccount') { 'ThirdLife.Broker.Tests' } else { 'ThirdLife.UI.Tests' }
         $test = Join-Path $stage "payload\$assembly\$assembly.dll"
         & $sdk vstest $test "/TestCaseFilter:FullyQualifiedName=$TestName" `
             '/Logger:trx;LogFileName=result.trx' "/ResultsDirectory:$results" -- RunConfiguration.TreatNoTestsAsError=true
@@ -468,7 +484,14 @@ exit `$LASTEXITCODE
                 $case = $document.SelectNodes("//*[local-name()='UnitTestResult']")
                 if ($case.Count -eq 1 -and $case[0].GetAttribute('testName') -ceq $TestName) {
                     $passed = $testExit -eq 0 -and $case[0].GetAttribute('outcome') -ceq 'Passed'
-                    if ($passed -and $updateScenario) {
+                    if ($passed -and $nativeAssessment) {
+                        $stdout = $case[0].SelectSingleNode(".//*[local-name()='StdOut']")
+                        if ($stdout -and $stdout.InnerText.Trim() -cmatch '\ANative broker lookup missing=Rejected, restricted=(Rejected|Unavailable), authorizations=0\.\z') {
+                            $updateAssessment = [ordered]@{ missingRevision = 'Rejected'; restrictedOffer = $Matches[1]; authorizations = 0 }
+                        }
+                        else { $passed = $false; $testFailure = 'NativeLookupObservationMissing' }
+                    }
+                    elseif ($passed -and $updateScenario) {
                         # Export only bounded counts, fixed status tokens and the optional removal fact.
                         $stdout = $case[0].SelectSingleNode(".//*[local-name()='StdOut']")
                         if ($stdout -and $stdout.InnerText -cmatch 'Offered (\d{1,2}) revisions, selectable (\d{1,2})\.') {
@@ -569,6 +592,12 @@ exit `$LASTEXITCODE
             finally { $reader.Dispose() }
         }
         elseif ($exitFile -and $classifyFailure) { $testFailure = 'TestResultMissing' }
+        if ($passed -and $updateRefusal) {
+            $passed = $observations.Count -eq 3 -and (($observations | ForEach-Object stage) -join ',') -ceq 'RequestingConsent,AuthenticatedHello,Result' -and
+                @($observations | Where-Object scenario -cne 'windowsupdatebrokerrefusal').Count -eq 0 -and
+                $observations[2].status -ceq 'NotStarted' -and $observations[2].terminalCount -eq 1 -and
+                $observations[2].clientUnelevated -eq $true -and $observations[2].exitCode -eq 0
+        }
         if ($passed -and $applicationScenario) {
             $expectedStatus = @{
                 ApplicationPreview = 'Previewed'; ApplicationAccept = 'Completed'
@@ -628,7 +657,7 @@ exit `$LASTEXITCODE
             Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
         }
         if ($updateScenario) {
-            $testhost = Join-Path $stage 'payload\ThirdLife.Packages.Tests\testhost.exe'
+            $testhost = Join-Path $stage "payload\$updateAssembly\testhost.exe"
             foreach ($worker in @(Get-Process -Name dotnet,testhost -ErrorAction SilentlyContinue)) {
                 try {
                     if ($worker.Path -in @($sdk, $testhost) -and -not $worker.HasExited) {

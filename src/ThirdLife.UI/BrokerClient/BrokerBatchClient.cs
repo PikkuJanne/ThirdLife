@@ -106,26 +106,10 @@ public sealed class BrokerBatchClient
                 return new BrokerBatchResult(BrokerBatchStatus.Unavailable, []);
             }
 
-            using var broker = WindowsBrokerPeer.Open(process.Id);
-            if (!broker.IsAlive || !broker.Identity.IsElevated || !broker.Identity.UserSid.Equals(client.UserSid) ||
-                broker.Identity.SessionId != client.SessionId)
-            {
-                return new BrokerBatchResult(BrokerBatchStatus.Unavailable, []);
-            }
-
-            using var pipe = WindowsBrokerPipe.CreateClient(ticket.PipeId);
-            await pipe.ConnectAsync(startup.Token).ConfigureAwait(false);
-            if (process.HasExited || !broker.IsAlive || !WindowsBrokerPipe.HasServerProcess(pipe, broker.ProcessId, client.SessionId))
-            {
-                return new BrokerBatchResult(BrokerBatchStatus.Unavailable, []);
-            }
-
-            await BrokerPipeFrames.WriteAsync(pipe, new BrokerHello(envelope), startup.Token).ConfigureAwait(false);
-            if (await BrokerPipeFrames.ReadAsync(pipe, startup.Token).ConfigureAwait(false) is not BrokerHelloAck ack ||
-                !ticket.MatchesEnvelope(ack.Envelope) || !BrokerProtocolLimits.IsWithinWindow(envelope.ExpiresAtUtc, TimeProvider.System.GetUtcNow()))
-            {
-                return new BrokerBatchResult(BrokerBatchStatus.Unavailable, []);
-            }
+            using var authenticated = await AuthenticatedBrokerConnection.ConnectAsync(process, client, ticket, envelope,
+                startup.Token).ConfigureAwait(false);
+            if (authenticated is null) { return new BrokerBatchResult(BrokerBatchStatus.Unavailable, []); }
+            var pipe = authenticated.Pipe;
 
             if (canDispatch is not null && !await canDispatch(startup.Token).ConfigureAwait(false))
             {

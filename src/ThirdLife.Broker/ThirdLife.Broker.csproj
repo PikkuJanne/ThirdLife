@@ -12,6 +12,7 @@
     <EventSourceSupport>false</EventSourceSupport>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
@@ -37,6 +38,8 @@
     <ProjectReference Include="..\ThirdLife.Actions\ThirdLife.Actions.csproj" />
     <ProjectReference Include="..\ThirdLife.Broker.Protocol\ThirdLife.Broker.Protocol.csproj" />
     <ProjectReference Include="..\ThirdLife.Inventory\ThirdLife.Inventory.csproj" />
+    <Compile Include="..\ThirdLife.Packages\WindowsUpdates\WuaServiceAuthority.cs" Link="WindowsUpdates\WuaServiceAuthority.cs" />
+    <Compile Include="..\ThirdLife.Packages\WindowsUpdates\WuaFailure.cs" Link="WindowsUpdates\WuaFailure.cs" />
     <InternalsVisibleTo Include="ThirdLife.Broker.Tests" />
   </ItemGroup>
 

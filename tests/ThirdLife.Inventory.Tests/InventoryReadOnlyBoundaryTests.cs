@@ -21,6 +21,7 @@ public sealed class InventoryReadOnlyBoundaryTests
             (typeof(WindowsSystemInventorySource), "kernel32.dll", "GetPhysicallyInstalledSystemMemory"),
             (typeof(WindowsSystemInventorySource), "kernel32.dll", "GetActiveProcessorCount"),
             (typeof(WindowsOperatingSystemSource), "kernel32.dll", "GetProductInfo"),
+            (typeof(WindowsOperatingSystemSource), "advapi32.dll", "RegGetValueW"),
             (typeof(WindowsOperatingSystemSource), "kernel32.dll", "VerSetConditionMask"),
             (typeof(WindowsOperatingSystemSource), "kernel32.dll", "VerifyVersionInfoW"),
             (typeof(WindowsActivationNativeApi), "kernel32.dll", "LocalFree"),

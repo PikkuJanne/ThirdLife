@@ -31,8 +31,14 @@ public sealed class PolicyDecisionRecord
         string summary,
         string explanation,
         string ruleReport,
-        string? exceptionReport = null)
+        string? exceptionReport = null,
+        int? jobEvidenceCount = null)
     {
+        if (jobEvidenceCount is { } count && (count is < 1 or > 10_000 || evidenceIds.IsDefault || count < evidenceIds.Length))
+        {
+            throw new ArgumentOutOfRangeException(nameof(jobEvidenceCount));
+        }
+        JobEvidenceCount = jobEvidenceCount;
         DecisionId = RequireId(decisionId, nameof(decisionId));
         JobId = jobId ?? throw new ArgumentNullException(nameof(jobId));
         AssessmentId = RequireId(assessmentId, nameof(assessmentId));
@@ -59,6 +65,11 @@ public sealed class PolicyDecisionRecord
         RuleReport = RequireReportText(ruleReport, MaximumRuleReportCharacters, nameof(ruleReport));
         ExceptionReport = exceptionReport is null ? null : RequireReportText(exceptionReport, MaximumRuleReportCharacters, nameof(exceptionReport));
     }
+
+    // An append-only job can contain additional evidence (including assessment journal markers)
+    // that is outside the policy projection. Bind its full extent without citing those as rule facts.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? JobEvidenceCount { get; }
 
     public string DecisionId { get; }
 
@@ -103,7 +114,8 @@ public sealed class PolicyDecisionRecord
         DispositionDecision decision,
         IEnumerable<EvidenceId> evidenceIds,
         DateTimeOffset evaluatedAtUtc,
-        string? previousDecisionId = null)
+        string? previousDecisionId = null,
+        int? jobEvidenceCount = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(jobId);
@@ -155,7 +167,8 @@ public sealed class PolicyDecisionRecord
             decision.Summary,
             decision.Explanation,
             PolicyRuleReport.Render(decision, includeExceptionAttribution: false),
-            PolicyRuleReport.RenderExceptions(decision))
+            PolicyRuleReport.RenderExceptions(decision),
+            jobEvidenceCount)
         {
             HasEvaluationProvenance = true,
         };

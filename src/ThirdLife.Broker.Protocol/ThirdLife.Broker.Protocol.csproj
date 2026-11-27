@@ -7,6 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="ThirdLife.UI" />
+    <InternalsVisibleTo Include="ThirdLife.UI.Tests" />
+    <InternalsVisibleTo Include="ThirdLife.Broker" />
     <ProjectReference Include="..\ThirdLife.Actions\ThirdLife.Actions.csproj" />
     <ProjectReference Include="..\ThirdLife.Core\ThirdLife.Core.csproj" />
   </ItemGroup>

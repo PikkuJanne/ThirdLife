@@ -33,6 +33,7 @@ public sealed class WindowsUpdateAgent : IWindowsUpdateAgent
                 SystemAvailableBytes = resources.SystemAvailableBytes,
                 CacheAvailableBytes = resources.CacheAvailableBytes,
                 CacheSharesSystemVolume = resources.CacheSharesSystemVolume,
+                Target = resources.Target,
             };
         }, status => new WindowsUpdatePreparation(exact, status, DateTimeOffset.UtcNow), ScanTimeout, cancellationToken);
     }

@@ -5,7 +5,8 @@ namespace ThirdLife.Broker.Protocol.Transport;
 /// <summary>Little-endian length-prefixed broker messages with a bound before payload allocation.</summary>
 public static class BrokerPipeFrames
 {
-    public static async Task<BrokerMessage> ReadAsync(Stream stream, CancellationToken cancellationToken)
+    public static async Task<BrokerMessage> ReadAsync(Stream stream, CancellationToken cancellationToken,
+        int expectedVersion = BrokerProtocolLimits.CurrentVersion)
     {
         ArgumentNullException.ThrowIfNull(stream);
         var header = new byte[sizeof(int)];
@@ -26,7 +27,7 @@ public static class BrokerPipeFrames
 
             var payload = new byte[length];
             await stream.ReadExactlyAsync(payload, cancellationToken).ConfigureAwait(false);
-            return BrokerProtocolCodec.Parse(payload);
+            return BrokerProtocolCodec.Parse(payload, expectedVersion);
         }
         catch (EndOfStreamException)
         {

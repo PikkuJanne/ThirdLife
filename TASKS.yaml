@@ -6108,7 +6108,7 @@ tasks:
   workstream: windows-update
   kind: code
   priority: P0
-  status: in_progress
+  status: blocked
   size: XL
   executor: codex
   environment: windows
@@ -6232,21 +6232,47 @@ tasks:
     duration: 411.907 s, 304 governance and 2348 deterministic tests, plus 25.022 s for the native offer check
     reference: artifacts/evidence/TL-0504/report.md, 710e5a867d15905c471bd8658539be94f6950f8a
     limitation: The read-only native test again found no eligible revision. Broker-side Windows servicing and independent verification of a ThirdLife-installed update remain unqualified.
+  - summary: Verified exact operator approval and reopening, the restricted native broker policy and refusal, SQLite evidence concurrency and installed-image protection.
+    command: eng/verify.ps1 -Tier Targeted with nine affected projects, native ActiveMachine broker cases, Extended WPF recovery and eng/run-ui-smoke.ps1
+    tier: targeted
+    result: passed
+    environment: Active Windows 11 Pro native x64 build 26300.9974, wuapi.dll 1511.2611.5012.0, .NET SDK 10.0.400
+    date: '2026-11-27'
+    duration: 222.617 s for 1704 Targeted executions, 68.197 s for two native host checks, 18.368 s for two recovery cases and 2.406 s for UI Automation
+    reference: artifacts/evidence/TL-0504/report.md, 5e8beed49977ba3e80af7ada63260b3e5211ea7a
+    limitation: Real Windows rejected the restricted revision before authorization. Operator workflow success, consent decline, restart and transaction outcomes used controlled inputs.
+  - summary: The final app adapter enumerated the guest's offers and the native broker adapter rejected the exact unsupported offer before authorization.
+    command: eng/run-thirdlife-hyperv.ps1 with WindowsUpdateBrokerAssessment and WindowsUpdateAssessment, plus host ActiveMachine exact lookup and clean win-x64 NativeAOT publication
+    tier: targeted
+    result: passed
+    environment: Same-machine Windows 11 native x64 host and Generation 2 guest, build 26300.9974, wuapi.dll 1511.2611.5012.0, SDK 10.0.400
+    date: '2026-11-27'
+    duration: 152.559 s for the limited-token guest broker test, 197.850 s for the guest inventory, 59.130 s for host inventory, 21.396 s for NativeAOT publication
+    reference: artifacts/evidence/TL-0504/report.md, 80aad3735506c0b06fb3f140b6d002725a27f951
+    limitation: Guest one offer and host four, zero eligible. Guest cleanup verified. No approved native transaction, servicing-related restart or subsequent installed-state confirmation occurred.
+  - summary: Final clean checkout passed locked restore, governance, formatting, Release build and deterministic tests with the v2 broker and schema 010.
+    command: eng/verify.ps1 -Tier Full -Restore, with the final native exception regressions also covered by eng/verify.ps1 -Tier Targeted for the Broker project
+    tier: full
+    result: passed
+    environment: Clean detached checkout on the active Windows 11 Pro native x64 host build 26300.9974, .NET SDK 10.0.400, Python 3.14.7, PyYAML 6.0.3
+    date: '2026-11-27'
+    duration: 560.757 s for 304 governance and 2423 deterministic tests, 152.849 s for 1414 final broker Targeted executions including Quick
+    reference: artifacts/evidence/TL-0504/report.md, 80aad3735506c0b06fb3f140b6d002725a27f951
+    limitation: Live servicing, restart and independent verification of a ThirdLife-installed revision require an eligible authorized guest transaction.
+  blocked_reason: The authorized Windows 11 guest currently offers no eligible revision. No exact update can yet be reviewed, approved, downloaded, installed or independently confirmed by this workflow.
   execution_prerequisites:
   - kind: capability
-    scope: A WUA-specific authenticated ephemeral broker and effective update policy qualified for the exact action, source, servicing, power, storage and rollback requirements.
+    scope: Same-machine Windows 11 guest with an applicable security or critical CBS revision, a reviewed v2 broker image and an effective compiled review for that exact revision, organization policy, recovery procedure and resource bounds.
   - kind: task
     task: TL-0314
     scope: Privilege-boundary decision for ordinary broker-dependent dispatch covering the WUA-specific action and its evidence.
   - kind: authorization
     authority: operator
-    scope: Approval for the exact eligible Windows Update identity, revision, class, size and impact in the intended guest, plus the applicable Windows consent.
+    scope: Durable approval for the exact update and its impacts, separate protected phase grants from the supervised qualification authority and the applicable actual Windows consent.
   notes:
-  - Claims cover the actual tested same-machine environments, documented structured interfaces, and separately identified
-    fixtures.
-  - The standard-user application can scan and reopen update inventory. Production download and installation are unavailable.
-    The live qualification still owes an eligible offer, native download and installation, restart where required, and a
-    correlated independent installed-revision observation and rescan. The reviewed package policy and MSI approval are outside this scope.
+  - The native writer, v2 protocol, WPF operator workflow and schema 010 journal are implemented. The compiled servicing catalog contains no effective review.
+  - The available guest and its local installation media are both Windows 11 build 26300.9974. The guest offered one unsupported software revision. Host and guest provider checks were read-only. An alternative baseline requires a licensed, authorized same-machine environment.
+  - Reopen with an eligible revision, bind its policy and recovery evidence, obtain exact approval and run the protected phases. Record the native receipts, any required restart, rescan and independently confirmed installed revision. Fixture results cannot close this qualification.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

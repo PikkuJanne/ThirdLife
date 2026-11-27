@@ -27,7 +27,10 @@ public sealed record WindowsUpdateApprovedActions(Guid ApprovalId, WindowsUpdate
 
 // Only these typed bindings travel to a prepared backend. Operator attribution stays in the job.
 internal sealed record WindowsUpdateDispatch(JobId JobId, SanitizationGateDecisionId GateId, Guid ScanId, string PolicyDecisionId,
-    Guid ApprovalId, WindowsUpdateCandidate Exact, WindowsUpdatePhaseAction Action, DateTimeOffset ExpiresAtUtc);
+    Guid ApprovalId, WindowsUpdateCandidate Exact, WindowsUpdatePhaseAction Action, DateTimeOffset ExpiresAtUtc,
+    WindowsUpdateApprovedActions ApprovedActions, string? ServicingPolicySha256);
+
+internal sealed class WindowsUpdateConsentDeclinedException : Exception;
 
 internal interface IWindowsUpdateDispatchBackend
 {
@@ -38,7 +41,7 @@ internal interface IWindowsUpdateDispatchBackend
 internal interface IWindowsUpdateDispatchChannel : IAsyncDisposable
 {
     WindowsUpdateDispatch Dispatch { get; }
-    Task<WindowsUpdateDispatchReceipt> SendAsync(CancellationToken token);
+    Task<WindowsUpdateDispatchReceipt?> SendAsync(CancellationToken token);
 }
 
-internal sealed record WindowsUpdateDispatchReceipt(WindowsUpdateDispatch Dispatch, WindowsUpdateOperation Outcome);
+internal sealed record WindowsUpdateDispatchReceipt(WindowsUpdateDispatch Dispatch, WindowsUpdateOperation Outcome, bool RefusedBeforeOperation = false);

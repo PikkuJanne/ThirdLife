@@ -238,11 +238,11 @@ public sealed class OperatingSystemProviderTests(ITestOutputHelper output)
             .SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.NonPublic))
             .Select(m => (Method: m, Import: m.GetCustomAttribute<DllImportAttribute>()))
             .Where(item => item.Import is not null).ToArray();
-        Assert.Equal(["GetProductInfo", "VerSetConditionMask", "VerifyVersionInfo"],
+        Assert.Equal(["GetProductInfo", "RegGetValueW", "VerSetConditionMask", "VerifyVersionInfo"],
             imports.Select(item => item.Method.Name).Order(StringComparer.Ordinal));
         Assert.All(imports, import =>
         {
-            Assert.Equal("kernel32.dll", import.Import!.Value);
+            Assert.Equal(import.Method.Name == "RegGetValueW" ? "advapi32.dll" : "kernel32.dll", import.Import!.Value);
             Assert.Equal(DllImportSearchPath.System32,
                 import.Method.GetCustomAttribute<DefaultDllImportSearchPathsAttribute>()!.Paths);
         });

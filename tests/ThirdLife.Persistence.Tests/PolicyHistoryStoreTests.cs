@@ -153,6 +153,43 @@ public sealed class PolicyHistoryStoreTests
         Assert.Equal(latest.DecisionId, (await store.LoadLatestPolicyDecisionAsync(job.JobId, AssessmentId))!.Decision.DecisionId);
     }
 
+    [Fact]
+    public async Task BackdatedEvidenceCommittedBetweenEvaluationAndAppendRequiresFreshDecision()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        await using var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        var job = PersistenceTestData.CreateJob();
+        await CreateJobWithEvidenceAsync(store, job, Observations());
+        var snapshot = Snapshot("1.0.0");
+        var initial = Assert.IsType<StoredJob>(await store.LoadJobAsync(job.JobId));
+        var stale = Evaluate(initial);
+
+        var backdated = PersistenceTestData.CreateHumanTest(job, "concurrent");
+        Assert.True(backdated.Metadata.CollectedAtUtc < stale.EvaluatedAtUtc);
+        await using (var writer = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+            await writer.AppendEvidenceAsync(new JobEvidenceBatch(job.JobId, humanTests: [backdated]));
+        }
+
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => store.AppendPolicyDecisionAsync(snapshot, stale));
+        Assert.Null(await store.LoadLatestPolicyDecisionAsync(job.JobId, AssessmentId));
+        var current = Assert.IsType<StoredJob>(await store.LoadJobAsync(job.JobId));
+        Assert.Equal(backdated, Assert.Single(current.HumanTests));
+        var fresh = Evaluate(current);
+        // The selected observations and evaluation time are identical. Only the job evidence count changed.
+        Assert.Equal(stale.EvidenceIds.AsEnumerable(), fresh.EvidenceIds.AsEnumerable());
+        Assert.Equal(stale.JobEvidenceCount + 1, fresh.JobEvidenceCount);
+        await store.AppendPolicyDecisionAsync(snapshot, fresh);
+        var saved = Assert.IsType<StoredPolicyDecision>(await store.LoadLatestPolicyDecisionAsync(job.JobId, AssessmentId));
+        Assert.Equal(fresh.DecisionId, saved.Decision.DecisionId);
+        Assert.Equal(fresh.JobEvidenceCount, saved.Decision.JobEvidenceCount);
+
+        PolicyDecisionRecord Evaluate(StoredJob loaded) => PolicyDecisionRecord.Create(snapshot, job.JobId, AssessmentId,
+            DispositionEngine.Evaluate(snapshot.Document, loaded.Observations, []),
+            loaded.Observations.Select(observation => observation.Metadata.EvidenceId), FirstEvaluation,
+            jobEvidenceCount: loaded.Observations.Count + loaded.SanitizationEvidence.Count + loaded.HumanTests.Count);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

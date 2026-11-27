@@ -429,7 +429,7 @@ public sealed class IpcIntegrationTests
             job ?? Job, approval ?? Approval, new string('b', 64), new string('c', 64),
             [ActionRegistry.CreateNoOp(ActionOne), ActionRegistry.CreateNoOp(ActionTwo)]);
 
-    private sealed class BufferedSessionStream(MemoryStream input) : Stream
+    internal sealed class BufferedSessionStream(MemoryStream input) : Stream
     {
         private readonly MemoryStream _responses = new();
 
@@ -453,13 +453,13 @@ public sealed class IpcIntegrationTests
             }
         }
 
-        public async Task<IReadOnlyList<BrokerMessage>> ReadResponsesAsync(CancellationToken token)
+        public async Task<IReadOnlyList<BrokerMessage>> ReadResponsesAsync(CancellationToken token, int version = BrokerProtocolLimits.CurrentVersion)
         {
             _responses.Position = 0;
             var result = new List<BrokerMessage>();
             while (_responses.Position < _responses.Length)
             {
-                result.Add(await BrokerPipeFrames.ReadAsync(_responses, token));
+                result.Add(await BrokerPipeFrames.ReadAsync(_responses, token, version));
             }
 
             return result;

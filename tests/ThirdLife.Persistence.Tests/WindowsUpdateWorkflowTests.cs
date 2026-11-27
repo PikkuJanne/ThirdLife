@@ -24,6 +24,59 @@ public sealed class WindowsUpdateWorkflowTests
     private static readonly OperatorId Operator = new("operator-synthetic-workshop");
 
     [Fact]
+    public async Task VersionNineFixtureDecisionCannotAuthorizeAServicingPolicyDigest()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        Job job;
+        SanitizationGateDecision gate;
+        string decision;
+        WindowsUpdateEntry scan;
+        var provider = new FixtureAgent();
+        await using (var before = await SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot, 9, Clock, null))
+        {
+            (job, gate, decision) = await SeedAsync(before);
+            scan = await Controlled(before, provider).ScanAsync(job.JobId, gate.DecisionId);
+        }
+        const string unreviewed = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        await using (var store = await OpenAsync(workspace))
+        {
+            Assert.Equal(decision, await store.FindWindowsUpdatePolicyAsync(job.JobId, gate.DecisionId, scan.Id, Update, null));
+            Assert.Null(await store.FindWindowsUpdatePolicyAsync(job.JobId, gate.DecisionId, scan.Id, Update, unreviewed));
+            await Assert.ThrowsAsync<JobStoreConflictException>(() => Controlled(store, provider)
+                .ApproveAsync(job.JobId, gate.DecisionId, scan.Id, Update, Operator, decision, unreviewed));
+        }
+        await Assert.ThrowsAsync<JobStoreVersionException>(() => SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot, 9, Clock, null));
+        Assert.Empty(provider.Mutations);
+    }
+
+    [Theory]
+    [InlineData(ActionKind.DownloadWindowsUpdate)]
+    [InlineData(ActionKind.InstallWindowsUpdate)]
+    public async Task AuthenticatedBrokerRefusalSettlesTheHandoffAndRequiresNewApproval(ActionKind refused)
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var provider = new FixtureAgent { Refuse = refused };
+        Job job;
+        SanitizationGateDecision gate;
+        string policy;
+        await using (var store = await OpenAsync(workspace))
+        {
+            (job, gate, policy) = await SeedAsync(store);
+            var workflow = Controlled(store, provider);
+            var scan = await workflow.ScanAsync(job.JobId, gate.DecisionId);
+            var approval = await workflow.ApproveAsync(job.JobId, gate.DecisionId, scan.Id, Update, Operator, policy);
+            Assert.Equal(WindowsUpdateStage.BrokerRefused, (await workflow.ExecuteAsync(job.JobId, approval.Id)).Stage);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => workflow.ExecuteAsync(job.JobId, approval.Id));
+        }
+        await using var reopened = await OpenAsync(workspace);
+        var next = Controlled(reopened, provider);
+        var fresh = await next.ScanAsync(job.JobId, gate.DecisionId);
+        Assert.Equal(WindowsUpdateDisposition.ApprovalRequired, WindowsUpdateHistory.Disposition(await reopened.LoadWindowsUpdatesAsync(job.JobId)));
+        Assert.Equal(WindowsUpdateStage.Approved, (await next.ApproveAsync(job.JobId, gate.DecisionId, fresh.Id, Update, Operator, policy)).Stage);
+        Assert.Equal(refused == ActionKind.DownloadWindowsUpdate ? 0 : 1, provider.Mutations.Count);
+    }
+
+    [Fact]
     public async Task MigrationKeepsOriginalApprovalBytesAndRequiresNewReviewBeforeDispatch()
     {
         using var workspace = new PersistenceTestWorkspace();
@@ -641,6 +694,7 @@ public sealed class WindowsUpdateWorkflowTests
         internal Task HoldInstall { get; init; } = Task.CompletedTask;
         internal Func<WindowsUpdateDispatch, CancellationToken, Task>? OnPrepare { get; set; }
         internal List<WindowsUpdateDispatch> Prepared { get; } = [];
+        internal ActionKind? Refuse { get; init; }
         internal bool ChangeChannel { get; set; }
         internal bool ChangeReceipt { get; set; }
         internal int ClosedChannels { get; set; }
@@ -656,8 +710,12 @@ public sealed class WindowsUpdateWorkflowTests
         {
             public WindowsUpdateDispatch Dispatch { get; } = dispatch;
 
-            public async Task<WindowsUpdateDispatchReceipt> SendAsync(CancellationToken token)
+            public async Task<WindowsUpdateDispatchReceipt?> SendAsync(CancellationToken token)
             {
+                if (agent.Refuse == Dispatch.Action.Impact.Kind)
+                {
+                    return new(Dispatch, new(WindowsUpdateStatus.AccessDenied, null), RefusedBeforeOperation: true);
+                }
                 var outcome = Dispatch.Action.Impact.Kind == ActionKind.DownloadWindowsUpdate
                     ? await agent.DownloadAsync(Dispatch.Exact, token) : await agent.InstallAsync(Dispatch.Exact, token);
                 return new(agent.ChangeReceipt ? Dispatch with { ScanId = Guid.NewGuid() } : Dispatch, outcome);

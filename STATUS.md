@@ -34,11 +34,11 @@ M5 technical gate, TL-0511.
 [Action outcome evidence](artifacts/evidence/TL-0502/report.md)
 [Preflight evidence](artifacts/evidence/TL-0503/report.md)
 
-TL-0504 remains in progress. Prepare can recheck one exact Windows Update offer.
-Verify reopens the scan and distinguishes a request stopped before dispatch from
-an unconfirmed handoff. A fresh scan can settle an interrupted, unsent request.
-The host and guest each offered one software update with an unsupported installer.
-The host also offered three drivers. Neither environment offered an eligible revision.
-Live download and installation require a qualified update broker, effective policy
-with rollback headroom, an eligible offer and exact approval.
+TL-0504 is blocked on live Windows Update qualification. Prepare can save an exact
+approval and reopen it for an explicit start. The v2 broker checks Windows state,
+the approved scope and a protected grant before download or installation.
+The current guest offered one unsupported software revision. Its installation
+media has the same build, and no revision has an effective servicing review.
+Qualification resumes with an eligible revision in an authorized same-machine
+guest, exact approval, native receipts and independent installed-state verification.
 [Windows Update evidence](artifacts/evidence/TL-0504/report.md)

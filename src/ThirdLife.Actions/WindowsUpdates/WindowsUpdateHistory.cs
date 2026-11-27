@@ -23,10 +23,12 @@ public enum WindowsUpdateStage
     InstallPreparing,
     DispatchNotSent,
     DispatchUnconfirmed,
+    BrokerRefused,
 }
 
 public sealed record WindowsUpdateApproval(Guid ScanId, WindowsUpdateCandidate Exact, OperatorId OperatorId, string PolicyDecisionId,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] WindowsUpdateApprovedActions? Actions = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] WindowsUpdateApprovedActions? Actions = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ServicingPolicySha256 = null);
 
 public sealed record WindowsUpdateVerification(Guid InstallReceiptId, WindowsUpdateInstalledObservation Observation);
 
@@ -37,6 +39,9 @@ public sealed record WindowsUpdateEntry(Guid Id, Guid? PreviousId, JobId JobId, 
 public interface IWindowsUpdateJournal
 {
     Task<ImmutableArray<WindowsUpdateEntry>> LoadWindowsUpdatesAsync(JobId jobId, CancellationToken token = default);
+
+    Task<string?> FindWindowsUpdatePolicyAsync(JobId jobId, SanitizationGateDecisionId gateId, Guid scanId,
+        WindowsUpdateCandidate exact, string? servicingPolicySha256, CancellationToken token = default) => Task.FromResult<string?>(null);
 
     // The store checks the predecessor, state transition, current job gate and any required
     // policy in one transaction. It stamps its own boot observation on scans and restart results.
@@ -54,7 +59,7 @@ public static class WindowsUpdateHistory
 
     public static bool IsPhaseTerminal(WindowsUpdateStage stage) =>
         stage is WindowsUpdateStage.DownloadCompleted or WindowsUpdateStage.InstallCompleted or WindowsUpdateStage.DispatchNotSent
-            or WindowsUpdateStage.DispatchUnconfirmed;
+            or WindowsUpdateStage.DispatchUnconfirmed or WindowsUpdateStage.BrokerRefused;
 
     public static WindowsUpdateDisposition Disposition(ImmutableArray<WindowsUpdateEntry> history)
     {
@@ -66,6 +71,7 @@ public static class WindowsUpdateHistory
 
         // A rescan can report applicability after an interruption. It cannot prove what an
         // interrupted mutation installed, or release that action for replay.
+        var downloadAttempts = 0;
         for (var index = 0; index < history.Length; index++)
         {
             var entry = history[index];
@@ -83,10 +89,13 @@ public static class WindowsUpdateHistory
             {
                 var completion = entry.Stage == WindowsUpdateStage.DownloadStarted
                     ? WindowsUpdateStage.DownloadCompleted : WindowsUpdateStage.InstallCompleted;
-                if (!history.Skip(index + 1).Any(later => later.Stage == completion && later.PreviousId == entry.Id))
+                var receipt = history.Skip(index + 1).FirstOrDefault(later => later.PreviousId == entry.Id &&
+                    (later.Stage == completion || later.Stage == WindowsUpdateStage.BrokerRefused));
+                if (receipt is null)
                 {
                     return WindowsUpdateDisposition.ReviewRequired;
                 }
+                if (entry.Stage == WindowsUpdateStage.DownloadStarted && receipt.Stage != WindowsUpdateStage.BrokerRefused) { downloadAttempts++; }
             }
 
             if (entry.Stage == WindowsUpdateStage.DispatchUnconfirmed ||
@@ -115,7 +124,7 @@ public static class WindowsUpdateHistory
         }
 
         return latest.Stage == WindowsUpdateStage.ScanCompleted && latest.Scan is { } scan
-            ? WindowsUpdatePolicy.Evaluate(scan, history.Count(entry => entry.Stage == WindowsUpdateStage.DownloadStarted))
+            ? WindowsUpdatePolicy.Evaluate(scan, downloadAttempts)
             : WindowsUpdateDisposition.NotCurrent;
     }
 
@@ -201,6 +210,8 @@ public static class WindowsUpdateHistory
         }
 
         if (scope?.Exact is null || scope.OperatorId is null || scope.ScanId == Guid.Empty ||
+            scope.ServicingPolicySha256 is { } digest && (scope.Actions is null || digest.Length != 64 ||
+                !digest.All(static c => c is >= '0' and <= '9' or >= 'a' and <= 'f')) ||
             scope.PolicyDecisionId is null ||
             !scope.PolicyDecisionId.StartsWith("policy-decision-", StringComparison.Ordinal) ||
             !Guid.TryParseExact(scope.PolicyDecisionId.AsSpan("policy-decision-".Length), "N", out _) ||
@@ -244,6 +255,8 @@ public static class WindowsUpdateHistory
             WindowsUpdateStage.InstallPreparing => history.Length <= MaximumEntries - 5 && CanPrepare(prior, WindowsUpdateStage.InstallChecked, entry),
             WindowsUpdateStage.DispatchNotSent => prior.Stage is WindowsUpdateStage.DownloadPreparing or WindowsUpdateStage.InstallPreparing &&
                 entry.Operation is { ProgressPercent: null, Status: not WindowsUpdateStatus.Succeeded } && entry.Scan is null,
+            WindowsUpdateStage.BrokerRefused => prior.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted &&
+                entry.Operation is { RebootRequired: null, ProgressPercent: null, Status: not (WindowsUpdateStatus.Succeeded or WindowsUpdateStatus.Partial) } && entry.Scan is null,
             WindowsUpdateStage.DispatchUnconfirmed => prior.Stage is WindowsUpdateStage.DownloadStarted or WindowsUpdateStage.InstallStarted &&
                 entry.Operation is { ProgressPercent: null, RebootRequired: null, Status: WindowsUpdateStatus.Partial } && entry.Scan is null,
             WindowsUpdateStage.DownloadCompleted => prior.Stage == WindowsUpdateStage.DownloadStarted && entry.Operation is not null && entry.Scan is null,

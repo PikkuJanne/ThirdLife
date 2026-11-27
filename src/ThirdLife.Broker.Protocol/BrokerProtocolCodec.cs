@@ -9,18 +9,19 @@ using ThirdLife.Core.Jobs;
 
 namespace ThirdLife.Broker.Protocol;
 
-/// <summary>Encodes a bounded, closed v1 message without granting session or dispatch authority.</summary>
-public static class BrokerProtocolCodec
+/// <summary>Encodes a bounded message for the protocol version pinned by its caller.</summary>
+public static partial class BrokerProtocolCodec
 {
     private const string InvalidMessage = "The message does not satisfy the ThirdLife broker v1 contract.";
+    private const string InvalidUpdateMessage = "The message does not satisfy the ThirdLife Windows Update broker contract.";
     private const string UtcFormat = "yyyy-MM-dd'T'HH:mm:ss.fffffff'Z'";
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
-    public static BrokerMessage Parse(ReadOnlyMemory<byte> payload)
+    public static BrokerMessage Parse(ReadOnlyMemory<byte> payload, int expectedVersion = BrokerProtocolLimits.CurrentVersion)
     {
         if (payload.Length is < 1 or > BrokerProtocolLimits.MaximumMessageBytes || payload.Span.StartsWith("\uFEFF"u8))
         {
-            throw new JsonException(InvalidMessage);
+            throw new JsonException(expectedVersion == BrokerProtocolLimits.WindowsUpdateVersion ? InvalidUpdateMessage : InvalidMessage);
         }
 
         try
@@ -32,12 +33,12 @@ public static class BrokerProtocolCodec
                 AllowDuplicateProperties = false,
                 MaxDepth = BrokerProtocolLimits.MaximumJsonDepth,
             });
-            return ReadMessage(document.RootElement);
+            return ReadMessage(document.RootElement, expectedVersion);
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException)
         {
             // Bounded inputs and fixed error text keep decoder or wire details out of logs and replies.
-            throw new JsonException(InvalidMessage);
+            throw new JsonException(expectedVersion == BrokerProtocolLimits.WindowsUpdateVersion ? InvalidUpdateMessage : InvalidMessage);
         }
     }
 
@@ -67,15 +68,19 @@ public static class BrokerProtocolCodec
     public static string ComputeRequestSha256(BrokerRequest request) =>
         Convert.ToHexStringLower(SHA256.HashData(Serialize(request)));
 
-    private static BrokerMessage ReadMessage(JsonElement root)
+    private static BrokerMessage ReadMessage(JsonElement root, int expectedVersion)
     {
-        if (!root.GetProperty("protocol_version").TryGetInt32(out var version) || version != BrokerProtocolLimits.CurrentVersion)
+        if (!root.GetProperty("protocol_version").TryGetInt32(out var version) || version != expectedVersion ||
+            version is not (BrokerProtocolLimits.CurrentVersion or BrokerProtocolLimits.WindowsUpdateVersion))
         {
             throw new JsonException();
         }
 
-        var envelope = new BrokerEnvelope(ReadGuid(root, "correlation_id"), new BrokerNonce(ReadString(root, "nonce")),
-            ReadUtc(root));
+        var correlation = ReadGuid(root, "correlation_id");
+        var nonce = new BrokerNonce(ReadString(root, "nonce"));
+        var expiry = ReadUtc(root);
+        var envelope = version == BrokerProtocolLimits.CurrentVersion ? new BrokerEnvelope(correlation, nonce, expiry) :
+            BrokerEnvelope.ForWindowsUpdate(correlation, nonce, expiry);
         var kind = ReadString(root, "kind");
         switch (kind)
         {
@@ -85,11 +90,15 @@ public static class BrokerProtocolCodec
             case "hello_ack":
                 RequireFields(root, []);
                 return new BrokerHelloAck(envelope);
-            case "request":
+            case "windows_update_request" when version == BrokerProtocolLimits.WindowsUpdateVersion:
+                return ReadWindowsUpdateRequest(root, envelope);
+            case "windows_update_result" when version == BrokerProtocolLimits.WindowsUpdateVersion:
+                return ReadWindowsUpdateResult(root, envelope);
+            case "request" when version == BrokerProtocolLimits.CurrentVersion:
                 RequireFields(root, ["job_id", "approval_id", "plan_sha256", "impact_sha256", "actions"]);
                 return new BrokerRequest(envelope, new JobId(ReadString(root, "job_id")), ReadGuid(root, "approval_id"),
                     ReadString(root, "plan_sha256"), ReadString(root, "impact_sha256"), ReadActions(root.GetProperty("actions")));
-            case "progress":
+            case "progress" when version == BrokerProtocolLimits.CurrentVersion:
                 RequireFields(root, ["action_id", "sequence", "stage"]);
                 var stage = ReadString(root, "stage") switch
                 {
@@ -98,7 +107,7 @@ public static class BrokerProtocolCodec
                     _ => throw new JsonException(),
                 };
                 return new BrokerProgress(envelope, ReadGuid(root, "action_id"), ReadInt32(root, "sequence"), stage);
-            case "result":
+            case "result" when version == BrokerProtocolLimits.CurrentVersion:
                 RequireFields(root, ["action_id", "sequence", "status"]);
                 var status = ReadString(root, "status") switch
                 {
@@ -149,7 +158,13 @@ public static class BrokerProtocolCodec
 
                 writer.WriteEndArray();
                 break;
-            case BrokerProgress progress:
+            case BrokerWindowsUpdateRequest servicing:
+                WriteWindowsUpdateRequest(writer, servicing);
+                break;
+            case BrokerWindowsUpdateResult receipt:
+                WriteWindowsUpdateResult(writer, receipt);
+                break;
+            case BrokerProgress progress when progress.Envelope.ProtocolVersion == BrokerProtocolLimits.CurrentVersion:
                 writer.WriteString("action_id", progress.ActionId);
                 writer.WriteNumber("sequence", progress.Sequence);
                 writer.WriteString("stage", progress.Stage switch
@@ -159,7 +174,7 @@ public static class BrokerProtocolCodec
                     _ => throw new JsonException(InvalidMessage),
                 });
                 break;
-            case BrokerResult result:
+            case BrokerResult result when result.Envelope.ProtocolVersion == BrokerProtocolLimits.CurrentVersion:
                 writer.WriteString("action_id", result.ActionId);
                 writer.WriteNumber("sequence", result.Sequence);
                 writer.WriteString("status", result.Status switch
@@ -258,6 +273,8 @@ public static class BrokerProtocolCodec
         BrokerMessageKind.Result => "result",
         BrokerMessageKind.Cancel => "cancel",
         BrokerMessageKind.Error => "error",
+        BrokerMessageKind.WindowsUpdateRequest => "windows_update_request",
+        BrokerMessageKind.WindowsUpdateResult => "windows_update_result",
         _ => throw new JsonException(InvalidMessage),
     };
 }

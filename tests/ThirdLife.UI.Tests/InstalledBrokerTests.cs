@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Text;
+using ThirdLife.Broker.Protocol.Transport;
 using ThirdLife.UI.BrokerClient;
 
 namespace ThirdLife.UI.Tests;
@@ -20,8 +21,17 @@ public sealed class InstalledBrokerTests
     [InlineData("O:BAD:P(A;;FA;;;BA)(A;;WO;;;AU)", false)]
     [InlineData("O:BAD:P(A;;FA;;;BA)(A;;SD;;;AU)", false)]
     public void InstalledObjectsRequireProtectedOwnerAndDacl(string sddl, bool expected) =>
-        Assert.Equal(expected, InstalledBroker.HasTrustedAccess(
-            new RawSecurityDescriptor(sddl), InstalledBroker.ObjectKind.Installation));
+        Assert.Equal(expected, ProtectedBrokerFiles.HasTrustedAccess(
+            new RawSecurityDescriptor(sddl), ProtectedBrokerFiles.ObjectKind.Installation));
+
+    [Theory]
+    [InlineData("O:BAD:P(A;;FA;;;BA)(A;;FA;;;SY)", true)]
+    [InlineData("O:SYD:P(A;;FA;;;SY)(A;;FR;;;BU)", false)]
+    [InlineData("O:BAD:(A;;FA;;;BA)(A;;FA;;;SY)", false)]
+    [InlineData("O:BUD:P(A;;FA;;;BA)(A;;FA;;;SY)", false)]
+    public void QualificationGrantSlotsRequireProtectedAdministratorOnlyAccess(string sddl, bool expected) =>
+        Assert.Equal(expected, ProtectedBrokerFiles.HasTrustedAccess(
+            new RawSecurityDescriptor(sddl), ProtectedBrokerFiles.ObjectKind.QualificationGrant));
 
     [Fact]
     public void RootMayPermitCreationOfSiblingsButCannotPermitReplacement()
@@ -29,9 +39,9 @@ public sealed class InstalledBrokerTests
         var createChildren = new RawSecurityDescriptor("O:SYD:P(A;;FA;;;SY)(A;;0x4;;;AU)(A;OICIIO;GW;;;AU)");
         var deleteChildren = new RawSecurityDescriptor("O:SYD:P(A;;FA;;;SY)(A;;0x40;;;AU)");
 
-        Assert.True(InstalledBroker.HasTrustedAccess(createChildren, InstalledBroker.ObjectKind.VolumeRoot));
-        Assert.False(InstalledBroker.HasTrustedAccess(createChildren, InstalledBroker.ObjectKind.SystemAncestor));
-        Assert.False(InstalledBroker.HasTrustedAccess(deleteChildren, InstalledBroker.ObjectKind.VolumeRoot));
+        Assert.True(ProtectedBrokerFiles.HasTrustedAccess(createChildren, ProtectedBrokerFiles.ObjectKind.VolumeRoot));
+        Assert.False(ProtectedBrokerFiles.HasTrustedAccess(createChildren, ProtectedBrokerFiles.ObjectKind.SystemAncestor));
+        Assert.False(ProtectedBrokerFiles.HasTrustedAccess(deleteChildren, ProtectedBrokerFiles.ObjectKind.VolumeRoot));
     }
 
     [Fact]

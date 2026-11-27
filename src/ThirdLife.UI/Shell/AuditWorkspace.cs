@@ -4,6 +4,7 @@ using System.IO;
 using ThirdLife.Actions.Execution;
 using ThirdLife.Actions.Journal;
 using ThirdLife.Actions.Planning;
+using ThirdLife.Actions.WindowsUpdates;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.ManualTests;
@@ -21,6 +22,7 @@ using ThirdLife.Persistence;
 using ThirdLife.Policy.Schema;
 using ThirdLife.Policy.Versioning;
 using ThirdLife.Reports.WorkshopReport;
+using ThirdLife.UI.BrokerClient;
 using ThirdLife.UI.Features.PlanReview;
 
 namespace ThirdLife.UI.Shell;
@@ -106,6 +108,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         }
 
         UpdateAgent = fixtureWindowsUpdates;
+        UpdateBackend = fixtureWindowsUpdates as IWindowsUpdateDispatchBackend;
         if (fixtureBrokerCoordinator is not null && !IsFixtureScenario)
         {
             throw new ArgumentException("A fixture coordinator requires a fixture workspace.", nameof(fixtureBrokerCoordinator));
@@ -194,6 +197,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         appendPackageDiagnostic: AppendLocalPackageDiagnosticAsync)
     {
         UpdateAgent = new WindowsUpdateAgent(),
+        UpdateBackend = new ProtectedWindowsUpdateBackend(),
     };
 
     private static WorkshopReportStore? RegisteredReportStore()

@@ -50,6 +50,11 @@ public sealed partial class SqliteJobStore : IPolicyHistoryStore
                 return;
             }
 
+            if (decision.JobEvidenceCount is { } expectedCount &&
+                expectedCount != await ReadEvidenceCountAsync(connection, transaction, decision.JobId, token).ConfigureAwait(false))
+            {
+                throw new JobStoreConflictException();
+            }
             if (!decision.HasEvaluationProvenance)
             {
                 throw new ArgumentException("A new policy decision requires an evaluation result.", nameof(decision));
