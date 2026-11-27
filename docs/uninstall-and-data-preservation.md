@@ -7,6 +7,10 @@ payload. The standalone installer, uninstall workflow and exact release-package
 file inventory require TL-0704 evidence.
 [Broker provisioner](../eng/install-thirdlife-broker.ps1) · [Development packaging](../artifacts/evidence/TL-0610/development-payload.md)
 
+The **Jobs** surface can archive the current job and restore it later
+by job code. The job keeps its evidence and records both transitions.
+[Retention and cleanup](retention-and-cleanup.md)
+
 The standalone uninstall contract has two distinct choices.
 
 - **Remove the application.** Remove only owned application, shortcut, registration

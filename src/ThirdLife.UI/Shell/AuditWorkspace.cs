@@ -160,6 +160,9 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     public bool CanCancel => IsAssessmentRunning && !_assessmentCancellation!.IsCancellationRequested;
     public bool CanCloseJob => Job is not null && !IsBusy && !_closing;
     public bool CanEditJob => CanCloseJob && Job is { IsArchived: false } && !_hasSeparateEvidenceOrigin;
+    public bool ShowsJobArchive => Job is not null && !IsFixtureScenario && !_hasSeparateEvidenceOrigin;
+    public bool CanChangeJobArchive => ShowsJobArchive && CanCloseJob;
+    public string JobArchiveAction => Job?.IsArchived == true ? "Restore archived job" : "Archive job";
     public bool IsFixtureScenario { get; }
     public bool IncludeBrokerQualification => _fixtureBrokerCoordinator is not null;
     public WorkshopReportArtifact? ReportArtifact { get; private set; }
@@ -271,6 +274,28 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         await RefreshPreparationDispositionAsync(id, invalidateReport: false);
         Status = "Job opened. The committed records are shown below.";
     });
+
+    public Task ChangeJobArchiveAsync(JobId jobId, bool archive)
+    {
+        if (!CanChangeJobArchive || Job is not { } current || current.Job.JobId != jobId ||
+            current.IsArchived == archive)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RunAsync(async () =>
+        {
+            await Task.Run(() => archive ? _jobs!.ArchiveAsync(jobId) : _jobs!.RestoreAsync(jobId));
+            var stored = await LoadJobAsync(jobId);
+            ClearFinalization();
+            ClearSupportExport();
+            ClearReport();
+            await ApplyJobAsync(stored);
+            Status = stored.IsArchived
+                ? "The job is archived and its saved records remain available to review."
+                : "The archived job was restored. You can resume work from its saved records.";
+        });
+    }
 
     public void CloseJob()
     {

@@ -5,6 +5,14 @@ its code. The stable workshop header shows a selectable copy of the code.
 Closing the job preserves saved evidence. The store opens on the first create
 or open action.
 
+## Archive and restore a job
+
+With the intended workshop job open, choose **Jobs** and **Archive
+job**. The job keeps its saved evidence and becomes read-only. To
+resume work, open the same job by code and choose **Restore archived
+job** from **Jobs**. The two transitions are retained with its history.
+[Data retention and cleanup](../retention-and-cleanup.md)
+
 ## Intake and assessment
 
 Record the outcome from an actual external sanitization record for the device. Select the

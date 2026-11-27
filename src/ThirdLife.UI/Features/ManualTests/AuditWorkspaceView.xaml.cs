@@ -148,6 +148,13 @@ public partial class AuditWorkspaceView : UserControl
         }
     }
 
+    private async void ChangeJobArchive(object sender, RoutedEventArgs e)
+    {
+        if (!Workspace.CanChangeJobArchive || Workspace.Job is not { } job) { return; }
+        FocusAndReveal(AuditStatus);
+        await Workspace.ChangeJobArchiveAsync(job.Job.JobId, archive: !job.IsArchived);
+    }
+
     private void CloseJob(object sender, RoutedEventArgs e)
     {
         Workspace.CloseJob();
@@ -488,6 +495,7 @@ public partial class AuditWorkspaceView : UserControl
         RefreshToggleKeys();
         RefreshBackupReadiness();
         JobHeader.Visibility = VisibleWhen(Workspace.Job is not null);
+        JobArchiveRegion.Visibility = VisibleWhen(Workspace.ShowsJobArchive);
         OperationErrorRegion.Visibility = VisibleWhen(Workspace.OperationError.Length != 0);
         AuditStatus.Visibility = VisibleWhen(Workspace.OperationError.Length == 0);
         JobIdentity.Content = Workspace.Assessment?.Observations.FirstOrDefault(observation =>
