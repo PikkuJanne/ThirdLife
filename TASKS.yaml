@@ -7444,6 +7444,16 @@ tasks:
     environment: Active Windows 11 Pro native x64 host, 660 by 520 DIP window, double layout scale, 22-point test text and long German label
     reference: artifacts/evidence/TL-0608/handover-signoff.md
     limitation: Scoped programmatic layout and focus observations. Full audit, audible assistive-technology perception and physical DPI change remain open.
+  - summary: Backup readiness clears stale inputs and results, with focused keyboard, live region and scaling evidence.
+    task: TL-0608
+    command: eng/verify.ps1 -Tier Targeted -Restore with four recipient-controls and Extended maintenance WPF selectors
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 193.470 s, 1446 Quick and 5 selected .NET tests
+    environment: Active Windows 11 native x64 host, isolated WPF resources and 2x layout
+    reference: artifacts/evidence/TL-0608/backup-readiness-controls.md, b1f34ee516e3c8ace141caf576b67fd172f1d8e6
+    limitation: Synthetic scale, WPF focus and announcement signals. Complete candidate accessibility audit, physical DPI and audible checks remain open.
   notes:
   - Engineering audit scope cannot establish full perceptual accessibility. TL-0611 carries the accountable pilot accessibility
     disposition.
@@ -7839,6 +7849,16 @@ tasks:
     environment: Active Windows 11 native x64 host, unelevated WPF and controlled domain fixtures
     reference: artifacts/evidence/TL-0702/readiness.md, c9446391db4d742e9aa464c901c755cd40f51569
     limitation: Read-only native interface prerequisites and system-volume rejection were observed. Launcher, protected restore probe and live backup and restore remain pending.
+  - summary: Native read-only readiness on an explicitly supplied local volume on a separate disk, alongside system-volume rejection.
+    task: TL-0702
+    command: dotnet test ThirdLife.UI.Tests with WindowsFileHistoryTests and the exact test volume root
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 2 selected .NET tests in 39 ms
+    environment: Active Windows 11 native x64 host, unelevated test process
+    reference: artifacts/evidence/TL-0608/backup-readiness-controls.md, b1f34ee516e3c8ace141caf576b67fd172f1d8e6
+    limitation: Native volume binding and capacity only. No setup, backup, restore, or write to that volume was invoked by the provider.
   notes:
   - The actual recipient controls destination, credentials and recovery material. TL-0710 carries the final security/privacy
     disposition.

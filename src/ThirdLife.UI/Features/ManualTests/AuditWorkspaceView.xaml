@@ -353,9 +353,11 @@
                   Visibility="Collapsed" Margin="0,0,0,12">
           <StackPanel>
             <Label Target="{Binding ElementName=BackupScopeMebibytes}" Content="Estimated backup size in MiB" />
-            <TextBox x:Name="BackupScopeMebibytes" MaxLength="13" AutomationProperties.Name="Estimated backup size in MiB" />
+            <TextBox x:Name="BackupScopeMebibytes" MaxLength="13" AutomationProperties.Name="Estimated backup size in MiB"
+                     TextChanged="BackupReadinessInputChanged" IsEnabled="{Binding CanCheckBackupReadiness}" />
             <CheckBox x:Name="BackupRecoveryConfirmed" Content="The recipient is present and controls recovery"
-                      Margin="0,8,0,0" />
+                      Checked="BackupReadinessInputChanged" Unchecked="BackupReadinessInputChanged"
+                      IsEnabled="{Binding CanCheckBackupReadiness}" Margin="0,8,0,0" />
             <Button x:Name="CheckBackupReadinessButton" Content="Choose a drive and check prerequisites" Click="CheckBackupReadiness" HorizontalAlignment="Left"
                     IsEnabled="{Binding CanCheckBackupReadiness}" Margin="0,8,0,0" />
             <TextBlock x:Name="BackupReadinessMessage" Text="{Binding BackupReadinessStatus}" Focusable="True"
