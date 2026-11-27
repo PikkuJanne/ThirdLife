@@ -5,9 +5,10 @@ namespace ThirdLife.UI.Shell;
 
 internal sealed partial class AuditWorkspace
 {
+    private const string BackupReadinessInstructions = "Select a backup drive with the recipient to check the prerequisites.";
     private WindowsFileHistoryInventory? _backupInventory;
 
-    public string BackupReadinessStatus { get; private set; } = "Select a backup drive with the recipient to check the prerequisites.";
+    public string BackupReadinessStatus { get; private set; } = BackupReadinessInstructions;
     public bool ShowsBackupReadiness => !IsFixtureScenario && RecipientHandover is { Handover.Mode: HandoverMode.Assisted };
     public bool CanCheckBackupReadiness => ShowsBackupReadiness && CanEditJob && !_readingFinalization;
 
@@ -41,9 +42,16 @@ internal sealed partial class AuditWorkspace
         }, refreshFinalization: false);
     }
 
+    public void InvalidateBackupReadiness()
+    {
+        if (BackupReadinessStatus == BackupReadinessInstructions) { return; }
+        ClearBackupReadiness();
+        Publish();
+    }
+
     private void ClearBackupReadiness()
     {
         _backupInventory = null;
-        BackupReadinessStatus = "Select a backup drive with the recipient to check the prerequisites.";
+        BackupReadinessStatus = BackupReadinessInstructions;
     }
 }

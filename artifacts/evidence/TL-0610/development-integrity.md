@@ -29,3 +29,19 @@ ignored local engineering output. The standalone installer, rollback,
 optional aggregate metrics export and authorized pilot exposure still
 have their own gates.
 [Deployment](../../../docs/pilot/deployment-rollback.md) · [Runbook](../../../docs/pilot/operator-runbook.md)
+
+## File History composition package
+
+The tool built source `2be6a208b1e26cb7d73b3e1bda58a554d582fe75`
+using the same locked release publish. All 19 verified archive entries
+matched the published bytes after extraction. The private ZIP calculated
+SHA-256 `a92345b178c9588326a87fc8339acb2a5116b0726988ac1a81f288737735d679`
+at 1,245,073 bytes. The SBOM hash is
+`3710ea64e11c25133e79012e8466608bfa6f62184b379da277f34226091559cc`.
+
+The exact unpacked apphost opened Inspect through external Windows UI
+Automation at 1.544 s with an unelevated host token. It closed normally
+by 1.728 s. The observed apphost hash is
+`c346b9504497d1bce7f2adc9b77a3bae2cc708cd8811ffec4134773522e1d4a4`.
+The archive, receipt and unpacked files are in an ignored local
+engineering directory.
