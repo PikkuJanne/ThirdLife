@@ -26,11 +26,17 @@ under the same unelevated user context in a read-only ActiveMachine test.
 The WPF applied, verified and restored states used an injected controlled
 adapter. The actual host setting stayed unchanged. A native write and
 restoration for an actual recipient require the corresponding runtime
-consent. The clean migration gate for the final composed source remains
-pending.
+consent.
 
 The exact composition against reviewed main
 `7590368dbd293ff017069be9cca4d5148b9bae1b` passed Targeted in 234.073 s.
 It exercised all Quick tests plus nine selected Core, SQLite and WPF
 checks, including the current handover sign-off controls and their
 keyboard regression. All selected cases passed with zero skips.
+
+The clean detached checkout of `dd69090554665a87c7e145b81a3bcf5710e4382a`
+passed `eng/verify.ps1 -Tier Full -Restore` on 27 November 2026 in
+521.818 s. It ran 310 governance tests and 2,676 .NET tests, all passing
+without skips. The integration also includes reviewed main
+`318de262c38e5cf8c492e0460c78dd5426b7444a`. The application's source, test
+sources and verification runner match the Full-verified checkout.
