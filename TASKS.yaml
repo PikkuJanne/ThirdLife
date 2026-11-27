@@ -7258,7 +7258,7 @@ tasks:
   workstream: diagnostics
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -7290,9 +7290,30 @@ tasks:
   verification:
   - Run seeded-PII, path attack, symlink/junction, huge-input, cancelled-export, and hostile-destination tests.
   - Manually inspect a representative bundle.
-  evidence: []
+  evidence:
+  - summary: TRACE previews both sanitized files, requires exact review, rejects changed facts and records the digest and operator after publication.
+    task: TL-0606
+    command: eng/verify.ps1 -Tier Targeted with Diagnostics, Reports, Persistence and UI selections in the support archive evidence
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 235.269 s, 1411 Quick .NET tests and 69 selected tests
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated WPF and SQLite, protected local synthetic archive
+    reference: artifacts/evidence/TL-0606/report.md, 7af7721aba6135574486acc3286150309463ab66
+    limitation: External forwarding was unobserved. Process interruption can retain an unconfirmed intent until exact archive verification.
+  - summary: Clean detached Full verified migration 018 and the composed diagnostics, detector, guide and workshop record.
+    task: TL-0606
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 620.459 s, 310 governance tests and 2625 .NET tests across 13 projects
+    environment: Active Windows 11 Pro 26H2 native x64 host, clean detached checkout, SDK 10.0.400
+    reference: artifacts/evidence/TL-0606/report.md, 7af7721aba6135574486acc3286150309463ab66
+    limitation: Deterministic Full checks retain separate native and Extended scopes.
   expected_test_tier: targeted
-  full_test_triggers: []
+  full_test_triggers:
+  - data_migration
   extended_test_triggers: []
 - id: TL-0607
   title: Enforce final sign-off and the blocking handover gate
