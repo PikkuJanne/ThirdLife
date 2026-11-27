@@ -6829,6 +6829,16 @@ tasks:
     environment: Active Windows 11 Pro 26H2 native x64 host, standard-user token and local Windows Storage WMI
     reference: artifacts/evidence/TL-0510/system-disk-health.md, 3b5dd745e94435650635e9495184348bcf4e5cd6
     limitation: The provider qualified on the host only. The existing guest and exact live-profile case still require their own evidence and aggregate restart clearance.
+  - summary: An earlier unresolved servicing recovery holds the restart check through Verify and Finalization, including a still-saved historical pass.
+    task: TL-0510
+    command: eng/verify.ps1 -Tier Targeted with ProfileVerificationTests and FullMaintenanceReopensAtEveryBoundaryAndRequiresFreshStateAfterFinalRestart
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 295.294 s with 1382 Quick and 13 selected deterministic .NET cases
+    environment: Active Windows 11 Pro 26H2 native x64 host with controlled update and maintenance evidence
+    reference: artifacts/evidence/TL-0510/restart-recovery.md, 4f9aabb
+    limitation: The production guard preserves historical results and gates unresolved recovery. Native clearance still requires its own positive proof.
   blocked_reason: Whole-device reference verification is held. The OS-disk health provider has active-host evidence.
     Reopen the native reference case with guest disk health, aggregate restart clearance and a qualified exact
     reference profile on ThirdLife-W11. Job Seeker is synthetic and the current live route supports one reviewed
