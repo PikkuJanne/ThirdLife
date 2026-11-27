@@ -7985,7 +7985,17 @@ tasks:
   - Drive the actual packaged clean install, reinstall/repair, upgrade from the pilot build, interruption, rollback/non-rollback,
     uninstall, and data-preservation paths. Record exact edition, release, build, architecture and artifact.
   - Inspect services, scheduled tasks, startup entries, files, registry entries, and job data before/after lifecycle operations.
-  evidence: []
+  evidence:
+  - summary: Two private native-x64 MSI versions authored, source-bound, and verified read-only on the existing guest.
+    task: TL-0704
+    command: eng/verify.ps1 -Tier Full -Restore, focused private package tests, and MsiVerifyPackage/MsiOpenPackageEx on ThirdLife-W11
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 467.589 s, 319 governance and 2680 .NET tests, plus 9 focused Python tests
+    environment: Clean Windows 11 native x64 host checkout and existing ThirdLife-W11 read-only preflight
+    reference: artifacts/evidence/TL-0704/private-msi-preflight.md, 6ee0ba7d932520111fe5c8dc17e8efd9693fea9f
+    limitation: Package authoring and guest preflight only. The verified standard-user launch, installed lifecycle, data-preservation, signatures and release scope remain pending.
   notes:
   - Record precise tested environment and data-preservation boundaries. TL-0710 carries actual release disposition.
   expected_test_tier: full
