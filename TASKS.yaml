@@ -6829,6 +6829,16 @@ tasks:
     environment: Active Windows 11 Pro 26H2 native x64 host, standard-user token and local Windows Storage WMI
     reference: artifacts/evidence/TL-0510/system-disk-health.md, 3b5dd745e94435650635e9495184348bcf4e5cd6
     limitation: The provider qualified on the host only. The existing guest and exact live-profile case still require their own evidence and aggregate restart clearance.
+  - summary: An earlier unresolved servicing recovery holds the restart check through Verify and Finalization, including a still-saved historical pass.
+    task: TL-0510
+    command: eng/verify.ps1 -Tier Targeted with ProfileVerificationTests and FullMaintenanceReopensAtEveryBoundaryAndRequiresFreshStateAfterFinalRestart
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 295.294 s with 1382 Quick and 13 selected deterministic .NET cases
+    environment: Active Windows 11 Pro 26H2 native x64 host with controlled update and maintenance evidence
+    reference: artifacts/evidence/TL-0510/restart-recovery.md, 4f9aabb
+    limitation: The production guard preserves historical results and gates unresolved recovery. Native clearance still requires its own positive proof.
   blocked_reason: Whole-device reference verification is held. The OS-disk health provider has active-host evidence.
     Reopen the native reference case with guest disk health, aggregate restart clearance and a qualified exact
     reference profile on ThirdLife-W11. Job Seeker is synthetic and the current live route supports one reviewed
@@ -7350,7 +7360,17 @@ tasks:
     automation, and announcement signals against ACCESSIBILITY.md.
   - Attach issue and test evidence for findings and fixes, and record unavailable physical or perceptual observations
     as specific validation limits.
-  evidence: []
+  evidence:
+  - summary: The two baseline desktop focus failures passed unchanged after programmatic stage transitions laid out the newly shown controls.
+    task: TL-0608
+    command: eng/verify.ps1 -Tier Targeted with the M1AuditJourneyTests and supported PolicyWorkflowTests active-host journeys
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 377.974 s, 1367 deterministic .NET cases plus two active-host journey cases
+    environment: Active Windows 11 Pro 26H2 native x64 host, isolated jobs and standard-user WPF
+    reference: artifacts/evidence/TL-0608/stage-focus.md, 522d90f3f2e585b8ce3b8735582096196836c55d
+    limitation: Verified stage-transition repair. The full M6 technical accessibility audit and perceptual scope remain open.
   notes:
   - Engineering audit scope cannot establish full perceptual accessibility. TL-0611 carries the accountable pilot accessibility
     disposition.

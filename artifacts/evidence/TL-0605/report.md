@@ -73,3 +73,8 @@ content adoption and exposure remain at TL-0508 and TL-0611.
 The integration trial used main `94ae1a4`. Targeted passed in 279.977 s
 with 1,394 Quick and thirteen selected .NET cases, eight work-selection
 regressions, both validators, formatting and a clean Release build.
+
+The final integration trial used main `07ac801`, including the keyboard-focus
+repair and restart-recovery hold. Both repository validators passed. The
+combined recipient guide, handover mode and workshop report WPF selection
+passed three cases in 4 s of test time.

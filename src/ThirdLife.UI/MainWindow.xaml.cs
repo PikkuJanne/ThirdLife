@@ -51,6 +51,8 @@ public partial class MainWindow : Window
         };
         StageList.SelectedItem = item;
         AuditView.ShowStage(stage);
+        // Navigation callers move keyboard focus to controls in the new stage.
+        AuditView.UpdateLayout();
     }
 
     private void FocusOnEntry(object sender, RoutedEventArgs e)
