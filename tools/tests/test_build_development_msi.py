@@ -69,6 +69,9 @@ class DevelopmentMsiTests(unittest.TestCase):
                  "TLPRIV~1|ThirdLife Private Preview"),
                 ("SELECT `Name` FROM `_Streams` WHERE `Name`='thirdlife.cab'", installer.CABINET),
                 ("SELECT `Value` FROM `Property` WHERE `Property`='REBOOT'", "ReallySuppress"),
+                ("SELECT `Condition` FROM `LaunchCondition` WHERE `Description` = "
+                 "'This preview requires Windows 11 client build 26300 on native x64.'",
+                 "Installed OR (VersionNT64 = 1000 AND Msix64 AND WindowsBuild = 26300 AND MsiNTProductType = 1)"),
             ]:
                 with self.subTest(query=query):
                     self.assertEqual(expected, self.read_cell(engine, database, query))

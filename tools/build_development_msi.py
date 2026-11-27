@@ -23,7 +23,8 @@ PRODUCT_NAME = "ThirdLife Setup Core (Private Preview)"
 CABINET = "thirdlife.cab"
 INSTALL_DIR = "PrivateInstall"
 REGISTRY_KEY = r"Software\ThirdLife\PrivateInstaller"
-REQUIRED_PLATFORM = "VersionNT64 AND Msix64 AND WindowsBuild >= 22000 AND MsiNTProductType = 1"
+# This private candidate admits only the reviewed build on the current host and named guest.
+REQUIRED_PLATFORM = "VersionNT64 = 1000 AND Msix64 AND WindowsBuild = 26300 AND MsiNTProductType = 1"
 
 
 def checked(result: int, action: str) -> None:
@@ -84,7 +85,7 @@ def author_tables(path: Path, payload: dict[str, bytes], version: str) -> list[s
             ("Desktop", file_id) for file_id, _, _ in records
         ]),
         table(path, "LaunchCondition", "Condition\tDescription", "s255\tl255", "Condition", [
-            (f"Installed OR ({REQUIRED_PLATFORM})", "ThirdLife requires Windows 11 client on native x64."),
+            (f"Installed OR ({REQUIRED_PLATFORM})", "This preview requires Windows 11 client build 26300 on native x64."),
             ("(NOT ALLUSERS) AND (NOT NEWERPREVIEW)", "This private preview installs for one user and requires a current version."),
         ]),
         table(path, "Upgrade", "UpgradeCode\tVersionMin\tVersionMax\tLanguage\tAttributes\tRemove\tActionProperty",
