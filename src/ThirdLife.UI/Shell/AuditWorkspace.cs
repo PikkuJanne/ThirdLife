@@ -188,6 +188,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             new FirmwareSecurityProvider(),
             new OperatingSystemProvider(),
             new PendingRebootProvider(),
+            new SecurityBaselineProvider(),
             new StorageProvider(),
             new SystemInventoryProvider(),
         ],
@@ -771,6 +772,19 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
             string key = observation.EvidenceKey.Value;
             string displayName = key switch
             {
+                "security.firewall_health" => "Firewall health reported by Windows Security Center",
+                "security.antivirus_health" => "Antivirus health reported by Windows Security Center",
+                "security.defender_health" => "Microsoft Defender real-time protection and signature health",
+                "security.system_volume_protection" => "BitLocker protection on the Windows volume",
+                "security.uac_health" => "User Account Control health reported by Windows Security Center",
+                "security.uac_configured" => "User Account Control setting",
+                "security.uac_state" => "User Account Control setting and reported health",
+                "security.remote_desktop_configured" => "Windows Remote Desktop connection setting",
+                "security.ntp_client_configured" => "Windows network time client setting",
+                "ownership.domain_join" => "Windows domain membership",
+                "ownership.mdm_registration" => "Device management registration",
+                "ownership.cloud_join" => "Device or current-user work account registration",
+                "ownership.lock_state" => "Ownership review",
                 "memory.installed_bytes" => "Installed memory (bytes)",
                 "device.model" => "Device model",
                 "device.manufacturer" => "Device manufacturer",
@@ -778,6 +792,17 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
                 "system.architecture" => "System architecture",
                 _ => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(key.Replace('.', ' ').Replace('_', ' ')),
             };
+            if (providerName == "windows-security-baseline")
+            {
+                detail += key switch
+                {
+                    "security.antivirus_health" => ". Category health only. Product approval needs separate evidence.",
+                    "security.remote_desktop_configured" => ". Other remote support tools and administrator accounts need separate review.",
+                    "security.ntp_client_configured" => ". This setting does not establish a successful time synchronization.",
+                    "ownership.lock_state" => ". Unresolved management or ownership blocks handover.",
+                    _ => string.Empty,
+                };
+            }
             string technicalDetails = $"Assessment {snapshot.AssessmentId.Value}\nEvidence {metadata.EvidenceId.Value}\nField {key}\nProvenance {metadata.Provenance.SourceReference}";
             yield return new AssessmentFinding(key, displayValue, detail, providerName, displayName,
                 metadata.CollectedAtUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture), technicalDetails);

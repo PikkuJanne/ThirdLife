@@ -123,6 +123,8 @@ internal static class AuditPolicyEvidence
             "tpm.present" or "tpm.version" => IsOwned(fact, FirmwareProvider, "tpm.tbs.device_info"),
             "tpm.ready" => IsOwned(fact, FirmwareProvider, "tpm.wmi.is_ready_information"),
             "activation.state" => IsOwned(fact, "windows-activation", "activation.slc.windows_application_status"),
+            "ownership.lock_state" => IsOwned(fact, "windows-security-baseline", "security.management_indicators") &&
+                (fact.Value is null or { Kind: EvidenceValueKind.Enum, StringValue: "management_indicated" }),
             _ => false,
         };
     }

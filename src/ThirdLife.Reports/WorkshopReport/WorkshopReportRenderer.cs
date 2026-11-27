@@ -81,6 +81,13 @@ public static partial class WorkshopReportRenderer
         Line(report, "");
         Line(report, "Saved observations");
         var needsReview = WriteObservations(report, job, showEvidenceIds, cancellationToken);
+        if (job.Observations.Any(item => item.Metadata.ProviderId.Value == "windows-security-baseline"))
+        {
+            Line(report, "Security Center reports category health. Approved antivirus identity needs separate evidence.");
+            Line(report, "Time client configuration does not establish a successful synchronization.");
+            Line(report, "Remote Desktop configuration covers one Windows setting. Other remote access and administrator accounts need separate review.");
+            Line(report, "Unresolved management or ownership blocks handover.");
+        }
         Line(report, "");
         Line(report, "Manual check records");
         needsReview |= WriteManualTests(report, job, showEvidenceIds, cancellationToken);
