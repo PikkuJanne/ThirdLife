@@ -48,7 +48,7 @@ public sealed class WindowsUpdatePolicyTests
     {
         var unbounded = new WindowsUpdateCandidate(Identity, WindowsUpdateClass.Security);
         Assert.False(WindowsUpdatePolicy.IsSelectable(unbounded));
-        Assert.Equal(WindowsUpdateDisposition.ReviewRequired, WindowsUpdatePolicy.Evaluate(
+        Assert.Equal(WindowsUpdateDisposition.NoEligibleOffers, WindowsUpdatePolicy.Evaluate(
             new WindowsUpdateScan(WindowsUpdateStatus.Succeeded, [unbounded], false), 0));
         var scan = new WindowsUpdateScan(WindowsUpdateStatus.Succeeded, [Security], false);
         Assert.True(WindowsUpdatePolicy.Matches(Security, scan));
@@ -73,7 +73,7 @@ public sealed class WindowsUpdatePolicyTests
             var excluded = new WindowsUpdateCandidate(Identity, classification);
             var scan = new WindowsUpdateScan(WindowsUpdateStatus.Succeeded, [excluded], false);
             Assert.False(WindowsUpdatePolicy.Matches(excluded, scan));
-            Assert.Equal(WindowsUpdateDisposition.ReviewRequired, WindowsUpdatePolicy.Evaluate(scan, 0));
+            Assert.Equal(WindowsUpdateDisposition.NoEligibleOffers, WindowsUpdatePolicy.Evaluate(scan, 0));
         }
     }
 

@@ -92,6 +92,7 @@ public sealed class WindowsUpdateInventoryTests(ITestOutputHelper output)
         {
             Assert.Contains("None met the servicing requirements", inventory);
             Assert.DoesNotContain("offered no applicable", reopened.WindowsUpdateStatusText);
+            if (scan.RebootRequired == false) { Assert.Contains("None met the servicing requirements", reopened.WindowsUpdateStatusText); }
             if (scan.EligibilityReasons!.Contains(WindowsUpdateEligibilityReason.UnsupportedHandler))
             {
                 Assert.Contains("required component-based servicing handler", inventory);

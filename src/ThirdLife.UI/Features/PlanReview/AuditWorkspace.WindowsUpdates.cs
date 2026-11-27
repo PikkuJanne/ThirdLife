@@ -114,9 +114,20 @@ internal sealed partial class AuditWorkspace
             WindowsUpdateDisposition.RestartRequired => "Windows reported a required restart. Rescan after the next confirmed restart.",
             WindowsUpdateDisposition.ApprovalRequired => "The configured service offered applicable updates. Review the saved inventory in Prepare.",
             WindowsUpdateDisposition.PassLimitReached => "The three-pass update limit was reached. Review remaining updates.",
+            WindowsUpdateDisposition.NoEligibleOffers when latest.Scan is { } excluded => DescribeIneligibleInventory(excluded),
             WindowsUpdateDisposition.ReviewRequired => "Update evidence needs workshop review before further preparation.",
             _ => "Update currency is unknown. Run a fresh scan and review the saved evidence.",
         };
+    }
+
+    private static string DescribeIneligibleInventory(WindowsUpdateScan scan)
+    {
+        var count = scan.Updates.Count;
+        var offered = count == 1 ? "The configured service offered one applicable revision."
+            : $"The configured service offered {count} applicable revisions.";
+        var detail = count == 1 && scan.EligibilityReasons is { } reasons
+            ? DescribeEligibility(reasons[0]) : "Review the saved inventory in Prepare.";
+        return $"{offered} None met the servicing requirements in this scan. {detail}";
     }
 
     public string WindowsUpdateInventory { get; private set; } = string.Empty;
