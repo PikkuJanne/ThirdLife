@@ -1,7 +1,11 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Diagnostics;
+using ThirdLife.Diagnostics.Redaction;
+using ThirdLife.Reports.Support;
 using ThirdLife.Reports.WorkshopReport;
 
 namespace ThirdLife.Reports.Tests;
@@ -113,6 +117,32 @@ public sealed class WorkshopReportStoreTests
     }
 
     [Fact]
+    public void SupportExportRequiresThePreviewDigestAndPublishesThoseBytesOnce()
+    {
+        using var directory = new FixtureDirectory();
+        var preview = SupportArchivePreview.Create([], DateTimeOffset.UtcNow);
+        var store = new SupportArchiveStore(directory.ReportRoot);
+
+        var changed = Assert.Throws<DiagnosticContractException>(() => store.Export(preview, new string('0', 64)));
+        Assert.Equal("support_preview_changed", changed.ResultCode);
+        Assert.False(Directory.Exists(directory.ReportRoot));
+        Assert.Throws<OperationCanceledException>(() =>
+            store.Export(preview, preview.ArchiveSha256, new CancellationToken(canceled: true)));
+        Assert.False(Directory.Exists(directory.ReportRoot));
+
+        var archive = store.Export(preview, preview.ArchiveSha256);
+        var path = Path.Combine(directory.ReportRoot, archive.FileName);
+        var bytes = File.ReadAllBytes(path);
+        Assert.Equal(preview.ArchiveSha256, Convert.ToHexStringLower(SHA256.HashData(bytes)));
+        Assert.Equal(preview.ArchiveByteCount, bytes.Length);
+
+        var collision = Assert.Throws<DiagnosticContractException>(() => store.Export(preview, preview.ArchiveSha256));
+        Assert.Equal("support_file_exists", collision.ResultCode);
+        Assert.Equal(bytes, File.ReadAllBytes(path));
+        Assert.Empty(Directory.EnumerateFiles(directory.ReportRoot, "*.tmp"));
+    }
+
+    [Fact]
     public async Task JunctionOrSymbolicLinkCannotRedirectReportStorage()
     {
         using var directory = new FixtureDirectory();
@@ -148,6 +178,9 @@ public sealed class WorkshopReportStoreTests
         {
             var store = new WorkshopReportStore(directory.ReportRoot);
             TheFailure(WorkshopReportFailure.DestinationUnavailable, () => store.Write(Job, Report));
+            var preview = SupportArchivePreview.Create([], DateTimeOffset.UtcNow);
+            var support = new SupportArchiveStore(directory.ReportRoot);
+            Assert.Throws<DiagnosticContractException>(() => support.Export(preview, preview.ArchiveSha256));
             Assert.Equal("unchanged", File.ReadAllText(outside));
             Assert.Single(Directory.EnumerateFileSystemEntries(target));
         }

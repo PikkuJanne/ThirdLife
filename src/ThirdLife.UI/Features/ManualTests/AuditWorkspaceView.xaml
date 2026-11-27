@@ -411,6 +411,48 @@
                  AutomationProperties.Name="Restricted workshop report preview" />
       </StackPanel>
     </GroupBox>
+    <GroupBox Header="Sanitized support archive" AutomationProperties.Name="Sanitized support archive">
+      <StackPanel>
+        <TextBlock Text="Review the two fixed files before exporting. The ZIP is saved in a protected ThirdLifeSupport folder at the local location you choose. Share a copy only for the support case." />
+        <Button x:Name="PreviewSupportButton" Content="Preview support archive" Click="PreviewSupport"
+                HorizontalAlignment="Left" Margin="0,8,0,0" IsEnabled="{Binding CanPreviewSupport}" />
+        <Button x:Name="CancelSupportButton" Content="Cancel support operation" Click="CancelSupport"
+                HorizontalAlignment="Left" Margin="0,8,0,0" Visibility="Collapsed" />
+        <TextBlock x:Name="SupportExportMessage" Text="{Binding SupportExportStatus}" Focusable="True"
+                   KeyboardNavigation.IsTabStop="False" AutomationProperties.Name="{Binding SupportExportStatus}"
+                   AutomationProperties.LiveSetting="Polite" Margin="0,8,0,0" />
+        <TextBlock x:Name="SupportHistoryMessage" Text="{Binding SupportHistoryStatus}" AutomationProperties.LiveSetting="Polite"
+                   Style="{DynamicResource Trace.AttentionText}" />
+        <Button x:Name="RetrySupportAuditButton" Content="Retry saving the export record" Click="RetrySupportAudit"
+                Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
+        <StackPanel x:Name="SupportPreviewRegion" Visibility="Collapsed" Margin="0,8,0,0">
+          <TextBlock Text="{Binding SupportPreviewSummary}" />
+          <TextBlock Text="The manifest shows the support code, versions and available generic machine details. The observations file shows check and package outcomes." />
+          <TextBlock Text="Keep exported copies only for the support case. Review their deletion within 30 days unless your workshop has a documented reason to keep them longer." />
+          <TabControl x:Name="SupportFiles" ItemsSource="{Binding SupportPreview.Files}" SelectedIndex="0"
+                      AutomationProperties.Name="Files in the support archive" Margin="0,8,0,0">
+            <TabControl.ItemTemplate>
+              <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+            </TabControl.ItemTemplate>
+            <TabControl.ContentTemplate>
+              <DataTemplate>
+                <TextBox Text="{Binding Contents, Mode=OneWay}" IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                         TextWrapping="Wrap" MinHeight="120" MaxHeight="260" VerticalScrollBarVisibility="Auto"
+                         AutomationProperties.Name="{Binding Name}" />
+              </DataTemplate>
+            </TabControl.ContentTemplate>
+          </TabControl>
+          <Label Target="{Binding ElementName=SupportOperatorCode}" Content="Support export operator code" />
+          <TextBox x:Name="SupportOperatorCode" MaxLength="64" AutomationProperties.Name="Support export operator code" />
+          <CheckBox x:Name="SupportExportApproved" Checked="SupportApprovalChanged" Unchecked="SupportApprovalChanged"
+                    Content="I reviewed both files and approve this exact support archive" Margin="0,8,0,0" />
+          <Button x:Name="ExportSupportButton" Content="Choose folder and export" Click="ExportSupport"
+                  HorizontalAlignment="Left" Margin="0,8,0,0" IsEnabled="False" />
+          <TextBlock x:Name="SupportInputError" AutomationProperties.LiveSetting="Polite"
+                     Style="{DynamicResource Trace.ErrorText}" />
+        </StackPanel>
+      </StackPanel>
+    </GroupBox>
       </StackPanel>
     </Grid>
   </StackPanel>
