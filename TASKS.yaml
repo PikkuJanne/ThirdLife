@@ -8083,7 +8083,17 @@ tasks:
   verification:
   - Validate links/evidence references and review every support/limitation claim against test results.
   - Inspect reading order, plain-language wording, technical accessibility, and evidence traceability.
-  evidence: []
+  evidence:
+  - summary: Prepared the candidate support and known-limitations pages and linked the scoped existing evidence.
+    task: TL-0705
+    command: Bundle and repository validation, focused security/privacy/testing document regressions and local evidence link review
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 3 focused document checks and local reference verification
+    environment: Active Windows 11 native x64 host and current repository records
+    reference: artifacts/evidence/TL-0705/claim-evidence.md, base 3599b23ff67a6f88bc609e4252cce5e9a58b3ba1
+    limitation: Engineering documentation only. Supported versions, approved confidential report handling and exact stable installed evidence remain pending.
   notes:
   - TL-0710 carries actual accountable support, release, security/privacy, and accessibility scope decisions.
   expected_test_tier: targeted
