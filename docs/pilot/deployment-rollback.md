@@ -46,3 +46,23 @@ The installer and its upgrade, repair, rollback and removal behavior
 still require qualification on the existing `ThirdLife-W11`. Keep this
 deployment procedure scoped to private unpack-and-run verification until
 the installer and the data-preservation paths have passed.
+
+## Private installer preflight
+
+The private MSI authoring tool takes a separately verified ZIP and SBOM.
+From a reviewed Windows checkout with the pinned Python, provide their
+reviewed hashes and a new local output path.
+
+```powershell
+python -m tools.build_development_msi $packageDirectory $newOutputDirectory `
+  --source $reviewedRevision --archive-sha256 $reviewedArchiveSha256 `
+  --sbom-sha256 $reviewedSbomSha256 --version $privateMsiVersion
+```
+
+The output includes the MSI, its exact receipt and the local authoring
+inputs. The package targets Windows 11 client build 26300 on native x64.
+The Windows Installer preflight verified and opened the two exact private
+versions on ThirdLife-W11. Installed lifecycle and native app launch are
+pending. Use the staged runtime only for the scoped qualification process.
+The proven unpack-and-run procedure remains available for engineering.
+[Installer preflight evidence](../../artifacts/evidence/TL-0704/private-msi-preflight.md)
