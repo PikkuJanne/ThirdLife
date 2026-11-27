@@ -15,8 +15,9 @@ At `TL-0610`, verified pilot behavior is populated and the sheet remains clearly
 The engineering preview is a framework-dependent Windows 11 AMD64 ZIP.
 Its unpacked desktop application was observed to open Inspect under an
 unelevated workshop token and exit normally. The source revision, archive
-and SBOM digests are recorded with the artifact. The standalone installer,
-lifecycle checks, partner exposure and stable freeze remain open.
+and SBOM digests are recorded with the artifact. The same-machine
+private MSI observations are recorded below. Pilot exposure and stable
+freeze remain open.
 [Package evidence](artifacts/evidence/TL-0610/development-payload.md)
 The newer unpacked engineering candidate also opened Prepare and
 displayed the exact Basic and Job Seeker configuration previews.
@@ -63,12 +64,14 @@ shown in its preview.
 
 ## 3. Install, update, repair, and remove
 
-The private 0.3.2 and 0.3.3 MSI pair passed native per-user install,
-repair, upgrade, downgrade refusal and removal on ThirdLife-W11.
-The installed files matched their reviewed bytes and the synthetic
-job-directory and adjacent sentinels were preserved. The installed
-window observation and frozen release information remain open.
-[Private lifecycle](artifacts/evidence/TL-0704/interactive-lifecycle.md)
+The reviewed private 0.3.3 and 0.3.6 MSI pair passed the native
+per-user lifecycle on ThirdLife-W11. Windows Installer could still
+remove the previous version after a canceled upgrade. Normal upgrade, repair,
+downgrade refusal and uninstall preserved the same populated archived
+job and its database bytes. The installed window, other interruption
+phases and frozen release information remain open.
+[Private lifecycle](artifacts/evidence/TL-0704/populated-job-lifecycle.md)
+· [Private standalone audit](artifacts/evidence/TL-0709/private-candidate-boundary.md)
 
 Qualify install, upgrade, repair and removal against D-005. Record the exact Windows 11 edition, release, build, native x64 architecture, tested artifact and limits. Document at `TL-0706`:
 

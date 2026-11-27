@@ -8128,6 +8128,36 @@ tasks:
     limitation: Private lifecycle and synthetic file preservation only. Windows first-use choices limited installed window observation. Interrupted recovery, populated SQLite preservation, signed identity and release remain open.
   notes:
   - Record precise tested environment and data-preservation boundaries. TL-0710 carries actual release disposition.
+  - summary: The exact private 0.3.3 to 0.3.4 normal lifecycle preserved the same populated archived workshop job.
+    task: TL-0704
+    command: Restricted guest standard-user lifecycle fixture and production SQLite store readback after repair, upgrade, and removal
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 31.979 s
+    environment: Existing ThirdLife-W11, Windows 11 Pro build 26300.9974 native x64, isolated standard-user fixture
+    reference: artifacts/evidence/TL-0704/populated-job-lifecycle.md, 71ec3b3bda6229d62b38263cb8422606d954e975
+    limitation: Identical protected schema-21 data and 19 verified files. Installed window and cross-schema recovery outside the run.
+  - summary: The corrected private 0.3.6 upgrade canceled after observed file replacement, retained its prior install, and also completed upgrade and removal with the same populated job.
+    task: TL-0704
+    command: Restricted guest lifecycle fixture with native Windows Installer cancellation after exact target-file readback, followed by normal upgrade and repair
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 34.195 s corrected native case, 2.892 s prior registration recovery, 10 focused checks in 0.915 s
+    environment: Existing ThirdLife-W11, Windows 11 Pro build 26300.9974 native x64, isolated standard-user fixture
+    reference: artifacts/evidence/TL-0704/populated-job-lifecycle.md, fa2fa35812a8960a35c3131bc902f2d7eee49b39
+    limitation: Exact unsigned private pair, one canceled upgrade phase and schema-21 data. Installed window and other interruption phases remain open.
+  - summary: Clean Full verification of the exact private installer recovery source.
+    task: TL-0704
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 600.796 s, 320 repository checks and 2688 .NET tests
+    environment: Active Windows 11 Pro 26H2 native x64 host, clean detached checkout
+    reference: artifacts/evidence/TL-0704/populated-job-lifecycle.md, fa2fa35812a8960a35c3131bc902f2d7eee49b39
+    limitation: Verification of the private authoring and application source. Native scope is recorded separately for the exact guest package pair.
   expected_test_tier: full
   full_test_triggers:
   - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
@@ -8487,7 +8517,17 @@ tasks:
   - Audit candidate project references, dependencies, installer contents, data access, task graph, release artifacts,
     and documentation against the boundary.
   - Run the bundle validator and a repository-wide search for prohibited coupling patterns.
-  evidence: []
+  evidence:
+  - summary: Scoped standalone boundary and exact MSI content review of the private 0.3.6 development package.
+    task: TL-0709
+    command: ProjectReference and desktop dependency-manifest audit, native MSI readback and independent cabinet-to-ZIP comparison
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 26 tracked projects, 51 project references within the repository, 19 matching package files
+    environment: Active Windows 11 Pro native x64 host and reused exact ThirdLife-W11 lifecycle evidence
+    reference: artifacts/evidence/TL-0709/private-candidate-boundary.md, fa2fa35812a8960a35c3131bc902f2d7eee49b39
+    limitation: Private standalone audit only. The final frozen candidate and Team B transition recommendation remain open.
   notes:
   - TL-0710 records actual portfolio acceptance and transition consent.
   expected_test_tier: targeted

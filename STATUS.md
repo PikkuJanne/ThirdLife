@@ -117,10 +117,11 @@ prerequisites. Exact setting changes and live backup and restore remain pending.
 
 The private ZIP launched unelevated and saved the exact reviewed synthetic
 configuration through the native folder picker. The corrected private
-MSIs passed install, repair, upgrade, downgrade refusal and uninstall
-under a standard-user guest fixture. The installed window observation
-awaits a desktop with its Windows first-use privacy choices resolved.
-[Private candidate](artifacts/evidence/TL-0706/private-interface.md) · [Guest MSI evidence](artifacts/evidence/TL-0704/interactive-lifecycle.md)
+MSIs passed the per-user lifecycle on the existing guest. Private
+0.3.6 passed upgrade cancellation and recovered uninstall while
+preserving the populated archived job. The installed window awaits
+a desktop with its Windows first-use privacy choices resolved.
+[Private candidate](artifacts/evidence/TL-0706/private-interface.md) · [Guest MSI evidence](artifacts/evidence/TL-0704/populated-job-lifecycle.md)
 
 The current Handover resumes the same protected harmless sample after
 a fresh recipient review and saves the current operator's copy result.
