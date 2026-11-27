@@ -1,4 +1,7 @@
+using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Inventory;
@@ -30,6 +33,10 @@ public sealed class M1FixtureWindowTests
             window.Width = 920;
             window.Height = 550;
             AutomationProperties.SetAutomationId(window, scenarioId!);
+            if (Environment.GetEnvironmentVariable("THIRDLIFE_M1_WHEEL_TRACE") == "1")
+            {
+                ObserveWheelDelivery(window);
+            }
             var expired = false;
             var timer = new DispatcherTimer(DispatcherPriority.Send, window.Dispatcher) { Interval = WindowLimit };
             timer.Tick += (_, _) =>
@@ -69,5 +76,45 @@ public sealed class M1FixtureWindowTests
 
         await M1AuditJourneyTests.AssertDurableFixtureResultAsync(fixture,
             Assert.IsType<M1AuditJourneyTests.JourneyResult>(result));
+    }
+
+    private static void ObserveWheelDelivery(Window window)
+    {
+        const int mouseWheelMessage = 0x020A;
+        var nativeMessages = 0;
+        var routedEvents = 0;
+        var hasRoutedMove = false;
+        PublishDelivery();
+        window.SourceInitialized += (_, _) =>
+        {
+            var source = Assert.IsType<HwndSource>(PresentationSource.FromVisual(window));
+            source.AddHook((nint handle, int message, nint wParam, nint lParam, ref bool handled) =>
+            {
+                if (message == mouseWheelMessage)
+                {
+                    nativeMessages++;
+                    PublishDelivery();
+                }
+
+                return 0;
+            });
+        };
+        window.AddHandler(Mouse.PreviewMouseWheelEvent, new MouseWheelEventHandler((_, _) =>
+        {
+            routedEvents++;
+            PublishDelivery();
+        }), handledEventsToo: true);
+
+        window.AddHandler(Mouse.PreviewMouseMoveEvent, new MouseEventHandler((_, _) =>
+        {
+            if (!hasRoutedMove)
+            {
+                hasRoutedMove = true;
+                PublishDelivery();
+            }
+        }), handledEventsToo: true);
+
+        void PublishDelivery() =>
+            AutomationProperties.SetItemStatus(window, $"native={nativeMessages} routed={routedEvents} pointer_ready={hasRoutedMove}");
     }
 }

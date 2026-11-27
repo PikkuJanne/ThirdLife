@@ -107,6 +107,19 @@ public sealed class AuditAccessibilityProbe : IDisposable
             throw new InvalidOperationException("Wheel input requires a point over the foreground fixture.");
     }
 
+    public void ActivateWheelPointer()
+    {
+        if (!GetPhysicalCursorPos(out CursorPoint cursor))
+            throw new InvalidOperationException("The current physical cursor position could not be read.");
+        RequireOwnedPoint(cursor);
+        RequireOwnedPoint(new CursorPoint { X = cursor.X + 1, Y = cursor.Y });
+        var input = new Input();
+        input.Mouse.X = 1;
+        input.Mouse.Flags = 0x2001;  // MOUSEEVENTF_MOVE | MOUSEEVENTF_MOVE_NOCOALESCE
+        if (SendInput(1, new[] { input }, Marshal.SizeOf(typeof(Input))) != 1)
+            throw new InvalidOperationException("Could not move the pointer in the fixture.");
+    }
+
     public void Wheel(int delta)
     {
         if (!GetPhysicalCursorPos(out CursorPoint cursor))
@@ -203,12 +216,16 @@ function Measure-FractionalWheel {
         }
     } 'vertical overflow in the populated Intake fixture'
     $scroll = $viewport.GetCurrentPattern([Windows.Automation.ScrollPattern]::Pattern)
-    $bounds = $viewport.Current.BoundingRectangle
-    $cursor = $probe.MoveWheelPointer(
-        [int]($bounds.X + $bounds.Width / 2), [int]($bounds.Y + $bounds.Height / 3))
+    $scroll.SetScrollPercent(-1, 0)
+    $null = Wait-For { $scroll.Current.VerticalScrollPercent -eq 0 } 'wheel baseline'
+    # Anchor the physical cursor to a known child of the shell scroll surface.
+    $target = Find-FixtureElement 'JobsButton'
+    $point = $target.GetClickablePoint()
+    $cursor = $probe.MoveWheelPointer([int]$point.X, [int]$point.Y)
     try {
-        $scroll.SetScrollPercent(-1, 0)
-        $null = Wait-For { $scroll.Current.VerticalScrollPercent -eq 0 } 'wheel baseline'
+        # WPF routes a wheel event using its active mouse source, which needs a pointer move.
+        $probe.ActivateWheelPointer()
+        $null = Wait-For { $window.Current.ItemStatus -match 'pointer_ready=True$' } 'a pointer move routed by the fixture'
         $probe.Wheel(-120)
         $detent = Wait-For { $scroll.Current.VerticalScrollPercent } 'one wheel detent'
         $scroll.SetScrollPercent(-1, 0)
@@ -222,7 +239,7 @@ function Measure-FractionalWheel {
         if ($partial[0] -ge $detent -or [Math]::Abs($partial[-1] - $detent) -gt 0.2) {
             throw 'Six fractional wheel pulses did not match one wheel detent.'
         }
-        $result.wheel = @{ detent_percent = $detent; fractional_percent = $partial }
+        $result.wheel = @{ detent_percent = $detent; fractional_percent = $partial; delivery = $window.Current.ItemStatus }
     }
     finally { $probe.RestoreWheelPointer($cursor) }
 }
@@ -237,6 +254,9 @@ $startInfo.RedirectStandardOutput = $true
 $startInfo.RedirectStandardError = $true
 $startInfo.EnvironmentVariables['THIRDLIFE_M1_JOURNEY_ID'] = $scenarioId
 $startInfo.EnvironmentVariables['DOTNET_CLI_TELEMETRY_OPTOUT'] = '1'
+if ($VerifyAccessibility -and -not $KeyboardOnly) {
+    $startInfo.EnvironmentVariables['THIRDLIFE_M1_WHEEL_TRACE'] = '1'
+}
 $timer = [Diagnostics.Stopwatch]::StartNew()
 $testRun = [Diagnostics.Process]::Start($startInfo)
 $stdout = $testRun.StandardOutput.ReadToEndAsync()
@@ -343,6 +363,9 @@ try {
 catch {
     $result.error = $_.Exception.Message
     $result.driver_line = $_.InvocationInfo.ScriptLineNumber
+    if ($window -and $VerifyAccessibility -and -not $KeyboardOnly) {
+        $result.wheel_delivery = $window.Current.ItemStatus
+    }
 }
 finally {
     if ($probe) {
