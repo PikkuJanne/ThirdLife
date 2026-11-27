@@ -5,7 +5,8 @@
              xmlns:plan="clr-namespace:ThirdLife.UI.Features.PlanReview"
              xmlns:execution="clr-namespace:ThirdLife.UI.Features.Execution"
              xmlns:evidence="clr-namespace:ThirdLife.Core.Evidence;assembly=ThirdLife.Core"
-             xmlns:finalization="clr-namespace:ThirdLife.Core.Finalization;assembly=ThirdLife.Core"
+             xmlns:handover="clr-namespace:ThirdLife.Core.Handover;assembly=ThirdLife.Core"
+  xmlns:finalization="clr-namespace:ThirdLife.Core.Finalization;assembly=ThirdLife.Core"
              xmlns:manual="clr-namespace:ThirdLife.Core.ManualTests;assembly=ThirdLife.Core"
              xmlns:sanitization="clr-namespace:ThirdLife.Core.Sanitization;assembly=ThirdLife.Core">  <StackPanel>
     <Border x:Name="JobHeader" Visibility="Collapsed" Padding="24,12"
@@ -282,6 +283,45 @@
             <TextBlock Text="Complete the required workshop checks and review whole-device cold-boot verification before handover. Recipient-guide generation is pending." Margin="0,4,0,0" />
           </StackPanel>
         </Border>
+        <GroupBox Header="Handover mode" AutomationProperties.Name="Handover mode" Margin="0,0,0,12">
+          <StackPanel>
+            <TextBlock x:Name="HandoverModeMessage" Text="{Binding HandoverModeStatus}" Focusable="True"
+                       KeyboardNavigation.IsTabStop="False" AutomationProperties.Name="{Binding HandoverModeStatus}"
+                       AutomationProperties.LiveSetting="Polite" />
+            <StackPanel x:Name="HandoverModeInput" IsEnabled="{Binding CanRecordHandoverMode}">
+              <Label Target="{Binding ElementName=HandoverModeChoice}" Content="Choose assisted or sealed handover" />
+              <ComboBox x:Name="HandoverModeChoice" SelectedValuePath="Tag"
+                        AutomationProperties.Name="Choose assisted or sealed handover">
+                <ComboBoxItem Content="Assisted" Tag="{x:Static handover:HandoverMode.Assisted}" />
+                <ComboBoxItem Content="Sealed" Tag="{x:Static handover:HandoverMode.Sealed}" />
+              </ComboBox>
+              <Label Target="{Binding ElementName=HandoverModeOperator}" Content="Handover operator code" />
+              <TextBlock Text="Use your workshop code. Keep names, account details and secrets out of this record." />
+              <TextBox x:Name="HandoverModeOperator" MaxLength="64" AutomationProperties.Name="Handover operator code" />
+              <TextBlock Text="Changing the mode resets current guidance choices and requires a fresh workshop checklist." />
+              <Button x:Name="SaveHandoverModeButton" Content="Save handover mode" Click="SaveHandoverMode"
+                      Margin="0,6,0,0" HorizontalAlignment="Left" />
+              <StackPanel x:Name="RecipientChoiceFields" Visibility="Collapsed" Margin="0,10,0,0">
+                <Label Target="{Binding ElementName=RecipientSetupAreaChoice}" Content="Setup area" />
+                <ComboBox x:Name="RecipientSetupAreaChoice" SelectedValuePath="Area" DisplayMemberPath="Label"
+                          SelectionChanged="RecipientSetupAreaChanged" AutomationProperties.Name="Setup area" />
+                <TextBlock x:Name="RecipientSetupGuidance" TextWrapping="Wrap" />
+                <Label Target="{Binding ElementName=RecipientSetupResult}" Content="Recipient guidance choice" />
+                <ComboBox x:Name="RecipientSetupResult" SelectedValuePath="Tag" AutomationProperties.Name="Recipient guidance choice">
+                  <ComboBoxItem Content="Leave pending" Tag="{x:Static handover:RecipientSetupChoice.Deferred}" />
+                  <ComboBoxItem Content="Guidance requested" Tag="{x:Static handover:RecipientSetupChoice.GuidanceRequested}" />
+                  <ComboBoxItem Content="Recipient declined" Tag="{x:Static handover:RecipientSetupChoice.Declined}" />
+                </ComboBox>
+                <CheckBox x:Name="RecipientPresentCheck" Content="The recipient is present and chose this result"
+                          Margin="0,6,0,0" />
+                <Button x:Name="SaveRecipientChoiceButton" Content="Save guidance choice" Click="SaveRecipientChoice"
+                        Margin="0,6,0,0" HorizontalAlignment="Left" />
+              </StackPanel>
+            </StackPanel>
+            <TextBlock x:Name="HandoverModeError" Style="{DynamicResource Trace.ErrorText}" AutomationProperties.LiveSetting="Polite" />
+            <TextBlock x:Name="RecipientChoicesSummary" Margin="0,8,0,0" TextWrapping="Wrap" />
+          </StackPanel>
+        </GroupBox>
         <GroupBox Header="Workshop finalization" AutomationProperties.Name="Workshop finalization checklist">
           <StackPanel>
             <TextBlock x:Name="FinalizationMessage" Text="{Binding FinalizationStatus}"

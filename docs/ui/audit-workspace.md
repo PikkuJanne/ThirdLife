@@ -133,6 +133,19 @@ checks and finalization are still required for handover.
 
 [Windows shutdown command](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/shutdown)
 
+## Handover mode
+
+Open **Handover** and save the **Assisted** or **Sealed** mode using your
+workshop code. In assisted handover, record whether the present recipient
+requests guidance, defers it, or declines it in each setup area. Record
+the choice without entering a name, account, password, destination or key.
+Saving a guidance choice keeps the recipient in control of actual setup.
+
+Sealed handover leaves all recipient settings pending while you complete
+the machine-level checks. Changing the saved mode starts a fresh set of
+guidance choices and requires you to review the workshop checklist again.
+The earlier records remain in the job history.
+
 ## Workshop finalization
 
 In **Handover**, choose a workshop check and follow its guidance. Save the
@@ -155,14 +168,17 @@ handover decision remain separate.
 
 Open **Handover** for the current job, then choose **Generate workshop report**.
 Generation rereads the durable job and writes a deterministic UTF-8 text report.
-The report distinguishes collected findings, unknowns, unrun providers, manual
-results and the latest assessment outcome. Earlier findings retain their own
-timestamps and provenance. Report generation leaves readiness unknown.
+The report includes the renderer build, saved policy and preparation digests,
+and each plan approval. Findings, manual results, repairs, retests, package
+transactions, independent verification and finalization retain their sources
+and timestamps. An earlier confirmation remains in the record when it needs
+a recheck. Review handover eligibility and sign-off separately.
 
 Use **Open workshop report** to read the verified generated copy in the keyboard-
 accessible preview. The preview opens the issued artifact for the current job.
-Selecting a different job clears the open action and preview. Earlier saved reports
-remain in the workshop folder and generating again creates a new artifact.
+Selecting a different job or saving a new finalization result clears the open
+action and preview. Earlier copies remain in the protected workshop report
+folder. Generate a fresh copy when newer evidence is available.
 
 The destination is the protected per-user directory
 `%LOCALAPPDATA%\ThirdLife\SetupCore\WorkshopReports`. The report uses opaque

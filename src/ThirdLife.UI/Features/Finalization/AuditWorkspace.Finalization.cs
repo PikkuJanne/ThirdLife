@@ -50,6 +50,7 @@ internal sealed partial class AuditWorkspace
         }
 
         _finalizationFeedback = string.Empty;
+        _handoverModeFeedback = string.Empty;
         return _finalizationRead = ReviewFinalizationAsync();
     }
 
@@ -71,6 +72,7 @@ internal sealed partial class AuditWorkspace
             {
                 await Task.Run(() => store.SaveFinalizationConfirmationAsync(job.Job.JobId, expected, rule, outcome,
                     reason, actor));
+                ClearReport();
                 _finalizationFeedback = SavedFinalizationMessage;
             }
             catch (JobStoreConflictException)
@@ -100,6 +102,7 @@ internal sealed partial class AuditWorkspace
             readFailed = true;
         }
 
+        var handover = await ReadRecipientHandoverAsync(job);
         if (ReferenceEquals(Job, job) && version == _finalizationReadVersion)
         {
             if (readFailed || job.IsArchived || checklist?.EvidenceVersion != Finalization?.EvidenceVersion &&
@@ -108,6 +111,7 @@ internal sealed partial class AuditWorkspace
                 _finalizationFeedback = string.Empty;
             }
 
+            RecipientHandover = handover;
             Finalization = checklist;
             _finalizationReadFailed = readFailed;
         }
@@ -130,6 +134,7 @@ internal sealed partial class AuditWorkspace
 
     private void ClearFinalization()
     {
+        ClearHandoverMode();
         Finalization = null;
         _finalizationFeedback = string.Empty;
         _finalizationReadFailed = false;

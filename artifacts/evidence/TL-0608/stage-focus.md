@@ -11,3 +11,8 @@ The production stage transition now completes layout before returning to the cal
 | `eng/verify.ps1 -Tier Targeted -Restore -TestProject tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj` with the same explicit filter | Passed in 377.974 s. Quick passed 1,367 tests and both selected active-host journeys passed in 7 s. The Quick WPF selection took 209 s while the separate clean Full candidate ran on the same host. |
 
 The cases were `ThirdLife.UI.Tests.M1AuditJourneyTests.OperatorRouteReopensSavedFixtureAndPreviewsItsWorkshopReport` and `ThirdLife.UI.Tests.PolicyWorkflowTests.SupportedDesktopAssessesEvaluatesReopensAndExportsAnIsolatedJob`. The active Windows 11 Pro x64 build 26300 host ran .NET SDK 10.0.400 on 2026-11-27. The journeys exercised actual WPF keyboard focus and UI Automation with controlled job evidence. The complete M6 accessibility audit and perceptual observations remain separate from this repair.
+
+On main `94ae1a489d5dad306741113117edea60947784bd`, the repository validators
+and both unchanged active-host journeys passed. Test time for the two
+cases was 11 s. This combines the workshop record and assisted/sealed
+Handover mode with the stage-transition repair.
