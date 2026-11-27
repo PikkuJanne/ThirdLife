@@ -7170,6 +7170,16 @@ tasks:
     environment: Active Windows 11 Pro 26H2 build 26300.9974 native x64, .NET SDK 10.0.400, Python 3.14.7, isolated SQLite and WPF
     reference: artifacts/evidence/TL-0604/report.md, b7fefee6c9b596dda8ea348908982a2a184694cf
     limitation: Controlled inputs and modeled boot change. Physical printing and perceptual assistive-technology use were unobserved. An existing ActiveMachine focus assertion reproduced on the unchanged baseline.
+  - summary: The current workshop record reads the saved backup sample scope and bounded result.
+    task: TL-0604
+    command: eng/verify.ps1 -Tier Targeted -Restore with Reports and WPF selections in the evidence
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 225.708 s, 1446 Quick and 39 selected .NET tests
+    environment: Active Windows 11 x64 host, scoped native drive discovery and isolated WPF and report stores
+    reference: artifacts/evidence/TL-0604/backup-sample-record.md, 6e087d261c10ff3bc49e7fbeef54acdf9f955005
+    limitation: Protected report continuity and typed copy state only. Actual Windows restoration and external transfer remain separate.
   expected_test_tier: targeted
   full_test_triggers: []
   extended_test_triggers: []
