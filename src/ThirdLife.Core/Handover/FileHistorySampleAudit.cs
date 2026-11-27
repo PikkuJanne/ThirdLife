@@ -60,7 +60,7 @@ public interface IFileHistorySampleAuditStore
         OperatorId actor, CancellationToken token = default);
 
     Task<FileHistorySampleAudit> RecordFileHistorySampleAsync(JobId jobId, FileHistorySampleAudit expected,
-        FileHistorySampleAuditState outcome, CancellationToken token = default);
+        FileHistorySampleAuditState outcome, OperatorId actor, CancellationToken token = default);
 
     Task<IReadOnlyList<FileHistorySampleAudit>> LoadFileHistorySampleHistoryAsync(JobId jobId, CancellationToken token = default);
 }

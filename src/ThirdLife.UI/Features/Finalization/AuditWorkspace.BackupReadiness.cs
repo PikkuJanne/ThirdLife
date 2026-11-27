@@ -28,10 +28,15 @@ internal sealed partial class AuditWorkspace
     public Guid? BackupReadinessReviewId => _backupReview?.ReviewId;
     public bool CanPrepareBackupSample => CanCheckBackupReadiness && _backupReview is not null &&
         _store is IFileHistorySampleAuditStore;
+    public bool CanReopenBackupSample => CanPrepareBackupSample && _latestBackupSampleAudit is { } audit &&
+        audit.HandoverSequence == _backupReview?.HandoverSequence && audit.CanRecord(FileHistorySampleAuditState.CopyMatches);
     public bool ShowsBackupSampleCheck => ShowsBackupReadiness && _preparedBackupSample is not null;
     public bool CanCheckBackupSample => CanCheckBackupReadiness && ShowsBackupSampleCheck;
     public string BackupSampleRecoveryInstructions => _preparedBackupSample is { } prepared
-        ? $"Use Windows File History to restore {prepared.Sample.FileName} from {DisplayedBackupSampleRoot}\\original to {DisplayedBackupSampleRoot}\\recovered."
+        ? $"With the recipient's backup account, use File Explorer to include only {DisplayedBackupSampleRoot}\\original in a library. " +
+            $"After File History has backed it up to the confirmed drive, open Previous Versions for the original folder, " +
+            $"find {prepared.Sample.FileName} in File History and choose Restore to for {DisplayedBackupSampleRoot}\\recovered. " +
+            "Keep the original file in place."
         : string.Empty;
     public string BackupSampleJournalStatus
     {
@@ -73,8 +78,7 @@ internal sealed partial class AuditWorkspace
             }
 
             var inventory = _backupInventory ??= new WindowsFileHistoryInventory();
-            var routeAvailable = await Task.Run(WindowsFileHistoryInventory.RouteAvailable);
-            var observation = routeAvailable ? await Task.Run(() => inventory.InspectDestination(volumeRoot)) : null;
+            var (routeAvailable, observation) = await InspectBackupDestinationAsync(inventory, volumeRoot);
             var preview = FileHistoryReview.Inspect(handover, routeAvailable, observation, requiredBytes, recipientControlsRecovery);
             _backupReview = preview.Review;
             _reviewedBackupDrive = preview.Review is null ? null : volumeRoot;
@@ -103,8 +107,7 @@ internal sealed partial class AuditWorkspace
         return RunAsync(async () =>
         {
             var handover = await ReadRecipientHandoverAsync(job);
-            var available = await Task.Run(WindowsFileHistoryInventory.RouteAvailable);
-            var destination = available ? await Task.Run(() => inventory.InspectDestination(volumeRoot)) : null;
+            var (available, destination) = await InspectBackupDestinationAsync(inventory, volumeRoot);
             var approval = review.Approve(reviewedId, recipientConfirmed);
             if (handover is null || !approval.IsCurrent(handover, available, destination))
             {
@@ -129,10 +132,10 @@ internal sealed partial class AuditWorkspace
                     : await Task.Run(() => probe.Prepare(sample));
                 var auditState = outcome == FileHistorySamplePreparation.Prepared
                     ? FileHistorySampleAuditState.Prepared : FileHistorySampleAuditState.PreparationUnavailable;
-                var saved = await Task.Run(() => store.RecordFileHistorySampleAsync(job.Job.JobId, staged, auditState));
+                var saved = await Task.Run(() => store.RecordFileHistorySampleAsync(job.Job.JobId, staged, auditState, actor));
                 _latestBackupSampleAudit = saved;
                 _preparedBackupSample = outcome == FileHistorySamplePreparation.Prepared && probe is not null
-                    ? new PreparedFileHistorySample(approval, sample, probe, volumeRoot, saved) : null;
+                    ? new PreparedFileHistorySample(approval, sample, probe, volumeRoot, saved, actor) : null;
                 BackupReadinessStatus = outcome switch
                 {
                     FileHistorySamplePreparation.Prepared => "Harmless restore sample prepared. Backup remains pending.",
@@ -147,6 +150,46 @@ internal sealed partial class AuditWorkspace
         }, refreshFinalization: false);
     }
 
+    public Task ReopenBackupSampleAsync(Guid reviewedId, bool recipientConfirmed, string operatorCode)
+    {
+        if (!CanReopenBackupSample || !recipientConfirmed || Job is not { } job ||
+            _backupReview is not { } review || review.ReviewId != reviewedId ||
+            _reviewedBackupDrive is not { } volumeRoot || _backupInventory is not { } inventory ||
+            _latestBackupSampleAudit is not { } recorded)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RunAsync(async () =>
+        {
+            var handover = await ReadRecipientHandoverAsync(job);
+            var (available, destination) = await InspectBackupDestinationAsync(inventory, volumeRoot);
+            var (latest, unavailable) = await ReadBackupSampleAuditAsync(job.Job.JobId);
+            _latestBackupSampleAudit = latest;
+            _backupSampleAuditUnavailable = unavailable;
+            var approval = review.Approve(reviewedId, recipientConfirmed);
+            if (handover is null || latest != recorded ||
+                approval.ReopenRestoreSample(handover, available, destination, recorded) is not { } sample)
+            {
+                ClearBackupReadiness();
+                BackupReadinessStatus = "The saved sample or review changed. Check the current prerequisites again.";
+                return;
+            }
+            var probe = _backupSampleProbe ?? RegisteredBackupSampleProbe();
+            if (probe is null || !await Task.Run(() => probe.VerifyOriginal(sample)))
+            {
+                BackupReadinessStatus = "The saved original sample is unavailable or changed. Backup remains pending.";
+                return;
+            }
+
+            var actor = new OperatorId(operatorCode.Trim());
+            _backupReview = null;
+            _reviewedBackupDrive = null;
+            _preparedBackupSample = new PreparedFileHistorySample(approval, sample, probe, volumeRoot, recorded, actor);
+            BackupReadinessStatus = "Reopened the saved harmless sample. Backup remains pending.";
+        }, refreshFinalization: false);
+    }
+
     public Task CheckBackupSampleAsync()
     {
         if (!CanCheckBackupSample || Job is not { } job || _preparedBackupSample is not { } prepared ||
@@ -158,8 +201,7 @@ internal sealed partial class AuditWorkspace
         return RunAsync(async () =>
         {
             var handover = await ReadRecipientHandoverAsync(job);
-            var available = await Task.Run(WindowsFileHistoryInventory.RouteAvailable);
-            var destination = available ? await Task.Run(() => inventory.InspectDestination(prepared.VolumeRoot)) : null;
+            var (available, destination) = await InspectBackupDestinationAsync(inventory, prepared.VolumeRoot);
             if (handover is null || !prepared.Approval.IsCurrent(handover, available, destination))
             {
                 ClearBackupReadiness();
@@ -175,7 +217,7 @@ internal sealed partial class AuditWorkspace
                 : FileHistorySampleAuditState.CopyMismatch;
             try
             {
-                var saved = await Task.Run(() => store.RecordFileHistorySampleAsync(job.Job.JobId, prepared.Audit, outcome));
+                var saved = await Task.Run(() => store.RecordFileHistorySampleAsync(job.Job.JobId, prepared.Audit, outcome, prepared.OperatorId));
                 _latestBackupSampleAudit = saved;
                 if (saved != prepared.Audit) { ClearReport(); }
                 _preparedBackupSample = prepared with { Audit = saved };
@@ -193,6 +235,13 @@ internal sealed partial class AuditWorkspace
             }
         }, refreshFinalization: false);
     }
+
+    private static Task<(bool Available, FileHistoryDestinationObservation? Destination)> InspectBackupDestinationAsync(
+        WindowsFileHistoryInventory inventory, string volumeRoot) => Task.Run(() =>
+    {
+        var available = WindowsFileHistoryInventory.RouteAvailable();
+        return (available, available ? inventory.InspectDestination(volumeRoot) : null);
+    });
 
     private async Task<(FileHistorySampleAudit? Audit, bool Unavailable)> ReadBackupSampleAuditAsync(JobId jobId,
         CancellationToken token = default)
@@ -234,5 +283,5 @@ internal sealed partial class AuditWorkspace
     }
 
     private sealed record PreparedFileHistorySample(FileHistoryApproval Approval, FileHistoryRestoreSample Sample,
-        FileHistoryRestoreProbe Probe, string VolumeRoot, FileHistorySampleAudit Audit);
+        FileHistoryRestoreProbe Probe, string VolumeRoot, FileHistorySampleAudit Audit, OperatorId OperatorId);
 }

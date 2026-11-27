@@ -108,6 +108,20 @@ public sealed class FileHistoryApproval
         return new FileHistoryRestoreSample(Review.ReviewId);
     }
 
+    public FileHistoryRestoreSample? ReopenRestoreSample(SavedRecipientHandover handover, bool routeAvailable,
+        FileHistoryDestinationObservation? destination, FileHistorySampleAudit recorded)
+    {
+        ArgumentNullException.ThrowIfNull(recorded);
+        if (!IsCurrent(handover, routeAvailable, destination) || recorded.HandoverSequence != Review.HandoverSequence ||
+            !recorded.CanRecord(FileHistorySampleAuditState.CopyMatches))
+        {
+            return null;
+        }
+
+        var sample = new FileHistoryRestoreSample(Review.ReviewId, recorded.SampleId);
+        return sample.Matches(new FileHistorySampleDigest(recorded.ByteLength, recorded.Sha256)) ? sample : null;
+    }
+
     public FileHistoryRestoreOutcome EvaluateRestore(SavedRecipientHandover handover, bool routeAvailable,
         FileHistoryDestinationObservation? destination, FileHistoryRestoreSample sample,
         FileHistorySampleObservation? observation, bool windowsRestoreAttributed)

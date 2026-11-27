@@ -370,6 +370,8 @@
               <TextBox x:Name="BackupSampleOperator" MaxLength="64" AutomationProperties.Name="Restore sample operator code" />
               <Button x:Name="PrepareBackupSampleButton" Content="Prepare harmless restore sample" Click="PrepareBackupSample"
                       HorizontalAlignment="Left" Margin="0,8,0,0" />
+              <Button x:Name="ReopenBackupSampleButton" Content="Use saved harmless sample" Click="ReopenBackupSample"
+                      Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
             </StackPanel>
             <TextBlock x:Name="BackupSampleJournalMessage" Text="{Binding BackupSampleJournalStatus}" Visibility="Collapsed" Margin="0,8,0,0" />
             <StackPanel x:Name="BackupPreparedRegion" Visibility="Collapsed" Margin="0,8,0,0">

@@ -7899,6 +7899,16 @@ tasks:
     environment: Clean active Windows 11 x64 checkout, separately selected local disk and isolated job fixture
     reference: artifacts/evidence/TL-0702/sample-journal.md, 93557a2d4b11ad8557e33e65621db0df2c227f48
     limitation: Saved scope and copy evidence survive reopening. Windows File History execution, restore attribution and actual recipient choice remain unobserved.
+  - summary: Reopen the exact protected sample under a fresh assisted review and attribute new copy outcomes to the current operator.
+    task: TL-0702
+    command: Full and Targeted with locked restore, plus named WPF keyboard and Handover cases
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 557.861 s Full with 319 governance and 2687 .NET tests, plus 249.915 s Targeted and 7 named WPF cases
+    environment: Clean active Windows 11 native x64 checkout and explicitly selected local drive
+    reference: artifacts/evidence/TL-0702/reopen-sample.md, c3284b46dfc94c2b30b2f129a08476b5d7e1d0b0
+    limitation: Reviewed resume and matching separate fixture copy only. Native setup, backup and attributable Windows restoration remain pending.
   notes:
   - The actual recipient controls destination, credentials and recovery material. TL-0710 carries the final security/privacy
     disposition.

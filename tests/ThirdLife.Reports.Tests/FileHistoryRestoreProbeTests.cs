@@ -15,11 +15,13 @@ public sealed class FileHistoryRestoreProbeTests
     {
         if (!OperatingSystem.IsWindows()) { return; }
         using var fixture = new RestoreFixture();
+        Assert.False(fixture.Probe.VerifyOriginal(fixture.Sample));
         Assert.Null(fixture.Probe.Observe(fixture.Sample));
         Assert.False(Directory.Exists(fixture.Original));
         Assert.False(Directory.Exists(fixture.Recovered));
 
         fixture.Prepare();
+        Assert.True(fixture.Probe.VerifyOriginal(fixture.Sample));
         File.WriteAllText(Path.Combine(fixture.Recovered, "unrelated.txt"), "Unrelated fixture");
         Assert.Null(fixture.Probe.Observe(fixture.Sample));
         fixture.Save(fixture.Recovered, fixture.Sample.CopyContent());

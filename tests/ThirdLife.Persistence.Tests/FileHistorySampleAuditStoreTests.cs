@@ -42,14 +42,21 @@ public sealed class FileHistorySampleAuditStoreTests
 
         await using var reopened = await Open(schema);
         Assert.Equal(pending, Assert.Single(await reopened.LoadFileHistorySampleHistoryAsync(job.JobId)));
-        var prepared = await reopened.RecordFileHistorySampleAsync(job.JobId, pending, FileHistorySampleAuditState.Prepared);
-        var matched = await reopened.RecordFileHistorySampleAsync(job.JobId, prepared, FileHistorySampleAuditState.CopyMatches);
-        Assert.Equal(matched, await reopened.RecordFileHistorySampleAsync(job.JobId, matched, FileHistorySampleAuditState.CopyMatches));
+        var resumedActor = new OperatorId("operator-resumed-sample");
+        await Assert.ThrowsAsync<ArgumentException>(() => reopened.RecordFileHistorySampleAsync(
+            job.JobId, pending, FileHistorySampleAuditState.Prepared, resumedActor));
+        var prepared = await reopened.RecordFileHistorySampleAsync(job.JobId, pending, FileHistorySampleAuditState.Prepared, actor);
+        var matched = await reopened.RecordFileHistorySampleAsync(job.JobId, prepared, FileHistorySampleAuditState.CopyMatches, actor);
+        Assert.Equal(matched, await reopened.RecordFileHistorySampleAsync(
+            job.JobId, matched, FileHistorySampleAuditState.CopyMatches, actor));
+        var confirmedBySecondOperator = await reopened.RecordFileHistorySampleAsync(
+            job.JobId, matched, FileHistorySampleAuditState.CopyMatches, resumedActor);
+        Assert.Equal(resumedActor, confirmedBySecondOperator.OperatorId);
         var assisted = Assert.IsType<SavedRecipientHandover>(await reopened.LoadRecipientHandoverAsync(job.JobId));
         await reopened.SaveHandoverModeAsync(job.JobId, assisted, HandoverMode.Sealed, actor);
         await Assert.ThrowsAsync<JobStoreConflictException>(() => reopened.RecordFileHistorySampleAsync(
-            job.JobId, matched, FileHistorySampleAuditState.CopyMismatch));
-        Assert.Equal(new[] { pending, prepared, matched }, await reopened.LoadFileHistorySampleHistoryAsync(job.JobId));
+            job.JobId, confirmedBySecondOperator, FileHistorySampleAuditState.CopyMismatch, resumedActor));
+        Assert.Equal(new[] { pending, prepared, matched, confirmedBySecondOperator }, await reopened.LoadFileHistorySampleHistoryAsync(job.JobId));
 
         FileHistoryReview RequiredReview(SavedRecipientHandover handover) =>
             Assert.IsType<FileHistoryReview>(FileHistoryReview.Inspect(handover, true, destination, 1, true).Review);
