@@ -9,6 +9,7 @@ internal sealed partial class AuditWorkspace
     private const string SavedFinalizationMessage = "Checklist result saved.";
     private Task _finalizationRead = Task.CompletedTask;
     private int _finalizationReadVersion;
+    private int _completedFinalizationReadVersion = -1;
     private bool _showFinalization;
     private bool _readingFinalization;
     private string _finalizationFeedback = string.Empty;
@@ -40,7 +41,13 @@ internal sealed partial class AuditWorkspace
         }
     }
 
-    public void ShowFinalization(bool show) => _showFinalization = show;
+    public void ShowFinalization(bool show)
+    {
+        if (_showFinalization == show) { return; }
+        _showFinalization = show;
+        _completedFinalizationReadVersion = -1;
+        Publish();
+    }
 
     public Task RefreshFinalizationAsync()
     {
@@ -96,6 +103,11 @@ internal sealed partial class AuditWorkspace
         try
         {
             checklist = await Task.Run(() => store.LoadFinalizationAsync(job.Job.JobId));
+            if (IsSeparateArtifactOrigin(checklist))
+            {
+                checklist = null;
+                readFailed = true;
+            }
         }
         catch (JobStoreException)
         {
@@ -118,6 +130,7 @@ internal sealed partial class AuditWorkspace
 
             RecipientHandover = handover;
             Finalization = checklist;
+            _completedFinalizationReadVersion = version;
             _finalizationReadFailed = readFailed;
         }
     }
@@ -141,7 +154,9 @@ internal sealed partial class AuditWorkspace
     {
         ClearHandoverMode();
         Finalization = null;
+        _completedFinalizationReadVersion = -1;
         _finalizationFeedback = string.Empty;
+        _artifactScanFeedback = string.Empty;
         _finalizationReadFailed = false;
     }
 }

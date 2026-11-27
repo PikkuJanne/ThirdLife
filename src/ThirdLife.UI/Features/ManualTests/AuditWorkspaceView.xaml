@@ -329,6 +329,29 @@
                        Focusable="True" KeyboardNavigation.IsTabStop="False" />
             <Button x:Name="RefreshFinalizationButton" Content="Refresh checklist" Click="RefreshFinalization"
                     IsEnabled="{Binding CanRefreshFinalization}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+            <Expander x:Name="WorkshopArtifactScanRegion" Header="Workshop artifact scan" Margin="0,12,0,4">
+              <StackPanel>
+                <TextBlock Text="Enter only exact workshop account or share names, one per line. Leave unknown lists empty and review those sources manually." />
+                <StackPanel IsEnabled="{Binding CanScanArtifacts}">
+                  <Label Target="{Binding ElementName=WorkshopAccountNames}" Content="Workshop local account names" />
+                  <TextBox x:Name="WorkshopAccountNames" MaxLength="2048" AcceptsReturn="True" IsUndoEnabled="False"
+                           TextWrapping="Wrap" MaxHeight="94" VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Workshop local account names" />
+                  <Label Target="{Binding ElementName=WorkshopShareNames}" Content="Workshop local share names" />
+                  <TextBox x:Name="WorkshopShareNames" MaxLength="2048" AcceptsReturn="True" IsUndoEnabled="False"
+                           TextWrapping="Wrap" MaxHeight="94" VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Workshop local share names" />
+                  <Button x:Name="ScanWorkshopArtifactsButton" Content="Scan workshop artifacts" Click="ScanWorkshopArtifacts"
+                          HorizontalAlignment="Left" Margin="0,8,0,0" />
+                </StackPanel>
+                <Button x:Name="CancelWorkshopArtifactScanButton" Content="Cancel artifact scan" Click="CancelWorkshopArtifactScan"
+                        IsEnabled="{Binding CanCancelArtifactScan}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+                <TextBlock x:Name="ArtifactScanMessage" Text="{Binding ArtifactScanStatus}" Margin="0,8,0,0"
+                           AutomationProperties.Name="{Binding ArtifactScanStatus}" AutomationProperties.LiveSetting="Polite"
+                           Focusable="True" KeyboardNavigation.IsTabStop="False" />
+                <TextBlock x:Name="ArtifactScanResult" Text="{Binding ArtifactScanFindings}" Margin="0,4,0,4"
+                           TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                <TextBlock Text="Review indications in the relevant checklist item. Preserve required workshop records and handle residue through authorized Windows or workshop procedures." />
+              </StackPanel>
+            </Expander>
             <StackPanel x:Name="FinalizationChecklistFields" Visibility="Collapsed">
               <Label Target="{Binding ElementName=FinalizationCheck}" Content="Workshop check" />
               <ComboBox x:Name="FinalizationCheck" DisplayMemberPath="Caption" SelectedValuePath="Id"

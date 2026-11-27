@@ -51,7 +51,7 @@ internal static class WindowsSecurityBaselineSource
             _ => SourceValue.InvalidData(),
         };
 
-    private static SourceValue ReadSwitch(string subkey, string name, string zero, string one)
+    internal static SourceValue ReadSwitch(string subkey, string name, string zero, string one)
     {
         // A single DWORD from the native 64-bit view. Never size a buffer from registry content.
         var localMachine = new nint(unchecked((int)0x80000002));
@@ -66,7 +66,7 @@ internal static class WindowsSecurityBaselineSource
     {
         int status = Native.NetGetJoinInformation(0, out nint name, out int join);
         // The API allocates the name. Release it without reading or converting it.
-        if (name != 0 && Native.NetApiBufferFree(name) != 0)
+        if (!ReleaseNetApiBuffer(name))
         {
             throw new SecuritySourceCleanupException();
         }
@@ -79,6 +79,8 @@ internal static class WindowsSecurityBaselineSource
             _ => SourceValue.InvalidData(),
         };
     }
+
+    internal static bool ReleaseNetApiBuffer(nint buffer) => buffer == 0 || Native.NetApiBufferFree(buffer) == 0;
 
     private static SourceValue ReadCloudJoin()
     {

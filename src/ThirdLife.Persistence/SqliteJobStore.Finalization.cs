@@ -24,7 +24,8 @@ public sealed partial class SqliteJobStore : IFinalizationStore
             var history = await ReadFinalizationHistoryAsync(transaction, jobId, ct).ConfigureAwait(false);
             var restart = state.EvidenceVersion is null ? FinalizationOutcome.Unknown :
                 await ReadFinalizationRestartAsync(transaction, jobId, ct).ConfigureAwait(false);
-            return FinalizationChecklist.Evaluate(state.EvidenceVersion, history, restart);
+            var scans = await ReadFinalizationArtifactScansAsync(transaction, jobId, ct).ConfigureAwait(false);
+            return FinalizationChecklist.Evaluate(state.EvidenceVersion, history, restart, scans);
         }, token);
     }
 
@@ -48,13 +49,15 @@ public sealed partial class SqliteJobStore : IFinalizationStore
 
             var history = await ReadFinalizationHistoryAsync(transaction, jobId, ct).ConfigureAwait(false);
             var currentSequence = history.Count == 0 ? 0 : history[^1].Sequence;
-            if (history.Count >= FinalizationChecklist.MaximumHistoryPerJob || expectedSequence != currentSequence)
+            var currentScans = await ReadFinalizationArtifactScansAsync(transaction, jobId, ct).ConfigureAwait(false);
+            if (history.Count >= FinalizationChecklist.MaximumHistoryPerJob || expectedSequence != currentSequence ||
+                currentScans.Count != expected.ArtifactScans.Count)
             {
                 throw new JobStoreConflictException();
             }
 
             var record = new FinalizationRecord(expectedSequence + 1, ruleId, outcome, reason, operatorId,
-                _timeProvider.GetUtcNow(), expectedVersion);
+                _timeProvider.GetUtcNow(), expected.EvidenceVersionForConfirmation(ruleId)!);
             var payload = SerializePayload(new StoredFinalizationConfirmation(jobId, record), FinalizationPayloadLimit);
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;

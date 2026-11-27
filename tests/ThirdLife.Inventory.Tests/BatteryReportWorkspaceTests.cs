@@ -363,7 +363,7 @@ public sealed class BatteryReportWorkspaceTests(ITestOutputHelper output)
         }
     }
 
-    private static void CreateJunction(string link, string target)
+    internal static void CreateJunction(string link, string target)
     {
         var substitute = Encoding.Unicode.GetBytes("\\??\\" + target);
         var printName = Encoding.Unicode.GetBytes(target);

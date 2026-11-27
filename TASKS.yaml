@@ -7010,7 +7010,7 @@ tasks:
   workstream: finalization
   kind: code
   priority: P0
-  status: backlog
+  status: done
   size: L
   executor: codex
   environment: windows
@@ -7039,9 +7039,30 @@ tasks:
   verification:
   - Seed known artifacts and sensitive decoys, run detection, and inspect all stored/exported evidence.
   - Run path traversal, junction/symlink, access-denied, and oversized-directory tests.
-  evidence: []
+  evidence:
+  - summary: Handover saved and reopened bounded residue findings and generated a matching restricted workshop record without retaining entered account or share names.
+    task: TL-0602
+    command: eng/verify.ps1 -Tier Targeted with the Reports and WPF selections in the evidence record
+    tier: targeted
+    result: passed
+    date: '2026-11-27'
+    duration: 271.033 s, 1394 Quick tests and 37 selected report and WPF cases
+    environment: Active Windows 11 Pro 26H2 native x64 host, controlled Handover adapters and guarded SQLite
+    reference: artifacts/evidence/TL-0602/report.md, 13453a4
+    limitation: Active-host narrow reads are separate. Positive native account and share indications, broader remote support and actual cleanup remain unobserved.
+  - summary: Clean Full passed the exact integrated detector and confirmation migrations, corrected report wheel fixture, and deterministic test suite.
+    task: TL-0602
+    command: eng/verify.ps1 -Tier Full -Restore
+    tier: full
+    result: passed
+    date: '2026-11-27'
+    duration: 502.462 s, 310 governance tests and 2611 deterministic .NET cases
+    environment: Clean detached worktree on the active Windows 11 Pro 26H2 native x64 host
+    reference: artifacts/evidence/TL-0602/report.md, 0c53597f68a188eb14747c14a7c5600061955dbc
+    limitation: Covers schema 17 and the saved history. Native case and actual handover evidence are separate.
   expected_test_tier: targeted
-  full_test_triggers: []
+  full_test_triggers:
+  - Run Full from a clean checkout for the workshop artifact scan migration.
   extended_test_triggers: []
 - id: TL-0603
   title: Support assisted and sealed handover models

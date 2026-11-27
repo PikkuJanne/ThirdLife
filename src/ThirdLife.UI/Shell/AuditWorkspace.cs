@@ -394,6 +394,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         CancelWindowsUpdate();
         CancelProfileVerification();
         CancelReport();
+        CancelArtifactScan();
         StopPackageRetryRefresh();
         StopWaitingForPackageOnClose();
         CancelBrokerExecution();

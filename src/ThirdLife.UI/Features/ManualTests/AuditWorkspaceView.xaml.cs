@@ -92,6 +92,7 @@ public partial class AuditWorkspaceView : UserControl
         PrepareSurface.Visibility = VisibleWhen(stage == ShellStage.Prepare);
         VerifySurface.Visibility = VisibleWhen(stage == ShellStage.Verify);
         HandoverSurface.Visibility = VisibleWhen(stage == ShellStage.Handover);
+        if (stage != ShellStage.Handover) { ClearArtifactTargets(); }
         _workspace?.ShowFinalization(stage == ShellStage.Handover);
         if (enteringHandover)
         {
