@@ -423,13 +423,13 @@ public sealed partial class RebootCheckpointStoreTests
         }
     }
 
-    private static ProfileDocument CreateReviewedProfile(CatalogDocument catalog)
+    private static ProfileDocument CreateReviewedProfile(CatalogDocument catalog, PolicyDocument? policy = null)
     {
         var json = JsonNode.Parse(ReadFixture("basic"))!;
         json["status"] = "reviewed";
         json["synthetic_data"] = false;
-        json["policy"]!["id"] = Policy.PolicyId;
-        json["policy"]!["version"] = Policy.Version;
+        json["policy"]!["id"] = (policy ?? Policy).PolicyId;
+        json["policy"]!["version"] = (policy ?? Policy).Version;
         json["catalog"]!["id"] = catalog.CatalogId;
         json["catalog"]!["version"] = catalog.Version;
         var workshop = json["workshop"]!;

@@ -37,22 +37,21 @@ public sealed class WorkshopReportStoreException : IOException
     public WorkshopReportFailure Failure { get; }
 }
 
+public sealed record WorkshopReportReceipt(string FileName, int ByteLength, string Sha256);
+
 public sealed class WorkshopReportArtifact
 {
     internal WorkshopReportArtifact(object issuer, JobId jobId, string fileName, int byteLength, byte[] digest)
     {
         Issuer = issuer;
         JobId = jobId;
-        FileName = fileName;
-        ByteLength = byteLength;
-        Digest = digest;
+        Receipt = new(fileName, byteLength, Convert.ToHexStringLower(digest));
     }
 
     public JobId JobId { get; }
-    public string FileName { get; }
+    public string FileName => Receipt.FileName;
     internal object Issuer { get; }
-    internal int ByteLength { get; }
-    internal byte[] Digest { get; }
+    public WorkshopReportReceipt Receipt { get; }
 }
 
 /// <summary>Retains protected report copies and opens only verified artifacts issued by this store.</summary>
@@ -172,36 +171,66 @@ public sealed class WorkshopReportStore
             throw new WorkshopReportStoreException(WorkshopReportFailure.ReadFailed);
         }
 
+        try
+        {
+            return Utf8.GetString(ReadVerifiedBytes(artifact.Receipt, cancellationToken));
+        }
+        catch (DecoderFallbackException)
+        {
+            throw new WorkshopReportStoreException(WorkshopReportFailure.ReadFailed);
+        }
+    }
+
+    public void VerifyReceipt(WorkshopReportReceipt receipt, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(receipt);
+        var name = receipt.FileName;
+        if (name is null || name.Length != _filePrefix.Length + 32 + _fileSuffix.Length ||
+            !name.StartsWith(_filePrefix, StringComparison.Ordinal) || !name.EndsWith(_fileSuffix, StringComparison.Ordinal) ||
+            !Guid.TryParseExact(name.AsSpan(_filePrefix.Length, 32), "N", out var token) ||
+            name != $"{_filePrefix}{token:N}{_fileSuffix}" || receipt.ByteLength is <= 0 or > MaximumArtifactBytes ||
+            receipt.Sha256 is not { Length: 64 } ||
+            receipt.Sha256.Any(character => character is not (>= '0' and <= '9' or >= 'a' and <= 'f')))
+        {
+            throw new WorkshopReportStoreException(WorkshopReportFailure.ReadFailed);
+        }
+
+        ReadVerifiedBytes(receipt, cancellationToken);
+    }
+
+    private byte[] ReadVerifiedBytes(WorkshopReportReceipt receipt, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         using var security = OpenRoot(create: false);
-        var path = Path.Combine(_rootDirectory, artifact.FileName);
+        var path = Path.Combine(_rootDirectory, receipt.FileName);
         try
         {
             using var stream = security.OpenValidatedRecord(path, FileShare.Read);
-            if (stream.Length != artifact.ByteLength || stream.Length is <= 0 or > MaximumArtifactBytes)
+            if (stream.Length != receipt.ByteLength || stream.Length is <= 0 or > MaximumArtifactBytes)
             {
                 throw new WorkshopReportStoreException(WorkshopReportFailure.ArtifactChanged);
             }
 
-            var bytes = new byte[artifact.ByteLength];
+            var bytes = new byte[receipt.ByteLength];
             for (var offset = 0; offset < bytes.Length; offset += TransferBytes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 stream.ReadExactly(bytes.AsSpan(offset, Math.Min(TransferBytes, bytes.Length - offset)));
             }
 
-            if (stream.ReadByte() != -1 || !CryptographicOperations.FixedTimeEquals(SHA256.HashData(bytes), artifact.Digest))
+            if (stream.ReadByte() != -1 || !CryptographicOperations.FixedTimeEquals(SHA256.HashData(bytes), Convert.FromHexString(receipt.Sha256)))
             {
                 throw new WorkshopReportStoreException(WorkshopReportFailure.ArtifactChanged);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            return Utf8.GetString(bytes);
+            return bytes;
         }
         catch (WorkshopReportStoreException)
         {
             throw;
         }
-        catch (Exception exception) when (IsFileSystemFailure(exception) || exception is DecoderFallbackException)
+        catch (Exception exception) when (IsFileSystemFailure(exception))
         {
             throw new WorkshopReportStoreException(WorkshopReportFailure.ReadFailed);
         }

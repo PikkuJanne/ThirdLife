@@ -179,7 +179,21 @@ The report includes the renderer build, saved policy and preparation digests,
 and each plan approval. Findings, manual results, repairs, retests, package
 transactions, independent verification and finalization retain their sources
 and timestamps. An earlier confirmation remains in the record when it needs
-a recheck. Review handover eligibility and sign-off separately.
+a recheck.
+
+Choose **Review handover readiness** in Handover to see the current blockers
+and the exact saved output identifiers and SHA-256 digests. A support archive
+can be omitted with a reason and workshop operator code. A pending export
+needs reconciliation before the current review can accept a support decision.
+The published workshop and guide copies must still match their recorded bytes.
+
+The separate sign-off action requires positive evidence and explicit operator
+confirmation. The saved sign-off binds the active job, policy, independent
+post-cold-boot verification, finalization and recipient mode to those outputs
+and the support decision. Review in a reopened job displays a current sign-off
+only while the evidence still matches. An observed material change, changed
+output, archive or later boot preserves the earlier sign-off in history and
+requires a new current review before another sign-off.
 
 Use **Open workshop report** to read the verified generated copy in the keyboard-
 accessible preview. The preview opens the issued artifact for the current job.

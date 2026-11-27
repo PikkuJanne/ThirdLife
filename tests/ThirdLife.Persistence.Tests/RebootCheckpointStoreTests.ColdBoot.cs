@@ -190,9 +190,9 @@ public sealed partial class RebootCheckpointStoreTests
     }
 
     private static async Task<(MaintenanceCheckpoint Boundary, JournalPlanSnapshot Plan)> ReachColdBootBoundaryAsync(
-        SqliteJobStore store, FixedTimeProvider clock, string suffix, Action restart)
+        SqliteJobStore store, FixedTimeProvider clock, string suffix, Action restart, JournalPlanSnapshot? reviewedPlan = null)
     {
-        var plan = await SaveFullMaintenancePlanAsync(store, suffix);
+        var plan = reviewedPlan ?? await SaveFullMaintenancePlanAsync(store, suffix);
         var approval = new JournalApproval(Guid.NewGuid(), plan.Key, Approver, Guid.NewGuid(), clock.GetUtcNow());
         await store.RecordMaintenanceApprovalAsync(approval, ScheduledApprovalEntries(plan, approval));
         var checkpoint = Assert.IsType<MaintenanceCheckpoint>(await store.LoadMaintenanceAsync(plan.Key.JobId));

@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using ThirdLife.Core.Handover;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Support;
 
@@ -22,6 +23,13 @@ public sealed partial class SqliteJobStore : ISupportExportAuditStore
         {
             if (!_supportsSupportExportAudit ||
                 await ReadArchiveStateAsync(connection, transaction, jobId, cancellationToken).ConfigureAwait(false))
+            {
+                throw new JobStoreConflictException();
+            }
+
+            if (intent.ReviewVersion is { } revision && (!_supportsHandoverCompletion ||
+                await ReadHandoverReviewAsync(transaction, jobId, cancellationToken).ConfigureAwait(false) is not
+                { Scope.Origin: HandoverEvidenceOrigin.ActiveDevice } current || current.Scope.Version != revision))
             {
                 throw new JobStoreConflictException();
             }
@@ -152,7 +160,7 @@ public sealed partial class SqliteJobStore : ISupportExportAuditStore
     private static bool SameSupportArchive(SupportExportAudit left, SupportExportAudit right) =>
         left.InternalSupportId == right.InternalSupportId && left.SchemaVersion == right.SchemaVersion &&
         left.ManifestVersion == right.ManifestVersion && left.ContentSha256 == right.ContentSha256 &&
-        left.OperatorId == right.OperatorId;
+        left.OperatorId == right.OperatorId && left.ReviewVersion == right.ReviewVersion;
 
     private sealed record StoredSupportAudit(JobId JobId, SupportExportAudit Export);
 }
