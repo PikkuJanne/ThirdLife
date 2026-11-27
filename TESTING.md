@@ -410,6 +410,11 @@ and a controlled package adapter. Run them on the unelevated active Windows
 [native qualification procedure](docs/testing/failure-injection.md#tl-0408-native-package-route-and-windows-restart)
 defines the Windows Installer and actual restart evidence required for that scope.
 
+TL-0510 exercises the M5 candidate profile, failure injection, constrained
+inventory and accessibility from clean Release outputs. Run Full first, then
+select the applicable independent cases. The matrix records exact commands,
+fixture substitutions and separate native evidence. [M5 matrix](artifacts/e2e/M5-full-profile.md)
+
 TL-0116 adds an independently invokable, unelevated Windows desktop scenario. From the
 verified Release checkout, run:
 

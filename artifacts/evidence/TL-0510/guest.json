@@ -1,0 +1,28 @@
+{
+  "task": "TL-0510",
+  "scenario": "GuestCandidate",
+  "filters": [
+    "FullyQualifiedName=ThirdLife.UI.Tests.PlanReviewTests.JobSeekerCandidateConvergesAndReopensWithoutLiveReadiness",
+    "FullyQualifiedName=ThirdLife.UI.Tests.PlanReviewTests.OptionalCandidateFailurePreservesEssentialActions",
+    "FullyQualifiedName=ThirdLife.UI.Tests.PlanReviewTests.EssentialCandidateFailureBlocksPreparation"
+  ],
+  "source_head": "84e47d5fe6b697e14cb9f1463f61ed8b30fce2be",
+  "payload_sha256": "597f5449c63153d5ab9619d01d099afe780d103f5fc539c4d19092c96c30611c",
+  "assembly_sha256": "2af469bbd45182cf62813484b87af63daad3d2dc7a086ed639efd02c04b7a94a",
+  "sdk_sha512": "9b8b88590e4da131bfd0da7aa089d0fc04d5418d5f8607ec13d55dc5a17b4399afd54d496c12657fa05c6c6546dc5eab930f26ac6c50f2d3a7712c0fb378c366",
+  "started_utc": "2026-11-27T15:57:58.5995438Z",
+  "elapsed_ms": 91149,
+  "scope": "Controlled candidate profile and action failure variants on the existing ThirdLife-W11 guest. Live readiness stays held.",
+  "cleanup": "host archive and guest staging and test data removed",
+  "observation": {
+    "result": "passed",
+    "total": 3,
+    "passed": 3,
+    "exit_code": 0,
+    "test_ms": 33489,
+    "windows_release": "26H2",
+    "windows_edition": "Professional",
+    "windows_build": "26300.9974",
+    "architecture": "AMD64"
+  }
+}
