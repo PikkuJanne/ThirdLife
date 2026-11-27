@@ -103,6 +103,64 @@ internal sealed partial class AuditWorkspace : IHandoverFileVerifier
         HandoverCompletionStatus = text;
     }
 
+    public bool ShowsArchivedOutputReview =>
+        ShowsJobArchive && Job is { IsArchived: true } && _store is IHandoverCompletionStore;
+
+    public bool CanReviewArchivedOutputs => ShowsArchivedOutputReview && CanCloseJob;
+
+    public Task ReviewArchivedOutputsAsync()
+    {
+        if (!CanReviewArchivedOutputs || Job is not { Checkpoints.Count: > 0 } job ||
+            _store is not IHandoverCompletionStore store)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RunAsync(async () =>
+        {
+            Status = await Task.Run(async () =>
+            {
+                var files = await store.ReadArchivedHandoverFilesAsync(job.Job.JobId, job.Checkpoints[^1].CheckpointId);
+                if (files is null)
+                {
+                    return "The archived job has changed. Reopen it before reviewing its saved copies.";
+                }
+                if (files.Count == 0)
+                {
+                    return "This archived job has no recorded local report or guide copies. Earlier unrecorded copies may remain.";
+                }
+
+                long remainingBytes = 2 * WorkshopReportStore.MaximumRetainedBytes;
+                int checkedCopies = 0;
+                int unverifiedCopies = 0;
+                foreach (var copies in files.GroupBy(file => (file.Output.Kind, file.FileName)))
+                {
+                    var first = copies.First();
+                    if (copies.Any(file => file.Output.Sha256 != first.Output.Sha256 || file.ByteLength != first.ByteLength) ||
+                        first.ByteLength > remainingBytes)
+                    {
+                        unverifiedCopies++;
+                        continue;
+                    }
+
+                    remainingBytes -= first.ByteLength;
+                    if (((IHandoverFileVerifier)this).MatchesPublishedFile(first, CancellationToken.None))
+                    {
+                        checkedCopies++;
+                    }
+                    else
+                    {
+                        unverifiedCopies++;
+                    }
+                }
+
+                return $"Local report and guide copies that match this job's records: {checkedCopies}. " +
+                    $"Recorded copies that could not be verified: {unverifiedCopies}. " +
+                    "Earlier unrecorded copies may remain. Exported copies and backup samples are outside this review.";
+            });
+        }, refreshFinalization: false);
+    }
+
     private async Task<HandoverReviewScope?> ReadPublicationScopeAsync(JobId jobId, CancellationToken token)
     {
         if (IsFixtureScenario || Job is not { IsArchived: false } || _store is not IHandoverCompletionStore store)

@@ -149,6 +149,19 @@ public sealed class AuditReportTests
         Assert.Equal(artifact.FileName, reopened.SavedReportFileName);
         ShowAuditWindow(reopened, (window, view) =>
         {
+            ShellTestHost.Invoke(window, "JobsButton");
+            var review = Named<Button>(view, "ReviewArchivedOutputsButton");
+            Assert.True(review.IsVisible);
+            Assert.True(review.IsEnabled);
+            Invoke(window, review);
+            PumpUntil(window, () => !reopened.IsBusy && reopened.Status.Contains("match this job's records: 1"), () => reopened.Status);
+            Assert.Contains("could not be verified: 0", reopened.Status, StringComparison.Ordinal);
+            var announcement = new TextBlockAutomationPeer(Named<TextBlock>(view, "AuditStatus"));
+            Assert.Equal(AutomationLiveSetting.Polite, announcement.GetLiveSetting());
+            Assert.Equal(reopened.Status, announcement.GetName());
+
+            ((MainWindow)window).ShowStage(ShellStage.Handover);
+            ShellTestHost.Drain(window);
             var open = Named<Button>(view, "OpenReportButton");
             Assert.True(open.IsEnabled);
             Invoke(window, open);
@@ -166,7 +179,13 @@ public sealed class AuditReportTests
             Assert.Contains("saved report has changed", reopened.ReportStatus, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(bytes, File.ReadAllBytes(file));
 
+            ShellTestHost.Invoke(window, "JobsButton");
+            Invoke(window, review);
+            PumpUntil(window, () => !reopened.IsBusy && reopened.Status.Contains("could not be verified: 1"), () => reopened.Status);
+            Assert.Contains("match this job's records: 0", reopened.Status, StringComparison.Ordinal);
+
             reopened.CloseJob();
+            Assert.False(review.IsEnabled);
             Assert.False(open.IsEnabled);
             Assert.Null(reopened.SavedReportFileName);
         });

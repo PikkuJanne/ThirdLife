@@ -25,6 +25,26 @@ public sealed partial class SqliteJobStore
         }, token);
     }
 
+    public Task<IReadOnlyList<HandoverFileReceipt>?> ReadArchivedHandoverFilesAsync(JobId jobId,
+        CheckpointId expectedCheckpoint, CancellationToken token = default)
+    {
+        ArgumentNullException.ThrowIfNull(jobId);
+        ArgumentNullException.ThrowIfNull(expectedCheckpoint);
+        return ReadJournalTransactionAsync<IReadOnlyList<HandoverFileReceipt>?>(async (transaction, ct) =>
+        {
+            if (!_supportsHandoverCompletion ||
+                await ReadStoredJobAsync(_connection, transaction, jobId, ct).ConfigureAwait(false) is not { IsArchived: true } job ||
+                job.Checkpoints.Count == 0 || job.Checkpoints[^1].CheckpointId != expectedCheckpoint)
+            {
+                return null;
+            }
+
+            _layout.ValidateJobDirectory(jobId);
+            var history = await ReadPublicationsAsync(transaction, jobId, ct).ConfigureAwait(false);
+            return Array.AsReadOnly(history.Select(item => item.File).OfType<HandoverFileReceipt>().ToArray());
+        }, token);
+    }
+
     public Task SaveHandoverFileAsync(HandoverFileReceipt receipt, IHandoverFileVerifier verifier, CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(receipt);

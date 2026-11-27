@@ -9,6 +9,9 @@ file inventory require TL-0704 evidence.
 
 The **Jobs** surface can archive the current job and restore it later
 by job code. The job keeps its evidence and records both transitions.
+For an archived job, **Check saved report and guide copies** compares
+the recorded local files with their saved lengths and digests. The review
+reports how many copies matched and how many could not be verified.
 [Retention and cleanup](retention-and-cleanup.md)
 
 The standalone uninstall contract has two distinct choices.

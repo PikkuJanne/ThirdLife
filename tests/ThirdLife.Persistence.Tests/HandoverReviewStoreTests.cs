@@ -126,6 +126,50 @@ public sealed class HandoverReviewStoreTests
     }
 
     [Fact]
+    public async Task ArchivedOutputReviewRequiresTheExactCheckpointAndKeepsTheJobPartition()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var clock = new FixedTimeProvider(PersistenceTestData.Timestamp);
+        var verifier = new OutputVerifier();
+        var actor = new OperatorId("operator-archive-test");
+        await using var store = await SqliteJobStore.OpenForTestingAsync(workspace.StoreRoot,
+            SqliteJobStore.CurrentSchemaVersion, clock, null, () => 10_000, () => 10);
+
+        var job = PersistenceTestData.CreateJob();
+        var other = Job.Create(DeviceId.New(), clock.GetUtcNow());
+        await store.CreateJobAsync(job);
+        await store.CreateJobAsync(other);
+        var review = Assert.IsType<HandoverEligibility>(await store.LoadHandoverReviewAsync(job.JobId));
+        var outside = Assert.IsType<HandoverEligibility>(await store.LoadHandoverReviewAsync(other.JobId));
+        var report = new HandoverFileReceipt(new(HandoverOutputKind.WorkshopRecord, review.Scope, "report-1", new string('1', 64)),
+            "workshop-report.txt", 20);
+        var guide = new HandoverFileReceipt(new(HandoverOutputKind.RecipientGuide, review.Scope, "guide-1", new string('2', 64)),
+            "recipient-guide.html", 30);
+        var otherReport = new HandoverFileReceipt(new(HandoverOutputKind.WorkshopRecord, outside.Scope, "report-2", new string('3', 64)),
+            "workshop-other.txt", 40);
+        verifier.Accepted = [report, guide, otherReport];
+        await store.SaveHandoverFileAsync(report, verifier);
+        await store.SaveHandoverFileAsync(guide, verifier);
+        await store.SaveHandoverFileAsync(otherReport, verifier);
+        await store.SaveHandoverSupportOmissionAsync(review.Scope, actor, SupportBundleOmissionReason.NoSupportRequest);
+
+        var active = Assert.IsType<StoredJob>(await store.LoadJobAsync(job.JobId));
+        Assert.Null(await store.ReadArchivedHandoverFilesAsync(job.JobId, active.Checkpoints[^1].CheckpointId));
+        await store.SetArchiveStateAsync(job.JobId, true, clock.GetUtcNow());
+        var archived = Assert.IsType<StoredJob>(await store.LoadJobAsync(job.JobId));
+        var checkpoint = archived.Checkpoints[^1].CheckpointId;
+        Assert.Equal([report, guide], await store.ReadArchivedHandoverFilesAsync(job.JobId, checkpoint));
+        Assert.Null(await store.ReadArchivedHandoverFilesAsync(other.JobId, checkpoint));
+
+        await store.SetArchiveStateAsync(job.JobId, false, clock.GetUtcNow());
+        await store.SetArchiveStateAsync(job.JobId, true, clock.GetUtcNow());
+        var rearchived = Assert.IsType<StoredJob>(await store.LoadJobAsync(job.JobId));
+        Assert.Equal(archived.ArchivedAtUtc, rearchived.ArchivedAtUtc);
+        Assert.Null(await store.ReadArchivedHandoverFilesAsync(job.JobId, checkpoint));
+        Assert.Equal([report, guide], await store.ReadArchivedHandoverFilesAsync(job.JobId, rearchived.Checkpoints[^1].CheckpointId));
+    }
+
+    [Fact]
     public async Task OnlyExactScopeBoundSupportPublicationSatisfiesTheSupportRequirement()
     {
         using var workspace = new PersistenceTestWorkspace();
