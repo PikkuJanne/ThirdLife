@@ -41,16 +41,21 @@ together in restricted local storage.
 Application files and workshop data have different owners. Keep existing
 job stores, guide copies, exported reports and support archives in their
 registered or explicitly chosen locations. The app can migrate the job
-store on open. Starting a previous binary against a newer schema may fail.
-Use the documented recovery procedure for the exact schema once qualified.
-Preserve the source store and record the last known successful build and
-job state while recovering. [Data locations](../data-locations.md) · [Uninstall contract](../uninstall-and-data-preservation.md)
+store on open. Preserve the source store and record the last successful
+build and job state while recovering. Use the reviewed build compatible
+with the saved schema.
+[Data locations](../data-locations.md)
+[Update, repair and recovery](../uninstall-and-data-preservation.md#update-repair-and-recovery-for-the-private-preview)
 
 The reviewed private 0.3.3 and 0.3.6 guest lifecycle preserved a
 populated archived job through cancellation, repair, upgrade and
-uninstall. The installed window and recovery across a changed
-SQLite schema still require their own verification.
+uninstall. In the separate 0.3.6-to-0.3.8 run, MSI upgrade preserved
+the schema-21 database bytes before the exact newer persistence reader
+migrated the store to schema 22. The older reader refused the migrated
+store. The newer reader reopened the same job after repair and
+uninstall. Installed window and controlled-pilot qualification remain open.
 [Exact private lifecycle](../../artifacts/evidence/TL-0704/populated-job-lifecycle.md)
+[Private schema-22 lifecycle](../../artifacts/evidence/TL-0704/schema-22-private-lifecycle.md)
 
 With the earlier 0.3.4 installer, cancellation can restore all old
 files without fully restoring the old product registration. If the

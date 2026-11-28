@@ -71,6 +71,11 @@ cases passed with zero skips. The new result covers local engineering
 verification. Confidential transfer, exact stable installed behavior
 and support commitments remain subject to their existing prerequisites.
 
+The integration with the TL-0704 checkpoint updated the installer
+limitation and retained the verified recovery evidence. Bundle and
+repository validation and 71 local references across the support and
+continuity pages passed on the integrated documentation.
+
 ```powershell
 .\eng\verify.ps1 -Tier Targeted `
   -TestProject @('tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj',
