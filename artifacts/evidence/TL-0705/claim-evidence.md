@@ -26,3 +26,54 @@ in the support, limitation and evidence pages. The link to the security
 reporting heading and the public repository setting were reviewed
 directly. This checkpoint documents the named evidence and stops
 short of release support or disclosure commitments.
+
+## Support export and recovery documentation
+
+The support procedure now follows the controls in Handover. An operator
+reviews and approves the two-file ZIP before choosing a local folder.
+The current window can retry saving the publication record. After
+reopening, the operator may select an unconfirmed archive by code and
+verify the existing file against the recorded digest in the original
+folder. A missing, inaccessible or changed file leaves its outcome
+unconfirmed. The earlier fixture preserved the approval actor, recorded
+the verifying actor and kept the chosen path out of the audit. The
+documentation uses those measured behaviors and retains the approved
+route requirement for sharing.
+[Support procedure](../../../docs/support.md#recover-an-interrupted-export) · [Workspace guidance](../../../docs/ui/audit-workspace.md#sanitized-support-archive) · [Security policy](../../../SECURITY.md#9-data-secrets-and-logging) · [Verified recovery](../TL-0606/reopened-support-recovery.md)
+
+The accessibility claim still covers the recorded keyboard and UI
+Automation routes, including the named 240 DPI run. The resource claim
+still covers the hashed in-memory workload and the separate simulated
+destination delay. Audible perception, broader device coverage and
+production performance budgets remain open. Confidential support
+handling and the exact stable lifecycle retain their release prerequisites.
+[Accessibility audit](../../audits/v0.1-accessibility.md) · [Resource metrics](../TL-0112/resource-metrics.json) · [Delayed destination](../TL-0702/handover-sample.md)
+
+On 28 November 2026, the active Windows 11 native x64 host checked the
+documentation against base `d57ce297ff57845046bcd9a78afc070ef7db5f2a`.
+The manual reading-order review traced the preview, publication and
+recovery controls in their respective display states. A local Python link and
+XAML comparison resolved 48 references and checked five exact control
+labels in 0.729 s. Three focused Python security, privacy and testing
+document checks passed in 1.136 s.
+
+The first `eng/verify.ps1 -Tier Targeted -Restore` invocation verified
+repository governance, restored the locked graph and built Release
+with zero warnings and errors. All 1,451 Quick and three selected
+WPF support cases passed. The Reports filter matched no case and the
+wrapper exited 1 after 235.894 s. The corrected `dotnet test` selection
+`FullyQualifiedName~Support` in `ThirdLife.Reports.Tests` passed both
+cases in 150 ms of test time, including rejection of changed ZIP bytes.
+
+The governed rerun passed in 210.505 s with the locked assets already
+restored. All 1,451 Quick, seven selected WPF and two selected Reports
+cases passed with zero skips. The new result covers local engineering
+verification. Confidential transfer, exact stable installed behavior
+and support commitments remain subject to their existing prerequisites.
+
+```powershell
+.\eng\verify.ps1 -Tier Targeted `
+  -TestProject @('tests/ThirdLife.UI.Tests/ThirdLife.UI.Tests.csproj',
+                 'tests/ThirdLife.Reports.Tests/ThirdLife.Reports.Tests.csproj') `
+  -Filter 'FullyQualifiedName~Support'
+```
