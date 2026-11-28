@@ -120,45 +120,59 @@ internal sealed partial class AuditWorkspace : IHandoverFileVerifier
         {
             Status = await Task.Run(async () =>
             {
-                var files = await store.ReadArchivedHandoverFilesAsync(job.Job.JobId, job.Checkpoints[^1].CheckpointId);
-                if (files is null)
+                var outputs = await store.ReadArchivedHandoverOutputsAsync(job.Job.JobId, job.Checkpoints[^1].CheckpointId);
+                if (outputs is null)
                 {
                     return "The archived job has changed. Reopen it before reviewing its saved copies.";
                 }
-                if (files.Count == 0)
-                {
-                    return "This archived job has no recorded local report or guide copies. Earlier unrecorded copies may remain.";
-                }
 
-                long remainingBytes = 2 * WorkshopReportStore.MaximumRetainedBytes;
-                int checkedCopies = 0;
-                int unverifiedCopies = 0;
-                foreach (var copies in files.GroupBy(file => (file.Output.Kind, file.FileName)))
-                {
-                    var first = copies.First();
-                    if (copies.Any(file => file.Output.Sha256 != first.Output.Sha256 || file.ByteLength != first.ByteLength) ||
-                        first.ByteLength > remainingBytes)
-                    {
-                        unverifiedCopies++;
-                        continue;
-                    }
-
-                    remainingBytes -= first.ByteLength;
-                    if (((IHandoverFileVerifier)this).MatchesPublishedFile(first, CancellationToken.None))
-                    {
-                        checkedCopies++;
-                    }
-                    else
-                    {
-                        unverifiedCopies++;
-                    }
-                }
-
-                return $"Local report and guide copies that match this job's records: {checkedCopies}. " +
-                    $"Recorded copies that could not be verified: {unverifiedCopies}. " +
-                    "Earlier unrecorded copies may remain. Exported copies and backup samples are outside this review.";
+                return DescribeArchivedReportAndGuideCopies(outputs.Files) + " " +
+                    DescribeArchivedOriginalSamples(outputs.OriginalSamples) + " " +
+                    "Earlier unrecorded copies may remain. Recovered samples and exported copies are outside this review.";
             });
         }, refreshFinalization: false);
+    }
+
+    private string DescribeArchivedReportAndGuideCopies(IReadOnlyList<HandoverFileReceipt> files)
+    {
+        if (files.Count == 0) { return "This archived job has no recorded local report or guide copies."; }
+
+        long remainingBytes = 2 * WorkshopReportStore.MaximumRetainedBytes;
+        int checkedCopies = 0;
+        int unverifiedCopies = 0;
+        foreach (var copies in files.GroupBy(file => (file.Output.Kind, file.FileName)))
+        {
+            var first = copies.First();
+            if (copies.Any(file => file.Output.Sha256 != first.Output.Sha256 || file.ByteLength != first.ByteLength) ||
+                first.ByteLength > remainingBytes)
+            {
+                unverifiedCopies++;
+                continue;
+            }
+
+            remainingBytes -= first.ByteLength;
+            if (((IHandoverFileVerifier)this).MatchesPublishedFile(first, CancellationToken.None))
+            {
+                checkedCopies++;
+            }
+            else
+            {
+                unverifiedCopies++;
+            }
+        }
+
+        return $"Local report and guide copies that match this job's records: {checkedCopies}. " +
+            $"Recorded copies that could not be verified: {unverifiedCopies}.";
+    }
+
+    private string DescribeArchivedOriginalSamples(IReadOnlyList<FileHistorySampleAudit> samples)
+    {
+        if (samples.Count == 0) { return "This archived job has no recorded original File History samples."; }
+
+        var probe = _backupSampleProbe ?? RegisteredBackupSampleProbe();
+        var matched = probe is null ? 0 : samples.Count(probe.VerifyRecordedOriginal);
+        return $"Original File History samples that match this job's records: {matched}. " +
+            $"Original samples that could not be verified: {samples.Count - matched}.";
     }
 
     private async Task<HandoverReviewScope?> ReadPublicationScopeAsync(JobId jobId, CancellationToken token)

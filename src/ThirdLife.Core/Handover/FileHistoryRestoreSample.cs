@@ -15,7 +15,7 @@ public sealed class FileHistoryRestoreSample
     {
         ReviewId = reviewId;
         SampleId = sampleId;
-        FileName = $"thirdlife-restore-{SampleId:N}.txt";
+        FileName = GetFileName(SampleId);
         _content = Encoding.ASCII.GetBytes($"ThirdLife File History restore sample\r\n{SampleId:N}\r\n");
         Sha256 = Convert.ToHexStringLower(SHA256.HashData(_content));
     }
@@ -29,6 +29,8 @@ public sealed class FileHistoryRestoreSample
     public byte[] CopyContent() => [.. _content];
 
     public bool IsFor(FileHistoryApproval approval) => approval.Review.ReviewId == ReviewId;
+
+    internal static string GetFileName(Guid sampleId) => $"thirdlife-restore-{sampleId:N}.txt";
 
     internal bool Matches(FileHistorySampleDigest digest) =>
         digest.ByteLength == ByteLength && string.Equals(digest.Sha256, Sha256, StringComparison.Ordinal);

@@ -152,21 +152,46 @@ public sealed class HandoverReviewStoreTests
         await store.SaveHandoverFileAsync(guide, verifier);
         await store.SaveHandoverFileAsync(otherReport, verifier);
         await store.SaveHandoverSupportOmissionAsync(review.Scope, actor, SupportBundleOmissionReason.NoSupportRequest);
+        foreach (var id in new[] { job.JobId, other.JobId })
+        {
+            var handover = Assert.IsType<SavedRecipientHandover>(await store.LoadRecipientHandoverAsync(id));
+            await store.SaveHandoverModeAsync(id, handover, HandoverMode.Assisted, actor);
+        }
+
+        var original = await StageSampleAsync(job.JobId);
+        _ = await store.RecordFileHistorySampleAsync(job.JobId, original, FileHistorySampleAuditState.Prepared, actor);
+        var pending = await StageSampleAsync(job.JobId);
+        _ = await StageSampleAsync(other.JobId);
 
         var active = Assert.IsType<StoredJob>(await store.LoadJobAsync(job.JobId));
-        Assert.Null(await store.ReadArchivedHandoverFilesAsync(job.JobId, active.Checkpoints[^1].CheckpointId));
+        Assert.Null(await store.ReadArchivedHandoverOutputsAsync(job.JobId, active.Checkpoints[^1].CheckpointId));
         await store.SetArchiveStateAsync(job.JobId, true, clock.GetUtcNow());
+        await store.SetArchiveStateAsync(other.JobId, true, clock.GetUtcNow());
         var archived = Assert.IsType<StoredJob>(await store.LoadJobAsync(job.JobId));
         var checkpoint = archived.Checkpoints[^1].CheckpointId;
-        Assert.Equal([report, guide], await store.ReadArchivedHandoverFilesAsync(job.JobId, checkpoint));
-        Assert.Null(await store.ReadArchivedHandoverFilesAsync(other.JobId, checkpoint));
+        var outputs = Assert.IsType<ArchivedHandoverOutputs>(await store.ReadArchivedHandoverOutputsAsync(job.JobId, checkpoint));
+        Assert.Equal([report, guide], outputs.Files);
+        Assert.Equal([original, pending], outputs.OriginalSamples);
+        Assert.Null(await store.ReadArchivedHandoverOutputsAsync(other.JobId, checkpoint));
 
         await store.SetArchiveStateAsync(job.JobId, false, clock.GetUtcNow());
         await store.SetArchiveStateAsync(job.JobId, true, clock.GetUtcNow());
         var rearchived = Assert.IsType<StoredJob>(await store.LoadJobAsync(job.JobId));
         Assert.Equal(archived.ArchivedAtUtc, rearchived.ArchivedAtUtc);
-        Assert.Null(await store.ReadArchivedHandoverFilesAsync(job.JobId, checkpoint));
-        Assert.Equal([report, guide], await store.ReadArchivedHandoverFilesAsync(job.JobId, rearchived.Checkpoints[^1].CheckpointId));
+        Assert.Null(await store.ReadArchivedHandoverOutputsAsync(job.JobId, checkpoint));
+        var current = Assert.IsType<ArchivedHandoverOutputs>(
+            await store.ReadArchivedHandoverOutputsAsync(job.JobId, rearchived.Checkpoints[^1].CheckpointId));
+        Assert.Equal(outputs.Files, current.Files);
+        Assert.Equal(outputs.OriginalSamples, current.OriginalSamples);
+
+        async Task<FileHistorySampleAudit> StageSampleAsync(JobId jobId)
+        {
+            var handover = Assert.IsType<SavedRecipientHandover>(await store.LoadRecipientHandoverAsync(jobId));
+            var destination = new FileHistoryDestinationObservation(Guid.NewGuid(), true, 50_000);
+            var sampleReview = Assert.IsType<FileHistoryReview>(FileHistoryReview.Inspect(handover, true, destination, 1, true).Review);
+            var approval = sampleReview.Approve(sampleReview.ReviewId, true);
+            return await store.StageFileHistorySampleAsync(approval, approval.CreateRestoreSample(handover, true, destination), actor);
+        }
     }
 
     [Fact]

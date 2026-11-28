@@ -76,13 +76,23 @@ public sealed class FileHistoryRestoreProbe
     public bool VerifyOriginal(FileHistoryRestoreSample sample)
     {
         ArgumentNullException.ThrowIfNull(sample);
+        return VerifyOriginal(sample.FileName, new(sample.ByteLength, sample.Sha256));
+    }
+
+    public bool VerifyRecordedOriginal(FileHistorySampleAudit recorded)
+    {
+        ArgumentNullException.ThrowIfNull(recorded);
+        return VerifyOriginal(recorded.FileName, new(recorded.ByteLength, recorded.Sha256));
+    }
+
+    private bool VerifyOriginal(string fileName, FileHistorySampleDigest expected)
+    {
         if (!OperatingSystem.IsWindows()) { return false; }
         try
         {
             using var root = new DiagnosticStoreSecurity(_originalDirectory);
-            using var original = OpenOriginal(root, sample);
-            var observed = ReadDigest(original);
-            return observed.ByteLength == sample.ByteLength && observed.Sha256 == sample.Sha256;
+            using var original = OpenOriginal(root, fileName);
+            return ReadDigest(original) == expected;
         }
         catch (Exception exception) when (IsProbeFailure(exception))
         {
@@ -97,7 +107,7 @@ public sealed class FileHistoryRestoreProbe
         {
             using var originalRoot = new DiagnosticStoreSecurity(_originalDirectory);
             using var recoveredRoot = new DiagnosticStoreSecurity(_recoveredDirectory);
-            using var original = OpenOriginal(originalRoot, sample);
+            using var original = OpenOriginal(originalRoot, sample.FileName);
             using var recovered = recoveredRoot.OpenValidatedRestoredSample(Path.Combine(_recoveredDirectory, sample.FileName));
             if (WindowsDiagnosticFileIdentity.GetIdentity(original.SafeFileHandle) ==
                 WindowsDiagnosticFileIdentity.GetIdentity(recovered.SafeFileHandle))
@@ -113,8 +123,8 @@ public sealed class FileHistoryRestoreProbe
         }
     }
 
-    private FileStream OpenOriginal(DiagnosticStoreSecurity root, FileHistoryRestoreSample sample) =>
-        root.OpenValidatedRecord(Path.Combine(_originalDirectory, sample.FileName), FileShare.Read, createRootIfMissing: false);
+    private FileStream OpenOriginal(DiagnosticStoreSecurity root, string fileName) =>
+        root.OpenValidatedRecord(Path.Combine(_originalDirectory, fileName), FileShare.Read, createRootIfMissing: false);
 
     private static bool IsProbeFailure(Exception exception) => exception is IOException or UnauthorizedAccessException or
         SecurityException or DiagnosticContractException or NotSupportedException;
