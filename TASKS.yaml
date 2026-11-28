@@ -8022,6 +8022,16 @@ tasks:
   - Run path/data-map tests and compare installer/uninstaller behavior with the documentation.
   - Search the release package for undocumented persistent locations and sibling data access.
   evidence:
+  - summary: Clean Full verification passed for the archived original-sample review and private MSI ownership regression.
+    task: TL-0703
+    command: eng/verify.ps1 -Tier Full -Restore in a clean detached checkout
+    tier: full
+    result: passed
+    date: '2026-11-28'
+    duration: 454.336 s for 322 repository checks and 2693 .NET tests
+    environment: Active Windows 11 Pro native x64 host with locked restore and isolated fixtures
+    reference: artifacts/evidence/TL-0703/archived-sample-review.md, 2555c566c492aacb04f0882d37c32f57f7fd24ee
+    limitation: Default deterministic Full scope. Native File History restoration, production job deletion and stable package qualification retain their separate evidence requirements.
   - summary: Jobs verified exact recorded original File History samples for the selected archived job and retained the existing report and guide review.
     task: TL-0703
     command: eng/verify.ps1 -Tier Targeted with guarded paths, persistence interruption, archived Jobs, report and File History selections
@@ -8123,6 +8133,7 @@ tasks:
     reference: artifacts/evidence/TL-0703/reopen-archived-report.md, 8440ae0cd7e6797a8c348ce5094396d30e443595
     limitation: Protected receipt readback and WPF behavior in the covered scopes. No job-data removal.
   notes:
+  - Persist a job-bound ownership record before publishing future local workshop reports and recipient guides. Files without reliable historical receipts require their own review.
   - Implement the durable, operator-approved deletion workflow with exact job and file attribution, interruption recovery and explicit retained-file results.
   - Verify stable installer ownership and data preservation when TL-0704 supplies the exact stable package. Historical private package observations retain their specific versions and scopes.
   expected_test_tier: targeted

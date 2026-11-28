@@ -36,6 +36,36 @@ changed code. It ran all 1,450 Quick .NET tests, eight work-selection
 checks, and 61 Persistence, nine WPF and 15 Reports tests with zero
 skips. Release compilation returned zero warnings.
 
+Clean detached Full verification with locked restore passed in
+454.336 seconds at `2555c566c492aacb04f0882d37c32f57f7fd24ee`,
+based on `98269a4c59e29cb9447d6eb458b6048e85b37cfc`.
+It passed 322 repository checks and 2,693 .NET tests with zero
+skips or build warnings. The default deterministic filter applies.
+
+Quick on the final branch with the evidence updates passed 1,450
+tests in 165.735 seconds against the 120-second target. The WPF
+selection took 96 seconds and the Release build 11.69 seconds. The
+earlier integrated Quick audit also exceeded the target at 178.889
+seconds, including 104 seconds in WPF. The test selections remained
+in place. [Earlier Quick audit](../TL-0709/private-candidate-boundary.md)
+
 The verified action reads synthetic original samples. Separate job-data
 deletion, native File History restoration and the stable installer
 lifecycle still require their respective implementation or qualification.
+
+## Separate deletion prerequisite
+
+A 0.017-second native Windows probe on 28 November opened a disposable
+synthetic file with `GENERIC_READ | DELETE`, `FILE_SHARE_READ` and
+`FILE_FLAG_OPEN_REPARSE_POINT`. A conflicting writer caused a sharing
+violation at acquisition. After acquisition, new write and delete
+opens returned sharing violations. The fixture checked the expected
+SHA-256 on the held handle, marked that handle for deletion and
+confirmed removal after closing it. An adjacent synthetic decoy
+retained its exact bytes.
+
+The probe isolates Windows handle sharing and disposition. The
+production workflow still needs a durable approval, a protected
+root and file identity check, and split-state recovery between
+SQLite records and files. The next implementation adds ownership
+records before publishing local workshop reports and guides.
