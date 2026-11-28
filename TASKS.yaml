@@ -8397,6 +8397,16 @@ tasks:
     environment: Active Windows 11 native x64 host and current repository records
     reference: artifacts/evidence/TL-0705/claim-evidence.md, base 3599b23ff67a6f88bc609e4252cce5e9a58b3ba1
     limitation: Engineering documentation only. Supported versions, approved confidential report handling and exact stable installed evidence remain pending.
+  - summary: Support guidance now matches the exact Handover export review, receipt retry and verification after reopening.
+    task: TL-0705
+    command: eng/verify.ps1 -Tier Targeted with the UI and Reports support selections, exact XAML control labels and local evidence link review
+    tier: targeted
+    result: passed
+    date: '2026-11-28'
+    duration: 210.505 s for 1451 Quick and 9 support-focused .NET tests, plus 48 local references and 5 control labels checked
+    environment: Isolated active Windows 11 Pro native x64 checkout with locked restore and synthetic report and UI cases
+    reference: artifacts/evidence/TL-0705/claim-evidence.md#support-export-and-recovery-documentation, c40c68c1758bcd97e9359c6fa3530b4dee19ee46
+    limitation: Current private support guidance. Exact stable version coverage and the accountable confidential support route remain pending.
   notes:
   - TL-0710 carries actual accountable support, release, security/privacy, and accessibility scope decisions.
   expected_test_tier: targeted

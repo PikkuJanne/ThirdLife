@@ -18,15 +18,29 @@ while a required handover check remains unresolved.
 
 ## Prepare a support record
 
-1. Open the affected job and check its visible result and app version.
-2. In **Handover**, preview the sanitized support archive. Review the
-   exact file list and contents before choosing a protected local folder.
-3. If saving was interrupted, select the original folder when prompted.
-   TRACE checks the existing bytes against the saved receipt.
-4. Forward a reviewed copy only through the route authorized for that
-   workshop or recipient. Keep passwords, recovery material, device
-   identifiers, full workshop reports and personal files in their
-   existing custody.
+1. Open the affected job. In **Handover**, choose **Preview support
+   archive** and review both files, the ZIP size and the digest.
+2. Enter your workshop operator code and approve the exact preview.
+   Select **Choose folder and export** and choose a local location for
+   the protected `ThirdLifeSupport` folder.
+3. Check the publication status before sharing. If the job shows an
+   unconfirmed archive, follow the recovery procedure below.
+4. Share the confirmed, reviewed copy only through the route authorized
+   for that workshop or recipient. Keep passwords, recovery material,
+   device identifiers, full workshop reports and personal files in
+   their existing custody.
+
+## Recover an interrupted export
+
+If the current window offers **Retry saving the export record**, use it
+to finish recording the publication. After reopening the job, select its
+code under **Unconfirmed support archive**, enter your workshop operator
+code, and select **Choose original folder and verify archive**. Choose
+the same local parent folder you selected for the export. ThirdLife checks
+the existing ZIP against the saved digest and records who verified it.
+An inaccessible, missing or changed copy keeps the export unconfirmed.
+Keep any related copy in local custody while its result is unconfirmed.
+[Verified recovery](../artifacts/evidence/TL-0606/reopened-support-recovery.md)
 
 Security reports require a private route. The exposure record must name
 the recipient contact and allowed transfer channel before partner use.

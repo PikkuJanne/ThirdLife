@@ -105,6 +105,10 @@ TL-0606 previews and publishes the exact sanitized support ZIP. The job retains
 its digest, versions, operator and publication outcome. Unconfirmed exports
 remain explicit after reopening. [Support export evidence](artifacts/evidence/TL-0606/report.md)
 
+TL-0705 documents the exact support export and both receipt recovery
+paths. The stable supported versions and confidential reporting route remain open.
+[Support guidance](artifacts/evidence/TL-0705/claim-evidence.md#support-export-and-recovery-documentation)
+
 TL-0607 gates Handover sign-off on the exact current evidence and verified
 outputs. Sign-off history survives reopening and becomes historical after
 an observed material change. [Completion evidence](artifacts/evidence/TL-0607/completion.md)

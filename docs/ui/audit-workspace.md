@@ -252,8 +252,11 @@ support case and review its retention after the case closes.
 
 The saved job records an export intent and, when confirmed, publication of the
 exact ZIP. If a ZIP was saved and writing its receipt failed, **Retry saving
-the export record** completes only the receipt. After an interruption, review
-any saved intent with an unconfirmed outcome before sharing a related copy.
+the export record** completes only the receipt. After reopening, **Choose
+original folder and verify archive** checks the selected unconfirmed export
+against its saved digest before confirming publication. Keep related copies
+local until the job confirms the export.
+[Support recovery procedure](../support.md#recover-an-interrupted-export)
 
 ## Recipient Toggle Keys
 
