@@ -14,10 +14,10 @@ TL-0704.
 The **Jobs** surface can archive the current job and restore it later
 by job code. The job keeps its evidence and records both transitions.
 For an archived job, **Check saved copies and original samples** compares
-the recorded local reports, guides and generated original File History samples
-with their saved lengths and digests. The review reports matches and
-unverified counts for each group. Earlier files without a receipt may remain.
-Recovered samples and exported copies follow the retention of their destinations.
+report and guide handover receipts and recorded original File History samples
+with their saved lengths and digests. The separate deletion review also includes
+ownership reservations made before publication. Earlier files without a reliable
+receipt and copies at other destinations follow their own retention arrangements.
 [Retention and cleanup](retention-and-cleanup.md)
 
 Application removal and job-data deletion use separate choices.
@@ -31,7 +31,9 @@ Application removal and job-data deletion use separate choices.
   needed. Select **Review job-data deletion** to check the archived job code and
   its recorded local files. Enter your workshop operator code, confirm the
   displayed scope and select **Permanently delete job data**. Pending action
-  recovery can make deletion unavailable.
+  recovery or support publication can make deletion unavailable. For an older
+  archive with a later evidence checkpoint, restore the job and archive the
+  current records before preparing a new deletion review.
 
 The job store saves the approval against the exact archive checkpoint and local
 file manifest before attempting removal. It checks the registered roots and

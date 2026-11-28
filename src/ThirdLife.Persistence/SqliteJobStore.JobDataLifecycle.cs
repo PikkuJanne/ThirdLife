@@ -9,6 +9,7 @@ using ThirdLife.Actions.WindowsUpdates;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Handover;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Support;
 
 namespace ThirdLife.Persistence;
 
@@ -282,7 +283,7 @@ public sealed partial class SqliteJobStore : IJobDataLifecycleStore
         await using var command = DeletionCommand(transaction, jobId, """
             SELECT checkpoints.checkpoint_id, checkpoints.checkpoint_kind, checkpoints.recorded_at_utc, jobs.archived_at_utc
             FROM jobs JOIN store_checkpoints AS checkpoints ON checkpoints.job_id = jobs.job_id
-            WHERE jobs.job_id = $job AND jobs.is_archived = 1 AND checkpoints.checkpoint_kind = 'archived'
+            WHERE jobs.job_id = $job AND jobs.is_archived = 1
             ORDER BY checkpoints.checkpoint_sequence DESC LIMIT 1;
             """);
         await using var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
@@ -310,6 +311,12 @@ public sealed partial class SqliteJobStore : IJobDataLifecycleStore
 
         var settings = await ReadToggleKeysJournalAsync(transaction, jobId, token).ConfigureAwait(false);
         if (settings.Count > 0 && settings[^1].Audit.Outcome == ToggleKeysAuditOutcome.ApprovedPending)
+        {
+            return true;
+        }
+
+        var exports = await ReadSupportHistoryAsync(transaction, jobId, token).ConfigureAwait(false);
+        if (exports.Values.Any(export => export.State == SupportExportState.Pending))
         {
             return true;
         }

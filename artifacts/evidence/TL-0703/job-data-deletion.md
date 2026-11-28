@@ -30,7 +30,8 @@ reconciled separately if the post-commit directory step is interrupted.
   review. Confirmation and operator code were needed to enable the deletion
   button. A locked report left the job archived with
   the approved deletion pending. The job reopened with a separate Continue
-  action. The retry removed the report and selected job. The other job
+  action. The first attempt removed the guide and original sample. The retry
+  removed the report and selected job. The other job
   reopened. The unrelated report and recovered sample retained their exact bytes.
 - The child-process interruption test stopped after handle-based removal of
   a synthetic file and before SQLite committed. The parent independently reopened
@@ -47,6 +48,10 @@ reconciled separately if the post-commit directory step is interrupted.
   stale previews, other-job claims, unowned directory entries, and preservation of
   a policy snapshot referenced by a surviving job. The original file-and-database
   state can be checked using the protected store after reopening.
+- A later evidence checkpoint invalidated an earlier approval preview. The
+  normal sanitization input now also asks the store to enforce the active-job
+  check. A pending support export held deletion until that exact export recorded
+  a terminal receipt, including when another export had already reached its terminal state.
 
 The first WPF integration run exposed two compatibility regressions. The store now
 allows report and guide publication for archives without a deletion approval, and

@@ -6,6 +6,7 @@ using ThirdLife.Core;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Handover;
 using ThirdLife.Core.Jobs;
+using ThirdLife.Core.Support;
 
 namespace ThirdLife.Persistence.Tests;
 
@@ -193,6 +194,63 @@ public sealed class JobDataLifecycleStoreTests
         Assert.NotEqual(archived, await ArchiveAsync(store, job.JobId));
         await Assert.ThrowsAsync<JobStoreConflictException>(() => store.ApproveArchivedJobDeletionAsync(current, Actor));
         Assert.Null(await store.ReviewArchivedJobDeletionAsync(job.JobId, archived));
+    }
+
+    [Fact]
+    public async Task EvidenceCommittedAfterArchiveInvalidatesThatDeletionPreview()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob();
+        var observation = PersistenceTestData.CreateObservation("late_archive_evidence");
+        await using var store = await OpenAsync(workspace);
+        await store.CreateJobAsync(job);
+        var archived = await ArchiveAsync(store, job.JobId);
+        var earlierReview = Assert.IsType<ArchivedJobDeletionReview>(await store.ReviewArchivedJobDeletionAsync(job.JobId, archived));
+
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => store.AppendEvidenceAsync(
+            new(job.JobId, [observation], requireUnarchivedJob: true)));
+        await store.AppendEvidenceAsync(new(job.JobId, [observation]));
+        var changed = Assert.IsType<StoredJob>(await store.LoadJobAsync(job.JobId));
+        Assert.True(changed.IsArchived);
+        Assert.Equal(observation, Assert.Single(changed.Observations));
+        Assert.Equal(JobCheckpointKind.EvidenceCommitted, changed.Checkpoints[^1].Kind);
+        Assert.Null(await store.ReviewArchivedJobDeletionAsync(job.JobId, archived));
+        Assert.Null(await store.ReviewArchivedJobDeletionAsync(job.JobId, changed.Checkpoints[^1].CheckpointId));
+        await Assert.ThrowsAsync<JobStoreConflictException>(() => store.ApproveArchivedJobDeletionAsync(earlierReview, Actor));
+
+        await store.SetArchiveStateAsync(job.JobId, false, ReviewedAt);
+        var rearchived = await ArchiveAsync(store, job.JobId);
+        var fresh = Assert.IsType<ArchivedJobDeletionReview>(await store.ReviewArchivedJobDeletionAsync(job.JobId, rearchived));
+        Assert.Equal(Actor, (await store.ApproveArchivedJobDeletionAsync(fresh, Actor)).ApprovedBy);
+    }
+
+    [Fact]
+    public async Task OnlyTerminalReceiptsForEverySupportAttemptReleaseArchivedDeletion()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob();
+        var first = $"SUP-{Guid.NewGuid():N}";
+        var second = $"SUP-{Guid.NewGuid():N}";
+        CheckpointId checkpoint;
+        await using (var store = await OpenAsync(workspace))
+        {
+            await store.CreateJobAsync(job);
+            await store.StageSupportExportAsync(job.JobId, Audit(first, SupportExportState.Pending));
+            await store.StageSupportExportAsync(job.JobId, Audit(second, SupportExportState.Pending));
+            checkpoint = await ArchiveAsync(store, job.JobId);
+            Assert.Null(await store.ReviewArchivedJobDeletionAsync(job.JobId, checkpoint));
+            await store.RecordSupportExportAsync(job.JobId, Audit(first, SupportExportState.Published));
+        }
+
+        await using var reopened = await OpenAsync(workspace);
+        Assert.Null(await reopened.ReviewArchivedJobDeletionAsync(job.JobId, checkpoint));
+        await reopened.RecordSupportExportAsync(job.JobId, Audit(second, SupportExportState.NotPublished));
+        var review = Assert.IsType<ArchivedJobDeletionReview>(await reopened.ReviewArchivedJobDeletionAsync(job.JobId, checkpoint));
+        Assert.Empty(review.Files);
+        Assert.Equal(Actor, (await reopened.ApproveArchivedJobDeletionAsync(review, Actor)).ApprovedBy);
+
+        static SupportExportAudit Audit(string id, SupportExportState state) => new(id, "thirdlife.support.v1",
+            "thirdlife.support-manifest.v1", new string('a', 64), ReviewedAt, Actor, state);
     }
 
     [Fact]

@@ -342,7 +342,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         var job = RequireWritableJob();
         var evidence = CreateSanitizationEvidence(input);
         await Task.Run(() => _store!.AppendEvidenceAsync(new JobEvidenceBatch(
-            job.Job.JobId, sanitizationEvidence: [evidence])));
+            job.Job.JobId, sanitizationEvidence: [evidence], requireUnarchivedJob: true)));
         await ApplyJobAsync(await LoadJobAsync(job.Job.JobId));
         await CompleteGateAsync(job.Job.JobId, evidence.Metadata.EvidenceId);
     });
