@@ -46,6 +46,7 @@ public sealed partial class SqliteJobStore : IJobStore
     private readonly bool _supportsHandoverCompletion;
     private readonly bool _supportsToggleKeysAudit;
     private readonly bool _supportsFileHistorySampleAudit;
+    private readonly bool _supportsJobDataLifecycle;
     private bool _disposed;
 
     private SqliteJobStore(
@@ -81,6 +82,7 @@ public sealed partial class SqliteJobStore : IJobStore
         _supportsHandoverCompletion = schemaVersion >= 19;
         _supportsToggleKeysAudit = schemaVersion >= 20;
         _supportsFileHistorySampleAudit = schemaVersion >= 21;
+        _supportsJobDataLifecycle = schemaVersion >= 22;
         _jsonOptions = DomainJson.CreateStrictOptions();
     }
 
@@ -173,6 +175,11 @@ public sealed partial class SqliteJobStore : IJobStore
             async (connection, transaction, token) =>
             {
                 var deviceId = await ReadDeviceIdAsync(connection, transaction, batch.JobId, token).ConfigureAwait(false);
+                if (_supportsJobDataLifecycle &&
+                    await ReadJobDeletionApprovalAsync(transaction, batch.JobId, token).ConfigureAwait(false) is not null)
+                {
+                    throw new JobStoreConflictException();
+                }
                 if (batch.ExpectedSanitizationGateDecisionId is not null)
                 {
                     await RequireExpectedSanitizationGateAsync(
@@ -274,6 +281,12 @@ public sealed partial class SqliteJobStore : IJobStore
         return ExecuteWriteAsync(
             async (connection, transaction, token) =>
             {
+                if (!isArchived && _supportsJobDataLifecycle &&
+                    await ReadJobDeletionApprovalAsync(transaction, jobId, token).ConfigureAwait(false) is not null)
+                {
+                    throw new JobStoreConflictException();
+                }
+
                 int changed;
                 await using (var command = connection.CreateCommand())
                 {
@@ -915,6 +928,12 @@ public sealed partial class SqliteJobStore : IJobStore
             cancellationToken).ConfigureAwait(false);
         await ExecuteNonQueryAsync(connection, "PRAGMA synchronous = FULL;", cancellationToken).ConfigureAwait(false);
         await ExecuteNonQueryAsync(connection, "PRAGMA trusted_schema = OFF;", cancellationToken).ConfigureAwait(false);
+        if (await ExecuteScalarAsync(connection, "PRAGMA secure_delete = ON;", cancellationToken).ConfigureAwait(false)
+            is not 1L)
+        {
+            throw new JobStoreUnavailableException();
+        }
+
         if (configureJournal)
         {
             await ConfigureJournalAsync(connection, cancellationToken).ConfigureAwait(false);

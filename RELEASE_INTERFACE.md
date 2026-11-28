@@ -99,21 +99,15 @@ No permanent privileged service is expected for Core 1.0.
 
 ## 5. Data locations
 
-Exact paths are finalized from implementation evidence. The interface sheet must identify:
-
-- application configuration;
-- local policies, profiles, and catalogue metadata;
-- SQLite job database(s);
-- per-job attachment/evidence directories;
-- cache and temporary paths;
-- package/update staging metadata;
-- logs;
-- generated workshop/recipient reports;
-- sanitized support bundles;
-- migration/backup copies used by ThirdLife itself;
-- retention and uninstall behavior.
-
-ThirdLife Setup Core does not own or document sibling private data locations as if they were part of its workspace.
+The data map identifies the current registered application and workshop paths,
+including configuration, jobs, staging, logs, reports and exports. The retention
+guide records their current cleanup behavior. Ordinary uninstall preserves
+workshop data. The separate **Jobs** action requires exact approval for
+permanent deletion of an archived job and its attributed local files.
+TL-0704 verifies the installation and removal inventory of the exact stable
+package.
+[Data locations](docs/data-locations.md) · [Retention](docs/retention-and-cleanup.md)
+· [Uninstall and data preservation](docs/uninstall-and-data-preservation.md)
 
 ## 6. Inputs
 
@@ -134,7 +128,7 @@ Expected outputs include:
 - technical workshop record;
 - plain-language recipient guide;
 - previewable sanitized diagnostic bundle;
-- documented local profile/policy export where implemented;
+- [validated local profile, policy and catalogue export](docs/profile-policy-export.md);
 - non-sensitive sample artifacts for black-box tests.
 
 For every output, document whether source data is referenced, copied, transformed, or omitted. Recipient and support outputs follow their separate privacy classes.

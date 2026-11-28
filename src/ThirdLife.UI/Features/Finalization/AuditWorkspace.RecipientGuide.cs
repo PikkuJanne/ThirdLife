@@ -22,6 +22,7 @@ internal sealed partial class AuditWorkspace
     public bool CanPreviewRecipientGuide => CanCloseJob && !_hasSeparateEvidenceOrigin && !_readingFinalization &&
         RecipientHandover is { Handover: not null };
     public bool CanSaveRecipientGuide => CanPreviewRecipientGuide && _recipientGuideStore is not null &&
+        !JobDeletionPending && _store is IJobDataLifecycleStore &&
         _recipientGuide is { } preview && preview.JobId == Job?.Job.JobId &&
         preview.HandoverSequence == RecipientHandover?.Sequence;
 
@@ -69,7 +70,9 @@ internal sealed partial class AuditWorkspace
                     return;
                 }
 
-                var artifact = await Task.Run(() => _recipientGuideStore!.SaveArtifact(job.Job.JobId, expected.Content));
+                var artifact = await Task.Run(() => _recipientGuideStore!.SaveArtifactWithOwnershipAsync(
+                    job.Job.JobId, expected.Content,
+                    (output, publish, token) => PublishOwnedJobFileAsync(JobLocalFileKind.RecipientGuide, output, publish, token)));
                 var recorded = await RecordPublishedHandoverFileAsync(reviewScope, HandoverOutputKind.RecipientGuide,
                     artifact, CancellationToken.None);
                 RecipientGuideStatus = recorded ? $"Printable guide saved as {artifact.FileName} in {RecipientGuideLocation}."

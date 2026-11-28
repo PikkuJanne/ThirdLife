@@ -99,6 +99,30 @@ public sealed class FileHistoryRestoreProbeTests
     }
 
     [Fact]
+    public void RemovesOnlyTheRecordedOriginalAndLeavesAnExactRecoveredCopy()
+    {
+        if (!OperatingSystem.IsWindows()) { return; }
+        using var fixture = new RestoreFixture();
+        var recorded = new JobLocalFile(JobLocalFileKind.FileHistoryOriginal, fixture.Sample.FileName,
+            fixture.Sample.ByteLength, fixture.Sample.Sha256);
+        Assert.Equal(JobLocalFileRemoval.Missing, fixture.Probe.RemoveRecordedOriginal(recorded));
+        Assert.False(Directory.Exists(fixture.Original));
+        Assert.False(Directory.Exists(fixture.Recovered));
+
+        fixture.Prepare();
+        fixture.Save(fixture.Recovered, fixture.Sample.CopyContent());
+        var recovered = Path.Combine(fixture.Recovered, fixture.Sample.FileName);
+        using (var lockedCopy = File.Open(recovered, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Assert.Equal(JobLocalFileRemoval.Removed, fixture.Probe.RemoveRecordedOriginal(recorded));
+        }
+
+        Assert.False(File.Exists(Path.Combine(fixture.Original, fixture.Sample.FileName)));
+        Assert.Equal(fixture.Sample.CopyContent(), File.ReadAllBytes(recovered));
+        Assert.Equal(JobLocalFileRemoval.Missing, fixture.Probe.RemoveRecordedOriginal(recorded));
+    }
+
+    [Fact]
     public void ExactSamplePreparationIsBoundedAndPreservesEarlierFiles()
     {
         if (!OperatingSystem.IsWindows()) { return; }

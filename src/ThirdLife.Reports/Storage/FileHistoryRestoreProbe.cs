@@ -2,6 +2,7 @@ using System.Runtime.Versioning;
 using System.Security;
 using System.Security.Cryptography;
 using ThirdLife.Core.Handover;
+using ThirdLife.Core.Jobs;
 using ThirdLife.Diagnostics;
 using ThirdLife.Diagnostics.Logging;
 
@@ -46,6 +47,7 @@ public sealed class FileHistoryRestoreProbe
         {
             using var original = new DiagnosticStoreSecurity(_originalDirectory);
             using var recovered = new DiagnosticStoreSecurity(_recoveredDirectory);
+            original.EnsureSafeRoot(requireCurrentOwner: true);
             recovered.EnsureSafeRoot();
             using var writeLock = original.TryAcquireExclusiveLock(Path.Combine(_originalDirectory, WriteLockName));
             if (writeLock is null) { return FileHistorySamplePreparation.Unavailable; }
@@ -58,7 +60,8 @@ public sealed class FileHistoryRestoreProbe
 
             var staging = Path.Combine(_originalDirectory, $".sample-{sample.SampleId:N}.tmp");
             var published = Path.Combine(_originalDirectory, sample.FileName);
-            return ProtectedArtifactPublication.Publish(original, sample.CopyContent(), staging, published, cancellationToken)
+            return ProtectedArtifactPublication.Publish(original, sample.CopyContent(), staging, published, cancellationToken,
+                requireCurrentOwner: true)
                 ? FileHistorySamplePreparation.Prepared : FileHistorySamplePreparation.Unavailable;
         }
         catch (Exception exception) when (IsProbeFailure(exception))
@@ -83,6 +86,17 @@ public sealed class FileHistoryRestoreProbe
     {
         ArgumentNullException.ThrowIfNull(recorded);
         return VerifyOriginal(recorded.FileName, new(recorded.ByteLength, recorded.Sha256));
+    }
+
+    public JobLocalFileRemoval RemoveRecordedOriginal(JobLocalFile file, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        if (file.Kind != JobLocalFileKind.FileHistoryOriginal) { return JobLocalFileRemoval.Retained; }
+
+        const string originalPrefix = "thirdlife-restore-";
+        var identifier = file.FileName.AsSpan(originalPrefix.Length, 32);
+        return ProtectedArtifactRemoval.Remove(_originalDirectory, file, string.Concat(".sample-", identifier, ".tmp"),
+            cancellationToken);
     }
 
     private bool VerifyOriginal(string fileName, FileHistorySampleDigest expected)

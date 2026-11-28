@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.Versioning;
+using System.Security.Cryptography;
 using System.Text;
+using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Sanitization;
 
@@ -219,6 +221,44 @@ public sealed class TransactionInterruptionTests
         Assert.Equal(SqliteJobStore.CurrentSchemaVersion, await SqliteTestControl.ReadUserVersionAsync(databasePath));
     }
 
+    [Fact]
+    public async Task ProcessKillAfterOwnedFileRemovalReopensTheApprovedJobBeforeDatabaseCommit()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var job = PersistenceTestData.CreateJob("deletion-crash");
+        var file = TransactionCrashChildTests.DeletionFixtureFile;
+        var path = workspace.GetPath(file.FileName);
+        var actor = new OperatorId("operator-crash-fixture");
+        CheckpointId checkpoint;
+        await using (var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+            await store.CreateJobAsync(job);
+            await store.PublishJobLocalFileAsync(job.JobId, file,
+                _ => File.WriteAllBytes(path, TransactionCrashChildTests.DeletionFixtureBytes.ToArray()));
+            await store.SetArchiveStateAsync(job.JobId, true, PersistenceTestData.Timestamp.AddMinutes(2));
+            checkpoint = Assert.IsType<StoredJob>(await store.LoadJobAsync(job.JobId)).Checkpoints[^1].CheckpointId;
+            var review = Assert.IsType<ArchivedJobDeletionReview>(await store.ReviewArchivedJobDeletionAsync(job.JobId, checkpoint));
+            await store.ApproveArchivedJobDeletionAsync(review, actor);
+        }
+
+        await RunAndKillChildAsync(workspace, "deletion_before_commit");
+
+        Assert.False(File.Exists(path));
+        await using var reopened = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        Assert.NotNull(await reopened.LoadJobAsync(job.JobId));
+        var approval = Assert.IsType<ArchivedJobDeletionReview>(await reopened.ReviewArchivedJobDeletionAsync(job.JobId, checkpoint));
+        Assert.Equal(actor, approval.ApprovedBy);
+        Assert.Equal(file, Assert.Single(approval.Files));
+        var removed = await reopened.ExecuteArchivedJobDeletionAsync(job.JobId, checkpoint, (expected, _) =>
+        {
+            Assert.Equal(file, expected);
+            Assert.False(File.Exists(path));
+            return JobLocalFileRemoval.Missing;
+        });
+        Assert.True(removed.Completed);
+        Assert.Null(await reopened.LoadJobAsync(job.JobId));
+    }
+
     private static async Task RunAndKillChildAsync(PersistenceTestWorkspace workspace, string mode)
     {
         var markerPath = workspace.GetPath(string.Concat("child-ready-", mode, ".marker"));
@@ -313,6 +353,10 @@ public sealed class TransactionCrashChildTests
     internal const string MarkerVariable = "THIRDLIFE_TL0102_CHILD_MARKER";
     internal const string ModeVariable = "THIRDLIFE_TL0102_CHILD_MODE";
     internal const string RootVariable = "THIRDLIFE_TL0102_CHILD_ROOT";
+    internal static ReadOnlySpan<byte> DeletionFixtureBytes => "ThirdLife synthetic retirement crash fixture"u8;
+    internal static JobLocalFile DeletionFixtureFile { get; } = new(JobLocalFileKind.WorkshopReport,
+        "workshop-00000000000000000000000000000001.txt", DeletionFixtureBytes.Length,
+        Convert.ToHexStringLower(SHA256.HashData(DeletionFixtureBytes)));
 
     [Fact]
     public async Task ChildBlocksAtConfiguredFaultPoint()
@@ -344,6 +388,7 @@ public sealed class TransactionCrashChildTests
             "gate_before_commit" => (JobStoreFaultPoint.BeforeWriteCommit, (int?)null),
             "gate_after_commit" => (JobStoreFaultPoint.AfterWriteCommit, (int?)null),
             "migration_before_commit" => (JobStoreFaultPoint.BeforeMigrationCommit, (int?)2),
+            "deletion_before_commit" => (JobStoreFaultPoint.BeforeWriteCommit, (int?)null),
             _ => throw new InvalidOperationException("The child interruption mode is unknown."),
         };
         var injector = new ProcessBlockingFaultInjector(point, detail, marker);
@@ -382,6 +427,18 @@ public sealed class TransactionCrashChildTests
             return;
         }
 
+        if (string.Equals(mode, "deletion_before_commit", StringComparison.Ordinal))
+        {
+            var deletionJob = PersistenceTestData.CreateJob("deletion-crash");
+            var archived = Assert.IsType<StoredJob>(await store.LoadJobAsync(deletionJob.JobId));
+            await store.ExecuteArchivedJobDeletionAsync(deletionJob.JobId, archived.Checkpoints[^1].CheckpointId, (file, _) =>
+            {
+                Assert.Equal(DeletionFixtureFile, file);
+                return RemoveDeletionFixture(root, file);
+            });
+            return;
+        }
+
         if (mode.StartsWith("guarded_", StringComparison.Ordinal))
         {
             var guardedJob = PersistenceTestData.CreateJob("guarded-crash");
@@ -405,6 +462,26 @@ public sealed class TransactionCrashChildTests
                 PersistenceTestData.CreateObservation("crash-first"),
                 PersistenceTestData.CreateObservation("crash-second"),
             ]));
+    }
+
+    private static JobLocalFileRemoval RemoveDeletionFixture(string root, JobLocalFile file)
+    {
+        var fixture = new DirectoryInfo(root).Parent ?? throw new InvalidOperationException("The fixture parent was not supplied.");
+        var temp = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.GetTempPath()));
+        Assert.Equal(temp, fixture.Parent?.FullName, ignoreCase: true);
+        Assert.StartsWith("ThirdLife-TL0102-", fixture.Name, StringComparison.Ordinal);
+        var path = Path.Combine(fixture.FullName, file.FileName);
+        using var handle = WindowsFileIdentity.OpenFileMutationGuard(path, allowReadWriteShare: false);
+        Assert.Equal(path, WindowsFileIdentity.GetFinalPath(handle), ignoreCase: true);
+        Assert.Equal(1U, WindowsFileIdentity.GetLinkCount(handle));
+        Assert.False(WindowsFileIdentity.GetAttributes(handle).HasFlag(FileAttributes.ReparsePoint));
+        using var data = new FileStream(handle, FileAccess.Read);
+        Assert.Equal(file.ByteLength, data.Length);
+        Span<byte> actual = stackalloc byte[file.ByteLength];
+        data.ReadExactly(actual);
+        Assert.True(actual.SequenceEqual(DeletionFixtureBytes));
+        WindowsFileIdentity.DeleteFile(handle);
+        return JobLocalFileRemoval.Removed;
     }
 
     private sealed class ProcessBlockingFaultInjector : IJobStoreFaultInjector

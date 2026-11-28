@@ -17,7 +17,7 @@ public sealed class FileHistorySampleAuditStoreTests
         var actor = new OperatorId("operator-sample-audit");
         var destination = new FileHistoryDestinationObservation(Guid.NewGuid(), true, 50_000);
         FileHistorySampleAudit pending;
-        var schema = SqliteJobStore.CurrentSchemaVersion;
+        const int schema = 21;
         await using (var original = await Open(schema - 1))
         {
             await original.CreateJobAsync(job);
