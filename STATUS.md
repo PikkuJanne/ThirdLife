@@ -116,12 +116,15 @@ prerequisites. Exact setting changes and live backup and restore remain pending.
 [Toggle Keys](artifacts/evidence/TL-0701/toggle-keys.md) · [Backup readiness](artifacts/evidence/TL-0702/readiness.md)
 
 The private ZIP launched unelevated and saved the exact reviewed synthetic
-configuration through the native folder picker. The corrected private
-MSIs passed the per-user lifecycle on the existing guest. Private
-0.3.6 passed upgrade cancellation and recovered uninstall while
-preserving the populated archived job. The installed window awaits
-a desktop with its Windows first-use privacy choices resolved.
-[Private candidate](artifacts/evidence/TL-0706/private-interface.md) · [Guest MSI evidence](artifacts/evidence/TL-0704/populated-job-lifecycle.md)
+configuration through the native folder picker. On ThirdLife-W11, the
+private 0.3.6-to-0.3.8 MSI upgrade preserved the schema-21 database.
+The newer reader migrated it to schema 22 and verified the same archived
+job after repair and removal. Reinstalling exact 0.3.8 recovered
+registration after canceled removal. The installed window awaits a desktop with
+Windows first-use privacy choices resolved. TL-0704 retains qualification
+of the exact production and pilot artifacts.
+[Private candidate](artifacts/evidence/TL-0706/private-interface.md)
+[Guest MSI evidence](artifacts/evidence/TL-0704/schema-22-private-lifecycle.md)
 
 TL-0703 is complete. Jobs separately approves deletion of one archived job
 and its recorded files. A locked copy left recoverable approval, and the

@@ -8177,13 +8177,11 @@ tasks:
   workstream: release
   kind: release
   priority: P0
-  status: backlog
+  status: blocked
   size: XL
   executor: codex
   environment: windows
   depends_on:
-  - TL-0701
-  - TL-0702
   - TL-0703
   decision_refs:
   - D-029
@@ -8240,8 +8238,6 @@ tasks:
     environment: Active Windows 11 x64 host and existing Windows 11 Pro native x64 guest build 26300.9974
     reference: artifacts/evidence/TL-0704/interactive-lifecycle.md, 00b305b1a075727d788a5a084bf5e3e7cafcf67b
     limitation: Private lifecycle and synthetic file preservation only. Windows first-use choices limited installed window observation. Interrupted recovery, populated SQLite preservation, signed identity and release remain open.
-  notes:
-  - Record precise tested environment and data-preservation boundaries. TL-0710 carries actual release disposition.
   - summary: The exact private 0.3.3 to 0.3.4 normal lifecycle preserved the same populated archived workshop job.
     task: TL-0704
     command: Restricted guest standard-user lifecycle fixture and production SQLite store readback after repair, upgrade, and removal
@@ -8272,26 +8268,89 @@ tasks:
     environment: Active Windows 11 Pro 26H2 native x64 host, clean detached checkout
     reference: artifacts/evidence/TL-0704/populated-job-lifecycle.md, fa2fa35812a8960a35c3131bc902f2d7eee49b39
     limitation: Verification of the private authoring and application source. Native scope is recorded separately for the exact guest package pair.
+  - summary: The exact private 0.3.6-to-0.3.8 MSI lifecycle preserved one populated archived job across a store migration from schema 21 to 22.
+    task: TL-0704
+    command: Hash-bound limited interactive guest fixture, Windows Installer install, upgrade, downgrade refusal, repair and removal, and exact packaged persistence readback
+    tier: targeted
+    result: passed
+    date: '2026-11-28'
+    duration: 31.075 s native transaction and store fixture, 227.625 s host Targeted including 48 persistence tests
+    environment: Existing ThirdLife-W11 Windows 11 Pro 26H2 build 26300.9974 native x64, synthetic standard-user profile, pinned local .NET Desktop Runtime 10.0.11
+    reference: artifacts/evidence/TL-0704/schema-22-private-lifecycle.md, fa2fa35812a8960a35c3131bc902f2d7eee49b39 and 11d2b792fbaefd23ebd374e4e67d1cd2777f50d2
+    limitation: Private unsigned MSI pair, one synthetic archived job and two chosen-copy sentinels. Installed window, remaining interruption phases and exact stable and pilot artifacts remain open.
+  - summary: Native repair cancellation on 0.3.8 rolled back the observed file replacement and a normal retry restored the install.
+    task: TL-0704
+    command: Hash-bound native interactive fixture using Windows Installer callbacks, independent file and product state verification, and packaged persistence readback
+    tier: targeted
+    result: passed
+    date: '2026-11-28'
+    duration: 6.890 s
+    environment: Existing ThirdLife-W11 Windows 11 Pro 26H2 build 26300.9974 native x64 and the same synthetic standard-user profile
+    reference: artifacts/evidence/TL-0704/schema-22-private-lifecycle.md, 11d2b792fbaefd23ebd374e4e67d1cd2777f50d2
+    limitation: One repair cancellation phase of unsigned private 0.3.8. Normal repair and uninstall preserved the same archived job and chosen-copy sentinels.
+  - summary: Native fresh-install cancellation restored the absent private 0.3.8 install and a normal retry installed all 19 owned files.
+    task: TL-0704
+    command: Hash-bound native interactive fixture using Windows Installer callbacks and file, product, feature, component and SQLite readback
+    tier: targeted
+    result: passed
+    date: '2026-11-28'
+    duration: Within a 5.562 s combined fresh-install and uninstall cancellation run
+    environment: Existing ThirdLife-W11 Windows 11 Pro 26H2 build 26300.9974 native x64 and the same synthetic standard-user profile
+    reference: artifacts/evidence/TL-0704/schema-22-private-lifecycle.md, 11d2b792fbaefd23ebd374e4e67d1cd2777f50d2
+    limitation: Fresh-install cancellation case only. The same run observed an incomplete automatic rollback of uninstall registration.
+  - summary: A canceled private 0.3.8 removal restored file bytes but left the product and feature advertised. Exact reinstall recovered registration before normal removal.
+    task: TL-0704
+    command: Native cancellation after observed file removal, followed by hash-bound per-user MSI registration readback, exact reinstall, normal uninstall and SQLite readback
+    tier: targeted
+    result: passed
+    date: '2026-11-28'
+    duration: 5.562 s combined cancellation run and 4.937 s explicit recovery
+    environment: Existing ThirdLife-W11 Windows 11 Pro 26H2 build 26300.9974 native x64 and the same synthetic standard-user profile
+    reference: artifacts/evidence/TL-0704/schema-22-private-lifecycle.md, 11d2b792fbaefd23ebd374e4e67d1cd2777f50d2
+    limitation: Passed the explicit recovery procedure. Automatic Windows Installer registration rollback was incomplete. Exact stable installer remains unqualified.
+  - summary: Full verification passed for the current installer and application source.
+    task: TL-0704
+    command: eng/verify.ps1 -Tier Full -Restore in the isolated worktree
+    tier: full
+    result: passed
+    date: '2026-11-28'
+    duration: 544.411 s, 322 repository checks and 2711 .NET tests
+    environment: Active unelevated Windows 11 Pro native x64 host with locked restore
+    reference: artifacts/evidence/TL-0704/schema-22-private-lifecycle.md, d57ce297ff57845046bcd9a78afc070ef7db5f2a
+    limitation: Deterministic Full scope. The exact private guest lifecycle results and limits are recorded separately.
+  blocked_reason: Exact production installer and controlled-pilot baseline artifacts are unavailable. Reopen the stable
+    lifecycle with reviewed digests, release identity, signing and runtime dependency admission, and a verified standard-user
+    ThirdLife-W11 desktop with Windows first-use choices resolved.
+  notes:
+  - Prepare and review candidate bytes before native qualification. TL-0708 freezes the qualified bytes after the matrix and interface work.
+    A changed package identity, signer or payload requires qualification against the changed bytes.
+  - Recipient setting and File History qualification apply to their respective release claims. The standalone installer lifecycle uses TL-0703 data ownership.
   expected_test_tier: full
   full_test_triggers:
   - The task is a milestone, preview, pilot, stable-release, packaging, or protected release gate.
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or
     security boundary.
   extended_test_triggers: []
+  completion_phase: execution
+  execution_prerequisites:
+  - kind: capability
+    scope: Exact reviewed production installer with source and artifact digests, publisher and signing disposition, and admitted runtime dependencies.
+  - kind: capability
+    scope: Exact controlled-pilot baseline artifact for the upgrade case.
+  - kind: capability
+    scope: Verified standard-user ThirdLife-W11 desktop ready for the installed-window and exact-candidate lifecycle checks.
 - id: TL-0705
   title: Finalize stable security, accessibility, low-spec, and support documentation
   milestone: M7
   workstream: quality
   kind: docs
   priority: P0
-  status: backlog
+  status: ready
   size: L
   executor: codex
   environment: windows
   depends_on:
-  - TL-0701
-  - TL-0702
-  - TL-0704
+  - TL-0703
   decision_refs:
   - D-039
   - D-043
@@ -8347,6 +8406,17 @@ tasks:
   extended_test_triggers:
   - Run the relevant extended scenario for interruption, resource pressure, adversarial input, cold boot, endurance, or restore
     risk affected by the task.
+  completion_phase: release
+  release_prerequisites:
+  - kind: task
+    task: TL-0701
+    scope: Verified recipient accessibility claims and remaining limits.
+  - kind: task
+    task: TL-0702
+    scope: Verified backup and restore claims and remaining limits.
+  - kind: task
+    task: TL-0704
+    scope: Verified exact stable installer lifecycle and data-preservation claims.
 - id: TL-0706
   title: Complete the minimal release interface and black-box samples
   milestone: M7

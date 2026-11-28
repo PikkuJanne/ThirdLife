@@ -68,10 +68,29 @@ The reviewed private 0.3.3 and 0.3.6 MSI pair passed the native
 per-user lifecycle on ThirdLife-W11. Windows Installer could still
 remove the previous version after a canceled upgrade. Normal upgrade, repair,
 downgrade refusal and uninstall preserved the same populated archived
-job and its database bytes. The installed window, other interruption
-phases and frozen release information remain open.
+job and its database bytes. The private 0.3.6-to-0.3.8 upgrade
+preserved the database through MSI replacement. The newer reader
+migrated it to schema 22 and reopened the same archived job after
+repair and uninstall. The older reader refused the migrated store
+without changing its bytes. Private 0.3.8 automatically rolled back
+fresh-install and repair cancellation. After canceled removal, a same-version
+reinstall recovered Windows Installer registration and normal removal succeeded.
+The installed window and exact release package remain open.
 [Private lifecycle](artifacts/evidence/TL-0704/populated-job-lifecycle.md)
-· [Private standalone audit](artifacts/evidence/TL-0709/private-candidate-boundary.md)
+[Private schema-22 lifecycle](artifacts/evidence/TL-0704/schema-22-private-lifecycle.md)
+[Private standalone audit](artifacts/evidence/TL-0709/private-candidate-boundary.md)
+
+Prepare the production package with its release product and upgrade identity,
+reviewed publisher and signature or verification method, admitted runtime
+dependencies and notices, and exact source and artifact digests. Inspect the
+native x64 MSI for its Windows 11 admission rule, registered per-user
+resources, maintenance options and restart behavior. Verify the reviewed
+payload and exact supported pilot upgrade source on ThirdLife-W11.
+TL-0708 freezes the qualified bytes and evidence after the matrix and
+interface checks. The private installer has its own product family and
+build-specific admission.
+[Private candidate ownership](artifacts/evidence/TL-0703/private-package-ownership.md)
+[Dependency admission](docs/supply-chain/dependencies.md)
 
 Qualify install, upgrade, repair and removal against D-005. Record the exact Windows 11 edition, release, build, native x64 architecture, tested artifact and limits. Document at `TL-0706`:
 

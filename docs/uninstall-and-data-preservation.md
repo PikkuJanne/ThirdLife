@@ -11,6 +11,42 @@ TL-0704.
 [Private package ownership](../artifacts/evidence/TL-0703/private-package-ownership.md)
 [Broker provisioner](../eng/install-thirdlife-broker.ps1)
 
+## Update, repair and recovery for the private preview
+
+Sign in as the same standard Windows user who installed the preview. Close
+ThirdLife and check the selected MSI against its reviewed package record.
+Use the newer reviewed MSI for an upgrade and the exact installed version
+for repair or removal. The private lifecycle fixture uses Windows Installer
+with `/i` for installation and upgrade, `/fa` for repair, and `/x` for removal,
+followed by the exact MSI path. It uses `/qn /norestart` and keeps installer
+logs in restricted local storage. After an upgrade or repair, reopen the job
+and check its saved history before continuing workshop work.
+[Private package preflight](pilot/deployment-rollback.md)
+[Windows Installer options](https://learn.microsoft.com/windows-server/administration/windows-commands/msiexec)
+
+If a private 0.3.8 uninstall is canceled, first check the owned files and
+Windows Installer registration. The guest observed all 19 files restored
+with the product and desktop feature still advertised. For that verified
+state, reinstall the same reviewed 0.3.8 MSI under the same Windows user
+and check that the desktop feature and components are installed. Then use
+normal uninstall if application removal is intended. If the files or MSI
+identity differ from the reviewed package, keep the job store and installation
+as found for support review.
+[Verified private recovery](../artifacts/evidence/TL-0704/schema-22-private-lifecycle.md#fresh-install-and-uninstall-cancellation)
+
+The newer app can migrate the job store the first time it opens it. Before
+upgrading, save the workshop report and recipient guide to their intended
+protected destinations. The exports preserve readable copies of those
+documents. After migration, use a reviewed build that supports the saved
+schema. If the previous build refuses the newer store, keep the database
+and its rollback journal in place. Reinstall a compatible reviewed build,
+reopen the same job and check its history and saved copies. If the
+compatible build also fails to reopen it, preserve the store for support.
+[Registered data roots](data-locations.md)
+[Support](support.md)
+
+## Keep or delete job data
+
 The **Jobs** surface can archive the current job and restore it later
 by job code. The job keeps its evidence and records both transitions.
 For an archived job, **Check saved copies and original samples** compares
@@ -57,10 +93,12 @@ removal preserves the existing schema version. Reinstall a build that supports
 the saved schema to reopen the database. Earlier builds report a newer store
 as unavailable and leave it in place.
 
-On ThirdLife-W11, removal of the exact private 0.3.6 MSI removed its
-19 registered desktop files. The lifecycle fixture reopened the same populated
-archived job after repair, upgrade, cancellation recovery and final uninstall.
-TL-0704 verifies removal and preservation for the exact stable package, including
-retained jobs, adjacent unrelated decoys and lifecycle interruption.
+On ThirdLife-W11, the private 0.3.6 cancellation run recovered the
+previous installer and the archived job. The separate 0.3.6-to-0.3.8
+run preserved the store during MSI upgrade. The newer persistence reader
+migrated it to schema 22. The same archived job and synthetic report and
+guide copies survived repair and removal. The exact stable package still
+requires lifecycle and data-preservation verification in TL-0704.
 [Private populated lifecycle](../artifacts/evidence/TL-0704/populated-job-lifecycle.md)
+[Private schema-22 lifecycle](../artifacts/evidence/TL-0704/schema-22-private-lifecycle.md)
 [Retention and cleanup](retention-and-cleanup.md)
