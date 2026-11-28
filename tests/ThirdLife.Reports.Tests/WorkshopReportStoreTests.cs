@@ -1,12 +1,16 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 using ThirdLife.Core.Evidence;
+using ThirdLife.Core.Handover;
 using ThirdLife.Core.Jobs;
 using ThirdLife.Core.Support;
 using ThirdLife.Diagnostics;
 using ThirdLife.Diagnostics.Redaction;
+using ThirdLife.Reports.RecipientGuide;
 using ThirdLife.Reports.Support;
 using ThirdLife.Reports.WorkshopReport;
 
@@ -69,6 +73,153 @@ public sealed class WorkshopReportStoreTests
         Assert.Equal(Report, store.Read(saved));
         Assert.Single(Directory.EnumerateFiles(directory.ReportRoot, "*.txt"));
         Assert.Empty(Directory.EnumerateFiles(directory.ReportRoot, "*.tmp"));
+    }
+
+    [Fact]
+    public async Task OwnershipCallbackReceivesExactBytesBeforePublicationAndCanPublishOnlyOnce()
+    {
+        using var directory = new FixtureDirectory();
+        var store = new WorkshopReportStore(directory.ReportRoot, () => FirstToken);
+        Action<CancellationToken>? captured = null;
+        var calls = 0;
+        var saved = await store.WriteWithOwnershipAsync(Job, Report, (artifact, publish, token) =>
+        {
+            calls++;
+            captured = publish;
+            Assert.Equal(Job, artifact.JobId);
+            Assert.Equal(Encoding.UTF8.GetByteCount(Report), artifact.Receipt.ByteLength);
+            Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Report))), artifact.Receipt.Sha256);
+            Assert.False(Directory.Exists(directory.ReportRoot));
+            publish(token);
+            Assert.Throws<InvalidOperationException>(() => publish(token));
+            return Task.CompletedTask;
+        });
+
+        Assert.Equal(1, calls);
+        Assert.Equal(Report, store.Read(saved));
+        Assert.NotNull(captured);
+        Assert.Throws<InvalidOperationException>(() => captured(CancellationToken.None));
+        Assert.Empty(Directory.EnumerateFiles(directory.ReportRoot, "*.tmp"));
+
+        var collision = await Assert.ThrowsAsync<WorkshopReportStoreException>(() =>
+            store.WriteWithOwnershipAsync(Job, Report, (_, _, _) =>
+            {
+                calls++;
+                return Task.CompletedTask;
+            }));
+        Assert.Equal(WorkshopReportFailure.NameCollision, collision.Failure);
+        Assert.Equal(1, calls);
+        Assert.Equal(Report, store.Read(saved));
+    }
+
+    [Fact]
+    public async Task OwnershipCallbackThatDoesNotPublishLeavesTheFolderAbsent()
+    {
+        using var directory = new FixtureDirectory();
+        var store = new WorkshopReportStore(directory.ReportRoot);
+        Action<CancellationToken>? delayed = null;
+        var failure = await Assert.ThrowsAsync<WorkshopReportStoreException>(() =>
+            store.WriteWithOwnershipAsync(Job, Report, (_, publish, _) =>
+            {
+                delayed = publish;
+                return Task.CompletedTask;
+            }));
+
+        Assert.Equal(WorkshopReportFailure.WriteFailed, failure.Failure);
+        Assert.NotNull(delayed);
+        Assert.Throws<InvalidOperationException>(() => delayed(CancellationToken.None));
+        Assert.False(Directory.Exists(directory.ReportRoot));
+    }
+
+    [Fact]
+    public void ExactRemovalDistinguishesMissingFromDenialAndLeavesIndependentFiles()
+    {
+        if (!OperatingSystem.IsWindows()) { return; }
+        using var directory = new FixtureDirectory();
+        var store = new WorkshopReportStore(directory.ReportRoot, () => FirstToken);
+        var reference = new JobLocalFile(JobLocalFileKind.WorkshopReport, $"workshop-{FirstToken:N}.txt",
+            Encoding.UTF8.GetByteCount(Report), Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Report))));
+        Assert.Equal(JobLocalFileRemoval.Missing, store.RemoveRecordedFile(reference));
+        Assert.False(Directory.Exists(directory.ReportRoot));
+        Assert.Equal(Report, store.Read(store.Write(Job, Report)));
+        var path = Path.Combine(directory.ReportRoot, reference.FileName);
+        var other = Path.Combine(directory.ReportRoot, "unrelated.txt");
+        File.WriteAllText(other, "unrelated file");
+
+        using (var mutation = File.Open(path, FileMode.Open, FileAccess.ReadWrite,
+                   FileShare.Read | FileShare.Write | FileShare.Delete))
+        {
+            Assert.Equal(JobLocalFileRemoval.Retained, store.RemoveRecordedFile(reference));
+        }
+        var changed = Report.Replace("café", "safé", StringComparison.Ordinal);
+        File.WriteAllText(path, changed);
+        Assert.Equal(JobLocalFileRemoval.Retained, store.RemoveRecordedFile(reference));
+        Assert.Equal(changed, File.ReadAllText(path));
+
+        File.WriteAllText(path, Report);
+        var info = new FileInfo(path);
+        var permissions = info.GetAccessControl();
+        var broadRule = new FileSystemAccessRule(
+            new SecurityIdentifier(WellKnownSidType.WorldSid, null), FileSystemRights.ReadData, AccessControlType.Allow);
+        permissions.AddAccessRule(broadRule);
+        info.SetAccessControl(permissions);
+        Assert.Equal(JobLocalFileRemoval.Retained, store.RemoveRecordedFile(reference));
+        Assert.Equal(Report, File.ReadAllText(path));
+        permissions.RemoveAccessRuleSpecific(broadRule);
+        info.SetAccessControl(permissions);
+
+        Assert.Equal(JobLocalFileRemoval.Removed, store.RemoveRecordedFile(reference));
+        Assert.False(File.Exists(path));
+        Assert.Equal(JobLocalFileRemoval.Missing, store.RemoveRecordedFile(reference));
+        Assert.Equal("unrelated file", File.ReadAllText(other));
+    }
+
+    [Fact]
+    public void ExactRemovalReconcilesAnIntactOwnedStageAndRetainsPartialStageBytes()
+    {
+        if (!OperatingSystem.IsWindows()) { return; }
+        using var directory = new FixtureDirectory();
+        var store = new WorkshopReportStore(directory.ReportRoot, () => FirstToken);
+        var stamped = store.Write(Job, Report);
+        var reference = new JobLocalFile(JobLocalFileKind.WorkshopReport, stamped.FileName,
+            stamped.Receipt.ByteLength, stamped.Receipt.Sha256);
+        var destination = Path.Combine(directory.ReportRoot, stamped.FileName);
+        var staging = Path.Combine(directory.ReportRoot, $".workshop-{FirstToken:N}.tmp");
+        File.Move(destination, staging);
+
+        File.WriteAllText(staging, "partial");
+        Assert.Equal(JobLocalFileRemoval.Retained, store.RemoveRecordedFile(reference));
+        Assert.Equal("partial", File.ReadAllText(staging));
+        File.WriteAllText(staging, Report);
+        Assert.Equal(JobLocalFileRemoval.Removed, store.RemoveRecordedFile(reference));
+        Assert.False(File.Exists(staging));
+        Assert.False(File.Exists(destination));
+    }
+
+    [Fact]
+    public async Task GuideUsesItsOwnRegisteredPublicationAndRemovalKind()
+    {
+        if (!OperatingSystem.IsWindows()) { return; }
+        using var directory = new FixtureDirectory();
+        var guideRoot = directory.PathFor("guides");
+        var guide = RecipientGuideRenderer.Render(new(RecipientHandover.Start(HandoverMode.Sealed), null, []));
+        var store = new RecipientGuideStore(guideRoot);
+        var saved = await store.SaveArtifactWithOwnershipAsync(Job, guide, (artifact, publish, token) =>
+        {
+            Assert.False(Directory.Exists(guideRoot));
+            Assert.StartsWith("recipient-guide-", artifact.FileName, StringComparison.Ordinal);
+            publish(token);
+            return Task.CompletedTask;
+        });
+        var guidePath = Path.Combine(guideRoot, saved.FileName);
+        Assert.Equal(guide.PrintableHtml, File.ReadAllText(guidePath));
+
+        var reference = new JobLocalFile(JobLocalFileKind.RecipientGuide, saved.FileName,
+            saved.Receipt.ByteLength, saved.Receipt.Sha256);
+        Assert.Equal(JobLocalFileRemoval.Retained, new WorkshopReportStore(guideRoot).RemoveRecordedFile(reference));
+        Assert.True(File.Exists(guidePath));
+        Assert.Equal(JobLocalFileRemoval.Removed, store.RemoveRecordedFile(reference));
+        Assert.False(File.Exists(guidePath));
     }
 
     [Fact]
@@ -191,7 +342,8 @@ public sealed class WorkshopReportStoreTests
     {
         using var directory = new FixtureDirectory();
         var target = Directory.CreateDirectory(directory.PathFor("another-folder")).FullName;
-        var outside = Path.Combine(target, "retained.txt");
+        var outsideName = $"workshop-{FirstToken:N}.txt";
+        var outside = Path.Combine(target, outsideName);
         File.WriteAllText(outside, "unchanged");
         if (OperatingSystem.IsWindows())
         {
@@ -222,6 +374,9 @@ public sealed class WorkshopReportStoreTests
         {
             var store = new WorkshopReportStore(directory.ReportRoot);
             TheFailure(WorkshopReportFailure.DestinationUnavailable, () => store.Write(Job, Report));
+            var reference = new JobLocalFile(JobLocalFileKind.WorkshopReport, outsideName, 9,
+                Convert.ToHexStringLower(SHA256.HashData("unchanged"u8)));
+            Assert.Equal(JobLocalFileRemoval.Retained, store.RemoveRecordedFile(reference));
             var preview = SupportArchivePreview.Create([], DateTimeOffset.UtcNow);
             var support = new SupportArchiveStore(directory.ReportRoot);
             Assert.Throws<DiagnosticContractException>(() => support.Export(preview, preview.ArchiveSha256));
@@ -249,6 +404,8 @@ public sealed class WorkshopReportStoreTests
         Assert.True(CreateHardLink(alias, Path.Combine(directory.ReportRoot, original.FileName), IntPtr.Zero));
 
         TheFailure(WorkshopReportFailure.ReadFailed, () => store.Read(original));
+        Assert.Equal(JobLocalFileRemoval.Retained, store.RemoveRecordedFile(new(JobLocalFileKind.WorkshopReport,
+            original.FileName, original.Receipt.ByteLength, original.Receipt.Sha256)));
         Assert.Equal(Report, File.ReadAllText(alias));
     }
 

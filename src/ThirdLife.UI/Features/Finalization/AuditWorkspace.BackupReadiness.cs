@@ -27,7 +27,7 @@ internal sealed partial class AuditWorkspace
     public bool CanCheckBackupReadiness => ShowsBackupReadiness && CanEditJob && !_readingFinalization;
     public Guid? BackupReadinessReviewId => _backupReview?.ReviewId;
     public bool CanPrepareBackupSample => CanCheckBackupReadiness && _backupReview is not null &&
-        _store is IFileHistorySampleAuditStore;
+        _store is IFileHistorySampleAuditStore and IJobDataLifecycleStore;
     public bool CanReopenBackupSample => CanPrepareBackupSample && _latestBackupSampleAudit is { } audit &&
         audit.HandoverSequence == _backupReview?.HandoverSequence && audit.CanRecord(FileHistorySampleAuditState.CopyMatches);
     public bool ShowsBackupSampleCheck => ShowsBackupReadiness && _preparedBackupSample is not null;
@@ -99,7 +99,7 @@ internal sealed partial class AuditWorkspace
         if (!CanPrepareBackupSample || !recipientConfirmed || Job is not { } job ||
             _backupReview is not { } review || review.ReviewId != reviewedId ||
             _reviewedBackupDrive is not { } volumeRoot || _backupInventory is not { } inventory ||
-            _store is not IFileHistorySampleAuditStore store)
+            _store is not IFileHistorySampleAuditStore store || _store is not IJobDataLifecycleStore lifecycle)
         {
             return Task.CompletedTask;
         }
@@ -129,7 +129,8 @@ internal sealed partial class AuditWorkspace
                 var probe = _backupSampleProbe ?? RegisteredBackupSampleProbe();
                 var outcome = probe is null
                     ? FileHistorySamplePreparation.Unavailable
-                    : await Task.Run(() => probe.Prepare(sample));
+                    : await Task.Run(() => lifecycle.PublishFileHistoryOriginalAsync(job.Job.JobId, staged,
+                        token => probe.Prepare(sample, token)));
                 var auditState = outcome == FileHistorySamplePreparation.Prepared
                     ? FileHistorySampleAuditState.Prepared : FileHistorySampleAuditState.PreparationUnavailable;
                 var saved = await Task.Run(() => store.RecordFileHistorySampleAsync(job.Job.JobId, staged, auditState, actor));

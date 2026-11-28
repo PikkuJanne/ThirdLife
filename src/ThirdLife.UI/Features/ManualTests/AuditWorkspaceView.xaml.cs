@@ -129,6 +129,12 @@ public partial class AuditWorkspaceView : UserControl
         string requested = JobIdInput.Text.Trim();
         JobRegion.Focus();
         await Workspace.OpenJobAsync(requested);
+        if (_shownStage is null && Workspace.JobDeletionPending)
+        {
+            FocusAndReveal(AuditStatus);
+            return;
+        }
+
         if (_shownStage is null && string.Equals(Workspace.JobId, requested, StringComparison.Ordinal) && requested.Length != 0)
         {
             var destination = Workspace.Assessment is not null || Workspace.CanAssess ? ShellStage.Inspect : ShellStage.Intake;
@@ -501,6 +507,7 @@ public partial class AuditWorkspaceView : UserControl
         RefreshHandoverCompletion();
         RefreshToggleKeys();
         RefreshBackupReadiness();
+        RefreshJobDeletion();
         JobHeader.Visibility = VisibleWhen(Workspace.Job is not null);
         JobArchiveRegion.Visibility = VisibleWhen(Workspace.ShowsJobArchive);
         ReviewArchivedOutputsButton.Visibility = VisibleWhen(Workspace.ShowsArchivedOutputReview);

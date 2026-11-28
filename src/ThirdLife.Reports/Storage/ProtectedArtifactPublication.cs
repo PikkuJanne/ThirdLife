@@ -23,7 +23,8 @@ internal static class ProtectedArtifactPublication
         byte[] bytes,
         string temporary,
         string destination,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool requireCurrentOwner = false)
     {
         using var stream = security.CreateRestrictedFile(
             temporary, FileShare.None, FileOptions.WriteThrough, TransferBytes);
@@ -37,7 +38,7 @@ internal static class ProtectedArtifactPublication
             }
 
             stream.Flush(flushToDisk: true);
-            security.EnsureSafeRoot();
+            security.EnsureSafeRoot(requireCurrentOwner: requireCurrentOwner);
             cancellationToken.ThrowIfCancellationRequested();
             if (OperatingSystem.IsWindows())
             {

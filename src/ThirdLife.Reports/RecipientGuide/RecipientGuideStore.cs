@@ -20,6 +20,17 @@ public sealed class RecipientGuideStore
         return _files.Write(jobId, preview.PrintableHtml, cancellationToken);
     }
 
+    public Task<WorkshopReportArtifact> SaveArtifactWithOwnershipAsync(JobId jobId, RenderedRecipientGuide preview,
+        Func<WorkshopReportArtifact, Action<CancellationToken>, CancellationToken, Task> publishWithOwnership,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(preview);
+        return _files.WriteWithOwnershipAsync(jobId, preview.PrintableHtml, publishWithOwnership, cancellationToken);
+    }
+
+    public JobLocalFileRemoval RemoveRecordedFile(JobLocalFile file, CancellationToken cancellationToken = default) =>
+        _files.RemoveRecordedFile(file, cancellationToken);
+
     public void VerifyReceipt(WorkshopReportReceipt receipt, CancellationToken cancellationToken = default) =>
         _files.VerifyReceipt(receipt, cancellationToken);
 }

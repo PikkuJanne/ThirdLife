@@ -60,6 +60,56 @@ public sealed class PolicyHistoryStoreTests
     }
 
     [Fact]
+    public async Task DeletingOneJobRemovesItsExclusivePolicyBytesAndPreservesReferencedSnapshots()
+    {
+        using var workspace = new PersistenceTestWorkspace();
+        var removedJob = PersistenceTestData.CreateJob("policy-remove");
+        var retainedJob = PersistenceTestData.CreateJob("policy-retain");
+        var shared = Snapshot("1.0.0");
+        var exclusive = Snapshot("1.1.0");
+        var removedObservations = Observations();
+        var retainedObservations = Observations("-retained");
+        var initial = Decide(shared, removedJob, removedObservations);
+        var reevaluated = Decide(exclusive, removedJob, removedObservations, initial.DecisionId);
+        var retainedDecision = Decide(shared, retainedJob, retainedObservations);
+        string databasePath;
+        await using (var store = await SqliteJobStore.OpenAsync(workspace.StoreRoot))
+        {
+            databasePath = store.DatabasePath;
+            await CreateJobWithEvidenceAsync(store, removedJob, removedObservations);
+            await store.AppendPolicyDecisionAsync(shared, initial);
+            await CreateJobWithEvidenceAsync(store, retainedJob, retainedObservations);
+            await store.AppendPolicyDecisionAsync(shared, retainedDecision);
+            await store.AppendPolicyDecisionAsync(exclusive, reevaluated);
+            await store.SetArchiveStateAsync(removedJob.JobId, true, FirstEvaluation.AddMinutes(10));
+            var archived = Assert.IsType<StoredJob>(await store.LoadJobAsync(removedJob.JobId));
+            var checkpoint = archived.Checkpoints[^1].CheckpointId;
+            var review = Assert.IsType<ArchivedJobDeletionReview>(await store.ReviewArchivedJobDeletionAsync(removedJob.JobId, checkpoint));
+            await store.ApproveArchivedJobDeletionAsync(review, new OperatorId("operator-policy-removal"));
+            var outcome = await store.ExecuteArchivedJobDeletionAsync(removedJob.JobId, checkpoint,
+                (_, _) => throw new InvalidOperationException("No local files were recorded for the job."));
+            Assert.True(outcome.Completed);
+        }
+
+        await using var reopened = await SqliteJobStore.OpenAsync(workspace.StoreRoot);
+        Assert.Null(await reopened.LoadJobAsync(removedJob.JobId));
+        var retained = Assert.IsType<StoredPolicyDecision>(await reopened.LoadLatestPolicyDecisionAsync(retainedJob.JobId, AssessmentId));
+        Assert.Equal(retainedDecision.DecisionId, retained.Decision.DecisionId);
+        Assert.Equal(shared.Utf8Json.ToArray(), retained.Snapshot.Utf8Json.ToArray());
+
+        await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = databasePath,
+            Mode = SqliteOpenMode.ReadOnly,
+            Pooling = false,
+        }.ToString());
+        await connection.OpenAsync();
+        await using var select = connection.CreateCommand();
+        select.CommandText = "SELECT group_concat(policy_version) FROM policy_snapshots;";
+        Assert.Equal("1.0.0", await select.ExecuteScalarAsync());
+    }
+
+    [Fact]
     public async Task DifferentBytesAndDowngradeFailWhileCommittedRetriesRemainIdempotent()
     {
         using var workspace = new PersistenceTestWorkspace();
@@ -333,12 +383,12 @@ public sealed class PolicyHistoryStoreTests
             evidence.Select(observation => observation.Metadata.EvidenceId),
             predecessor is null ? FirstEvaluation : FirstEvaluation.AddMinutes(minutesAfterFirst), predecessor);
 
-    private static Observation[] Observations() =>
+    private static Observation[] Observations(string suffix = "") =>
     [
-        Fact("operating-system", "operating_system.release", EvidenceValue.FromEnum("windows_11")),
-        Fact("support", "operating_system.support_state", EvidenceValue.FromEnum("supported")),
-        Fact("architecture", "system.architecture", EvidenceValue.FromEnum("x64")),
-        Fact("memory", "memory.installed_bytes", EvidenceValue.FromInteger(4_294_967_296), "bytes"),
+        Fact("operating-system" + suffix, "operating_system.release", EvidenceValue.FromEnum("windows_11")),
+        Fact("support" + suffix, "operating_system.support_state", EvidenceValue.FromEnum("supported")),
+        Fact("architecture" + suffix, "system.architecture", EvidenceValue.FromEnum("x64")),
+        Fact("memory" + suffix, "memory.installed_bytes", EvidenceValue.FromInteger(4_294_967_296), "bytes"),
     ];
 
     private static Observation Fact(string id, string key, EvidenceValue value, string? unit = null) =>

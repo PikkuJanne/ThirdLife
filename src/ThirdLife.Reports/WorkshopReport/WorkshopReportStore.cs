@@ -68,6 +68,7 @@ public sealed class WorkshopReportStore
     private readonly string _rootDirectory;
     private readonly string _filePrefix;
     private readonly string _fileSuffix;
+    private readonly JobLocalFileKind _fileKind;
     private readonly Func<Guid> _nextReportToken;
     private readonly object _issuer = new();
 
@@ -93,12 +94,80 @@ public sealed class WorkshopReportStore
         _nextReportToken = nextReportToken;
         _filePrefix = printableRecipientGuide ? "recipient-guide-" : "workshop-";
         _fileSuffix = printableRecipientGuide ? ".html" : ".txt";
+        _fileKind = printableRecipientGuide ? JobLocalFileKind.RecipientGuide : JobLocalFileKind.WorkshopReport;
     }
 
     public WorkshopReportArtifact Write(
         JobId jobId,
         string content,
         CancellationToken cancellationToken = default)
+    {
+        var (artifact, bytes) = PrepareWrite(jobId, content, cancellationToken);
+        Publish(artifact, bytes, $".{_filePrefix}{Guid.NewGuid():N}.tmp", cancellationToken);
+        return artifact;
+    }
+
+    /// <summary>Provides the exact file metadata before publication and waits for the owner to invoke the bounded write.</summary>
+    public async Task<WorkshopReportArtifact> WriteWithOwnershipAsync(JobId jobId, string content,
+        Func<WorkshopReportArtifact, Action<CancellationToken>, CancellationToken, Task> publishWithOwnership,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(publishWithOwnership);
+        var (artifact, bytes) = PrepareWrite(jobId, content, cancellationToken);
+        var stageName = GetOwnedStageName(artifact.FileName);
+        try
+        {
+            if (ProtectedArtifactRemoval.HasPublicationCollision(_rootDirectory, artifact.FileName, stageName))
+            {
+                throw new WorkshopReportStoreException(WorkshopReportFailure.NameCollision);
+            }
+        }
+        catch (Exception exception) when (exception is not WorkshopReportStoreException && IsFileSystemFailure(exception))
+        {
+            throw new WorkshopReportStoreException(WorkshopReportFailure.DestinationUnavailable);
+        }
+
+        var publicationGate = new object();
+        var callbackOpen = true;
+        var started = false;
+        var published = false;
+        try
+        {
+            await publishWithOwnership(artifact, PublishOnce, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            lock (publicationGate) { callbackOpen = false; }
+        }
+
+        if (!published) { throw new WorkshopReportStoreException(WorkshopReportFailure.WriteFailed); }
+        return artifact;
+
+        void PublishOnce(CancellationToken token)
+        {
+            lock (publicationGate)
+            {
+                if (!callbackOpen || started) { throw new InvalidOperationException("This publication can be attempted once."); }
+                started = true;
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, token);
+                Publish(artifact, bytes, stageName, linked.Token, requireCurrentOwner: true);
+                published = true;
+            }
+        }
+    }
+
+    public JobLocalFileRemoval RemoveRecordedFile(JobLocalFile file, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        return file.Kind == _fileKind
+            ? ProtectedArtifactRemoval.Remove(_rootDirectory, file, GetOwnedStageName(file.FileName), cancellationToken)
+            : JobLocalFileRemoval.Retained;
+    }
+
+    private string GetOwnedStageName(string fileName) => $".{fileName[..^_fileSuffix.Length]}.tmp";
+
+    private (WorkshopReportArtifact Artifact, byte[] Bytes) PrepareWrite(JobId jobId, string content,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(jobId);
         ArgumentException.ThrowIfNullOrEmpty(content);
@@ -125,8 +194,15 @@ public sealed class WorkshopReportStore
         }
 
         var fileName = $"{_filePrefix}{_nextReportToken():N}{_fileSuffix}";
-        var destination = Path.Combine(_rootDirectory, fileName);
-        using var security = OpenRoot(create: true);
+        return (new(_issuer, jobId, fileName, bytes.Length, SHA256.HashData(bytes)), bytes);
+    }
+
+    private void Publish(WorkshopReportArtifact artifact, byte[] bytes, string stageName,
+        CancellationToken cancellationToken, bool requireCurrentOwner = false)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var destination = Path.Combine(_rootDirectory, artifact.FileName);
+        using var security = OpenRoot(create: true, requireCurrentOwner: requireCurrentOwner);
         try
         {
             using var writeLock = security.TryAcquireExclusiveLock(Path.Combine(_rootDirectory, LockFileName))
@@ -137,16 +213,14 @@ public sealed class WorkshopReportStore
             }
 
             EnsureCapacity(bytes.Length, cancellationToken);
-            var digest = SHA256.HashData(bytes);
-            var temporary = Path.Combine(_rootDirectory, $".{_filePrefix}{Guid.NewGuid():N}.tmp");
+            var temporary = Path.Combine(_rootDirectory, stageName);
             cancellationToken.ThrowIfCancellationRequested();
-            var committed = ProtectedArtifactPublication.Publish(security, bytes, temporary, destination, cancellationToken);
+            var committed = ProtectedArtifactPublication.Publish(security, bytes, temporary, destination, cancellationToken,
+                requireCurrentOwner);
             if (!committed)
             {
                 throw new WorkshopReportStoreException(WorkshopReportFailure.NameCollision);
             }
-
-            return new WorkshopReportArtifact(_issuer, jobId, fileName, bytes.Length, digest);
         }
         catch (WorkshopReportStoreException)
         {
@@ -260,7 +334,7 @@ public sealed class WorkshopReportStore
         }
     }
 
-    private DiagnosticStoreSecurity OpenRoot(bool create)
+    private DiagnosticStoreSecurity OpenRoot(bool create, bool requireCurrentOwner = false)
     {
         try
         {
@@ -281,7 +355,7 @@ public sealed class WorkshopReportStore
             var security = new DiagnosticStoreSecurity(_rootDirectory);
             try
             {
-                security.EnsureSafeRoot(createIfMissing: create);
+                security.EnsureSafeRoot(createIfMissing: create, requireCurrentOwner: requireCurrentOwner);
                 return security;
             }
             catch

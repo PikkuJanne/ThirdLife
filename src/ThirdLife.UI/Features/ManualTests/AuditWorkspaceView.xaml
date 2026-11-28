@@ -55,6 +55,39 @@
                     Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
           </StackPanel>
         </GroupBox>
+        <GroupBox x:Name="JobDeletionRegion" Header="Permanent job-data deletion" Visibility="Collapsed" Margin="0,16,0,0">
+          <StackPanel>
+            <Button x:Name="ReviewJobDeletionButton" Content="Review job-data deletion" Click="ReviewJobDeletion"
+                    IsEnabled="{Binding CanReviewJobDeletion}" HorizontalAlignment="Left" />
+            <StackPanel x:Name="JobDeletionReviewPanel" Visibility="Collapsed" Margin="0,8,0,0">
+              <TextBlock x:Name="JobDeletionScope" Focusable="True" KeyboardNavigation.IsTabStop="False"
+                         Text="Permanent deletion includes this archived job's saved records and the recorded local files below." />
+              <Label Target="{Binding ElementName=JobDeletionCode}" Content="Archived job code" />
+              <TextBox x:Name="JobDeletionCode" IsReadOnly="True" Text="{Binding JobDeletionJobCode, Mode=OneWay}"
+                       AutomationProperties.Name="Archived job code approved for deletion" />
+              <Label Target="{Binding ElementName=JobDeletionFiles}" Content="{Binding JobDeletionFilesLabel}" />
+              <TextBox x:Name="JobDeletionFiles" IsReadOnly="True" Text="{Binding JobDeletionFiles, Mode=OneWay}"
+                       TextWrapping="Wrap" MaxHeight="128" VerticalScrollBarVisibility="Auto"
+                       AutomationProperties.Name="{Binding JobDeletionFilesLabel}" />
+              <TextBlock Text="Keep exported copies, recovered backup copies and local files without an ownership record under their existing retention policies."
+                         Margin="0,8,0,0" />
+              <StackPanel x:Name="JobDeletionApprovalPanel">
+                <Label Target="{Binding ElementName=JobDeletionOperator}" Content="Deletion operator code" />
+                <TextBox x:Name="JobDeletionOperator" MaxLength="64" TextChanged="UpdateJobDeletionConfirmation"
+                         AutomationProperties.Name="Deletion operator code" />
+                <CheckBox x:Name="JobDeletionConfirmed" Checked="UpdateJobDeletionConfirmation"
+                          Unchecked="UpdateJobDeletionConfirmation" Margin="0,8,0,0"
+                          AutomationProperties.Name="Approve permanent deletion of this archived job and its recorded local files">
+                  <TextBlock Text="I approve permanently deleting this archived job and the recorded local files." TextWrapping="Wrap" />
+                </CheckBox>
+                <Button x:Name="ApproveJobDeletionButton" Content="Permanently delete job data" Click="ApproveJobDeletion"
+                        IsEnabled="False" HorizontalAlignment="Left" Margin="0,8,0,0" />
+              </StackPanel>
+              <Button x:Name="ResumeJobDeletionButton" Content="Continue approved job-data deletion" Click="ResumeJobDeletion"
+                      IsEnabled="{Binding CanResumeJobDeletion}" Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
+            </StackPanel>
+          </StackPanel>
+        </GroupBox>
         <TextBlock x:Name="AuditStatus" Text="{Binding JobEntryStatus}" Margin="0,12,0,0" Focusable="True"
                    AutomationProperties.Name="{Binding JobEntryStatus}" AutomationProperties.LiveSetting="Polite" />
       </StackPanel>

@@ -161,7 +161,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     public bool CanCloseJob => Job is not null && !IsBusy && !_closing;
     public bool CanEditJob => CanCloseJob && Job is { IsArchived: false } && !_hasSeparateEvidenceOrigin;
     public bool ShowsJobArchive => Job is not null && !IsFixtureScenario && !_hasSeparateEvidenceOrigin;
-    public bool CanChangeJobArchive => ShowsJobArchive && CanCloseJob;
+    public bool CanChangeJobArchive => ShowsJobArchive && CanCloseJob && !JobDeletionPending;
     public string JobArchiveAction => Job?.IsArchived == true ? "Restore archived job" : "Archive job";
     public bool IsFixtureScenario { get; }
     public bool IncludeBrokerQualification => _fixtureBrokerCoordinator is not null;
@@ -171,8 +171,9 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     public string ReportPreview { get; private set; } = string.Empty;
     public string ReportStatus { get; private set; } =
         "Open a job to generate its restricted workshop report.";
-    public bool CanGenerateReport => CanCloseJob && _reportStore is not null && !_hasSeparateEvidenceOrigin;
-    public bool CanOpenReport => CanGenerateReport && Job is { } job &&
+    public bool CanGenerateReport => CanCloseJob && _reportStore is not null && !_hasSeparateEvidenceOrigin &&
+        !JobDeletionPending && _store is IJobDataLifecycleStore;
+    public bool CanOpenReport => CanCloseJob && _reportStore is not null && !_hasSeparateEvidenceOrigin && Job is { } job &&
         (ReportArtifact?.JobId == job.Job.JobId || _recordedWorkshopReport?.Output.Scope.JobId == job.Job.JobId);
     public bool CanCancelReport => _reportCancellation is { IsCancellationRequested: false };
 
@@ -276,7 +277,9 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         await ReconcileSavedPackageAsync(id);
         await RefreshPreparationDispositionAsync(id, invalidateReport: false);
         await LoadRecordedWorkshopReportAsync(id);
-        Status = "Job opened. The committed records are shown below.";
+        Status = await LoadPendingJobDeletionAsync(stored)
+            ? "This archived job has an approved deletion waiting to finish. Open Jobs to review and continue."
+            : "Job opened. The committed records are shown below.";
     });
 
     public Task ChangeJobArchiveAsync(JobId jobId, bool archive)
@@ -291,6 +294,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         {
             await Task.Run(() => archive ? _jobs!.ArchiveAsync(jobId) : _jobs!.RestoreAsync(jobId));
             var stored = await LoadJobAsync(jobId);
+            ClearJobDeletionReview();
             ClearFinalization();
             ClearSupportExport();
             ClearReport();
@@ -305,6 +309,13 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
     public void CloseJob()
     {
         if (IsBusy || _closing) { return; }
+        ClearOpenJob();
+        Status = "Job closed. Reopen it by its workshop job ID.";
+        Publish();
+    }
+
+    private void ClearOpenJob()
+    {
         Job = null;
         OperationError = string.Empty;
         _hasSeparateEvidenceOrigin = false;
@@ -323,8 +334,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         ClearFinalization();
         ClearSupportExport();
         ClearHandoverReview();
-        Status = "Job closed. Reopen it by its workshop job ID.";
-        Publish();
+        ClearJobDeletionReview();
     }
 
     public Task RecordSanitizationAsync(SanitizationInput input) => RunAsync(async () =>
@@ -332,7 +342,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         var job = RequireWritableJob();
         var evidence = CreateSanitizationEvidence(input);
         await Task.Run(() => _store!.AppendEvidenceAsync(new JobEvidenceBatch(
-            job.Job.JobId, sanitizationEvidence: [evidence])));
+            job.Job.JobId, sanitizationEvidence: [evidence], requireUnarchivedJob: true)));
         await ApplyJobAsync(await LoadJobAsync(job.Job.JobId));
         await CompleteGateAsync(job.Job.JobId, evidence.Metadata.EvidenceId);
     });
@@ -490,7 +500,9 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
                     preparation, ProjectProfileVerification(verification, coldBoot),
                     ProjectWorkshopRecordDetails(jobId, journals, finalization, backupSample),
                     cancellationToken);
-                return _reportStore!.Write(jobId, content, cancellationToken);
+                return _reportStore!.WriteWithOwnershipAsync(jobId, content,
+                    (output, publish, token) => PublishOwnedJobFileAsync(JobLocalFileKind.WorkshopReport, output, publish, token),
+                    cancellationToken);
             }, cancellationToken);
             ReportArtifact = artifact;
             ReportPreview = string.Empty;
@@ -770,6 +782,7 @@ internal sealed partial class AuditWorkspace : INotifyPropertyChanged, IAsyncDis
         Job = job;
         if (jobChanged)
         {
+            ClearJobDeletionReview();
             ClearFinalization();
             ClearSupportExport();
             ClearHandoverReview();

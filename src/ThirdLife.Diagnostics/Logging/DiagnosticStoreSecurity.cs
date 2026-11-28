@@ -29,7 +29,7 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
         }
     }
 
-    public void EnsureSafeRoot(bool createIfMissing = true)
+    public void EnsureSafeRoot(bool createIfMissing = true, bool requireCurrentOwner = false)
     {
         ValidateExistingPathComponents(_rootPath);
         if (File.Exists(_rootPath))
@@ -39,7 +39,7 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
 
         if (OperatingSystem.IsWindows())
         {
-            EnsureSafeWindowsRoot(createIfMissing);
+            EnsureSafeWindowsRoot(createIfMissing, requireCurrentOwner);
         }
         else
         {
@@ -197,19 +197,19 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
         }
     }
 
-    public FileStream OpenValidatedRecordForDeletion(string path)
+    public FileStream OpenValidatedRecordForDeletion(string path, bool requireExclusiveOwnership = false)
     {
-        EnsureSafeRoot();
+        EnsureSafeRoot(createIfMissing: !requireExclusiveOwnership, requireCurrentOwner: requireExclusiveOwnership);
         EnsureContained(path);
         if (OperatingSystem.IsWindows())
         {
-            var handle = WindowsDiagnosticFileIdentity.OpenFileForDeletion(path);
+            var handle = WindowsDiagnosticFileIdentity.OpenFileForDeletion(path, exclusive: requireExclusiveOwnership);
             try
             {
                 var stream = new FileStream(handle, FileAccess.Read, bufferSize: 4096, isAsync: false);
                 try
                 {
-                    ValidateWindowsFile(path, stream);
+                    ValidateWindowsFile(path, stream, requireCurrentOwner: requireExclusiveOwnership);
                     return stream;
                 }
                 catch
@@ -244,14 +244,14 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
         }
     }
 
-    public void DeleteOpenedRecord(string path, FileStream stream)
+    public void DeleteOpenedRecord(string path, FileStream stream, bool requireExclusiveOwnership = false)
     {
         ArgumentNullException.ThrowIfNull(stream);
-        EnsureSafeRoot();
+        EnsureSafeRoot(createIfMissing: !requireExclusiveOwnership, requireCurrentOwner: requireExclusiveOwnership);
         EnsureContained(path);
         if (OperatingSystem.IsWindows())
         {
-            ValidateWindowsFile(path, stream);
+            ValidateWindowsFile(path, stream, requireCurrentOwner: requireExclusiveOwnership);
             WindowsDiagnosticFileIdentity.MarkForDeletion(stream.SafeFileHandle);
         }
         else
@@ -268,7 +268,7 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
     }
 
     [SupportedOSPlatform("windows")]
-    private void EnsureSafeWindowsRoot(bool createIfMissing)
+    private void EnsureSafeWindowsRoot(bool createIfMissing, bool requireCurrentOwner)
     {
         if (!Directory.Exists(_rootPath))
         {
@@ -284,7 +284,7 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
 
         ValidateSecurityDescriptor(
             new DirectoryInfo(_rootPath).GetAccessControl(
-                AccessControlSections.Access | AccessControlSections.Owner));
+                AccessControlSections.Access | AccessControlSections.Owner), requireCurrentOwner: requireCurrentOwner);
 
         _rootGuard ??= WindowsDiagnosticFileIdentity.OpenDirectoryGuard(_rootPath);
         var identity = ValidateDirectoryHandle(_rootGuard);
@@ -377,7 +377,8 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
     }
 
     [SupportedOSPlatform("windows")]
-    private void ValidateWindowsFile(string expectedPath, FileStream stream, bool allowInheritedFileRules = false)
+    private void ValidateWindowsFile(string expectedPath, FileStream stream, bool allowInheritedFileRules = false,
+        bool requireCurrentOwner = false)
     {
         var canonical = Path.TrimEndingDirectorySeparator(Path.GetFullPath(expectedPath));
         var attributes = WindowsDiagnosticFileIdentity.GetAttributes(stream.SafeFileHandle);
@@ -391,7 +392,7 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
             throw UnsafeStore();
         }
 
-        ValidateSecurityDescriptor(stream.GetAccessControl(), allowInheritedFileRules);
+        ValidateSecurityDescriptor(stream.GetAccessControl(), allowInheritedFileRules, requireCurrentOwner);
     }
 
     [UnsupportedOSPlatform("windows")]
@@ -409,11 +410,12 @@ internal sealed class DiagnosticStoreSecurity : IDisposable
     }
 
     [SupportedOSPlatform("windows")]
-    private void ValidateSecurityDescriptor(FileSystemSecurity security, bool allowInheritedFileRules = false)
+    private void ValidateSecurityDescriptor(FileSystemSecurity security, bool allowInheritedFileRules = false,
+        bool requireCurrentOwner = false)
     {
         if ((!allowInheritedFileRules && !security.AreAccessRulesProtected) ||
             security.GetOwner(typeof(SecurityIdentifier)) is not SecurityIdentifier owner ||
-            !_allowedIdentities.Contains(owner))
+            !_allowedIdentities.Contains(owner) || (requireCurrentOwner && !_currentUser!.Equals(owner)))
         {
             throw UnsafeStore();
         }
@@ -513,12 +515,12 @@ internal static class WindowsDiagnosticFileIdentity
         return handle;
     }
 
-    public static SafeFileHandle OpenFileForDeletion(string path)
+    public static SafeFileHandle OpenFileForDeletion(string path, bool exclusive = false)
     {
         var handle = CreateFile(
             path,
             GenericRead | DeleteAccess | FileReadAttributes,
-            FileShareRead | FileShareWrite | FileShareDelete,
+            exclusive ? 0 : FileShareRead | FileShareWrite | FileShareDelete,
             IntPtr.Zero,
             OpenExisting,
             FileFlagOpenReparsePoint,

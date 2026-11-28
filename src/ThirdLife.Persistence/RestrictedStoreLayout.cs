@@ -532,6 +532,52 @@ internal sealed class RestrictedStoreLayout : IDisposable
         }
     }
 
+    public SafeFileHandle OpenEmptyJobDirectoryDeleteGuard(JobId jobId)
+    {
+        var path = GetJobDirectoryPath(jobId);
+        ValidateExistingPathComponents(path);
+        var guard = WindowsFileIdentity.OpenDirectoryDeleteGuard(path);
+        try
+        {
+            ValidateEmptyJobDirectory(jobId, guard);
+            return guard;
+        }
+        catch
+        {
+            guard.Dispose();
+            throw;
+        }
+    }
+
+    public void ValidateEmptyJobDirectory(JobId jobId, SafeFileHandle guard)
+    {
+        ThrowIfDisposed();
+        ValidateDirectoryGuard(JobsPath, _jobsGuard, _jobsIdentity);
+        var path = GetJobDirectoryPath(jobId);
+        _ = ValidateDirectoryHandle(path, guard);
+        ValidateDirectorySecurity(new DirectoryInfo(path));
+        if (Directory.EnumerateFileSystemEntries(path).Any())
+        {
+            throw new JobStorePathException();
+        }
+    }
+
+    public bool TryDeleteEmptyJobDirectory(JobId jobId, SafeFileHandle guard)
+    {
+        try
+        {
+            ValidateEmptyJobDirectory(jobId, guard);
+            WindowsFileIdentity.DeleteDirectory(guard);
+            return true;
+        }
+        catch (Exception exception) when (exception is JobStorePathException or IOException or UnauthorizedAccessException)
+        {
+            // The database commit is final. Start-up reconciliation can inspect the
+            // same empty derived directory when the transient lock or access issue clears.
+            return false;
+        }
+    }
+
     private void ReconcileJobDirectoriesCore(
         IReadOnlyCollection<JobId> jobIds,
         int maximumDirectories)

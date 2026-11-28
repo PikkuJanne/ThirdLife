@@ -14,10 +14,10 @@ TL-0704.
 The **Jobs** surface can archive the current job and restore it later
 by job code. The job keeps its evidence and records both transitions.
 For an archived job, **Check saved copies and original samples** compares
-the recorded local reports, guides and generated original File History samples
-with their saved lengths and digests. The review reports matches and
-unverified counts for each group. Earlier files without a receipt may remain.
-Recovered samples and exported copies follow the retention of their destinations.
+report and guide handover receipts and recorded original File History samples
+with their saved lengths and digests. The separate deletion review also includes
+ownership reservations made before publication. Earlier files without a reliable
+receipt and copies at other destinations follow their own retention arrangements.
 [Retention and cleanup](retention-and-cleanup.md)
 
 Application removal and job-data deletion use separate choices.
@@ -27,29 +27,40 @@ Application removal and job-data deletion use separate choices.
   the workshop job store, job-bound evidence and local reports and guides by default.
   Published ZIPs stay in the chosen destinations. Windows-owned accessibility
   settings, backup selections and installed vendor packages stay with their owners.
-- **Delete ThirdLife-owned job data.** This choice remains pending. It requires
-  explicit approval of the affected records, verification of the registered root,
-  exact job identities and final file handles, and a recoverable result identifying
-  retained data after failure. Exported copies and unrelated directories follow
-  their owners' retention policies. [Registered data roots](data-locations.md)
+- **Permanently delete job data.** Open the job in **Jobs** and archive it if
+  needed. Select **Review job-data deletion** to check the archived job code and
+  its recorded local files. Enter your workshop operator code, confirm the
+  displayed scope and select **Permanently delete job data**. Pending action
+  recovery or support publication can make deletion unavailable. For an older
+  archive with a later evidence checkpoint, restore the job and archive the
+  current records before preparing a new deletion review.
 
-The deletion workflow needs a durable approval tied to the selected archived
-job and its exact records and attributed local files. If an approved file step
-is interrupted, reopening the job needs to show the outstanding operation and
-which file results remain unverified. Job-record removal follows reconciliation
-of those file results. Files without reliable job attribution need independent
-review under the workshop's retention policy.
+The job store saves the approval against the exact archive checkpoint and local
+file manifest before attempting removal. It checks the registered roots and
+verifies the names, lengths and digests on the held file handles. An absent file
+can be reconciled on retry. An unavailable, changed or unsafe file retains the
+job and approval. Review the retained file names, address locks or other
+ownership problems, then reopen the job and choose **Continue approved job-data
+deletion**. Opening a pending job displays its state. The operator starts the
+retry. Restore is unavailable while deletion is pending.
 
-Report and guide receipts are saved after publication. Interruption can leave
-a local file with no saved receipt. Reports generated from archived jobs also
-remain outside the handover receipt workflow. A durable ownership record before
-publication is needed to include future copies reliably in a deletion review.
+Successful removal deletes the job's SQLite records and its recorded local
+reports, guides and original File History samples. It retains policy snapshots
+referenced by other jobs. New local reports and guides have job-bound ownership
+records before publication. Confirmed staging copies use the same recorded ID.
+Historical copies without reliable receipts, exported copies, recovered samples,
+Windows backups and unrelated directories retain their own retention arrangements.
+[Registered data roots](data-locations.md)
+
+Schema 22 stores local ownership and deletion approvals. Ordinary application
+removal preserves the existing schema version. Reinstall a build that supports
+the saved schema to reopen the database. Earlier builds report a newer store
+as unavailable and leave it in place.
 
 On ThirdLife-W11, removal of the exact private 0.3.6 MSI removed its
 19 registered desktop files. The lifecycle fixture reopened the same populated
 archived job after repair, upgrade, cancellation recovery and final uninstall.
-The exact stable package and separate deletion workflow require their own
-verification with retained jobs, adjacent unrelated decoys, locked and denied
-paths, links, interruption and later reopening.
+TL-0704 verifies removal and preservation for the exact stable package, including
+retained jobs, adjacent unrelated decoys and lifecycle interruption.
 [Private populated lifecycle](../artifacts/evidence/TL-0704/populated-job-lifecycle.md)
 [Retention and cleanup](retention-and-cleanup.md)
