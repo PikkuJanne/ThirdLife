@@ -123,12 +123,13 @@ preserving the populated archived job. The installed window awaits
 a desktop with its Windows first-use privacy choices resolved.
 [Private candidate](artifacts/evidence/TL-0706/private-interface.md) · [Guest MSI evidence](artifacts/evidence/TL-0704/populated-job-lifecycle.md)
 
-TL-0703 verified the exact private 0.3.7 MSI's 19 owned files and
-per-user registrations. Jobs checks recorded original File History
-samples when reviewing an archived job's local copies. The separate
-job-data deletion workflow and stable package verification remain open.
+TL-0703 is complete. Jobs separately approves deletion of one archived job
+and its recorded files. A locked copy left recoverable approval, and the
+retry removed the job while preserving other data. Two clean builds
+reproduced private 0.3.8 and its 19-file installer inventory. TL-0704 retains
+the exact stable installer lifecycle on ThirdLife-W11.
+[Job-data deletion](artifacts/evidence/TL-0703/job-data-deletion.md)
 [Package ownership](artifacts/evidence/TL-0703/private-package-ownership.md)
-[Archived sample review](artifacts/evidence/TL-0703/archived-sample-review.md)
 
 The current Handover resumes the same protected harmless sample after
 a fresh recipient review and saves the current operator's copy result.

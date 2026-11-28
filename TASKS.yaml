@@ -7989,7 +7989,7 @@ tasks:
   workstream: data
   kind: docs
   priority: P0
-  status: ready
+  status: done
   size: M
   executor: codex
   environment: any
@@ -8020,8 +8020,38 @@ tasks:
   - Support and export paths do not scan sibling private data.
   verification:
   - Run path/data-map tests and compare installer/uninstaller behavior with the documentation.
-  - Search the release package for undocumented persistent locations and sibling data access.
+  - Inspect the exact current installer candidate for undocumented persistent locations and sibling data access. Repeat the inventory and native lifecycle verification for the exact stable package at TL-0704.
   evidence:
+  - summary: Clean cumulative Full passed for the schema 22 migration and standalone data deletion workflow.
+    task: TL-0703
+    command: eng/verify.ps1 -Tier Full -Restore in a clean detached checkout
+    tier: full
+    result: passed
+    date: '2026-11-28'
+    duration: 480.491 s for 322 repository checks and 2711 .NET tests
+    environment: Active unelevated Windows 11 Pro native x64 host with locked restore and isolated synthetic fixtures
+    reference: artifacts/evidence/TL-0703/job-data-deletion.md, 11d2b792fbaefd23ebd374e4e67d1cd2777f50d2
+    limitation: Default deterministic Full scope. Native File History restoration and the exact stable package lifecycle retain their separate gates.
+  - summary: Jobs separately approved and removed one archived job and its verified local files. A locked report and an interrupted process both left recoverable approval.
+    task: TL-0703
+    command: eng/verify.ps1 -Tier Targeted with JobDataLifecycle, migration, process interruption, WPF, Reports and Diagnostics selections
+    tier: targeted
+    result: passed
+    date: '2026-11-28'
+    duration: 284.698 s for 1451 Quick tests, eight work-selection checks and 159 focused .NET tests
+    environment: Active unelevated Windows 11 Pro native x64 host with protected synthetic stores
+    reference: artifacts/evidence/TL-0703/job-data-deletion.md, 11d2b792fbaefd23ebd374e4e67d1cd2777f50d2
+    limitation: Explicit logical deletion of a selected eligible archive and its attributed local files. Historical unrecorded and external copies have their own retention. Native File History restoration is separate.
+  - summary: Two clean builds reproduced private 0.3.8 and its exact Windows Installer inventory contained 19 owned payload files with matching per-user component registrations.
+    task: TL-0703
+    command: Pinned private publisher and MSI author in two detached checkouts, native table queries, verified cabinet extraction and focused package unittest selections
+    tier: targeted
+    result: passed
+    date: '2026-11-28'
+    duration: 34.754 s and 35.086 s for the independent builds, 0.245 s for native inspection and extraction, and 1.437 s for 11 package tests
+    environment: Active Windows 11 Pro native x64 host with isolated private package outputs
+    reference: artifacts/evidence/TL-0703/private-package-ownership.md, 11d2b792fbaefd23ebd374e4e67d1cd2777f50d2
+    limitation: Read-only exact unsigned private inventory. Prior 0.3.6 native removal preserved a populated archived job at that version. TL-0704 requires the exact stable package and a qualified guest session.
   - summary: Clean Full verification passed for the archived original-sample review and private MSI ownership regression.
     task: TL-0703
     command: eng/verify.ps1 -Tier Full -Restore in a clean detached checkout
@@ -8133,9 +8163,9 @@ tasks:
     reference: artifacts/evidence/TL-0703/reopen-archived-report.md, 8440ae0cd7e6797a8c348ce5094396d30e443595
     limitation: Protected receipt readback and WPF behavior in the covered scopes. No job-data removal.
   notes:
-  - Persist a job-bound ownership record before publishing future local workshop reports and recipient guides. Files without reliable historical receipts require their own review.
-  - Implement the durable, operator-approved deletion workflow with exact job and file attribution, interruption recovery and explicit retained-file results.
-  - Verify stable installer ownership and data preservation when TL-0704 supplies the exact stable package. Historical private package observations retain their specific versions and scopes.
+  - Ordinary application removal preserves job data. The separate Jobs workflow requires exact approval for one archived job and retains the job and approval while any attributed local file needs review.
+  - Future local report and guide publications reserve ownership before writing. Earlier files without reliable attribution follow the workshop's separate retention review.
+  - TL-0704 carries stable installer inventory and deployed data-preservation checks. The exact stable artifact and a qualified standard-user session on ThirdLife-W11 are required for that lifecycle run.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

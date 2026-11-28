@@ -61,6 +61,22 @@ checks in nine seconds. An earlier broad filter discovered a separately selected
 active-machine File History case that requires an exact
 `THIRDLIFE_FILE_HISTORY_TEST_VOLUME`. No native restore is claimed here.
 
+Governed Targeted on the unelevated active Windows 11 Pro native x64 host
+passed on 28 November in 284.698 seconds at
+`11d2b792fbaefd23ebd374e4e67d1cd2777f50d2`. It ran 1,451 Quick tests,
+eight work-selection checks and 159 focused executions with zero skips.
+The focused selections were 82 Persistence, 11 WPF, 23 Reports and
+43 Diagnostics checks. The Quick WPF group took 101 seconds. Earlier
+clean Quick verification also exceeded the 120-second target with
+104 seconds in that group. [Earlier Quick audit](../TL-0709/private-candidate-boundary.md)
+
+Clean detached Full with locked restore passed in 480.491 seconds at
+`11d2b792fbaefd23ebd374e4e67d1cd2777f50d2`, based on
+`b2fa3db15190caadb850ef0732bb63f1a06d4219`. The build had
+zero warnings. All 322 repository checks and 2,711 .NET tests passed
+with zero skips, including 247 Persistence and 231 WPF tests.
+The default deterministic Full filter applies.
+
 This evidence covers controlled jobs, logical SQLite deletion and attributable
 local files. Export destinations, recovered samples, earlier local files without
 reliable attribution and Windows backup copies follow their owners' retention.

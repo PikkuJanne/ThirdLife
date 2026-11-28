@@ -52,6 +52,11 @@ Historical copies without reliable receipts, exported copies, recovered samples,
 Windows backups and unrelated directories retain their own retention arrangements.
 [Registered data roots](data-locations.md)
 
+Schema 22 stores local ownership and deletion approvals. Ordinary application
+removal preserves the existing schema version. Reinstall a build that supports
+the saved schema to reopen the database. Earlier builds report a newer store
+as unavailable and leave it in place.
+
 On ThirdLife-W11, removal of the exact private 0.3.6 MSI removed its
 19 registered desktop files. The lifecycle fixture reopened the same populated
 archived job after repair, upgrade, cancellation recovery and final uninstall.

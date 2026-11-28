@@ -49,3 +49,46 @@ install paths, installed-window behavior and the separate job-data
 deletion workflow remain unverified.
 [Exact private 0.3.7 preflight](../TL-0708/reviewed-msi-preflight.md)
 [Private 0.3.6 guest lifecycle](../TL-0704/populated-job-lifecycle.md)
+
+## Exact private 0.3.8 after job-data deletion
+
+Two independent clean detached checkouts of
+`11d2b792fbaefd23ebd374e4e67d1cd2777f50d2` produced the same private
+ZIP, MSI, SBOM and receipts on the active Windows 11 Pro native x64
+host. `eng/package-development-preview.ps1 -RunName tl-0703-ownership
+-ProductVersion 0.3.8-dev` and the native MSI author took 34.754 and
+35.086 seconds including the corresponding checks. An early rehearsal
+at `e2d1bdf` used different run names. The generated regex assemblies encoded
+those different build inputs. The verified pair held the run name
+constant across unequal checkout paths.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Private MSI | `37c2e904f24005faa27c0694f5569074e27118ad565ef6bf6934513131aa2319` |
+| Desktop ZIP | `2de9c759481ca5ecbe596c2cc88fbd0bdcb6bb7160e2bcac91dee2c145150742` |
+| SBOM | `6f0b028af2ee5de1025db999a00499a1fac0956c6bf50d6b7a05f7dc9564d36c` |
+| Embedded cabinet | `2c586c80d30dcc2b031b169dc7d9e6fa0591cd3f1608275fff5c68826fbc720f` |
+
+Read-only Windows Installer queries verified the complete 15-table
+inventory and isolated extraction matched all 19 native cabinet
+members to the reviewed ZIP in 0.245 seconds. The installer owns the
+same per-user desktop files and registration scope. The job store,
+report and guide roots and original sample root remain application
+data. Eleven focused native installer and verifier checks passed
+in 1.437 seconds. Runtime ownership and deletion are covered by the
+application path tests for the same source. [Job-data evidence](job-data-deletion.md)
+
+The source-path review found the new ownership and approval tables
+inside the registered job store, deterministic staging names in the
+existing protected output folders, and a directory check restricted
+to the selected job's derived path. The installed and runtime paths
+are listed in the data map. [Data locations](../../../docs/data-locations.md)
+
+The current `ThirdLife-W11` guest reported Windows 11 Pro 26H2
+build 26300.9974 on native x64. The native transaction fixture needs
+a signed-in standard-user Basic console session. The current read-only
+preflight found no qualified session. The 0.3.8 evidence is limited to
+the read-only candidate and host application checks. The exact 0.3.6
+native preservation evidence remains applicable to that version.
+TL-0704 carries the stable package inventory, installing and removing
+that package, and verifying preserved data on the existing guest.
