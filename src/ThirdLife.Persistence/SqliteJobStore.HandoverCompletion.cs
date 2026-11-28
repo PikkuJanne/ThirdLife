@@ -25,12 +25,12 @@ public sealed partial class SqliteJobStore
         }, token);
     }
 
-    public Task<IReadOnlyList<HandoverFileReceipt>?> ReadArchivedHandoverFilesAsync(JobId jobId,
+    public Task<ArchivedHandoverOutputs?> ReadArchivedHandoverOutputsAsync(JobId jobId,
         CheckpointId expectedCheckpoint, CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(jobId);
         ArgumentNullException.ThrowIfNull(expectedCheckpoint);
-        return ReadJournalTransactionAsync<IReadOnlyList<HandoverFileReceipt>?>(async (transaction, ct) =>
+        return ReadJournalTransactionAsync<ArchivedHandoverOutputs?>(async (transaction, ct) =>
         {
             if (!_supportsHandoverCompletion ||
                 await ReadStoredJobAsync(_connection, transaction, jobId, ct).ConfigureAwait(false) is not { IsArchived: true } job ||
@@ -41,7 +41,13 @@ public sealed partial class SqliteJobStore
 
             _layout.ValidateJobDirectory(jobId);
             var history = await ReadPublicationsAsync(transaction, jobId, ct).ConfigureAwait(false);
-            return Array.AsReadOnly(history.Select(item => item.File).OfType<HandoverFileReceipt>().ToArray());
+            var samples = _supportsFileHistorySampleAudit
+                ? await ReadFileHistorySampleHistoryAsync(transaction, jobId, ct).ConfigureAwait(false)
+                : [];
+            return new(
+                Array.AsReadOnly(history.Select(item => item.File).OfType<HandoverFileReceipt>().ToArray()),
+                Array.AsReadOnly(samples.Select(item => item.Audit)
+                    .Where(audit => audit.State == FileHistorySampleAuditState.Preparing).ToArray()));
         }, token);
     }
 

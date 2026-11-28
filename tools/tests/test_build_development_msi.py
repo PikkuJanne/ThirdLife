@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+import uuid
 from zipfile import ZipFile
 
 from tools import build_development_msi as installer
@@ -21,9 +22,13 @@ class DevelopmentMsiTests(unittest.TestCase):
         self.output = self.root / "output"
         self.write_input(apphost())
 
-    def write_input(self, content):
+    def write_input(self, content, additional_entries=None):
+        entries = {package.APPHOST: content}
+        if additional_entries:
+            entries.update(additional_entries)
         with ZipFile(self.input / package.ARCHIVE, "w") as archive:
-            archive.writestr(package.APPHOST, content)
+            for name in sorted(entries):
+                archive.writestr(name, entries[name])
         artifact = (self.input / package.ARCHIVE).read_bytes()
         sbom = json.dumps({
             "bomFormat": "CycloneDX",
@@ -43,7 +48,7 @@ class DevelopmentMsiTests(unittest.TestCase):
             "apphost_sha256": sha256(content),
             "sbom": package.SBOM,
             "sbom_sha256": self.sbom_digest,
-            "entries": [package.APPHOST],
+            "entries": sorted(entries),
         }), encoding="utf-8")
 
     def test_rebuilds_identically_and_assigns_new_code_for_changed_payload(self):
@@ -76,74 +81,139 @@ class DevelopmentMsiTests(unittest.TestCase):
             return value.value
 
     def test_writes_a_native_readable_package_with_only_owned_resources(self):
+        apphost_content = apphost()
+        runtime_name = "ThirdLife.UI.runtimeconfig.json"
+        runtime_content = b"{}"
+        self.write_input(apphost_content, {runtime_name: runtime_content})
         msi = installer.build(self.input, self.output, SOURCE, self.archive_digest, self.sbom_digest, "0.3.0")
         receipts = json.loads((self.output / "installer-receipt.json").read_text(encoding="utf-8"))
         self.assertEqual(sha256(msi.read_bytes()), receipts["msi_sha256"])
+        self.assert_owned_resources(msi, {package.APPHOST: len(apphost_content), runtime_name: len(runtime_content)},
+                                    "0.3.0")
 
+    def assert_owned_resources(self, msi, expected_file_sizes, version):
+        family = uuid.UUID("f9d1d0d5-3c36-471f-9b78-89951d6a9aef")
+        upgrade_code = f"{{{str(family).upper()}}}"
+        files = [(f"F{index:03}", name, size)
+                 for index, (name, size) in enumerate(sorted(expected_file_sizes.items()), 1)]
         engine = installer.WindowsInstaller()
         api = engine.api
-        api.MsiDatabaseIsTablePersistentW.argtypes = [wintypes.UINT, wintypes.LPCWSTR]
-        api.MsiDatabaseIsTablePersistentW.restype = ctypes.c_int
         api.MsiViewFetch.argtypes = [wintypes.UINT, ctypes.POINTER(wintypes.UINT)]
         api.MsiViewFetch.restype = wintypes.UINT
+        api.MsiRecordGetFieldCount.argtypes = [wintypes.UINT]
+        api.MsiRecordGetFieldCount.restype = wintypes.UINT
         api.MsiRecordGetStringW.argtypes = [
             wintypes.UINT, wintypes.UINT, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD),
         ]
         api.MsiRecordGetStringW.restype = wintypes.UINT
         with engine.open_handle(api.MsiOpenDatabaseW, str(msi), None) as database:
-            for table in ("RemoveFile", "ServiceInstall", "ServiceControl"):
-                self.assertEqual(2, api.MsiDatabaseIsTablePersistentW(database, table))
+            # Allow only the authored tables. This excludes extra cleanup and executable tables.
+            tables = self.read_rows(engine, database, "SELECT `Name` FROM `_Tables`")
+            self.assertCountEqual([row[0] for row in tables], [
+                "AppSearch", "Component", "CustomAction", "Directory", "Feature", "FeatureComponents", "File",
+                "InstallExecuteSequence", "LaunchCondition", "Media", "Property", "RegLocator", "Registry",
+                "Signature", "Upgrade",
+            ])
             for query, expected in [
-                ("SELECT `FileName` FROM `File`", f"F001.exe|{package.APPHOST}"),
-                ("SELECT `Key` FROM `Registry`", installer.REGISTRY_KEY),
-                ("SELECT `DefaultDir` FROM `Directory` WHERE `Directory`='PrivateInstall'",
-                 "TLPRIV~1|ThirdLife Private Preview"),
-                ("SELECT `Name` FROM `_Streams` WHERE `Name`='thirdlife.cab'", installer.CABINET),
-                ("SELECT `Value` FROM `Property` WHERE `Property`='REBOOT'", "ReallySuppress"),
-                ("SELECT `Condition` FROM `LaunchCondition` WHERE `Description` = "
-                 "'This preview requires Windows 11 client build 26300 on native x64.'",
-                 'Installed OR (VersionNT64 AND Msix64 AND MsiNTProductType = 1 AND TL_NATIVE_BUILD = "26300")'),
-                ("SELECT `Action` FROM `CustomAction` WHERE `Action`='ResetNativeBuild'", "ResetNativeBuild"),
-                ("SELECT `Type` FROM `CustomAction` WHERE `Action`='ResetNativeBuild'", "51"),
-                ("SELECT `Source` FROM `CustomAction` WHERE `Action`='ResetNativeBuild'", "TL_NATIVE_BUILD"),
-                ("SELECT `Target` FROM `CustomAction` WHERE `Action`='ResetNativeBuild'", "unavailable"),
-                ("SELECT `Property` FROM `AppSearch` WHERE `Signature_`='NativeBuildFromRegistry'", "TL_NATIVE_BUILD"),
-                ("SELECT `Root` FROM `RegLocator` WHERE `Signature_`='NativeBuildFromRegistry'", "2"),
-                ("SELECT `Key` FROM `RegLocator` WHERE `Signature_`='NativeBuildFromRegistry'",
-                 r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"),
-                ("SELECT `Name` FROM `RegLocator` WHERE `Signature_`='NativeBuildFromRegistry'", "CurrentBuildNumber"),
-                ("SELECT `Type` FROM `RegLocator` WHERE `Signature_`='NativeBuildFromRegistry'", "18"),
-                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='ResetNativeBuild'", "40"),
-                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='AppSearch'", "50"),
-                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='LaunchConditions'", "100"),
-                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='InstallExecute'", "6550"),
-                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='RemoveExistingProducts'", "6575"),
-                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='InstallFinalize'", "6600"),
-                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='ClearRelatedPreview'", "5"),
-                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='ClearNewerPreview'", "10"),
-                ("SELECT `Sequence` FROM `InstallExecuteSequence` WHERE `Action`='FindRelatedProducts'", "25"),
-                ("SELECT `Target` FROM `CustomAction` WHERE `Action`='ClearRelatedPreview'",
-                 "[ThirdLifeEmptyUpgradeList]"),
-                ("SELECT `Target` FROM `CustomAction` WHERE `Action`='ClearNewerPreview'",
-                 "[ThirdLifeEmptyUpgradeList]"),
-                ("SELECT `Target` FROM `CustomAction` WHERE `Action`='UseExactUpgradeFiles'", "amus"),
-                ("SELECT `Condition` FROM `InstallExecuteSequence` WHERE `Action`='UseExactUpgradeFiles'",
-                 "RELATEDPREVIEW AND NOT Installed"),
+                ("SELECT `Directory`, `Directory_Parent`, `DefaultDir` FROM `Directory`", [
+                    ("TARGETDIR", "", "SourceDir"),
+                    ("LocalAppDataFolder", "TARGETDIR", "."),
+                    ("PrivatePrograms", "LocalAppDataFolder", "Programs"),
+                    ("PrivateInstall", "PrivatePrograms", "TLPRIV~1|ThirdLife Private Preview"),
+                ]),
+                ("SELECT `Component`, `ComponentId`, `Directory_`, `Attributes`, `Condition`, `KeyPath` "
+                 "FROM `Component`", [
+                    (file_id, f"{{{str(uuid.uuid5(family, 'file:' + name.lower())).upper()}}}",
+                     "PrivateInstall", "260", "", file_id)
+                    for file_id, name, _ in files
+                ]),
+                ("SELECT `File`, `Component_`, `FileName`, `FileSize`, `Attributes`, `Sequence` FROM `File`", [
+                    (file_id, file_id, f"{file_id}{Path(name).suffix[:4]}|{name}", str(size), "512", str(index))
+                    for index, (file_id, name, size) in enumerate(files, 1)
+                ]),
+                ("SELECT `Feature`, `Feature_Parent`, `Directory_` FROM `Feature`", [("Desktop", "", "PrivateInstall")]),
+                ("SELECT `Feature_`, `Component_` FROM `FeatureComponents`", [
+                    ("Desktop", file_id) for file_id, _, _ in files
+                ]),
+                ("SELECT `DiskId`, `LastSequence`, `DiskPrompt`, `Cabinet`, `VolumeLabel`, `Source` FROM `Media`", [
+                    ("1", str(len(files)), "", "#thirdlife.cab", "", ""),
+                ]),
+                ("SELECT `Registry`, `Root`, `Key`, `Name`, `Value`, `Component_` FROM `Registry`", [
+                    (file_id, "1", r"Software\ThirdLife\PrivateInstaller", name, "#1", file_id)
+                    for file_id, name, _ in files
+                ]),
+                ("SELECT `UpgradeCode`, `VersionMin`, `VersionMax`, `Language`, `Attributes`, `Remove`, "
+                 "`ActionProperty` FROM `Upgrade`", [
+                    (upgrade_code, "", version, "", "0", "", "RELATEDPREVIEW"),
+                    (upgrade_code, version, "", "", "2", "", "NEWERPREVIEW"),
+                ]),
+                ("SELECT `Property`, `Signature_` FROM `AppSearch`", [("TL_NATIVE_BUILD", "NativeBuildFromRegistry")]),
+                ("SELECT `Signature_`, `Root`, `Key`, `Name`, `Type` FROM `RegLocator`", [
+                    ("NativeBuildFromRegistry", "2", r"SOFTWARE\Microsoft\Windows NT\CurrentVersion",
+                     "CurrentBuildNumber", "18"),
+                ]),
+                ("SELECT `Signature` FROM `Signature`", []),
+                ("SELECT `Action`, `Type`, `Source`, `Target` FROM `CustomAction`", [
+                    ("ResetNativeBuild", "51", "TL_NATIVE_BUILD", "unavailable"),
+                    ("ClearRelatedPreview", "51", "RELATEDPREVIEW", "[ThirdLifeEmptyUpgradeList]"),
+                    ("ClearNewerPreview", "51", "NEWERPREVIEW", "[ThirdLifeEmptyUpgradeList]"),
+                    ("UseExactUpgradeFiles", "51", "REINSTALLMODE", "amus"),
+                ]),
+                ("SELECT `Condition` FROM `LaunchCondition`", [
+                    ('Installed OR (VersionNT64 AND Msix64 AND MsiNTProductType = 1 AND TL_NATIVE_BUILD = "26300")',),
+                    ("(NOT ALLUSERS) AND (NOT NEWERPREVIEW)",),
+                ]),
+                ("SELECT `Property`, `Value` FROM `Property`", [
+                    ("ProductName", "ThirdLife Setup Core (Private Preview)"),
+                    ("Manufacturer", "ThirdLife"),
+                    ("ProductCode", f"{{{str(uuid.uuid5(family, 'version:' + version)).upper()}}}"),
+                    ("UpgradeCode", upgrade_code),
+                    ("ProductLanguage", "1033"),
+                    ("ProductVersion", version),
+                    ("REBOOT", "ReallySuppress"),
+                    ("SecureCustomProperties", "RELATEDPREVIEW;NEWERPREVIEW"),
+                ]),
+                ("SELECT `Action`, `Condition`, `Sequence` FROM `InstallExecuteSequence`", [
+                    ("ClearRelatedPreview", "", "5"), ("ClearNewerPreview", "", "10"),
+                    ("FindRelatedProducts", "", "25"), ("ResetNativeBuild", "", "40"),
+                    ("AppSearch", "", "50"), ("LaunchConditions", "", "100"),
+                    ("UseExactUpgradeFiles", "RELATEDPREVIEW AND NOT Installed", "110"),
+                    ("CostInitialize", "", "800"), ("FileCost", "", "900"), ("CostFinalize", "", "1000"),
+                    ("InstallValidate", "", "1400"), ("InstallInitialize", "", "1500"),
+                    ("ProcessComponents", "", "1600"), ("UnpublishFeatures", "", "1800"),
+                    ("RemoveRegistryValues", "", "2600"), ("RemoveFiles", "", "3500"),
+                    ("InstallFiles", "", "4000"), ("WriteRegistryValues", "", "5000"),
+                    ("RegisterUser", "", "6000"), ("RegisterProduct", "", "6100"),
+                    ("PublishFeatures", "", "6300"), ("PublishProduct", "", "6400"),
+                    ("InstallExecute", "", "6550"), ("RemoveExistingProducts", "", "6575"),
+                    ("InstallFinalize", "", "6600"),
+                ]),
+                ("SELECT `Name` FROM `_Streams` WHERE `Name`='thirdlife.cab'", [("thirdlife.cab",)]),
             ]:
                 with self.subTest(query=query):
-                    self.assertEqual(expected, self.read_cell(engine, database, query))
+                    self.assertCountEqual(self.read_rows(engine, database, query), expected)
 
-    def read_cell(self, engine, database, query):
+    def read_rows(self, engine, database, query):
         api = engine.api
+        rows = []
         with engine.open_handle(api.MsiDatabaseOpenViewW, database, query) as view:
             installer.checked(api.MsiViewExecute(view, 0), "run MSI read query")
-            with engine.open_handle(api.MsiViewFetch, view) as row:
-                value = ctypes.create_unicode_buffer(1024)
-                size = wintypes.DWORD(len(value))
-                installer.checked(api.MsiRecordGetStringW(row, 1, value, ctypes.byref(size)), "read MSI cell")
-            second = wintypes.UINT()
-            self.assertEqual(259, api.MsiViewFetch(view, ctypes.byref(second)))
-            return value.value
+            while True:
+                row = wintypes.UINT()
+                result = api.MsiViewFetch(view, ctypes.byref(row))
+                if result == 259:  # ERROR_NO_MORE_ITEMS
+                    return rows
+                installer.checked(result, "fetch MSI row")
+                try:
+                    fields = []
+                    for index in range(1, api.MsiRecordGetFieldCount(row) + 1):
+                        value = ctypes.create_unicode_buffer(1024)
+                        size = wintypes.DWORD(len(value))
+                        installer.checked(api.MsiRecordGetStringW(row, index, value, ctypes.byref(size)), "read MSI cell")
+                        fields.append(value.value)
+                    rows.append(tuple(fields))
+                finally:
+                    installer.checked(api.MsiCloseHandle(row), "close MSI row")
 
     def test_preflight_binds_exact_installer_and_receipt_to_reviewed_package(self):
         msi = installer.build(self.input, self.output, SOURCE, self.archive_digest, self.sbom_digest, "0.3.0")

@@ -7989,7 +7989,7 @@ tasks:
   workstream: data
   kind: docs
   priority: P0
-  status: backlog
+  status: ready
   size: M
   executor: codex
   environment: any
@@ -8022,6 +8022,26 @@ tasks:
   - Run path/data-map tests and compare installer/uninstaller behavior with the documentation.
   - Search the release package for undocumented persistent locations and sibling data access.
   evidence:
+  - summary: Jobs verified exact recorded original File History samples for the selected archived job and retained the existing report and guide review.
+    task: TL-0703
+    command: eng/verify.ps1 -Tier Targeted with guarded paths, persistence interruption, archived Jobs, report and File History selections
+    tier: targeted
+    result: passed
+    date: '2026-11-28'
+    duration: 217.742 s for 1450 Quick, eight work-selection and 85 selected .NET tests
+    environment: Active Windows 11 Pro native x64 host with protected synthetic stores and WPF
+    reference: artifacts/evidence/TL-0703/archived-sample-review.md
+    limitation: Exact read-only matches and unverified counts for recorded originals. Recovered copies, unrecorded files and external exports remain separately owned. No job-data deletion or native restore observation.
+  - summary: The exact private 0.3.7 MSI declares 19 owned desktop components and matching per-user registrations. Its embedded payload matches the reviewed ZIP.
+    task: TL-0703
+    command: Native Windows Installer read-only inventory, verified cabinet extraction, and focused Windows Installer and development package unittest selections
+    tier: targeted
+    result: passed
+    date: '2026-11-28'
+    duration: 2.485 s for inventory and extraction, 0.143 s for the stricter table recheck, and 1.398 s for 11 Python tests
+    environment: Active Windows 11 x64 host with read-only private artifact access and isolated extraction
+    reference: artifacts/evidence/TL-0703/private-package-ownership.md, 8440ae0cd7e6797a8c348ce5094396d30e443595
+    limitation: Exact unsigned private artifact only. Removal with a populated archived job was observed on private 0.3.6. Stable inventory and the separate job-data removal workflow remain open.
   - summary: The guarded rollback journal change passed clean cumulative verification including all 236 Persistence cases.
     task: TL-0703
     command: eng/verify.ps1 -Tier Full -Restore in a clean detached checkout
@@ -8102,6 +8122,9 @@ tasks:
     environment: Active Windows 11 Pro 26H2 native x64 host, dedicated detached checkout
     reference: artifacts/evidence/TL-0703/reopen-archived-report.md, 8440ae0cd7e6797a8c348ce5094396d30e443595
     limitation: Protected receipt readback and WPF behavior in the covered scopes. No job-data removal.
+  notes:
+  - Implement the durable, operator-approved deletion workflow with exact job and file attribution, interruption recovery and explicit retained-file results.
+  - Verify stable installer ownership and data preservation when TL-0704 supplies the exact stable package. Historical private package observations retain their specific versions and scopes.
   expected_test_tier: targeted
   full_test_triggers:
   - Run the full tier when this task changes a data/migration, privilege, package/update, installer/lifecycle, backup, or

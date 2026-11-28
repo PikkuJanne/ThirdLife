@@ -68,6 +68,37 @@ public sealed class FileHistoryRestoreProbeTests
     }
 
     [Fact]
+    public void RecordedOriginalRequiresExistingProtectedRootsAndExactFileBytes()
+    {
+        if (!OperatingSystem.IsWindows()) { return; }
+        using var fixture = new RestoreFixture();
+        var recorded = new FileHistorySampleAudit(fixture.Sample.SampleId, 1, fixture.Sample.Sha256,
+            fixture.Sample.ByteLength, new OperatorId("operator-restore-proof"), DateTimeOffset.UtcNow,
+            FileHistorySampleAuditState.Preparing);
+        Assert.Equal(fixture.Sample.FileName, recorded.FileName);
+        Assert.False(fixture.Probe.VerifyRecordedOriginal(recorded));
+        Assert.False(Directory.Exists(fixture.Original));
+        Assert.False(Directory.Exists(fixture.Recovered));
+
+        fixture.Prepare();
+        var path = Path.Combine(fixture.Original, fixture.Sample.FileName);
+        using (var locked = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Assert.False(fixture.Probe.VerifyRecordedOriginal(recorded));
+        }
+        Assert.True(fixture.Probe.VerifyRecordedOriginal(recorded));
+
+        var file = new FileInfo(path);
+        var permissions = file.GetAccessControl();
+        permissions.AddAccessRule(new FileSystemAccessRule(
+            new SecurityIdentifier(WellKnownSidType.WorldSid, null), FileSystemRights.ReadData, AccessControlType.Allow));
+        file.SetAccessControl(permissions);
+        Assert.False(fixture.Probe.VerifyRecordedOriginal(recorded));
+        Assert.Equal(fixture.Sample.CopyContent(), File.ReadAllBytes(path));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(fixture.Recovered));
+    }
+
+    [Fact]
     public void ExactSamplePreparationIsBoundedAndPreservesEarlierFiles()
     {
         if (!OperatingSystem.IsWindows()) { return; }

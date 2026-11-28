@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ThirdLife.Core.Evidence;
 using ThirdLife.Core.Jobs;
 
@@ -36,6 +37,8 @@ public sealed record FileHistorySampleAudit
     }
 
     public Guid SampleId { get; }
+    [JsonIgnore]
+    public string FileName => FileHistoryRestoreSample.GetFileName(SampleId);
     public long HandoverSequence { get; }
     public string Sha256 { get; }
     public int ByteLength { get; }

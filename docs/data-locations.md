@@ -2,11 +2,14 @@
 
 The current application uses the signed-in workshop account's local Windows data.
 The paths below are relative to Windows-known folders and contain no donor or
-recipient identity in their filenames. The installer and release checks for
-additional paths are tracked in TL-0704. [Uninstall and data preservation](uninstall-and-data-preservation.md)
+recipient identity in their filenames. The installed paths identify the reviewed
+private MSI. The stable package inventory is tracked in TL-0704.
+[Uninstall and data preservation](uninstall-and-data-preservation.md)
 
 | Owner and classification | Current location | Content and scope |
 | --- | --- | --- |
+| Private application installation | `%LOCALAPPDATA%\Programs\ThirdLife Private Preview` | The private per-user MSI installs its reviewed desktop payload to this dedicated folder. The private ZIP runs from the operator's chosen extraction folder. |
+| Private installer registration | `HKCU\Software\ThirdLife\PrivateInstaller` and Windows Installer product registration | One component marker per owned desktop file. Windows Installer manages the private product registration and its own installer cache. |
 | Workshop settings | `HKCU\Software\ThirdLife\SetupCore` | The `Appearance` value stores the selected light or dark appearance. Windows high contrast still takes precedence when active. [Appearance setting](../src/ThirdLife.UI/Themes/TraceAppearance.cs) |
 | Reviewed configuration | Embedded application resources | Hash-pinned profile, policy, catalogue and servicing-policy JSON. Profiles and catalogues carry the exact validated bytes. Policy evaluation and preparation retain the applicable policy and plan versions. [Configuration export model](profile-policy-export.md) |
 | Exported configuration | `ThirdLifeConfiguration` beneath the chosen local folder | User-owned ZIP with the three validated configuration documents. The publisher stages a restricted `.configuration-<token>.tmp` file there for atomic publication. [Configuration export](profile-policy-export.md) |
@@ -15,7 +18,7 @@ additional paths are tracked in TL-0704. [Uninstall and data preservation](unins
 | Job store initialization/recovery residue | `.thirdlife-jobs.sqlite3-initialize-<token>.tmp` and its paired journal under the job-store root | Private staged SQLite initialization. Opening a store reconciles verified initialization artifacts and rejects unsafe or corrupt state. This stage is separate from a recovery backup. [Store implementation](../src/ThirdLife.Persistence/SqliteJobStore.cs) |
 | Workshop-restricted reports | `%LOCALAPPDATA%\ThirdLife\SetupCore\WorkshopReports` | Bounded UTF-8 text copies `workshop-<token>.txt`, private `.workshop-<token>.tmp` staging and `.workshop-write.lock`. The report view opens a store-issued artifact or an exact receipt recorded for the reopened job. [Report store](../src/ThirdLife.Reports/WorkshopReport/WorkshopReportStore.cs) |
 | Local recipient guide copies | `%LOCALAPPDATA%\ThirdLife\SetupCore\RecipientGuides` | Reviewed printable HTML `recipient-guide-<token>.html`, staging `.recipient-guide-<token>.tmp` and `.workshop-write.lock`. The store uses protected local publication and keeps the guide separate from the workshop report. [Guide store](../src/ThirdLife.Reports/RecipientGuide/RecipientGuideStore.cs) |
-| Harmless backup restore samples | `%LOCALAPPDATA%\ThirdLife\SetupCore\FileHistorySamples\original` and `recovered` | The protected original folder contains generated `thirdlife-restore-<token>.txt` files, publication staging and `.restore-sample.lock`. The recovery folder starts empty. The verifier reads only the exact expected sample without storing recipient paths or recovery material. [Sample handling](../artifacts/evidence/TL-0702/handover-sample.md) |
+| Harmless backup restore samples | `%LOCALAPPDATA%\ThirdLife\SetupCore\FileHistorySamples\original` and `recovered` | The protected original folder contains generated `thirdlife-restore-<token>.txt` files, publication staging and `.restore-sample.lock`. Windows or the operator supplies files in the recovery folder. Protection and readback use the exact expected sample name and digest. Jobs can check attributable original files from an archived job. [Sample handling](../artifacts/evidence/TL-0702/handover-sample.md) |
 | Support exports | `ThirdLifeSupport` beneath the chosen protected local folder | Exact approved `<support-code>.zip` and staging `.support-<token>.tmp`. The job retains the internal support code, content digest and attributed state. Reopened recovery verifies the original folder and archive using the same approval digest. [Support export store](../src/ThirdLife.Reports/Support/SupportArchiveStore.cs) |
 | Sanitized operational diagnostics | `%LOCALAPPDATA%\ThirdLife\SetupCore\Logs` | Schema-validated `evt-*.json` records, `.tmp-*.json` and `.txn-*.json` transaction artifacts and `.diagnostic-store.lock`. The production package diagnostics entry point uses a 1 MiB byte limit and the default 14-day limit. [Log store](../src/ThirdLife.Diagnostics/Logging/SanitizedLogStore.cs) [Production settings](../src/ThirdLife.UI/Features/PlanReview/AuditWorkspace.PackageDiagnostics.cs) |
 | Battery inventory temporary files | `%LOCALAPPDATA%\ThirdLife\SetupCore\BatteryReports` | The controlled battery report route uses a generated `report-<token>.xml`, a binary ownership marker `pending.bin` and `.lock`. It parses bounded data and cleans the verified files within the guarded workspace. [Battery report workspace](../src/ThirdLife.Inventory/Windows/BatteryReportWorkspace.cs) |
@@ -27,8 +30,9 @@ additional paths are tracked in TL-0704. [Uninstall and data preservation](unins
 Windows Update's native cache and installed vendor packages remain Windows/vendor
 lifecycle data. Working copies that an operator exports or moves to another
 folder follow that destination's access and retention arrangements. The release
-inventory will check the exact application and broker installation locations,
-shortcuts, registrations and preserved data. [Privacy model](privacy/privacy-model.md)
+inventory will verify the stable application and broker installation locations,
+shortcuts, registrations and preserved data against the exact package.
+[Privacy model](privacy/privacy-model.md)
 
 The application uses its registered paths and job identifiers. It has no shared
 portfolio identity or private workspace, repository, recording, content or key

@@ -50,7 +50,7 @@
             <TextBlock Text="Archive keeps the current job's records available for review. Restore the job to resume work." />
             <Button x:Name="JobArchiveButton" Content="{Binding JobArchiveAction}" Click="ChangeJobArchive"
                     IsEnabled="{Binding CanChangeJobArchive}" HorizontalAlignment="Left" Margin="0,8,0,0" />
-            <Button x:Name="ReviewArchivedOutputsButton" Content="Check saved report and guide copies"
+            <Button x:Name="ReviewArchivedOutputsButton" Content="Check saved copies and original samples"
                     Click="ReviewArchivedOutputs" IsEnabled="{Binding CanReviewArchivedOutputs}"
                     Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
           </StackPanel>

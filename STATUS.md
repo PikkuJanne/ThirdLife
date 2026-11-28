@@ -1,6 +1,6 @@
 # ThirdLife Setup Core - Current status
 
-**Snapshot date** 2026-11-27  
+**Snapshot date** 2026-11-28  
 **Bundle baseline** 0.8.0  
 **Runtime authority** Active Codex machine only. Remote CI is supplementary.
 
@@ -122,6 +122,13 @@ MSIs passed the per-user lifecycle on the existing guest. Private
 preserving the populated archived job. The installed window awaits
 a desktop with its Windows first-use privacy choices resolved.
 [Private candidate](artifacts/evidence/TL-0706/private-interface.md) · [Guest MSI evidence](artifacts/evidence/TL-0704/populated-job-lifecycle.md)
+
+TL-0703 verified the exact private 0.3.7 MSI's 19 owned files and
+per-user registrations. Jobs checks recorded original File History
+samples when reviewing an archived job's local copies. The separate
+job-data deletion workflow and stable package verification remain open.
+[Package ownership](artifacts/evidence/TL-0703/private-package-ownership.md)
+[Archived sample review](artifacts/evidence/TL-0703/archived-sample-review.md)
 
 The current Handover resumes the same protected harmless sample after
 a fresh recipient review and saves the current operator's copy result.
